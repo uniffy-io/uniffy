@@ -19,6 +19,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.permissions.org_permission_defaults import (
     OrganizationPermissionDefaults,
 )
@@ -76,3 +77,59 @@ async def resolve_content_defaults(
         return fallback["default_access_mode"], fallback["default_baseline_role"]
 
     return AccessMode.OWNER_ONLY, None
+
+
+async def resolve_access_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_type: ContentType,
+    access_mode: AccessMode | None,
+    baseline_role: ContentRole | None,
+) -> tuple[AccessMode, ContentRole | None]:
+    """Fill in defaults and validate an ``(access_mode, baseline_role)`` pair.
+
+    Every domain ``create()`` path calls this helper to turn optional
+    caller args into the canonical tuple stored on the content row.
+
+    Resolution rules:
+
+    - If ``access_mode`` is ``None``, load org defaults for ``content_type``.
+      ``baseline_role`` stays ``None`` unless also unset, in which case the
+      org default baseline fills it.
+    - If ``access_mode`` is ``OPEN_TO_ORG`` and ``baseline_role`` is
+      ``None`` (caller supplied the mode explicitly but no baseline),
+      fall back to the org default baseline. If that is also ``None``,
+      fall back to ``ContentRole.VIEWER`` as the safe least-privilege
+      baseline so callers (e.g. UI dropping content into the org tree)
+      do not need to know the org-configured default.
+    - If the resolved ``access_mode`` is ``OPEN_TO_ORG``, ``baseline_role``
+      must not be ``OWNER`` or ``BLOCKED``.
+    - For any other ``access_mode``, ``baseline_role`` is forced to ``None``.
+
+    Raises
+    ------
+    ValidationError
+        If ``baseline_role`` is ``OWNER`` / ``BLOCKED`` on ``OPEN_TO_ORG``.
+    """
+    if access_mode is None:
+        access_mode, default_baseline = await resolve_content_defaults(
+            session, organization_id, content_type
+        )
+        if baseline_role is None:
+            baseline_role = default_baseline
+
+    if access_mode == AccessMode.OPEN_TO_ORG:
+        if baseline_role is None:
+            _, default_baseline = await resolve_content_defaults(
+                session, organization_id, content_type
+            )
+            baseline_role = default_baseline or ContentRole.VIEWER
+
+        if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+            raise ValidationError(
+                "baseline_role",
+                f"{baseline_role.value} is not a valid baseline role",
+            )
+        return access_mode, baseline_role
+
+    return access_mode, None

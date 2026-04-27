@@ -20,6 +20,7 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     DeleteOrganizationResponse,
     GetOrganizationOverviewRequest,
     GetOrganizationRequest,
+    GetOrganizationSettingsRequest,
     GetPermissionDefaultsRequest,
     GetUserDomainAdminsRequest,
     GetUserDomainAdminsResponse,
@@ -34,6 +35,7 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     ListOrganizationsResponse,
     OrganizationDetail,
     OrganizationOverview,
+    OrganizationSettings,
     PermissionDefaultsResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
@@ -41,6 +43,7 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     RevokeDomainAdminResponse,
     UpdateMemberRoleRequest,
     UpdateOrganizationRequest,
+    UpdateOrganizationSettingsRequest,
     UpdatePermissionDefaultsRequest,
 )
 
@@ -59,12 +62,13 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.converters import (
     my_organization_to_proto,
     organization_detail_to_proto,
     organization_overview_to_proto,
+    organization_settings_to_proto,
     permission_defaults_to_proto,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -86,7 +90,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 orgs_with_memberships = await ops.get_user_organizations(user_id)
 
@@ -113,7 +117,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -169,7 +173,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 # Verify user has access (is member or system admin)
@@ -210,7 +214,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Name and slug are required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -257,7 +261,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 # Verify user is org admin or system admin
@@ -298,7 +302,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -334,7 +338,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
 
@@ -371,7 +375,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.require_org_member(user_id, org_id)
 
@@ -432,7 +436,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
 
@@ -473,7 +477,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 # Get role from proto
@@ -512,7 +516,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 await ops.remove_member(
@@ -548,7 +552,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
 
@@ -581,20 +585,16 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 default_access_mode = None
                 if request.HasField("default_access_mode"):
-                    default_access_mode = access_mode_from_proto(
-                        request.default_access_mode
-                    )
+                    default_access_mode = access_mode_from_proto(request.default_access_mode)
 
                 default_baseline_role = None
                 if request.HasField("default_baseline_role"):
-                    default_baseline_role = content_role_from_proto(
-                        request.default_baseline_role
-                    )
+                    default_baseline_role = content_role_from_proto(request.default_baseline_role)
 
                 defaults = await ops.update_permission_defaults(
                     user_id=user_id,
@@ -609,6 +609,67 @@ class OrganizationsHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.error(f"Error updating permission defaults: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_organization_settings(
+        self,
+        request: GetOrganizationSettingsRequest,
+        ctx: RequestContext,
+    ) -> OrganizationSettings:
+        """Get the organization settings blob (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        try:
+            async with open_session() as session:
+                ops = OrganizationOperations(session)
+                await ops.require_org_admin(user_id, org_id)
+                settings = await ops.get_organization_settings(org_id)
+                return organization_settings_to_proto(settings)
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error getting organization settings: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def update_organization_settings(
+        self,
+        request: UpdateOrganizationSettingsRequest,
+        ctx: RequestContext,
+    ) -> OrganizationSettings:
+        """Merge-update the organization settings blob (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        chat_agents_enabled: bool | None = None
+        if request.HasField("chat"):
+            chat_agents_enabled = request.chat.agents_enabled
+
+        try:
+            async with open_session() as session:
+                ops = OrganizationOperations(session)
+                settings = await ops.update_organization_settings(
+                    user_id=user_id,
+                    org_id=org_id,
+                    chat_agents_enabled=chat_agents_enabled,
+                )
+                return organization_settings_to_proto(settings)
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error updating organization settings: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     # ─────────────────────────────────────────────────────────────
@@ -634,7 +695,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid domain")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 da, target_user = await ops.grant_domain_admin(
                     admin_user_id=user_id,
@@ -670,7 +731,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid domain")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.revoke_domain_admin(
                     admin_user_id=user_id,
@@ -701,7 +762,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
 
@@ -727,9 +788,7 @@ class OrganizationsHandlers:
                 total_pages = (total + page_size - 1) // page_size
 
                 return ListDomainAdminsResponse(
-                    domain_admins=[
-                        domain_admin_info_to_proto(da, user) for da, user in items
-                    ],
+                    domain_admins=[domain_admin_info_to_proto(da, user) for da, user in items],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -758,7 +817,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = OrganizationOperations(session)
 
                 # Any org member can check their own; org admin can check anyone

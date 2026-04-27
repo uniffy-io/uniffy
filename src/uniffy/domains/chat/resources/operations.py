@@ -15,6 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.content.references import extract_urns_with_types
 from uniffy.core.models.chat.channel_resource import ChatChannelResource
 from uniffy.core.types import ContentType, generate_id
+from uniffy.domains.chat.cache import (
+    RESOURCES_HEAD_LIMIT,
+    get_cached_channel_resources_head,
+    invalidate_cached_channel_resources,
+    set_cached_channel_resources_head,
+)
 
 LOGGER_COMPONENT = "chat.resources"
 
@@ -58,9 +64,7 @@ class ChatResourceOperations:
                 constraint="uq_chat_resources_channel_urn",
                 set_={
                     "last_mentioned_at": now,
-                    "mention_count": (
-                        ChatChannelResource.mention_count + 1
-                    ),
+                    "mention_count": (ChatChannelResource.mention_count + 1),
                 },
             )
             await self.session.execute(stmt)
@@ -70,6 +74,10 @@ class ChatResourceOperations:
                 f"Failed to upsert resources for channel {channel_id}",
                 component=LOGGER_COMPONENT,
             )
+            return
+
+        touched_types = sorted({ct.value for _, ct in urns})
+        await invalidate_cached_channel_resources(channel_id, touched_types)
 
     async def decrement_resources_from_message(
         self,
@@ -91,9 +99,7 @@ class ChatResourceOperations:
                     ChatChannelResource.channel_id == channel_id,
                     ChatChannelResource.urn.in_(urn_strings),
                 )
-                .values(
-                    mention_count=ChatChannelResource.mention_count - 1
-                )
+                .values(mention_count=ChatChannelResource.mention_count - 1)
             )
 
             # Remove rows with mention_count <= 0
@@ -109,6 +115,10 @@ class ChatResourceOperations:
                 f"Failed to decrement resources for channel {channel_id}",
                 component=LOGGER_COMPONENT,
             )
+            return
+
+        touched_types = sorted({ct.value for _, ct in urns})
+        await invalidate_cached_channel_resources(channel_id, touched_types)
 
     async def get_channel_resources(
         self,
@@ -119,9 +129,25 @@ class ChatResourceOperations:
     ) -> tuple[list[ChatChannelResource], int]:
         """Get channel resources with optional type filter.
 
+        When ``offset == 0`` and the requested ``limit`` fits the cached
+        head, the head is served from Valkey (mention autocomplete is the
+        hot caller). Other windows hit PG directly.
+
         Uses a window function to get total count in a single query.
         Returns (resources, total_count).
         """
+        head_eligible = offset == 0 and limit <= RESOURCES_HEAD_LIMIT
+        if head_eligible:
+            cached = await get_cached_channel_resources_head(
+                channel_id, content_type_filter
+            )
+            if cached is not None:
+                head_payloads, total = cached
+                resources = [
+                    _resource_from_payload(channel_id, p) for p in head_payloads
+                ]
+                return resources[:limit], total
+
         total_col = func.count().over().label("_total")
 
         query = select(ChatChannelResource, total_col).where(
@@ -134,9 +160,35 @@ class ChatResourceOperations:
                 ct = ContentType(type_upper)
                 query = query.where(ChatChannelResource.content_type == ct)
 
-        query = query.order_by(
-            ChatChannelResource.last_mentioned_at.desc()
-        ).offset(offset).limit(limit)
+        if head_eligible:
+            head_query = (
+                query.order_by(ChatChannelResource.last_mentioned_at.desc())
+                .offset(0)
+                .limit(RESOURCES_HEAD_LIMIT)
+            )
+            head_result = await self.session.execute(head_query)
+            head_rows = head_result.all()
+            if not head_rows:
+                await set_cached_channel_resources_head(
+                    channel_id, content_type_filter, [], 0
+                )
+                return [], 0
+
+            head_resources = [row[0] for row in head_rows]
+            total = head_rows[0][1]
+            await set_cached_channel_resources_head(
+                channel_id,
+                content_type_filter,
+                [_resource_to_payload(r) for r in head_resources],
+                total,
+            )
+            return head_resources[:limit], total
+
+        query = (
+            query.order_by(ChatChannelResource.last_mentioned_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
 
         result = await self.session.execute(query)
         rows = result.all()
@@ -145,6 +197,54 @@ class ChatResourceOperations:
             return [], 0
 
         resources = [row[0] for row in rows]
-        total = rows[0][1]  # Window count is same for all rows
+        total = rows[0][1]
 
         return resources, total
+
+
+def _resource_to_payload(row: ChatChannelResource) -> dict:
+    """Serialize a ``ChatChannelResource`` for the head cache."""
+    return {
+        "id": str(row.id),
+        "urn": row.urn,
+        "content_type": row.content_type.value,
+        "first_mentioned_at": (
+            row.first_mentioned_at.isoformat() if row.first_mentioned_at else None
+        ),
+        "last_mentioned_at": (
+            row.last_mentioned_at.isoformat() if row.last_mentioned_at else None
+        ),
+        "mention_count": row.mention_count,
+        "first_mentioned_by": (
+            str(row.first_mentioned_by) if row.first_mentioned_by else None
+        ),
+    }
+
+
+def _resource_from_payload(
+    channel_id: UUID,
+    payload: dict,
+) -> ChatChannelResource:
+    """Rebuild a transient ``ChatChannelResource`` from a cached payload."""
+    return ChatChannelResource(
+        id=UUID(payload["id"]),
+        channel_id=channel_id,
+        urn=payload["urn"],
+        content_type=ContentType(payload["content_type"]),
+        first_mentioned_at=(
+            datetime.fromisoformat(payload["first_mentioned_at"])
+            if payload.get("first_mentioned_at")
+            else None
+        ),
+        last_mentioned_at=(
+            datetime.fromisoformat(payload["last_mentioned_at"])
+            if payload.get("last_mentioned_at")
+            else None
+        ),
+        mention_count=payload.get("mention_count", 0),
+        first_mentioned_by=(
+            UUID(payload["first_mentioned_by"])
+            if payload.get("first_mentioned_by")
+            else None
+        ),
+    )

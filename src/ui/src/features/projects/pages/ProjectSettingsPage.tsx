@@ -11,7 +11,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { selectProjectById, setCurrentProject } from "@/features/projects/store/projectsSlice";
 import { fetchProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
-import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { roleCanManage } from "@/shared/utils/contentRoles";
 import { ProjectSettingsLayout } from "@/features/projects/components/settings/ProjectSettingsLayout";
 
 export function ProjectSettingsPage() {
@@ -20,11 +20,10 @@ export function ProjectSettingsPage() {
   const dispatch = useAppDispatch();
   const selectProject = useMemo(() => selectProjectById(projectId || ""), [projectId]);
   const project = useAppSelector(selectProject);
-  const { canManage } = useProjectPermission();
+  const canManage = useMemo(() => roleCanManage(project?.userRole ?? null), [project?.userRole]);
 
   useDocumentTitle(project ? `${project.name} Settings` : "Project Settings");
 
-  // Ensure current project is set and data is loaded
   useEffect(() => {
     if (!projectId) return;
     dispatch(setCurrentProject(projectId));
@@ -34,7 +33,6 @@ export function ProjectSettingsPage() {
     }
   }, [projectId, project, dispatch]);
 
-  // Redirect if no settings permission (owner, org admin, domain admin, system admin)
   useEffect(() => {
     if (project && !canManage) {
       navigate(`/projects/${projectId}`, { replace: true });

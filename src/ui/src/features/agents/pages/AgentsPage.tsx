@@ -66,7 +66,9 @@ export function AgentsPage() {
   return (
     <>
       <AppHeader />
-      <AgentsLayout />
+      <div data-testid="agents-page" data-active-tab={tab ?? persistedTab}>
+        <AgentsLayout />
+      </div>
     </>
   );
 }

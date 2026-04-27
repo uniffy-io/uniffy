@@ -103,7 +103,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const navigate = useNavigate();
     const providerKeys = useAppSelector(selectProviderKeys);
 
-    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
     const canEdit = roleCanEdit(myRole);
 
     const primaryKeyId = agent.primaryProviderKeyId || "";

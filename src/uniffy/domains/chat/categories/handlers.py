@@ -22,7 +22,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
@@ -56,7 +56,7 @@ class CategoryHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatCategoryOperations(session)
                 cat = await ops.create(user_id, org_id, request.name)
                 return CreateCategoryResponse(category=category_to_proto(cat))
@@ -79,7 +79,7 @@ class CategoryHandlers:
         name = request.name if request.HasField("name") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatCategoryOperations(session)
                 cat = await ops.update(user_id, org_id, cat_id, name=name)
                 return UpdateCategoryResponse(category=category_to_proto(cat))
@@ -100,7 +100,7 @@ class CategoryHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatCategoryOperations(session)
                 await ops.delete(user_id, org_id, cat_id)
                 return DeleteCategoryResponse()
@@ -118,12 +118,10 @@ class CategoryHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = ChatCategoryOperations(session)
             cats = await ops.list_categories(org_id)
-            return ListCategoriesResponse(
-                categories=[category_to_proto(c) for c in cats]
-            )
+            return ListCategoriesResponse(categories=[category_to_proto(c) for c in cats])
 
     async def reorder_categories(
         self,
@@ -139,12 +137,10 @@ class CategoryHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatCategoryOperations(session)
                 cats = await ops.reorder(user_id, org_id, cat_ids)
-                return ReorderCategoriesResponse(
-                    categories=[category_to_proto(c) for c in cats]
-                )
+                return ReorderCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except PermissionDeniedError as e:
             _handle_error(e)
 
@@ -165,19 +161,15 @@ class CategoryHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatCategoryOperations(session)
-                await ops.move_channel_to_category(
-                    user_id, org_id, channel_id, cat_id
-                )
+                await ops.move_channel_to_category(user_id, org_id, channel_id, cat_id)
 
                 # Fetch updated channel for response
                 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 
                 ch_ops = ChatChannelOperations(session)
                 channel = await ch_ops.get_by_id(user_id, org_id, channel_id)
-                return MoveChannelToCategoryResponse(
-                    channel=channel_to_proto(channel)
-                )
+                return MoveChannelToCategoryResponse(channel=channel_to_proto(channel))
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)

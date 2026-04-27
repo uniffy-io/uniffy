@@ -124,13 +124,9 @@ class ProjectsHandlers:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
         slug = request.slug if request.HasField("slug") else None
 
@@ -148,9 +144,10 @@ class ProjectsHandlers:
                     baseline_role=baseline_role,
                     slug=slug,
                 )
+                user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-                return ProjectResponse(project=project_to_proto(project, fields, views))
+                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -175,9 +172,7 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
 
-                return ProjectResponse(
-                    project=project_to_proto(project, fields, views, user_role)
-                )
+                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -226,9 +221,10 @@ class ProjectsHandlers:
                         "A project with that slug already exists",
                     ) from exc
 
+                user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-                return ProjectResponse(project=project_to_proto(project, fields, views))
+                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -247,12 +243,8 @@ class ProjectsHandlers:
         try:
             async with open_session() as session:
                 ops = ProjectOperations(session)
-                await ops.delete(
-                    user_id, organization_id, project_id, permanent=request.permanent
-                )
-                return DeleteProjectResponse(
-                    success=True, message="Project deleted successfully"
-                )
+                await ops.delete(user_id, organization_id, project_id, permanent=request.permanent)
+                return DeleteProjectResponse(success=True, message="Project deleted successfully")
         except ConnectError:
             raise
         except Exception as exc:
@@ -276,9 +268,7 @@ class ProjectsHandlers:
                 100,
             )
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
 
         try:
             async with open_session() as session:
@@ -288,9 +278,7 @@ class ProjectsHandlers:
                     organization_id=organization_id,
                     access_mode=access_mode,
                     include_deleted=(
-                        request.include_deleted
-                        if request.HasField("include_deleted")
-                        else False
+                        request.include_deleted if request.HasField("include_deleted") else False
                     ),
                     page=page,
                     page_size=page_size,
@@ -302,9 +290,10 @@ class ProjectsHandlers:
 
                 project_protos = []
                 for project in projects:
+                    user_role = await ops._resolve_role(user_id, organization_id, project)
                     fields = fields_map.get(str(project.id), [])
                     views = views_map.get(str(project.id), [])
-                    project_protos.append(project_to_proto(project, fields, views))
+                    project_protos.append(project_to_proto(project, fields, views, user_role))
 
                 total_pages = (total + page_size - 1) // page_size
 
@@ -335,9 +324,7 @@ class ProjectsHandlers:
         kwargs: dict = {
             "description": request.description if request.HasField("description") else "",
             "status": request.status if request.HasField("status") else "status_todo",
-            "priority": (
-                request.priority if request.HasField("priority") else "priority_medium"
-            ),
+            "priority": (request.priority if request.HasField("priority") else "priority_medium"),
             "task_type": request.task_type if request.HasField("task_type") else "task",
         }
 
@@ -368,7 +355,7 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except (json.JSONDecodeError, ValueError):
+                except json.JSONDecodeError, ValueError:
                     field_values[key] = value
             kwargs["field_values"] = field_values
 
@@ -384,17 +371,19 @@ class ProjectsHandlers:
                     **kwargs,
                 )
 
+                user_role = await ops._resolve_role(user_id, organization_id, task)
+
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, subtask_total=p_total, subtask_completed=p_done
+                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
                     )
 
                 return TaskResponse(
-                    task=task_to_proto(task),
+                    task=task_to_proto(task, user_role),
                     updated_parent=updated_parent_proto,
                 )
         except ConnectError:
@@ -421,9 +410,7 @@ class ProjectsHandlers:
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
-                return TaskResponse(
-                    task=task_to_proto(task, user_role, st_total, st_done)
-                )
+                return TaskResponse(task=task_to_proto(task, user_role, st_total, st_done))
         except ConnectError:
             raise
         except Exception as exc:
@@ -479,16 +466,16 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except (json.JSONDecodeError, ValueError):
+                except json.JSONDecodeError, ValueError:
                     field_values[key] = value
             updates["field_values"] = field_values
 
         try:
             async with open_session() as session:
                 ops = TaskOperations(session)
-                task, spawned_task = await ops.update(
-                    user_id, organization_id, task_id, **updates
-                )
+                task, spawned_task = await ops.update(user_id, organization_id, task_id, **updates)
+
+                user_role = await ops._resolve_role(user_id, organization_id, task)
 
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
@@ -499,13 +486,18 @@ class ProjectsHandlers:
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, subtask_total=p_total, subtask_completed=p_done
+                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
                     )
 
-                spawned_proto = task_to_proto(spawned_task) if spawned_task else None
+                spawned_proto = task_to_proto(spawned_task, user_role) if spawned_task else None
 
                 return TaskResponse(
-                    task=task_to_proto(task, subtask_total=st_total, subtask_completed=st_done),
+                    task=task_to_proto(
+                        task,
+                        user_role,
+                        subtask_total=st_total,
+                        subtask_completed=st_done,
+                    ),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
                 )
@@ -535,6 +527,8 @@ class ProjectsHandlers:
                     request.sort_order,
                 )
 
+                user_role = await ops._resolve_role(user_id, organization_id, task)
+
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
@@ -544,13 +538,18 @@ class ProjectsHandlers:
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, subtask_total=p_total, subtask_completed=p_done
+                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
                     )
 
-                spawned_proto = task_to_proto(spawned_task) if spawned_task else None
+                spawned_proto = task_to_proto(spawned_task, user_role) if spawned_task else None
 
                 return TaskResponse(
-                    task=task_to_proto(task, subtask_total=st_total, subtask_completed=st_done),
+                    task=task_to_proto(
+                        task,
+                        user_role,
+                        subtask_total=st_total,
+                        subtask_completed=st_done,
+                    ),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
                 )
@@ -589,8 +588,13 @@ class ProjectsHandlers:
                     list(request.task_ids),
                     **changes,
                 )
+
+                user_role = None
+                if tasks:
+                    user_role = await ops._resolve_role(user_id, organization_id, tasks[0])
+
                 return BulkUpdateTasksResponse(
-                    tasks=[task_to_proto(t) for t in tasks],
+                    tasks=[task_to_proto(t, user_role) for t in tasks],
                     updated_count=len(tasks),
                 )
         except ConnectError:
@@ -638,7 +642,7 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except (NotFoundError, PermissionDeniedError, ValueError):
+                    except NotFoundError, PermissionDeniedError, ValueError:
                         continue
                 return DeleteTasksResponse(success=True, deleted_count=count)
         except ConnectError:
@@ -686,9 +690,7 @@ class ProjectsHandlers:
                     organization_id=organization_id,
                     project_id=project_id,
                     include_deleted=(
-                        request.include_deleted
-                        if request.HasField("include_deleted")
-                        else False
+                        request.include_deleted if request.HasField("include_deleted") else False
                     ),
                     parent_id=parent_id,
                     sprint_id=sprint_id_filter,
@@ -699,6 +701,10 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
+                project_ops = ProjectOperations(session)
+                project = await project_ops.get_by_id(user_id, organization_id, project_id)
+                user_role = await project_ops._resolve_role(user_id, organization_id, project)
+
                 task_ids = [t.id for t in tasks]
                 subtask_counts = await queries.get_subtask_counts(session, task_ids)
 
@@ -706,7 +712,12 @@ class ProjectsHandlers:
                 for t in tasks:
                     st_total, st_done = subtask_counts.get(t.id, (0, 0))
                     task_protos.append(
-                        task_to_proto(t, subtask_total=st_total, subtask_completed=st_done)
+                        task_to_proto(
+                            t,
+                            user_role,
+                            subtask_total=st_total,
+                            subtask_completed=st_done,
+                        )
                     )
 
                 return ListTasksResponse(
@@ -752,9 +763,7 @@ class ProjectsHandlers:
                     project_id=project_id,
                     name=request.name,
                     type=field_type_from_proto(request.type),
-                    is_required=(
-                        request.is_required if request.HasField("is_required") else False
-                    ),
+                    is_required=(request.is_required if request.HasField("is_required") else False),
                     is_system=False,
                     sort_order=request.sort_order if request.HasField("sort_order") else 999,
                     config=config if config else None,
@@ -805,9 +814,7 @@ class ProjectsHandlers:
                     try:
                         field.config = json.loads(request.config_json)
                     except json.JSONDecodeError as exc:
-                        raise ConnectError(
-                            Code.INVALID_ARGUMENT, "Invalid config_json"
-                        ) from exc
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
                     flag_modified(field, "config")
 
                 field.updated_at = datetime.now(UTC)
@@ -934,9 +941,7 @@ class ProjectsHandlers:
                     try:
                         view.config = json.loads(request.config_json)
                     except json.JSONDecodeError as exc:
-                        raise ConnectError(
-                            Code.INVALID_ARGUMENT, "Invalid config_json"
-                        ) from exc
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
                 view.updated_at = datetime.now(UTC)
                 await session.commit()

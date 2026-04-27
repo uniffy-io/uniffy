@@ -78,6 +78,26 @@ services:
     networks:
       - uniffy-network
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: uniffy-redisinsight
+    restart: unless-stopped
+    environment:
+      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
+      RI_REDIS_HOST: valkey
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_PASSWORD: uniffy-valkey-dev
+      RI_REDIS_ALIAS: uniffy-valkey
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      valkey:
+        condition: service_healthy
+    networks:
+      - uniffy-network
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: uniffy-pgadmin
@@ -116,12 +136,35 @@ services:
     networks:
       - uniffy-network
 
+  # Playwright MCP server. Off by default; bring up with the `mcp` profile
+  # (see ./run.sh mcp-up). Exposes an SSE endpoint that Claude Code reaches
+  # via .mcp.json at the repo root, and drives a headless chromium inside
+  # the container. The container reaches the host-side dev stack via
+  # `host.docker.internal` (host-gateway).
+  mcp-playwright:
+    image: mcr.microsoft.com/playwright:v1.59.0-jammy
+    container_name: uniffy-mcp-playwright
+    profiles: ["mcp"]
+    restart: unless-stopped
+    command: >-
+      npx -y @playwright/mcp@latest
+      --port 8931 --host 0.0.0.0
+      --browser chromium --headless --isolated
+    ports:
+      - "8931:8931"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - uniffy-network
+
 volumes:
   postgres_data:
     driver: local
   meilisearch_data:
     driver: local
   valkey_data:
+    driver: local
+  redisinsight_data:
     driver: local
   pgadmin_data:
     driver: local

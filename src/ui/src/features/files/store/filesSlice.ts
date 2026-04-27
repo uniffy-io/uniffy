@@ -156,6 +156,15 @@ interface FilesState {
 
     // Sidebar open/collapsed state (shared across all files pages)
     sidebarOpen: boolean;
+
+    // Current user's storage usage (for sidebar indicator)
+    myStorageUsage: {
+        usedBytes: number;
+        quotaBytes: number | null;
+        usagePercent: number;
+        fileCount: number;
+        loading: boolean;
+    };
 }
 
 // Load persisted view settings
@@ -198,6 +207,13 @@ const initialState: FilesState = {
     isDetailsPanelOpen: false,
     detailsPanelTab: 'info',
     sidebarOpen: true,
+    myStorageUsage: {
+        usedBytes: 0,
+        quotaBytes: null,
+        usagePercent: 0,
+        fileCount: 0,
+        loading: false,
+    },
 };
 
 export const filesSlice = createSlice({
@@ -444,6 +460,23 @@ export const filesSlice = createSlice({
             state.sidebarOpen = !state.sidebarOpen;
         },
 
+        // Set current user's storage usage
+        setMyStorageUsage: (state, action: PayloadAction<{
+            usedBytes: number;
+            quotaBytes: number | null;
+            usagePercent: number;
+            fileCount: number;
+        }>) => {
+            state.myStorageUsage = {
+                ...action.payload,
+                loading: false,
+            };
+        },
+
+        setMyStorageUsageLoading: (state, action: PayloadAction<boolean>) => {
+            state.myStorageUsage.loading = action.payload;
+        },
+
         // Clear all files (for logout)
         clearFiles: (state) => {
             state.files = {};
@@ -602,6 +635,8 @@ export const {
     setDetailsPanelTab,
     toggleSidebar,
     clearFiles,
+    setMyStorageUsage,
+    setMyStorageUsageLoading,
 } = filesSlice.actions;
 
 export const filesReducer = filesSlice.reducer;

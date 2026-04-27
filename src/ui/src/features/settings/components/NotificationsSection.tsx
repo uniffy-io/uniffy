@@ -148,6 +148,28 @@ export function NotificationsSection() {
                 </p>
             </div>
 
+            {/* Real-time Alerts */}
+            <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Real-time Alerts</h2>
+
+                <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="font-medium text-foreground">Show Toast Notifications</div>
+                            <div className="text-sm text-muted-foreground">
+                                Display pop-up alerts when new notifications arrive while you are using Uniffy.
+                                Toasts are suppressed during Zen Mode or when the notification panel is open.
+                            </div>
+                        </div>
+                        <ToggleSwitch
+                            enabled={notifications.toastEnabled}
+                            onChange={(v) => handleToggle('toastEnabled', v)}
+                            disabled={saving}
+                        />
+                    </div>
+                </div>
+            </section>
+
             {/* Browser Notifications */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Browser Notifications</h2>

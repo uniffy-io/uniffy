@@ -49,9 +49,7 @@ class RecurrenceException(SQLModel, table=True):
     event_id: UUID = Field(foreign_key="calendar_events.id", nullable=False, index=True)
     original_date: datetime = Field(sa_column=Column(Date, nullable=False, index=True))
     is_cancelled: bool = Field(default=False, nullable=False)
-    override_event_id: UUID | None = Field(
-        default=None, foreign_key="calendar_events.id"
-    )
+    override_event_id: UUID | None = Field(default=None, foreign_key="calendar_events.id")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

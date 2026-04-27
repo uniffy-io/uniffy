@@ -21,7 +21,7 @@ const getOrganizationId = (state: RootState): string => {
 };
 
 // Helper to convert proto File to serializable plain object
-const fileToPlain = (file: File) => ({
+export const fileToPlain = (file: File) => ({
     id: file.id,
     urn: file.urn,
     organizationId: file.organizationId,

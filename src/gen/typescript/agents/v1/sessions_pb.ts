@@ -969,11 +969,6 @@ export class GetSessionContextRequest extends Message<GetSessionContextRequest> 
    */
   sessionId = "";
 
-  /**
-   * @generated from field: optional int32 max_messages = 3;
-   */
-  maxMessages?: number;
-
   constructor(data?: PartialMessage<GetSessionContextRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -984,7 +979,6 @@ export class GetSessionContextRequest extends Message<GetSessionContextRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "max_messages", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSessionContextRequest {

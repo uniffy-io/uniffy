@@ -39,6 +39,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 from uniffy.core.auth.permissions import (
     ContentAccessQuery,
     PermissionChecker,
+    resolve_access_policy,
     role_can_delete,
     role_can_edit,
     role_can_manage,
@@ -47,7 +48,7 @@ from uniffy.core.auth.permissions import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
 
 class BaseContentOperations[TModel](ABC):
@@ -127,9 +128,7 @@ class BaseContentOperations[TModel](ABC):
         entirely and see all content in the organization. Everyone else
         goes through :meth:`ContentAccessQuery.build_accessible_filter`.
         """
-        query = select(self.model_class).where(
-            self._get_org_id_column() == organization_id
-        )
+        query = select(self.model_class).where(self._get_org_id_column() == organization_id)
 
         if not include_deleted:
             query = query.where(self._get_is_deleted_column() == False)  # noqa: E712
@@ -169,6 +168,28 @@ class BaseContentOperations[TModel](ABC):
     # would violate LSP. Subclasses implement these three methods
     # directly and use the ``_require_*`` / ``_index_for_search``
     # helpers below to stay consistent.
+
+    # Access policy resolution
+
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an ``(access_mode, baseline)`` pair.
+
+        Thin wrapper around :func:`resolve_access_policy` that binds the
+        session and ``content_type`` of this operations class. Called by
+        every domain's ``create()`` path.
+        """
+        return await resolve_access_policy(
+            self.session,
+            organization_id,
+            self.content_type,
+            access_mode,
+            baseline_role,
+        )
 
     # Role resolution
 
@@ -211,9 +232,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        await self._require_role(
-            user_id, organization_id, content, role_can_view, "access"
-        )
+        await self._require_role(user_id, organization_id, content, role_can_view, "access")
 
     async def _require_edit(
         self,
@@ -221,9 +240,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        await self._require_role(
-            user_id, organization_id, content, role_can_edit, "edit"
-        )
+        await self._require_role(user_id, organization_id, content, role_can_edit, "edit")
 
     async def _require_delete(
         self,
@@ -231,9 +248,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        await self._require_role(
-            user_id, organization_id, content, role_can_delete, "delete"
-        )
+        await self._require_role(user_id, organization_id, content, role_can_delete, "delete")
 
     async def _require_manage(
         self,
@@ -241,9 +256,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        await self._require_role(
-            user_id, organization_id, content, role_can_manage, "manage"
-        )
+        await self._require_role(user_id, organization_id, content, role_can_manage, "manage")
 
     async def _require_transfer(
         self,
@@ -251,9 +264,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        await self._require_role(
-            user_id, organization_id, content, role_can_transfer, "transfer"
-        )
+        await self._require_role(user_id, organization_id, content, role_can_transfer, "transfer")
 
     # Search indexing
 
@@ -279,9 +290,12 @@ class BaseContentOperations[TModel](ABC):
         blocked_group_ids: list[UUID] = []
 
         if not skip_member_lookup:
-            shared_user_ids, shared_group_ids, blocked_user_ids, blocked_group_ids = (
-                await self._get_member_id_lists(model.id)
-            )
+            (
+                shared_user_ids,
+                shared_group_ids,
+                blocked_user_ids,
+                blocked_group_ids,
+            ) = await self._get_member_id_lists(model.id)
 
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
@@ -291,9 +305,7 @@ class BaseContentOperations[TModel](ABC):
             url_path=self._get_url_path(model),
             owner_id=model.owner_id,
             access_mode=model.access_mode.value,
-            baseline_role=(
-                model.baseline_role.value if model.baseline_role is not None else None
-            ),
+            baseline_role=(model.baseline_role.value if model.baseline_role is not None else None),
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
             shared_user_ids=shared_user_ids if shared_user_ids else None,
@@ -316,8 +328,7 @@ class BaseContentOperations[TModel](ABC):
                 ContentMember.subject_type,
                 ContentMember.subject_id,
                 ContentMember.role,
-            )
-            .where(
+            ).where(
                 ContentMember.content_type == self.content_type,
                 ContentMember.content_id == content_id,
             )

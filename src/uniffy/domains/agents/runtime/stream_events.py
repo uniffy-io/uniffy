@@ -1,6 +1,7 @@
 """Domain-level stream events for runtime (decoupled from proto)."""
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from uniffy.core.models.agents.message import AgentMessage
 
@@ -18,10 +19,20 @@ class RuntimeTokenEvent(RuntimeStreamEvent):
     ----------
     text : str
         The token text.
+    message_id : UUID | None
+        Id of the placeholder chat row this token patches. Set on the
+        chat-destination path so the translator can emit AGENT_TOKEN_DELTA
+        keyed to the in-flight assistant message. `None` for legacy
+        session-backed streams that have no placeholder row.
+    sequence : int
+        Monotonic per-message counter starting at 1. Lets clients drop
+        late deltas after a reorder. Always `0` when `message_id is None`.
 
     """
 
     text: str
+    message_id: UUID | None = None
+    sequence: int = 0
 
 
 @dataclass
@@ -36,12 +47,17 @@ class RuntimeToolCallEvent(RuntimeStreamEvent):
         Tool function name.
     tool_args : dict
         Tool input arguments.
+    message_id : UUID | None
+        Id of the persisted message the writer created for this tool
+        call. Required for the chat-destination translator; `None` for
+        session-backed invocations.
 
     """
 
     tool_call_id: str
     tool_name: str
     tool_args: dict
+    message_id: UUID | None = None
 
 
 @dataclass
@@ -58,6 +74,9 @@ class RuntimeToolResultEvent(RuntimeStreamEvent):
         Whether the tool executed successfully.
     result : str
         Tool execution result or error message.
+    message_id : UUID | None
+        Id of the persisted tool-result message. `None` for session
+        invocations.
 
     """
 
@@ -65,6 +84,7 @@ class RuntimeToolResultEvent(RuntimeStreamEvent):
     tool_name: str
     success: bool
     result: str
+    message_id: UUID | None = None
 
 
 @dataclass
@@ -115,6 +135,12 @@ class RuntimeConfirmationRequiredEvent(RuntimeStreamEvent):
         Tool input arguments.
     description : str
         Human-readable description of what will happen.
+    request_id : UUID | None
+        Opaque approval-store key; the chat translator publishes this
+        so the RespondToAgentConfirmation RPC can match.
+    message_id : UUID | None
+        Id of the persisted confirmation-request message (chat
+        destination only).
 
     """
 
@@ -122,6 +148,8 @@ class RuntimeConfirmationRequiredEvent(RuntimeStreamEvent):
     tool_name: str
     tool_args: dict
     description: str
+    request_id: UUID | None = None
+    message_id: UUID | None = None
 
 
 @dataclass

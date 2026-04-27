@@ -112,12 +112,35 @@ message CronTaskUsage {
 
 message SendMessageRequest {
   string organization_id = 1;
+  // Legacy: addresses an isolated AgentSession. Used by the builder Test
+  // tab and historical playgrounds.
   string session_id = 2;
   string content = 3;
   // IDs of uploaded files to include (uploaded via FilesService)
   repeated string file_ids = 4;
   // IANA timezone of the user's browser (e.g. "America/New_York")
   string user_timezone = 5;
+  // New: invokes the agent inside a chat channel. When set, the runtime
+  // reads context from chat_messages (scoped per the channel binding) and
+  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // exclusive with session_id at the handler boundary.
+  optional ChatChannelContext chat_context = 6;
+}
+
+// ChatChannelContext binds an agent invocation to a chat channel and
+// the user message that triggered it. Used by the AgentChatBridge to
+// build the scoped context window and route streaming output.
+message ChatChannelContext {
+  string channel_id = 1;
+  string agent_id = 2;
+  // The chat message that triggered this invocation (the user's message
+  // containing the @mention, reply, or DM payload).
+  string trigger_message_id = 3;
+  // Optional ephemeral prompt hint for embedded Agent Dock invocations.
+  // Format: URN of the resource the user is currently viewing. Injected
+  // into the system prompt for THIS invocation only; not persisted as a
+  // chat message and does not branch the channel.
+  optional string context_urn = 4;
 }
 
 message SendMessageResponse {

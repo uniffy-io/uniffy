@@ -275,6 +275,7 @@ generate_image = ToolDefinition(
     },
     executor=_execute_generate_image,
     destructive=False,
+    timeout_seconds=60,
 )
 
 IMAGES_TOOLS: list[ToolDefinition] = [generate_image]

@@ -157,9 +157,7 @@ class ChatCategoryOperations:
         )
         await self.session.commit()
 
-    async def _require_org_admin(
-        self, user_id: UUID, organization_id: UUID
-    ) -> None:
+    async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
         """Verify user is org admin/owner or chat domain admin."""
         if await self.access.is_org_admin(user_id, organization_id):
             return

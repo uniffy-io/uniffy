@@ -137,6 +137,7 @@ SUBJECT_TYPE_TO_PROTO: dict[DomainSubjectType, ProtoSubjectType.ValueType] = {
     DomainSubjectType.USER: ProtoSubjectType.SUBJECT_TYPE_USER,
     DomainSubjectType.GROUP: ProtoSubjectType.SUBJECT_TYPE_GROUP,
     DomainSubjectType.ORGANIZATION: ProtoSubjectType.SUBJECT_TYPE_ORGANIZATION,
+    DomainSubjectType.AGENT: ProtoSubjectType.SUBJECT_TYPE_AGENT,
 }
 
 SUBJECT_TYPE_FROM_PROTO: dict[ProtoSubjectType.ValueType, DomainSubjectType] = {

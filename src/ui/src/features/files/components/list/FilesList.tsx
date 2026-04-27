@@ -6,8 +6,10 @@
 
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
+    File,
     Folder,
     FolderPlus,
+    FolderOpen,
     List,
     SquaresFour,
     CloudArrowUp,
@@ -26,6 +28,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { renderIcon } from '@/components/icon-picker';
 import { useNavigate } from 'react-router-dom';
@@ -99,6 +102,7 @@ interface FilesListProps {
     onDownload?: (fileId: string) => void;
     onBulkDownload?: (items: FileDownloadItem[]) => Promise<void>;
     onUpload?: () => void;
+    onUploadFolder?: () => void;
     onCreateFolder?: () => void;
     onToggleSidebar?: () => void;
     folderTree?: {
@@ -108,7 +112,7 @@ interface FilesListProps {
     };
 }
 
-export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload, onUpload, onCreateFolder, onToggleSidebar, folderTree }: FilesListProps) {
+export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload, onUpload, onUploadFolder, onCreateFolder, onToggleSidebar, folderTree }: FilesListProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { isMobile } = useBreakpoint();
@@ -293,12 +297,29 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         [dispatch, scopedFiles]
     );
 
-    const handleDeleteFile = useCallback(
+    // Pending delete confirmation (single file, single folder, or bulk)
+    const [pendingDelete, setPendingDelete] = useState<
+        | { kind: 'file'; id: string; name: string }
+        | { kind: 'folder'; id: string; name: string }
+        | { kind: 'bulk'; fileIds: string[]; folderIds: string[] }
+        | null
+    >(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const executeDeleteFile = useCallback(
         async (fileId: string) => {
             await dispatch(deleteFile({ fileId }));
             dispatch(fetchFilesTree({ includeFiles: false }));
         },
         [dispatch]
+    );
+
+    const handleDeleteFile = useCallback(
+        (fileId: string) => {
+            const file = filesMap[fileId];
+            setPendingDelete({ kind: 'file', id: fileId, name: file?.filename ?? 'this file' });
+        },
+        [filesMap]
     );
 
     const handleDownload = useCallback(
@@ -518,24 +539,31 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const totalSelectedCount = selectedFileIds.length + selectedFolderIds.length;
 
     // Bulk actions
-    const handleBulkDelete = useCallback(async () => {
+    const executeBulkDelete = useCallback(
+        async (fileIds: string[], folderIds: string[]) => {
+            setBulkActionLoading(true);
+            try {
+                // Delete folders first
+                for (const folderId of folderIds) {
+                    await dispatch(deleteFolder({ folderId, recursive: true }));
+                }
+                // Then delete files
+                for (const fileId of fileIds) {
+                    await dispatch(deleteFile({ fileId }));
+                }
+                dispatch(clearSelection());
+                dispatch(fetchFilesTree({ includeFiles: false }));
+            } finally {
+                setBulkActionLoading(false);
+            }
+        },
+        [dispatch]
+    );
+
+    const handleBulkDelete = useCallback(() => {
         if (totalSelectedCount === 0) return;
-        setBulkActionLoading(true);
-        try {
-            // Delete folders first
-            for (const folderId of selectedFolderIds) {
-                await dispatch(deleteFolder({ folderId, recursive: true }));
-            }
-            // Then delete files
-            for (const fileId of selectedFileIds) {
-                await dispatch(deleteFile({ fileId }));
-            }
-            dispatch(clearSelection());
-            dispatch(fetchFilesTree({ includeFiles: false }));
-        } finally {
-            setBulkActionLoading(false);
-        }
-    }, [dispatch, selectedFileIds, selectedFolderIds, totalSelectedCount]);
+        setPendingDelete({ kind: 'bulk', fileIds: [...selectedFileIds], folderIds: [...selectedFolderIds] });
+    }, [selectedFileIds, selectedFolderIds, totalSelectedCount]);
 
     // Build a file info array for folder content lookup (use allFiles for recursive downloads)
     const filesForDownload = allFiles || files;
@@ -583,12 +611,20 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     }, [selectedFileIds, selectedFolderIds, onBulkDownload, onDownload, folderTree, allFilesInfo]);
 
     // Folder action handlers (must be after allFilesInfo is defined)
-    const handleDeleteFolderAction = useCallback(
+    const executeDeleteFolder = useCallback(
         async (folderId: string) => {
             await dispatch(deleteFolder({ folderId, recursive: true }));
             dispatch(fetchFilesTree({ includeFiles: false }));
         },
         [dispatch]
+    );
+
+    const handleDeleteFolderAction = useCallback(
+        (folderId: string) => {
+            const folder = folders[folderId];
+            setPendingDelete({ kind: 'folder', id: folderId, name: folder?.name ?? 'this folder' });
+        },
+        [folders]
     );
 
     const handleDownloadFolder = useCallback(
@@ -933,8 +969,20 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 }}
                                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                             >
-                                <CloudArrowUp size={16} className="text-primary" />
+                                <File size={16} weight="duotone" className="text-primary" />
                                 Upload Files
+                            </button>
+                        )}
+                        {onUploadFolder && (
+                            <button
+                                onClick={() => {
+                                    onUploadFolder();
+                                    setContextMenu(null);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                            >
+                                <FolderOpen size={16} weight="duotone" className="text-primary" />
+                                Upload Folder
                             </button>
                         )}
                         {onCreateFolder && (
@@ -966,12 +1014,20 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                         <>
                             <p className="text-lg font-medium">No files yet</p>
                             <p className="text-sm mb-4">Right-click to upload files or create a folder</p>
-                            {onUpload && (
-                                <Button size="md" onClick={onUpload}>
-                                    <CloudArrowUp size={16} />
-                                    Upload Files
-                                </Button>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {onUpload && (
+                                    <Button size="md" onClick={onUpload}>
+                                        <CloudArrowUp size={16} />
+                                        Upload Files
+                                    </Button>
+                                )}
+                                {onUploadFolder && (
+                                    <Button size="md" variant="outline" onClick={onUploadFolder}>
+                                        <FolderOpen size={16} weight="duotone" />
+                                        Upload Folder
+                                    </Button>
+                                )}
+                            </div>
                         </>
                     )}
                 </div>
@@ -1101,6 +1157,46 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 currentAccessMode={moveCurrentAccessMode}
                 currentFolderId={moveCurrentFolderId}
                 itemName={moveItemName}
+            />
+
+            <ConfirmDialog
+                isOpen={pendingDelete !== null}
+                onClose={() => {
+                    if (!deleteLoading) setPendingDelete(null);
+                }}
+                onConfirm={async () => {
+                    if (!pendingDelete) return;
+                    setDeleteLoading(true);
+                    try {
+                        if (pendingDelete.kind === 'file') {
+                            await executeDeleteFile(pendingDelete.id);
+                        } else if (pendingDelete.kind === 'folder') {
+                            await executeDeleteFolder(pendingDelete.id);
+                        } else {
+                            await executeBulkDelete(pendingDelete.fileIds, pendingDelete.folderIds);
+                        }
+                        setPendingDelete(null);
+                    } finally {
+                        setDeleteLoading(false);
+                    }
+                }}
+                title={
+                    pendingDelete?.kind === 'folder'
+                        ? 'Delete folder?'
+                        : pendingDelete?.kind === 'bulk'
+                            ? 'Delete selected items?'
+                            : 'Delete file?'
+                }
+                message={
+                    pendingDelete?.kind === 'folder'
+                        ? `"${pendingDelete.name}" and everything inside it will be moved to the trash.`
+                        : pendingDelete?.kind === 'bulk'
+                            ? `${pendingDelete.folderIds.length + pendingDelete.fileIds.length} item${pendingDelete.folderIds.length + pendingDelete.fileIds.length === 1 ? '' : 's'} will be moved to the trash. Folders will be deleted recursively.`
+                            : `"${pendingDelete?.name ?? 'This file'}" will be moved to the trash.`
+                }
+                confirmLabel="Delete"
+                variant="danger"
+                loading={deleteLoading}
             />
         </div>
     );

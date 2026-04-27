@@ -134,7 +134,7 @@ export function ChatMentionPopup({
             <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[999] animate-in fade-in-0 duration-150" />
 
             {/* Centered popup */}
-            <div className="fixed inset-0 z-[1000] flex items-start justify-center pt-[15vh]">
+            <div className="fixed inset-0 z-[1000] flex items-start justify-center pt-[15vh]" data-testid="chat-mention-popup">
                 <div
                     ref={popupRef}
                     className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
@@ -161,6 +161,7 @@ export function ChatMentionPopup({
                                 autoCorrect="off"
                                 autoCapitalize="off"
                                 spellCheck={false}
+                                data-testid="chat-mention-popup-input"
                             />
                             <div className="absolute right-4 flex items-center gap-2">
                                 {searchQuery && (

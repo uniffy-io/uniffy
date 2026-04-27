@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause } from '@phosphor-icons/react';
+import { Play, Pause, MusicNote } from '@phosphor-icons/react';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
 
 interface AudioBlockProps {
@@ -128,7 +128,7 @@ function drawWaveform(
     }
 }
 
-export function AudioBlock({ src, selected }: AudioBlockProps) {
+export function AudioBlock({ src, title, selected }: AudioBlockProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const peaksRef = useRef<Float32Array>(new Float32Array(0));
@@ -352,6 +352,12 @@ export function AudioBlock({ src, selected }: AudioBlockProps) {
 
     return (
         <div className={`audio-block-container${selected ? ' audio-block-selected' : ''}`}>
+            {title && (
+                <div className="audio-block-header">
+                    <MusicNote size={14} weight="bold" />
+                    <span className="audio-block-header-title">{title}</span>
+                </div>
+            )}
             {/* Hidden audio element for Range-based streaming playback */}
             <audio ref={audioRef} preload="metadata" style={{ display: 'none' }} />
 

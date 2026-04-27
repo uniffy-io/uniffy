@@ -42,6 +42,9 @@ export interface FileCardProps {
     isChecked: boolean;
     onToggleCheck: (id: string, shiftKey: boolean) => void;
     canShare?: boolean;
+    trashMode?: boolean;
+    onRestore?: (id: string) => void;
+    canRestore?: boolean;
 }
 
 export function FileCard({
@@ -62,6 +65,9 @@ export function FileCard({
     isChecked,
     onToggleCheck,
     canShare = true,
+    trashMode = false,
+    onRestore,
+    canRestore = true,
 }: FileCardProps) {
     const navigate = useNavigate();
     const { isMobile } = useBreakpoint();
@@ -319,6 +325,9 @@ export function FileCard({
                         onEditTags={handleEditTagsClick}
                         onMove={() => onMove(file.id)}
                         canShare={canShare}
+                        trashMode={trashMode}
+                        onRestore={onRestore ? () => onRestore(file.id) : undefined}
+                        canRestore={canRestore}
                     />
                 )}
             </div>
@@ -384,9 +393,9 @@ export function FileCard({
             </div>
 
             {/* File info */}
-            <div className={cn("p-2", config.iconSize >= 48 && "p-3")}>
+            <div className={cn("p-2 min-w-0 overflow-hidden", config.iconSize >= 48 && "p-3")}>
                 {isRenaming ? (
-                    <div onClick={(e) => e.stopPropagation()}>
+                    <div onClick={(e) => e.stopPropagation()} className="min-w-0">
                         <RenameInput
                             initialValue={file.filename}
                             onConfirm={handleRenameConfirm}
@@ -474,6 +483,9 @@ export function FileCard({
                     onEditTags={handleEditTagsClick}
                     onMove={() => onMove(file.id)}
                     canShare={canShare}
+                    trashMode={trashMode}
+                    onRestore={onRestore ? () => onRestore(file.id) : undefined}
+                    canRestore={canRestore}
                 />
             )}
         </div>

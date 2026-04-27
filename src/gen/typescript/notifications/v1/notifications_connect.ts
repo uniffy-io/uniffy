@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteNotificationRequest, DeleteNotificationResponse, GetUnreadCountRequest, GetUnreadCountResponse, GetVapidPublicKeyRequest, GetVapidPublicKeyResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, StreamNotificationEvent, StreamNotificationsRequest, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
+import { BulkDeleteNotificationsRequest, BulkDeleteNotificationsResponse, BulkMarkAsReadRequest, BulkMarkAsReadResponse, DeleteNotificationRequest, DeleteNotificationResponse, GetNotificationStatsRequest, GetNotificationStatsResponse, GetUnreadCountRequest, GetUnreadCountResponse, GetVapidPublicKeyRequest, GetVapidPublicKeyResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, SearchNotificationsRequest, SearchNotificationsResponse, StreamNotificationEvent, StreamNotificationsRequest, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -111,6 +111,50 @@ export const NotificationsService = {
       name: "GetVapidPublicKey",
       I: GetVapidPublicKeyRequest,
       O: GetVapidPublicKeyResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Search notifications with full-text search and advanced filters
+     *
+     * @generated from rpc notifications.v1.NotificationsService.SearchNotifications
+     */
+    searchNotifications: {
+      name: "SearchNotifications",
+      I: SearchNotificationsRequest,
+      O: SearchNotificationsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get aggregated notification statistics for analytics
+     *
+     * @generated from rpc notifications.v1.NotificationsService.GetNotificationStats
+     */
+    getNotificationStats: {
+      name: "GetNotificationStats",
+      I: GetNotificationStatsRequest,
+      O: GetNotificationStatsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Mark multiple notifications as read in bulk
+     *
+     * @generated from rpc notifications.v1.NotificationsService.BulkMarkAsRead
+     */
+    bulkMarkAsRead: {
+      name: "BulkMarkAsRead",
+      I: BulkMarkAsReadRequest,
+      O: BulkMarkAsReadResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Delete multiple notifications in bulk
+     *
+     * @generated from rpc notifications.v1.NotificationsService.BulkDeleteNotifications
+     */
+    bulkDeleteNotifications: {
+      name: "BulkDeleteNotifications",
+      I: BulkDeleteNotificationsRequest,
+      O: BulkDeleteNotificationsResponse,
       kind: MethodKind.Unary,
     },
   }

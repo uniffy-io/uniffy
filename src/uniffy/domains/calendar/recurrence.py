@@ -96,7 +96,7 @@ def expand_recurrence(
     # Resolve the event's local timezone to preserve wall-clock time across DST
     try:
         tz = ZoneInfo(timezone)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         tz = ZoneInfo("UTC")
 
     # Convert master start/end to local time to extract wall-clock hour/minute
@@ -178,15 +178,24 @@ def _generate_occurrence_dates(
         return _expand_daily(event_start_date, interval, days_of_week, *args)
     elif pattern == RecurrencePattern.WEEKLY:
         return _expand_weekly(
-            event_start_date, interval, days_of_week, *args,
+            event_start_date,
+            interval,
+            days_of_week,
+            *args,
         )
     elif pattern == RecurrencePattern.BIWEEKLY:
         return _expand_weekly(
-            event_start_date, interval * 2, days_of_week, *args,
+            event_start_date,
+            interval * 2,
+            days_of_week,
+            *args,
         )
     elif pattern == RecurrencePattern.MONTHLY:
         return _expand_monthly(
-            event_start_date, interval, day_of_month, *args,
+            event_start_date,
+            interval,
+            day_of_month,
+            *args,
         )
     elif pattern == RecurrencePattern.YEARLY:
         return _expand_yearly(event_start_date, interval, *args)
@@ -207,9 +216,7 @@ def _expand_daily(
     # If all 7 days or no filter specified, allow all days
     allowed_weekdays: set[int] | None = None
     if days_of_week and len(days_of_week) < 7:
-        allowed_weekdays = {
-            _DAY_OF_WEEK_TO_INT[d] for d in days_of_week if d in _DAY_OF_WEEK_TO_INT
-        }
+        allowed_weekdays = {_DAY_OF_WEEK_TO_INT[d] for d in days_of_week if d in _DAY_OF_WEEK_TO_INT}
 
     results: list[date] = []
     count = 0
@@ -244,9 +251,7 @@ def _expand_weekly(
     """Expand weekly recurrence with specific days of the week."""
     # Default to the event's start day if no days specified
     if days_of_week:
-        target_days = sorted(
-            {_DAY_OF_WEEK_TO_INT.get(d, start.weekday()) for d in days_of_week}
-        )
+        target_days = sorted({_DAY_OF_WEEK_TO_INT.get(d, start.weekday()) for d in days_of_week})
     else:
         target_days = [start.weekday()]
 

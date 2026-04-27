@@ -4,12 +4,15 @@ Revision ID: 004
 Revises: 003
 Create Date: 2026-01-20
 
+Consolidates (original dates):
+  - notes_notes (2026-01-20)
+  - inline_tags column (2026-01-25)
+  - canvas_content + CANVAS node type (2026-02-18)
 """
 
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
@@ -19,11 +22,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _access_mode_enum = postgresql.ENUM(
-    "OWNER_ONLY",
-    "EXPLICIT_MEMBERS",
-    "OPEN_TO_ORG",
-    name="accessmode",
-    create_type=False,
+    "OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG", name="accessmode", create_type=False
 )
 _content_role_enum = postgresql.ENUM(
     "OWNER",
@@ -52,22 +51,24 @@ def upgrade() -> None:
         ),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("node_type", _node_type_enum, nullable=False, server_default="NOTE"),
-        sa.Column("title", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
-        sa.Column(
-            "content", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default="''"
-        ),
-        sa.Column("slug", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column("title", sa.String(500), nullable=False),
+        sa.Column("content", sa.Text(), nullable=False, server_default=""),
+        sa.Column("canvas_content", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("slug", sa.String(500), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("inline_tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("note_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column("outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
         sa.Column(
             "content_search",
             postgresql.TSVECTOR(),
-            server_default=sa.text("to_tsvector('english', '')"),
             nullable=True,
+            server_default=sa.text("to_tsvector('english', '')"),
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -77,14 +78,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["parent_id"], ["notes_notes.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_notes_notes_organization_id", "notes_notes", ["organization_id"], unique=False
-    )
-    op.create_index("ix_notes_notes_owner_id", "notes_notes", ["owner_id"], unique=False)
-    op.create_index("ix_notes_notes_access_mode", "notes_notes", ["access_mode"], unique=False)
-    op.create_index("ix_notes_notes_node_type", "notes_notes", ["node_type"], unique=False)
-    op.create_index("ix_notes_notes_slug", "notes_notes", ["slug"], unique=False)
-    op.create_index("ix_notes_notes_parent_id", "notes_notes", ["parent_id"], unique=False)
+    op.create_index("ix_notes_notes_organization_id", "notes_notes", ["organization_id"])
+    op.create_index("ix_notes_notes_owner_id", "notes_notes", ["owner_id"])
+    op.create_index("ix_notes_notes_access_mode", "notes_notes", ["access_mode"])
+    op.create_index("ix_notes_notes_node_type", "notes_notes", ["node_type"])
+    op.create_index("ix_notes_notes_slug", "notes_notes", ["slug"])
+    op.create_index("ix_notes_notes_parent_id", "notes_notes", ["parent_id"])
 
 
 def downgrade() -> None:

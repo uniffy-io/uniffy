@@ -19,7 +19,7 @@ from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.shared import AttendeeStatus, NotificationType
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 
 
 def _format_reminder_interval(minutes: int) -> str:
@@ -148,7 +148,7 @@ async def check_calendar_reminders(ctx: dict[str, Any]) -> dict[str, Any]:
 
     """
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             count = await _process_due_reminders(session)
             if count > 0:
                 logger.info(f"Processed {count} calendar reminder(s)")

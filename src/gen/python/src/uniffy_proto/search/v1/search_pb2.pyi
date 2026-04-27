@@ -36,7 +36,14 @@ SEARCH_RESULT_TYPE_CHAT_MESSAGE: SearchResultType
 SEARCH_RESULT_TYPE_ROOM: SearchResultType
 
 class SearchRequest(_message.Message):
-    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "exclude_types")
+    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "exclude_types", "metadata_filters")
+    class MetadataFiltersEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TYPE_FILTERS_FIELD_NUMBER: _ClassVar[int]
@@ -46,6 +53,7 @@ class SearchRequest(_message.Message):
     MY_CONTENT_ONLY_FIELD_NUMBER: _ClassVar[int]
     OWNER_FILTER_FIELD_NUMBER: _ClassVar[int]
     EXCLUDE_TYPES_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FILTERS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     query: str
     type_filters: _containers.RepeatedScalarFieldContainer[SearchResultType]
@@ -55,7 +63,8 @@ class SearchRequest(_message.Message):
     my_content_only: bool
     owner_filter: str
     exclude_types: _containers.RepeatedScalarFieldContainer[SearchResultType]
-    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., exclude_types: _Optional[_Iterable[_Union[SearchResultType, str]]] = ...) -> None: ...
+    metadata_filters: _containers.ScalarMap[str, str]
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., exclude_types: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., metadata_filters: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
     __slots__ = ("items",)
@@ -177,7 +186,7 @@ class ResolveUrnsResponse(_message.Message):
     def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
 
 class UrnMetadata(_message.Message):
-    __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name")
+    __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name", "priority", "priority_label", "priority_color", "status_label", "status_color", "task_type", "task_number", "project_name", "project_slug", "project_color", "subtask_completed", "subtask_total", "blocked_by_count", "event_start_time", "event_end_time", "event_is_all_day", "event_location", "event_meeting_url", "file_mime_type", "file_size", "note_node_type", "channel_type", "agent_emoji", "agent_theme_color", "user_avatar_url", "user_email", "assignee_ids", "content_tags")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -198,6 +207,34 @@ class UrnMetadata(_message.Message):
     TOTAL_TASKS_FIELD_NUMBER: _ClassVar[int]
     MEMBER_COUNT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_BY_NAME_FIELD_NUMBER: _ClassVar[int]
+    PRIORITY_FIELD_NUMBER: _ClassVar[int]
+    PRIORITY_LABEL_FIELD_NUMBER: _ClassVar[int]
+    PRIORITY_COLOR_FIELD_NUMBER: _ClassVar[int]
+    STATUS_LABEL_FIELD_NUMBER: _ClassVar[int]
+    STATUS_COLOR_FIELD_NUMBER: _ClassVar[int]
+    TASK_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TASK_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_NAME_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_SLUG_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_COLOR_FIELD_NUMBER: _ClassVar[int]
+    SUBTASK_COMPLETED_FIELD_NUMBER: _ClassVar[int]
+    SUBTASK_TOTAL_FIELD_NUMBER: _ClassVar[int]
+    BLOCKED_BY_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EVENT_START_TIME_FIELD_NUMBER: _ClassVar[int]
+    EVENT_END_TIME_FIELD_NUMBER: _ClassVar[int]
+    EVENT_IS_ALL_DAY_FIELD_NUMBER: _ClassVar[int]
+    EVENT_LOCATION_FIELD_NUMBER: _ClassVar[int]
+    EVENT_MEETING_URL_FIELD_NUMBER: _ClassVar[int]
+    FILE_MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    NOTE_NODE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_TYPE_FIELD_NUMBER: _ClassVar[int]
+    AGENT_EMOJI_FIELD_NUMBER: _ClassVar[int]
+    AGENT_THEME_COLOR_FIELD_NUMBER: _ClassVar[int]
+    USER_AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    USER_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    ASSIGNEE_IDS_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TAGS_FIELD_NUMBER: _ClassVar[int]
     title: str
     description: str
     type: SearchResultType
@@ -211,4 +248,32 @@ class UrnMetadata(_message.Message):
     total_tasks: int
     member_count: int
     updated_by_name: str
-    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., status: _Optional[str] = ..., due_date: _Optional[str] = ..., assignee_name: _Optional[str] = ..., processing_status: _Optional[str] = ..., completed_tasks: _Optional[int] = ..., total_tasks: _Optional[int] = ..., member_count: _Optional[int] = ..., updated_by_name: _Optional[str] = ...) -> None: ...
+    priority: str
+    priority_label: str
+    priority_color: str
+    status_label: str
+    status_color: str
+    task_type: str
+    task_number: int
+    project_name: str
+    project_slug: str
+    project_color: str
+    subtask_completed: int
+    subtask_total: int
+    blocked_by_count: int
+    event_start_time: str
+    event_end_time: str
+    event_is_all_day: bool
+    event_location: str
+    event_meeting_url: str
+    file_mime_type: str
+    file_size: int
+    note_node_type: str
+    channel_type: str
+    agent_emoji: str
+    agent_theme_color: str
+    user_avatar_url: str
+    user_email: str
+    assignee_ids: _containers.RepeatedScalarFieldContainer[str]
+    content_tags: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., status: _Optional[str] = ..., due_date: _Optional[str] = ..., assignee_name: _Optional[str] = ..., processing_status: _Optional[str] = ..., completed_tasks: _Optional[int] = ..., total_tasks: _Optional[int] = ..., member_count: _Optional[int] = ..., updated_by_name: _Optional[str] = ..., priority: _Optional[str] = ..., priority_label: _Optional[str] = ..., priority_color: _Optional[str] = ..., status_label: _Optional[str] = ..., status_color: _Optional[str] = ..., task_type: _Optional[str] = ..., task_number: _Optional[int] = ..., project_name: _Optional[str] = ..., project_slug: _Optional[str] = ..., project_color: _Optional[str] = ..., subtask_completed: _Optional[int] = ..., subtask_total: _Optional[int] = ..., blocked_by_count: _Optional[int] = ..., event_start_time: _Optional[str] = ..., event_end_time: _Optional[str] = ..., event_is_all_day: _Optional[bool] = ..., event_location: _Optional[str] = ..., event_meeting_url: _Optional[str] = ..., file_mime_type: _Optional[str] = ..., file_size: _Optional[int] = ..., note_node_type: _Optional[str] = ..., channel_type: _Optional[str] = ..., agent_emoji: _Optional[str] = ..., agent_theme_color: _Optional[str] = ..., user_avatar_url: _Optional[str] = ..., user_email: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., content_tags: _Optional[_Iterable[str]] = ...) -> None: ...

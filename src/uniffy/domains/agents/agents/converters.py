@@ -9,10 +9,24 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.types import ContentRole
 
 
-def agent_to_proto(agent: Agent) -> AgentInfo:
-    """Convert an :class:`Agent` row to its proto representation."""
+def agent_to_proto(
+    agent: Agent,
+    user_role: ContentRole | None = None,
+) -> AgentInfo:
+    """Convert an :class:`Agent` row to its proto representation.
+
+    Parameters
+    ----------
+    agent : Agent
+        Agent row.
+    user_role : ContentRole | None
+        Effective role of the requesting user, if known. Set this when
+        the proto will travel to the frontend so the UI can render the
+        correct edit/share affordances; omit for internal callers.
+    """
     avatar_url = get_avatar_url(
         agent.id,
         agent.avatar_key,
@@ -49,5 +63,7 @@ def agent_to_proto(agent: Agent) -> AgentInfo:
 
     if agent.baseline_role is not None:
         proto.baseline_role = content_role_to_proto(agent.baseline_role)
+    if user_role is not None:
+        proto.user_role = content_role_to_proto(user_role)
 
     return proto

@@ -1354,3 +1354,561 @@ export class GetVapidPublicKeyResponse extends Message<GetVapidPublicKeyResponse
   }
 }
 
+/**
+ * Request to search notifications with full-text and filters
+ *
+ * @generated from message notifications.v1.SearchNotificationsRequest
+ */
+export class SearchNotificationsRequest extends Message<SearchNotificationsRequest> {
+  /**
+   * Organization context
+   *
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * Free-text search query (matches title and body)
+   *
+   * @generated from field: string query = 2;
+   */
+  query = "";
+
+  /**
+   * Page number (1-indexed)
+   *
+   * @generated from field: int32 page = 3;
+   */
+  page = 0;
+
+  /**
+   * Page size (default 20)
+   *
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize = 0;
+
+  /**
+   * Filter by read status (omit for all)
+   *
+   * @generated from field: optional bool is_read = 5;
+   */
+  isRead?: boolean;
+
+  /**
+   * Filter by notification types
+   *
+   * @generated from field: repeated notifications.v1.NotificationType notification_types = 6;
+   */
+  notificationTypes: NotificationType[] = [];
+
+  /**
+   * Filter by date range start (inclusive)
+   *
+   * @generated from field: google.protobuf.Timestamp date_from = 7;
+   */
+  dateFrom?: Timestamp;
+
+  /**
+   * Filter by date range end (inclusive)
+   *
+   * @generated from field: google.protobuf.Timestamp date_to = 8;
+   */
+  dateTo?: Timestamp;
+
+  /**
+   * Filter by actor user ID
+   *
+   * @generated from field: string actor_id = 9;
+   */
+  actorId = "";
+
+  constructor(data?: PartialMessage<SearchNotificationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.SearchNotificationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "is_read", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 6, name: "notification_types", kind: "enum", T: proto3.getEnumType(NotificationType), repeated: true },
+    { no: 7, name: "date_from", kind: "message", T: Timestamp },
+    { no: 8, name: "date_to", kind: "message", T: Timestamp },
+    { no: 9, name: "actor_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchNotificationsRequest {
+    return new SearchNotificationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SearchNotificationsRequest {
+    return new SearchNotificationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SearchNotificationsRequest {
+    return new SearchNotificationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SearchNotificationsRequest | PlainMessage<SearchNotificationsRequest> | undefined, b: SearchNotificationsRequest | PlainMessage<SearchNotificationsRequest> | undefined): boolean {
+    return proto3.util.equals(SearchNotificationsRequest, a, b);
+  }
+}
+
+/**
+ * Response for search notifications
+ *
+ * @generated from message notifications.v1.SearchNotificationsResponse
+ */
+export class SearchNotificationsResponse extends Message<SearchNotificationsResponse> {
+  /**
+   * Matching notifications
+   *
+   * @generated from field: repeated notifications.v1.Notification notifications = 1;
+   */
+  notifications: Notification[] = [];
+
+  /**
+   * Total count matching filters
+   *
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  /**
+   * Number of unread notifications (regardless of filters)
+   *
+   * @generated from field: int32 unread_count = 3;
+   */
+  unreadCount = 0;
+
+  constructor(data?: PartialMessage<SearchNotificationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.SearchNotificationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "notifications", kind: "message", T: Notification, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "unread_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchNotificationsResponse {
+    return new SearchNotificationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SearchNotificationsResponse {
+    return new SearchNotificationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SearchNotificationsResponse {
+    return new SearchNotificationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SearchNotificationsResponse | PlainMessage<SearchNotificationsResponse> | undefined, b: SearchNotificationsResponse | PlainMessage<SearchNotificationsResponse> | undefined): boolean {
+    return proto3.util.equals(SearchNotificationsResponse, a, b);
+  }
+}
+
+/**
+ * Request to get notification statistics
+ *
+ * @generated from message notifications.v1.GetNotificationStatsRequest
+ */
+export class GetNotificationStatsRequest extends Message<GetNotificationStatsRequest> {
+  /**
+   * Organization context
+   *
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * Number of days to include in stats (default 30)
+   *
+   * @generated from field: int32 days = 2;
+   */
+  days = 0;
+
+  constructor(data?: PartialMessage<GetNotificationStatsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.GetNotificationStatsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNotificationStatsRequest {
+    return new GetNotificationStatsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNotificationStatsRequest {
+    return new GetNotificationStatsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNotificationStatsRequest {
+    return new GetNotificationStatsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNotificationStatsRequest | PlainMessage<GetNotificationStatsRequest> | undefined, b: GetNotificationStatsRequest | PlainMessage<GetNotificationStatsRequest> | undefined): boolean {
+    return proto3.util.equals(GetNotificationStatsRequest, a, b);
+  }
+}
+
+/**
+ * Stat entry for a single day
+ *
+ * @generated from message notifications.v1.DailyNotificationStat
+ */
+export class DailyNotificationStat extends Message<DailyNotificationStat> {
+  /**
+   * Date string (YYYY-MM-DD)
+   *
+   * @generated from field: string date = 1;
+   */
+  date = "";
+
+  /**
+   * Total notifications on this day
+   *
+   * @generated from field: int32 total = 2;
+   */
+  total = 0;
+
+  /**
+   * Unread notifications on this day
+   *
+   * @generated from field: int32 unread = 3;
+   */
+  unread = 0;
+
+  /**
+   * Read notifications on this day
+   *
+   * @generated from field: int32 read = 4;
+   */
+  read = 0;
+
+  constructor(data?: PartialMessage<DailyNotificationStat>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.DailyNotificationStat";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "date", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "unread", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "read", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DailyNotificationStat {
+    return new DailyNotificationStat().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DailyNotificationStat {
+    return new DailyNotificationStat().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DailyNotificationStat {
+    return new DailyNotificationStat().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DailyNotificationStat | PlainMessage<DailyNotificationStat> | undefined, b: DailyNotificationStat | PlainMessage<DailyNotificationStat> | undefined): boolean {
+    return proto3.util.equals(DailyNotificationStat, a, b);
+  }
+}
+
+/**
+ * Stat entry for a notification type
+ *
+ * @generated from message notifications.v1.TypeNotificationStat
+ */
+export class TypeNotificationStat extends Message<TypeNotificationStat> {
+  /**
+   * Notification type
+   *
+   * @generated from field: notifications.v1.NotificationType notification_type = 1;
+   */
+  notificationType = NotificationType.UNSPECIFIED;
+
+  /**
+   * Count of notifications of this type
+   *
+   * @generated from field: int32 count = 2;
+   */
+  count = 0;
+
+  constructor(data?: PartialMessage<TypeNotificationStat>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.TypeNotificationStat";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "notification_type", kind: "enum", T: proto3.getEnumType(NotificationType) },
+    { no: 2, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeNotificationStat {
+    return new TypeNotificationStat().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeNotificationStat {
+    return new TypeNotificationStat().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeNotificationStat {
+    return new TypeNotificationStat().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeNotificationStat | PlainMessage<TypeNotificationStat> | undefined, b: TypeNotificationStat | PlainMessage<TypeNotificationStat> | undefined): boolean {
+    return proto3.util.equals(TypeNotificationStat, a, b);
+  }
+}
+
+/**
+ * Response with notification statistics
+ *
+ * @generated from message notifications.v1.GetNotificationStatsResponse
+ */
+export class GetNotificationStatsResponse extends Message<GetNotificationStatsResponse> {
+  /**
+   * Daily breakdown
+   *
+   * @generated from field: repeated notifications.v1.DailyNotificationStat daily_stats = 1;
+   */
+  dailyStats: DailyNotificationStat[] = [];
+
+  /**
+   * Breakdown by type
+   *
+   * @generated from field: repeated notifications.v1.TypeNotificationStat type_stats = 2;
+   */
+  typeStats: TypeNotificationStat[] = [];
+
+  /**
+   * Overall totals
+   *
+   * @generated from field: int32 total_count = 3;
+   */
+  totalCount = 0;
+
+  /**
+   * @generated from field: int32 unread_count = 4;
+   */
+  unreadCount = 0;
+
+  /**
+   * @generated from field: int32 read_count = 5;
+   */
+  readCount = 0;
+
+  constructor(data?: PartialMessage<GetNotificationStatsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.GetNotificationStatsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "daily_stats", kind: "message", T: DailyNotificationStat, repeated: true },
+    { no: 2, name: "type_stats", kind: "message", T: TypeNotificationStat, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "unread_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "read_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNotificationStatsResponse {
+    return new GetNotificationStatsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNotificationStatsResponse {
+    return new GetNotificationStatsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNotificationStatsResponse {
+    return new GetNotificationStatsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNotificationStatsResponse | PlainMessage<GetNotificationStatsResponse> | undefined, b: GetNotificationStatsResponse | PlainMessage<GetNotificationStatsResponse> | undefined): boolean {
+    return proto3.util.equals(GetNotificationStatsResponse, a, b);
+  }
+}
+
+/**
+ * Request to bulk mark notifications as read
+ *
+ * @generated from message notifications.v1.BulkMarkAsReadRequest
+ */
+export class BulkMarkAsReadRequest extends Message<BulkMarkAsReadRequest> {
+  /**
+   * Notification IDs to mark as read
+   *
+   * @generated from field: repeated string notification_ids = 1;
+   */
+  notificationIds: string[] = [];
+
+  constructor(data?: PartialMessage<BulkMarkAsReadRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.BulkMarkAsReadRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "notification_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkMarkAsReadRequest {
+    return new BulkMarkAsReadRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkMarkAsReadRequest {
+    return new BulkMarkAsReadRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkMarkAsReadRequest {
+    return new BulkMarkAsReadRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkMarkAsReadRequest | PlainMessage<BulkMarkAsReadRequest> | undefined, b: BulkMarkAsReadRequest | PlainMessage<BulkMarkAsReadRequest> | undefined): boolean {
+    return proto3.util.equals(BulkMarkAsReadRequest, a, b);
+  }
+}
+
+/**
+ * Response for bulk mark as read
+ *
+ * @generated from message notifications.v1.BulkMarkAsReadResponse
+ */
+export class BulkMarkAsReadResponse extends Message<BulkMarkAsReadResponse> {
+  /**
+   * Number of notifications marked as read
+   *
+   * @generated from field: int32 updated_count = 1;
+   */
+  updatedCount = 0;
+
+  constructor(data?: PartialMessage<BulkMarkAsReadResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.BulkMarkAsReadResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "updated_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkMarkAsReadResponse {
+    return new BulkMarkAsReadResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkMarkAsReadResponse {
+    return new BulkMarkAsReadResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkMarkAsReadResponse {
+    return new BulkMarkAsReadResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkMarkAsReadResponse | PlainMessage<BulkMarkAsReadResponse> | undefined, b: BulkMarkAsReadResponse | PlainMessage<BulkMarkAsReadResponse> | undefined): boolean {
+    return proto3.util.equals(BulkMarkAsReadResponse, a, b);
+  }
+}
+
+/**
+ * Request to bulk delete notifications
+ *
+ * @generated from message notifications.v1.BulkDeleteNotificationsRequest
+ */
+export class BulkDeleteNotificationsRequest extends Message<BulkDeleteNotificationsRequest> {
+  /**
+   * Notification IDs to delete
+   *
+   * @generated from field: repeated string notification_ids = 1;
+   */
+  notificationIds: string[] = [];
+
+  constructor(data?: PartialMessage<BulkDeleteNotificationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.BulkDeleteNotificationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "notification_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkDeleteNotificationsRequest {
+    return new BulkDeleteNotificationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkDeleteNotificationsRequest {
+    return new BulkDeleteNotificationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkDeleteNotificationsRequest {
+    return new BulkDeleteNotificationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkDeleteNotificationsRequest | PlainMessage<BulkDeleteNotificationsRequest> | undefined, b: BulkDeleteNotificationsRequest | PlainMessage<BulkDeleteNotificationsRequest> | undefined): boolean {
+    return proto3.util.equals(BulkDeleteNotificationsRequest, a, b);
+  }
+}
+
+/**
+ * Response for bulk delete
+ *
+ * @generated from message notifications.v1.BulkDeleteNotificationsResponse
+ */
+export class BulkDeleteNotificationsResponse extends Message<BulkDeleteNotificationsResponse> {
+  /**
+   * Number of notifications deleted
+   *
+   * @generated from field: int32 deleted_count = 1;
+   */
+  deletedCount = 0;
+
+  constructor(data?: PartialMessage<BulkDeleteNotificationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.BulkDeleteNotificationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deleted_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkDeleteNotificationsResponse {
+    return new BulkDeleteNotificationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkDeleteNotificationsResponse {
+    return new BulkDeleteNotificationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkDeleteNotificationsResponse {
+    return new BulkDeleteNotificationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkDeleteNotificationsResponse | PlainMessage<BulkDeleteNotificationsResponse> | undefined, b: BulkDeleteNotificationsResponse | PlainMessage<BulkDeleteNotificationsResponse> | undefined): boolean {
+    return proto3.util.equals(BulkDeleteNotificationsResponse, a, b);
+  }
+}
+

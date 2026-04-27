@@ -14,7 +14,7 @@ from loguru import logger
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.storage import get_s3_client
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.domains.files.operations import FileOperations
@@ -90,7 +90,7 @@ async def get_thumbnail(
 
     """
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = FileOperations(session)
 
             # Get file and check permissions (this validates access)
@@ -207,7 +207,7 @@ async def stream_file(
 
     """
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = FileOperations(session)
 
             # Get file and check permissions (this validates access)

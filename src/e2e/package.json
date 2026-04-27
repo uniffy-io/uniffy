@@ -1,0 +1,26 @@
+{
+  "name": "uniffy-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:ci": "playwright test --reporter=list,junit,html",
+    "report": "playwright show-report reports/playwright-report",
+    "setup": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^24.10.9",
+    "dotenv": "^16.4.7",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "1.10.0",
+    "@connectrpc/connect": "1.7.0",
+    "@connectrpc/connect-node": "1.7.0",
+    "@uniffy/proto": "workspace:*"
+  }
+}

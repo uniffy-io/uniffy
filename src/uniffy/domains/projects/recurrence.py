@@ -35,7 +35,7 @@ def parse_recurrence_config(recurrence_rule: str | None) -> dict[str, Any] | Non
         if not isinstance(config, dict) or "pattern" not in config:
             return None
         return config
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         return None
 
 
@@ -88,7 +88,7 @@ def compute_next_occurrence(due_date: str, config: dict[str, Any]) -> str | None
     end_date_str = config.get("end_date")
     try:
         end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         end_date_val = None
 
     max_occ = config.get("max_occurrences")
@@ -100,7 +100,7 @@ def compute_next_occurrence(due_date: str, config: dict[str, Any]) -> str | None
 
     try:
         current = date.fromisoformat(due_date)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
     # If end date already passed, no more occurrences

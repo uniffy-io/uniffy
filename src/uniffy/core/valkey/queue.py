@@ -41,7 +41,7 @@ async def init_queue() -> ArqRedis:
     global _queue_pool
 
     config = ValkeyConfig.from_env()
-    _queue_pool = await create_pool(config.to_redis_settings())
+    _queue_pool = await create_pool(config.to_arq_redis_settings())
 
     logger.info(f"Queue pool initialized: {config.host}:{config.port}")
     return _queue_pool
@@ -83,7 +83,7 @@ async def _try_reinit_queue() -> ArqRedis | None:
         try:
             logger.warning("Queue pool lost, attempting re-initialization...")
             config = ValkeyConfig.from_env()
-            _queue_pool = await create_pool(config.to_redis_settings())
+            _queue_pool = await create_pool(config.to_arq_redis_settings())
             logger.info("Queue pool re-initialized successfully")
             return _queue_pool
         except Exception as e:

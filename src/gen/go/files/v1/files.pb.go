@@ -3233,6 +3233,154 @@ func (x *EmptyTrashResponse) GetFoldersDeleted() int32 {
 	return 0
 }
 
+type ListTrashRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListTrashRequest) Reset() {
+	*x = ListTrashRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTrashRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTrashRequest) ProtoMessage() {}
+
+func (x *ListTrashRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTrashRequest.ProtoReflect.Descriptor instead.
+func (*ListTrashRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ListTrashRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type ListTrashResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Files         []*File                `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+	Folders       []*Folder              `protobuf:"bytes,2,rep,name=folders,proto3" json:"folders,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTrashResponse) Reset() {
+	*x = ListTrashResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTrashResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTrashResponse) ProtoMessage() {}
+
+func (x *ListTrashResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTrashResponse.ProtoReflect.Descriptor instead.
+func (*ListTrashResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ListTrashResponse) GetFiles() []*File {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *ListTrashResponse) GetFolders() []*Folder {
+	if x != nil {
+		return x.Folders
+	}
+	return nil
+}
+
+type RestoreFolderRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FolderId       string                 `protobuf:"bytes,1,opt,name=folder_id,json=folderId,proto3" json:"folder_id,omitempty"`
+	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RestoreFolderRequest) Reset() {
+	*x = RestoreFolderRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreFolderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreFolderRequest) ProtoMessage() {}
+
+func (x *RestoreFolderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreFolderRequest.ProtoReflect.Descriptor instead.
+func (*RestoreFolderRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *RestoreFolderRequest) GetFolderId() string {
+	if x != nil {
+		return x.FolderId
+	}
+	return ""
+}
+
+func (x *RestoreFolderRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
 type FileVersion struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -3248,7 +3396,7 @@ type FileVersion struct {
 
 func (x *FileVersion) Reset() {
 	*x = FileVersion{}
-	mi := &file_files_v1_files_proto_msgTypes[42]
+	mi := &file_files_v1_files_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3260,7 +3408,7 @@ func (x *FileVersion) String() string {
 func (*FileVersion) ProtoMessage() {}
 
 func (x *FileVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[42]
+	mi := &file_files_v1_files_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3273,7 +3421,7 @@ func (x *FileVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileVersion.ProtoReflect.Descriptor instead.
 func (*FileVersion) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{42}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *FileVersion) GetId() string {
@@ -3335,7 +3483,7 @@ type ListFileVersionsRequest struct {
 
 func (x *ListFileVersionsRequest) Reset() {
 	*x = ListFileVersionsRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[43]
+	mi := &file_files_v1_files_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3347,7 +3495,7 @@ func (x *ListFileVersionsRequest) String() string {
 func (*ListFileVersionsRequest) ProtoMessage() {}
 
 func (x *ListFileVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[43]
+	mi := &file_files_v1_files_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3360,7 +3508,7 @@ func (x *ListFileVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFileVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListFileVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{43}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ListFileVersionsRequest) GetFileId() string {
@@ -3386,7 +3534,7 @@ type ListFileVersionsResponse struct {
 
 func (x *ListFileVersionsResponse) Reset() {
 	*x = ListFileVersionsResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[44]
+	mi := &file_files_v1_files_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3398,7 +3546,7 @@ func (x *ListFileVersionsResponse) String() string {
 func (*ListFileVersionsResponse) ProtoMessage() {}
 
 func (x *ListFileVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[44]
+	mi := &file_files_v1_files_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3411,7 +3559,7 @@ func (x *ListFileVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFileVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListFileVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{44}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ListFileVersionsResponse) GetVersions() []*FileVersion {
@@ -3432,7 +3580,7 @@ type RestoreFileVersionRequest struct {
 
 func (x *RestoreFileVersionRequest) Reset() {
 	*x = RestoreFileVersionRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[45]
+	mi := &file_files_v1_files_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3444,7 +3592,7 @@ func (x *RestoreFileVersionRequest) String() string {
 func (*RestoreFileVersionRequest) ProtoMessage() {}
 
 func (x *RestoreFileVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[45]
+	mi := &file_files_v1_files_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3457,7 +3605,7 @@ func (x *RestoreFileVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreFileVersionRequest.ProtoReflect.Descriptor instead.
 func (*RestoreFileVersionRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{45}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *RestoreFileVersionRequest) GetFileId() string {
@@ -3499,7 +3647,7 @@ type FilterCriteria struct {
 
 func (x *FilterCriteria) Reset() {
 	*x = FilterCriteria{}
-	mi := &file_files_v1_files_proto_msgTypes[46]
+	mi := &file_files_v1_files_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3511,7 +3659,7 @@ func (x *FilterCriteria) String() string {
 func (*FilterCriteria) ProtoMessage() {}
 
 func (x *FilterCriteria) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[46]
+	mi := &file_files_v1_files_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3524,7 +3672,7 @@ func (x *FilterCriteria) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilterCriteria.ProtoReflect.Descriptor instead.
 func (*FilterCriteria) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{46}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *FilterCriteria) GetExtensions() []string {
@@ -3601,7 +3749,7 @@ type IconValue struct {
 
 func (x *IconValue) Reset() {
 	*x = IconValue{}
-	mi := &file_files_v1_files_proto_msgTypes[47]
+	mi := &file_files_v1_files_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3613,7 +3761,7 @@ func (x *IconValue) String() string {
 func (*IconValue) ProtoMessage() {}
 
 func (x *IconValue) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[47]
+	mi := &file_files_v1_files_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3626,7 +3774,7 @@ func (x *IconValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IconValue.ProtoReflect.Descriptor instead.
 func (*IconValue) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{47}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *IconValue) GetType() string {
@@ -3664,7 +3812,7 @@ type SavedFilter struct {
 
 func (x *SavedFilter) Reset() {
 	*x = SavedFilter{}
-	mi := &file_files_v1_files_proto_msgTypes[48]
+	mi := &file_files_v1_files_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3676,7 +3824,7 @@ func (x *SavedFilter) String() string {
 func (*SavedFilter) ProtoMessage() {}
 
 func (x *SavedFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[48]
+	mi := &file_files_v1_files_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3689,7 +3837,7 @@ func (x *SavedFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavedFilter.ProtoReflect.Descriptor instead.
 func (*SavedFilter) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{48}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *SavedFilter) GetId() string {
@@ -3785,7 +3933,7 @@ type SavedFilterResponse struct {
 
 func (x *SavedFilterResponse) Reset() {
 	*x = SavedFilterResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[49]
+	mi := &file_files_v1_files_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3797,7 +3945,7 @@ func (x *SavedFilterResponse) String() string {
 func (*SavedFilterResponse) ProtoMessage() {}
 
 func (x *SavedFilterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[49]
+	mi := &file_files_v1_files_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3810,7 +3958,7 @@ func (x *SavedFilterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavedFilterResponse.ProtoReflect.Descriptor instead.
 func (*SavedFilterResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{49}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *SavedFilterResponse) GetFilter() *SavedFilter {
@@ -3835,7 +3983,7 @@ type CreateSavedFilterRequest struct {
 
 func (x *CreateSavedFilterRequest) Reset() {
 	*x = CreateSavedFilterRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[50]
+	mi := &file_files_v1_files_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3847,7 +3995,7 @@ func (x *CreateSavedFilterRequest) String() string {
 func (*CreateSavedFilterRequest) ProtoMessage() {}
 
 func (x *CreateSavedFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[50]
+	mi := &file_files_v1_files_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3860,7 +4008,7 @@ func (x *CreateSavedFilterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSavedFilterRequest.ProtoReflect.Descriptor instead.
 func (*CreateSavedFilterRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{50}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *CreateSavedFilterRequest) GetOrganizationId() string {
@@ -3922,7 +4070,7 @@ type GetSavedFilterRequest struct {
 
 func (x *GetSavedFilterRequest) Reset() {
 	*x = GetSavedFilterRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[51]
+	mi := &file_files_v1_files_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3934,7 +4082,7 @@ func (x *GetSavedFilterRequest) String() string {
 func (*GetSavedFilterRequest) ProtoMessage() {}
 
 func (x *GetSavedFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[51]
+	mi := &file_files_v1_files_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3947,7 +4095,7 @@ func (x *GetSavedFilterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSavedFilterRequest.ProtoReflect.Descriptor instead.
 func (*GetSavedFilterRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{51}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetSavedFilterRequest) GetFilterId() string {
@@ -3980,7 +4128,7 @@ type UpdateSavedFilterRequest struct {
 
 func (x *UpdateSavedFilterRequest) Reset() {
 	*x = UpdateSavedFilterRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[52]
+	mi := &file_files_v1_files_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3992,7 +4140,7 @@ func (x *UpdateSavedFilterRequest) String() string {
 func (*UpdateSavedFilterRequest) ProtoMessage() {}
 
 func (x *UpdateSavedFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[52]
+	mi := &file_files_v1_files_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4005,7 +4153,7 @@ func (x *UpdateSavedFilterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSavedFilterRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSavedFilterRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{52}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *UpdateSavedFilterRequest) GetFilterId() string {
@@ -4074,7 +4222,7 @@ type DeleteSavedFilterRequest struct {
 
 func (x *DeleteSavedFilterRequest) Reset() {
 	*x = DeleteSavedFilterRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[53]
+	mi := &file_files_v1_files_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4086,7 +4234,7 @@ func (x *DeleteSavedFilterRequest) String() string {
 func (*DeleteSavedFilterRequest) ProtoMessage() {}
 
 func (x *DeleteSavedFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[53]
+	mi := &file_files_v1_files_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4099,7 +4247,7 @@ func (x *DeleteSavedFilterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSavedFilterRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSavedFilterRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{53}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteSavedFilterRequest) GetFilterId() string {
@@ -4126,7 +4274,7 @@ type DeleteSavedFilterResponse struct {
 
 func (x *DeleteSavedFilterResponse) Reset() {
 	*x = DeleteSavedFilterResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[54]
+	mi := &file_files_v1_files_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4138,7 +4286,7 @@ func (x *DeleteSavedFilterResponse) String() string {
 func (*DeleteSavedFilterResponse) ProtoMessage() {}
 
 func (x *DeleteSavedFilterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[54]
+	mi := &file_files_v1_files_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4151,7 +4299,7 @@ func (x *DeleteSavedFilterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSavedFilterResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSavedFilterResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{54}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *DeleteSavedFilterResponse) GetSuccess() bool {
@@ -4178,7 +4326,7 @@ type ListSavedFiltersRequest struct {
 
 func (x *ListSavedFiltersRequest) Reset() {
 	*x = ListSavedFiltersRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[55]
+	mi := &file_files_v1_files_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4190,7 +4338,7 @@ func (x *ListSavedFiltersRequest) String() string {
 func (*ListSavedFiltersRequest) ProtoMessage() {}
 
 func (x *ListSavedFiltersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[55]
+	mi := &file_files_v1_files_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4203,7 +4351,7 @@ func (x *ListSavedFiltersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedFiltersRequest.ProtoReflect.Descriptor instead.
 func (*ListSavedFiltersRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{55}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListSavedFiltersRequest) GetOrganizationId() string {
@@ -4229,7 +4377,7 @@ type ListSavedFiltersResponse struct {
 
 func (x *ListSavedFiltersResponse) Reset() {
 	*x = ListSavedFiltersResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[56]
+	mi := &file_files_v1_files_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4241,7 +4389,7 @@ func (x *ListSavedFiltersResponse) String() string {
 func (*ListSavedFiltersResponse) ProtoMessage() {}
 
 func (x *ListSavedFiltersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[56]
+	mi := &file_files_v1_files_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4254,12 +4402,1636 @@ func (x *ListSavedFiltersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedFiltersResponse.ProtoReflect.Descriptor instead.
 func (*ListSavedFiltersResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{56}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ListSavedFiltersResponse) GetFilters() []*SavedFilter {
 	if x != nil {
 		return x.Filters
+	}
+	return nil
+}
+
+// Organization-level quota configuration.
+type OrgStorageQuota struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId        string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OrgQuotaBytes         *int64                 `protobuf:"varint,3,opt,name=org_quota_bytes,json=orgQuotaBytes,proto3,oneof" json:"org_quota_bytes,omitempty"`
+	DefaultUserQuotaBytes *int64                 `protobuf:"varint,4,opt,name=default_user_quota_bytes,json=defaultUserQuotaBytes,proto3,oneof" json:"default_user_quota_bytes,omitempty"`
+	WarnAtPercent         int32                  `protobuf:"varint,5,opt,name=warn_at_percent,json=warnAtPercent,proto3" json:"warn_at_percent,omitempty"`
+	Enforce               bool                   `protobuf:"varint,6,opt,name=enforce,proto3" json:"enforce,omitempty"`
+	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *OrgStorageQuota) Reset() {
+	*x = OrgStorageQuota{}
+	mi := &file_files_v1_files_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrgStorageQuota) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrgStorageQuota) ProtoMessage() {}
+
+func (x *OrgStorageQuota) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrgStorageQuota.ProtoReflect.Descriptor instead.
+func (*OrgStorageQuota) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *OrgStorageQuota) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OrgStorageQuota) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *OrgStorageQuota) GetOrgQuotaBytes() int64 {
+	if x != nil && x.OrgQuotaBytes != nil {
+		return *x.OrgQuotaBytes
+	}
+	return 0
+}
+
+func (x *OrgStorageQuota) GetDefaultUserQuotaBytes() int64 {
+	if x != nil && x.DefaultUserQuotaBytes != nil {
+		return *x.DefaultUserQuotaBytes
+	}
+	return 0
+}
+
+func (x *OrgStorageQuota) GetWarnAtPercent() int32 {
+	if x != nil {
+		return x.WarnAtPercent
+	}
+	return 0
+}
+
+func (x *OrgStorageQuota) GetEnforce() bool {
+	if x != nil {
+		return x.Enforce
+	}
+	return false
+}
+
+func (x *OrgStorageQuota) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *OrgStorageQuota) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type GetOrgStorageQuotaRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetOrgStorageQuotaRequest) Reset() {
+	*x = GetOrgStorageQuotaRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrgStorageQuotaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrgStorageQuotaRequest) ProtoMessage() {}
+
+func (x *GetOrgStorageQuotaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrgStorageQuotaRequest.ProtoReflect.Descriptor instead.
+func (*GetOrgStorageQuotaRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *GetOrgStorageQuotaRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type GetOrgStorageQuotaResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Quota          *OrgStorageQuota       `protobuf:"bytes,1,opt,name=quota,proto3" json:"quota,omitempty"`
+	TotalUsedBytes int64                  `protobuf:"varint,2,opt,name=total_used_bytes,json=totalUsedBytes,proto3" json:"total_used_bytes,omitempty"`
+	TotalFileCount int32                  `protobuf:"varint,3,opt,name=total_file_count,json=totalFileCount,proto3" json:"total_file_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetOrgStorageQuotaResponse) Reset() {
+	*x = GetOrgStorageQuotaResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrgStorageQuotaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrgStorageQuotaResponse) ProtoMessage() {}
+
+func (x *GetOrgStorageQuotaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrgStorageQuotaResponse.ProtoReflect.Descriptor instead.
+func (*GetOrgStorageQuotaResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *GetOrgStorageQuotaResponse) GetQuota() *OrgStorageQuota {
+	if x != nil {
+		return x.Quota
+	}
+	return nil
+}
+
+func (x *GetOrgStorageQuotaResponse) GetTotalUsedBytes() int64 {
+	if x != nil {
+		return x.TotalUsedBytes
+	}
+	return 0
+}
+
+func (x *GetOrgStorageQuotaResponse) GetTotalFileCount() int32 {
+	if x != nil {
+		return x.TotalFileCount
+	}
+	return 0
+}
+
+type SetOrgStorageQuotaRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId        string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OrgQuotaBytes         *int64                 `protobuf:"varint,2,opt,name=org_quota_bytes,json=orgQuotaBytes,proto3,oneof" json:"org_quota_bytes,omitempty"`
+	DefaultUserQuotaBytes *int64                 `protobuf:"varint,3,opt,name=default_user_quota_bytes,json=defaultUserQuotaBytes,proto3,oneof" json:"default_user_quota_bytes,omitempty"`
+	WarnAtPercent         *int32                 `protobuf:"varint,4,opt,name=warn_at_percent,json=warnAtPercent,proto3,oneof" json:"warn_at_percent,omitempty"`
+	Enforce               *bool                  `protobuf:"varint,5,opt,name=enforce,proto3,oneof" json:"enforce,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *SetOrgStorageQuotaRequest) Reset() {
+	*x = SetOrgStorageQuotaRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetOrgStorageQuotaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetOrgStorageQuotaRequest) ProtoMessage() {}
+
+func (x *SetOrgStorageQuotaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetOrgStorageQuotaRequest.ProtoReflect.Descriptor instead.
+func (*SetOrgStorageQuotaRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *SetOrgStorageQuotaRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetOrgStorageQuotaRequest) GetOrgQuotaBytes() int64 {
+	if x != nil && x.OrgQuotaBytes != nil {
+		return *x.OrgQuotaBytes
+	}
+	return 0
+}
+
+func (x *SetOrgStorageQuotaRequest) GetDefaultUserQuotaBytes() int64 {
+	if x != nil && x.DefaultUserQuotaBytes != nil {
+		return *x.DefaultUserQuotaBytes
+	}
+	return 0
+}
+
+func (x *SetOrgStorageQuotaRequest) GetWarnAtPercent() int32 {
+	if x != nil && x.WarnAtPercent != nil {
+		return *x.WarnAtPercent
+	}
+	return 0
+}
+
+func (x *SetOrgStorageQuotaRequest) GetEnforce() bool {
+	if x != nil && x.Enforce != nil {
+		return *x.Enforce
+	}
+	return false
+}
+
+type SetOrgStorageQuotaResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Quota         *OrgStorageQuota       `protobuf:"bytes,1,opt,name=quota,proto3" json:"quota,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetOrgStorageQuotaResponse) Reset() {
+	*x = SetOrgStorageQuotaResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetOrgStorageQuotaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetOrgStorageQuotaResponse) ProtoMessage() {}
+
+func (x *SetOrgStorageQuotaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetOrgStorageQuotaResponse.ProtoReflect.Descriptor instead.
+func (*SetOrgStorageQuotaResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *SetOrgStorageQuotaResponse) GetQuota() *OrgStorageQuota {
+	if x != nil {
+		return x.Quota
+	}
+	return nil
+}
+
+// Per-user quota override.
+type UserStorageQuotaOverrideInfo struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	QuotaBytes     int64                  `protobuf:"varint,4,opt,name=quota_bytes,json=quotaBytes,proto3" json:"quota_bytes,omitempty"`
+	Note           *string                `protobuf:"bytes,5,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	CreatedBy      string                 `protobuf:"bytes,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UserStorageQuotaOverrideInfo) Reset() {
+	*x = UserStorageQuotaOverrideInfo{}
+	mi := &file_files_v1_files_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserStorageQuotaOverrideInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserStorageQuotaOverrideInfo) ProtoMessage() {}
+
+func (x *UserStorageQuotaOverrideInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserStorageQuotaOverrideInfo.ProtoReflect.Descriptor instead.
+func (*UserStorageQuotaOverrideInfo) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetQuotaBytes() int64 {
+	if x != nil {
+		return x.QuotaBytes
+	}
+	return 0
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *UserStorageQuotaOverrideInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type GetUserStorageQuotaRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetUserStorageQuotaRequest) Reset() {
+	*x = GetUserStorageQuotaRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserStorageQuotaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserStorageQuotaRequest) ProtoMessage() {}
+
+func (x *GetUserStorageQuotaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserStorageQuotaRequest.ProtoReflect.Descriptor instead.
+func (*GetUserStorageQuotaRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *GetUserStorageQuotaRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetUserStorageQuotaRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type GetUserStorageQuotaResponse struct {
+	state               protoimpl.MessageState        `protogen:"open.v1"`
+	EffectiveQuotaBytes *int64                        `protobuf:"varint,1,opt,name=effective_quota_bytes,json=effectiveQuotaBytes,proto3,oneof" json:"effective_quota_bytes,omitempty"`
+	UsedBytes           int64                         `protobuf:"varint,2,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	FileCount           int32                         `protobuf:"varint,3,opt,name=file_count,json=fileCount,proto3" json:"file_count,omitempty"`
+	UsagePercent        float32                       `protobuf:"fixed32,4,opt,name=usage_percent,json=usagePercent,proto3" json:"usage_percent,omitempty"`
+	Override            *UserStorageQuotaOverrideInfo `protobuf:"bytes,5,opt,name=override,proto3,oneof" json:"override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetUserStorageQuotaResponse) Reset() {
+	*x = GetUserStorageQuotaResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserStorageQuotaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserStorageQuotaResponse) ProtoMessage() {}
+
+func (x *GetUserStorageQuotaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserStorageQuotaResponse.ProtoReflect.Descriptor instead.
+func (*GetUserStorageQuotaResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *GetUserStorageQuotaResponse) GetEffectiveQuotaBytes() int64 {
+	if x != nil && x.EffectiveQuotaBytes != nil {
+		return *x.EffectiveQuotaBytes
+	}
+	return 0
+}
+
+func (x *GetUserStorageQuotaResponse) GetUsedBytes() int64 {
+	if x != nil {
+		return x.UsedBytes
+	}
+	return 0
+}
+
+func (x *GetUserStorageQuotaResponse) GetFileCount() int32 {
+	if x != nil {
+		return x.FileCount
+	}
+	return 0
+}
+
+func (x *GetUserStorageQuotaResponse) GetUsagePercent() float32 {
+	if x != nil {
+		return x.UsagePercent
+	}
+	return 0
+}
+
+func (x *GetUserStorageQuotaResponse) GetOverride() *UserStorageQuotaOverrideInfo {
+	if x != nil {
+		return x.Override
+	}
+	return nil
+}
+
+type SetUserStorageQuotaOverrideRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	QuotaBytes     int64                  `protobuf:"varint,3,opt,name=quota_bytes,json=quotaBytes,proto3" json:"quota_bytes,omitempty"`
+	Note           *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) Reset() {
+	*x = SetUserStorageQuotaOverrideRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetUserStorageQuotaOverrideRequest) ProtoMessage() {}
+
+func (x *SetUserStorageQuotaOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetUserStorageQuotaOverrideRequest.ProtoReflect.Descriptor instead.
+func (*SetUserStorageQuotaOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) GetQuotaBytes() int64 {
+	if x != nil {
+		return x.QuotaBytes
+	}
+	return 0
+}
+
+func (x *SetUserStorageQuotaOverrideRequest) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+type SetUserStorageQuotaOverrideResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Override      *UserStorageQuotaOverrideInfo `protobuf:"bytes,1,opt,name=override,proto3" json:"override,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetUserStorageQuotaOverrideResponse) Reset() {
+	*x = SetUserStorageQuotaOverrideResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetUserStorageQuotaOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetUserStorageQuotaOverrideResponse) ProtoMessage() {}
+
+func (x *SetUserStorageQuotaOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetUserStorageQuotaOverrideResponse.ProtoReflect.Descriptor instead.
+func (*SetUserStorageQuotaOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *SetUserStorageQuotaOverrideResponse) GetOverride() *UserStorageQuotaOverrideInfo {
+	if x != nil {
+		return x.Override
+	}
+	return nil
+}
+
+type RemoveUserStorageQuotaOverrideRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RemoveUserStorageQuotaOverrideRequest) Reset() {
+	*x = RemoveUserStorageQuotaOverrideRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveUserStorageQuotaOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveUserStorageQuotaOverrideRequest) ProtoMessage() {}
+
+func (x *RemoveUserStorageQuotaOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveUserStorageQuotaOverrideRequest.ProtoReflect.Descriptor instead.
+func (*RemoveUserStorageQuotaOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *RemoveUserStorageQuotaOverrideRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RemoveUserStorageQuotaOverrideRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type RemoveUserStorageQuotaOverrideResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveUserStorageQuotaOverrideResponse) Reset() {
+	*x = RemoveUserStorageQuotaOverrideResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveUserStorageQuotaOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveUserStorageQuotaOverrideResponse) ProtoMessage() {}
+
+func (x *RemoveUserStorageQuotaOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveUserStorageQuotaOverrideResponse.ProtoReflect.Descriptor instead.
+func (*RemoveUserStorageQuotaOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *RemoveUserStorageQuotaOverrideResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type ListUserStorageQuotaOverridesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListUserStorageQuotaOverridesRequest) Reset() {
+	*x = ListUserStorageQuotaOverridesRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserStorageQuotaOverridesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserStorageQuotaOverridesRequest) ProtoMessage() {}
+
+func (x *ListUserStorageQuotaOverridesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserStorageQuotaOverridesRequest.ProtoReflect.Descriptor instead.
+func (*ListUserStorageQuotaOverridesRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *ListUserStorageQuotaOverridesRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type ListUserStorageQuotaOverridesResponse struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Overrides     []*UserStorageQuotaOverrideInfo `protobuf:"bytes,1,rep,name=overrides,proto3" json:"overrides,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserStorageQuotaOverridesResponse) Reset() {
+	*x = ListUserStorageQuotaOverridesResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserStorageQuotaOverridesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserStorageQuotaOverridesResponse) ProtoMessage() {}
+
+func (x *ListUserStorageQuotaOverridesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserStorageQuotaOverridesResponse.ProtoReflect.Descriptor instead.
+func (*ListUserStorageQuotaOverridesResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *ListUserStorageQuotaOverridesResponse) GetOverrides() []*UserStorageQuotaOverrideInfo {
+	if x != nil {
+		return x.Overrides
+	}
+	return nil
+}
+
+// Storage usage tracking.
+type StorageUsageInfo struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	UserId              string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrganizationId      string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UsedBytes           int64                  `protobuf:"varint,3,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	FileCount           int32                  `protobuf:"varint,4,opt,name=file_count,json=fileCount,proto3" json:"file_count,omitempty"`
+	EffectiveQuotaBytes *int64                 `protobuf:"varint,5,opt,name=effective_quota_bytes,json=effectiveQuotaBytes,proto3,oneof" json:"effective_quota_bytes,omitempty"`
+	UsagePercent        float32                `protobuf:"fixed32,6,opt,name=usage_percent,json=usagePercent,proto3" json:"usage_percent,omitempty"`
+	HasOverride         bool                   `protobuf:"varint,7,opt,name=has_override,json=hasOverride,proto3" json:"has_override,omitempty"`
+	LastRecalculatedAt  *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_recalculated_at,json=lastRecalculatedAt,proto3,oneof" json:"last_recalculated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *StorageUsageInfo) Reset() {
+	*x = StorageUsageInfo{}
+	mi := &file_files_v1_files_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageUsageInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageUsageInfo) ProtoMessage() {}
+
+func (x *StorageUsageInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageUsageInfo.ProtoReflect.Descriptor instead.
+func (*StorageUsageInfo) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *StorageUsageInfo) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StorageUsageInfo) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *StorageUsageInfo) GetUsedBytes() int64 {
+	if x != nil {
+		return x.UsedBytes
+	}
+	return 0
+}
+
+func (x *StorageUsageInfo) GetFileCount() int32 {
+	if x != nil {
+		return x.FileCount
+	}
+	return 0
+}
+
+func (x *StorageUsageInfo) GetEffectiveQuotaBytes() int64 {
+	if x != nil && x.EffectiveQuotaBytes != nil {
+		return *x.EffectiveQuotaBytes
+	}
+	return 0
+}
+
+func (x *StorageUsageInfo) GetUsagePercent() float32 {
+	if x != nil {
+		return x.UsagePercent
+	}
+	return 0
+}
+
+func (x *StorageUsageInfo) GetHasOverride() bool {
+	if x != nil {
+		return x.HasOverride
+	}
+	return false
+}
+
+func (x *StorageUsageInfo) GetLastRecalculatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastRecalculatedAt
+	}
+	return nil
+}
+
+type GetStorageUsageRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         *string                `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetStorageUsageRequest) Reset() {
+	*x = GetStorageUsageRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStorageUsageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStorageUsageRequest) ProtoMessage() {}
+
+func (x *GetStorageUsageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStorageUsageRequest.ProtoReflect.Descriptor instead.
+func (*GetStorageUsageRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *GetStorageUsageRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetStorageUsageRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return ""
+}
+
+type GetStorageUsageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Usage         *StorageUsageInfo      `protobuf:"bytes,1,opt,name=usage,proto3" json:"usage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStorageUsageResponse) Reset() {
+	*x = GetStorageUsageResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStorageUsageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStorageUsageResponse) ProtoMessage() {}
+
+func (x *GetStorageUsageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStorageUsageResponse.ProtoReflect.Descriptor instead.
+func (*GetStorageUsageResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *GetStorageUsageResponse) GetUsage() *StorageUsageInfo {
+	if x != nil {
+		return x.Usage
+	}
+	return nil
+}
+
+type ListOrgStorageUsageRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListOrgStorageUsageRequest) Reset() {
+	*x = ListOrgStorageUsageRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrgStorageUsageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrgStorageUsageRequest) ProtoMessage() {}
+
+func (x *ListOrgStorageUsageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrgStorageUsageRequest.ProtoReflect.Descriptor instead.
+func (*ListOrgStorageUsageRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *ListOrgStorageUsageRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type ListOrgStorageUsageResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Users          []*StorageUsageInfo    `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	TotalUsedBytes int64                  `protobuf:"varint,2,opt,name=total_used_bytes,json=totalUsedBytes,proto3" json:"total_used_bytes,omitempty"`
+	TotalFileCount int32                  `protobuf:"varint,3,opt,name=total_file_count,json=totalFileCount,proto3" json:"total_file_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListOrgStorageUsageResponse) Reset() {
+	*x = ListOrgStorageUsageResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrgStorageUsageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrgStorageUsageResponse) ProtoMessage() {}
+
+func (x *ListOrgStorageUsageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrgStorageUsageResponse.ProtoReflect.Descriptor instead.
+func (*ListOrgStorageUsageResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ListOrgStorageUsageResponse) GetUsers() []*StorageUsageInfo {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+func (x *ListOrgStorageUsageResponse) GetTotalUsedBytes() int64 {
+	if x != nil {
+		return x.TotalUsedBytes
+	}
+	return 0
+}
+
+func (x *ListOrgStorageUsageResponse) GetTotalFileCount() int32 {
+	if x != nil {
+		return x.TotalFileCount
+	}
+	return 0
+}
+
+type RecalculateStorageUsageRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         *string                `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RecalculateStorageUsageRequest) Reset() {
+	*x = RecalculateStorageUsageRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecalculateStorageUsageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecalculateStorageUsageRequest) ProtoMessage() {}
+
+func (x *RecalculateStorageUsageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecalculateStorageUsageRequest.ProtoReflect.Descriptor instead.
+func (*RecalculateStorageUsageRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *RecalculateStorageUsageRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RecalculateStorageUsageRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return ""
+}
+
+type RecalculateStorageUsageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Recalculated  []*StorageUsageInfo    `protobuf:"bytes,1,rep,name=recalculated,proto3" json:"recalculated,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecalculateStorageUsageResponse) Reset() {
+	*x = RecalculateStorageUsageResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecalculateStorageUsageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecalculateStorageUsageResponse) ProtoMessage() {}
+
+func (x *RecalculateStorageUsageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecalculateStorageUsageResponse.ProtoReflect.Descriptor instead.
+func (*RecalculateStorageUsageResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *RecalculateStorageUsageResponse) GetRecalculated() []*StorageUsageInfo {
+	if x != nil {
+		return x.Recalculated
+	}
+	return nil
+}
+
+type CheckStorageQuotaRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId  string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	AdditionalBytes int64                  `protobuf:"varint,2,opt,name=additional_bytes,json=additionalBytes,proto3" json:"additional_bytes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CheckStorageQuotaRequest) Reset() {
+	*x = CheckStorageQuotaRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStorageQuotaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStorageQuotaRequest) ProtoMessage() {}
+
+func (x *CheckStorageQuotaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStorageQuotaRequest.ProtoReflect.Descriptor instead.
+func (*CheckStorageQuotaRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *CheckStorageQuotaRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *CheckStorageQuotaRequest) GetAdditionalBytes() int64 {
+	if x != nil {
+		return x.AdditionalBytes
+	}
+	return 0
+}
+
+type CheckStorageQuotaResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Allowed          bool                   `protobuf:"varint,1,opt,name=allowed,proto3" json:"allowed,omitempty"`
+	Reason           string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	CurrentUsedBytes int64                  `protobuf:"varint,3,opt,name=current_used_bytes,json=currentUsedBytes,proto3" json:"current_used_bytes,omitempty"`
+	QuotaBytes       *int64                 `protobuf:"varint,4,opt,name=quota_bytes,json=quotaBytes,proto3,oneof" json:"quota_bytes,omitempty"`
+	RemainingBytes   *int64                 `protobuf:"varint,5,opt,name=remaining_bytes,json=remainingBytes,proto3,oneof" json:"remaining_bytes,omitempty"`
+	UsagePercent     float32                `protobuf:"fixed32,6,opt,name=usage_percent,json=usagePercent,proto3" json:"usage_percent,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CheckStorageQuotaResponse) Reset() {
+	*x = CheckStorageQuotaResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStorageQuotaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStorageQuotaResponse) ProtoMessage() {}
+
+func (x *CheckStorageQuotaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStorageQuotaResponse.ProtoReflect.Descriptor instead.
+func (*CheckStorageQuotaResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *CheckStorageQuotaResponse) GetAllowed() bool {
+	if x != nil {
+		return x.Allowed
+	}
+	return false
+}
+
+func (x *CheckStorageQuotaResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *CheckStorageQuotaResponse) GetCurrentUsedBytes() int64 {
+	if x != nil {
+		return x.CurrentUsedBytes
+	}
+	return 0
+}
+
+func (x *CheckStorageQuotaResponse) GetQuotaBytes() int64 {
+	if x != nil && x.QuotaBytes != nil {
+		return *x.QuotaBytes
+	}
+	return 0
+}
+
+func (x *CheckStorageQuotaResponse) GetRemainingBytes() int64 {
+	if x != nil && x.RemainingBytes != nil {
+		return *x.RemainingBytes
+	}
+	return 0
+}
+
+func (x *CheckStorageQuotaResponse) GetUsagePercent() float32 {
+	if x != nil {
+		return x.UsagePercent
+	}
+	return 0
+}
+
+// Batch folder creation for recursive folder upload.
+type FolderTreeNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Children      []*FolderTreeNode      `protobuf:"bytes,2,rep,name=children,proto3" json:"children,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FolderTreeNode) Reset() {
+	*x = FolderTreeNode{}
+	mi := &file_files_v1_files_proto_msgTypes[83]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FolderTreeNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FolderTreeNode) ProtoMessage() {}
+
+func (x *FolderTreeNode) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[83]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FolderTreeNode.ProtoReflect.Descriptor instead.
+func (*FolderTreeNode) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{83}
+}
+
+func (x *FolderTreeNode) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FolderTreeNode) GetChildren() []*FolderTreeNode {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
+type CreatedFolderInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	ParentId      *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatedFolderInfo) Reset() {
+	*x = CreatedFolderInfo{}
+	mi := &file_files_v1_files_proto_msgTypes[84]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatedFolderInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatedFolderInfo) ProtoMessage() {}
+
+func (x *CreatedFolderInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[84]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatedFolderInfo.ProtoReflect.Descriptor instead.
+func (*CreatedFolderInfo) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{84}
+}
+
+func (x *CreatedFolderInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CreatedFolderInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreatedFolderInfo) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *CreatedFolderInfo) GetParentId() string {
+	if x != nil && x.ParentId != nil {
+		return *x.ParentId
+	}
+	return ""
+}
+
+type CreateFolderTreeRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ParentFolderId *string                `protobuf:"bytes,2,opt,name=parent_folder_id,json=parentFolderId,proto3,oneof" json:"parent_folder_id,omitempty"`
+	Tree           []*FolderTreeNode      `protobuf:"bytes,3,rep,name=tree,proto3" json:"tree,omitempty"`
+	AccessMode     v1.AccessMode          `protobuf:"varint,4,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,5,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateFolderTreeRequest) Reset() {
+	*x = CreateFolderTreeRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[85]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFolderTreeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFolderTreeRequest) ProtoMessage() {}
+
+func (x *CreateFolderTreeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[85]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFolderTreeRequest.ProtoReflect.Descriptor instead.
+func (*CreateFolderTreeRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{85}
+}
+
+func (x *CreateFolderTreeRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *CreateFolderTreeRequest) GetParentFolderId() string {
+	if x != nil && x.ParentFolderId != nil {
+		return *x.ParentFolderId
+	}
+	return ""
+}
+
+func (x *CreateFolderTreeRequest) GetTree() []*FolderTreeNode {
+	if x != nil {
+		return x.Tree
+	}
+	return nil
+}
+
+func (x *CreateFolderTreeRequest) GetAccessMode() v1.AccessMode {
+	if x != nil {
+		return x.AccessMode
+	}
+	return v1.AccessMode(0)
+}
+
+func (x *CreateFolderTreeRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+type CreateFolderTreeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Folders       []*CreatedFolderInfo   `protobuf:"bytes,1,rep,name=folders,proto3" json:"folders,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFolderTreeResponse) Reset() {
+	*x = CreateFolderTreeResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[86]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFolderTreeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFolderTreeResponse) ProtoMessage() {}
+
+func (x *CreateFolderTreeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[86]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFolderTreeResponse.ProtoReflect.Descriptor instead.
+func (*CreateFolderTreeResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{86}
+}
+
+func (x *CreateFolderTreeResponse) GetFolders() []*CreatedFolderInfo {
+	if x != nil {
+		return x.Folders
 	}
 	return nil
 }
@@ -4610,7 +6382,15 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12#\n" +
 	"\rfiles_deleted\x18\x03 \x01(\x05R\ffilesDeleted\x12'\n" +
-	"\x0ffolders_deleted\x18\x04 \x01(\x05R\x0efoldersDeleted\"\x9a\x02\n" +
+	"\x0ffolders_deleted\x18\x04 \x01(\x05R\x0efoldersDeleted\";\n" +
+	"\x10ListTrashRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"e\n" +
+	"\x11ListTrashResponse\x12$\n" +
+	"\x05files\x18\x01 \x03(\v2\x0e.files.v1.FileR\x05files\x12*\n" +
+	"\afolders\x18\x02 \x03(\v2\x10.files.v1.FolderR\afolders\"\\\n" +
+	"\x14RestoreFolderRequest\x12\x1b\n" +
+	"\tfolder_id\x18\x01 \x01(\tR\bfolderId\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x9a\x02\n" +
 	"\vFileVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12%\n" +
@@ -4722,7 +6502,151 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12'\n" +
 	"\x0finclude_presets\x18\x02 \x01(\bR\x0eincludePresets\"K\n" +
 	"\x18ListSavedFiltersResponse\x12/\n" +
-	"\afilters\x18\x01 \x03(\v2\x15.files.v1.SavedFilterR\afilters*\x9a\x01\n" +
+	"\afilters\x18\x01 \x03(\v2\x15.files.v1.SavedFilterR\afilters\"\x9e\x03\n" +
+	"\x0fOrgStorageQuota\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12+\n" +
+	"\x0forg_quota_bytes\x18\x03 \x01(\x03H\x00R\rorgQuotaBytes\x88\x01\x01\x12<\n" +
+	"\x18default_user_quota_bytes\x18\x04 \x01(\x03H\x01R\x15defaultUserQuotaBytes\x88\x01\x01\x12&\n" +
+	"\x0fwarn_at_percent\x18\x05 \x01(\x05R\rwarnAtPercent\x12\x18\n" +
+	"\aenforce\x18\x06 \x01(\bR\aenforce\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x12\n" +
+	"\x10_org_quota_bytesB\x1b\n" +
+	"\x19_default_user_quota_bytes\"D\n" +
+	"\x19GetOrgStorageQuotaRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xa1\x01\n" +
+	"\x1aGetOrgStorageQuotaResponse\x12/\n" +
+	"\x05quota\x18\x01 \x01(\v2\x19.files.v1.OrgStorageQuotaR\x05quota\x12(\n" +
+	"\x10total_used_bytes\x18\x02 \x01(\x03R\x0etotalUsedBytes\x12(\n" +
+	"\x10total_file_count\x18\x03 \x01(\x05R\x0etotalFileCount\"\xcc\x02\n" +
+	"\x19SetOrgStorageQuotaRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12+\n" +
+	"\x0forg_quota_bytes\x18\x02 \x01(\x03H\x00R\rorgQuotaBytes\x88\x01\x01\x12<\n" +
+	"\x18default_user_quota_bytes\x18\x03 \x01(\x03H\x01R\x15defaultUserQuotaBytes\x88\x01\x01\x12+\n" +
+	"\x0fwarn_at_percent\x18\x04 \x01(\x05H\x02R\rwarnAtPercent\x88\x01\x01\x12\x1d\n" +
+	"\aenforce\x18\x05 \x01(\bH\x03R\aenforce\x88\x01\x01B\x12\n" +
+	"\x10_org_quota_bytesB\x1b\n" +
+	"\x19_default_user_quota_bytesB\x12\n" +
+	"\x10_warn_at_percentB\n" +
+	"\n" +
+	"\b_enforce\"M\n" +
+	"\x1aSetOrgStorageQuotaResponse\x12/\n" +
+	"\x05quota\x18\x01 \x01(\v2\x19.files.v1.OrgStorageQuotaR\x05quota\"\xc8\x02\n" +
+	"\x1cUserStorageQuotaOverrideInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vquota_bytes\x18\x04 \x01(\x03R\n" +
+	"quotaBytes\x12\x17\n" +
+	"\x04note\x18\x05 \x01(\tH\x00R\x04note\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\x06 \x01(\tR\tcreatedBy\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
+	"\x05_note\"^\n" +
+	"\x1aGetUserStorageQuotaRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"\xa9\x02\n" +
+	"\x1bGetUserStorageQuotaResponse\x127\n" +
+	"\x15effective_quota_bytes\x18\x01 \x01(\x03H\x00R\x13effectiveQuotaBytes\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x02 \x01(\x03R\tusedBytes\x12\x1d\n" +
+	"\n" +
+	"file_count\x18\x03 \x01(\x05R\tfileCount\x12#\n" +
+	"\rusage_percent\x18\x04 \x01(\x02R\fusagePercent\x12G\n" +
+	"\boverride\x18\x05 \x01(\v2&.files.v1.UserStorageQuotaOverrideInfoH\x01R\boverride\x88\x01\x01B\x18\n" +
+	"\x16_effective_quota_bytesB\v\n" +
+	"\t_override\"\xa9\x01\n" +
+	"\"SetUserStorageQuotaOverrideRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vquota_bytes\x18\x03 \x01(\x03R\n" +
+	"quotaBytes\x12\x17\n" +
+	"\x04note\x18\x04 \x01(\tH\x00R\x04note\x88\x01\x01B\a\n" +
+	"\x05_note\"i\n" +
+	"#SetUserStorageQuotaOverrideResponse\x12B\n" +
+	"\boverride\x18\x01 \x01(\v2&.files.v1.UserStorageQuotaOverrideInfoR\boverride\"i\n" +
+	"%RemoveUserStorageQuotaOverrideRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"B\n" +
+	"&RemoveUserStorageQuotaOverrideResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"O\n" +
+	"$ListUserStorageQuotaOverridesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"m\n" +
+	"%ListUserStorageQuotaOverridesResponse\x12D\n" +
+	"\toverrides\x18\x01 \x03(\v2&.files.v1.UserStorageQuotaOverrideInfoR\toverrides\"\x99\x03\n" +
+	"\x10StorageUsageInfo\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x03 \x01(\x03R\tusedBytes\x12\x1d\n" +
+	"\n" +
+	"file_count\x18\x04 \x01(\x05R\tfileCount\x127\n" +
+	"\x15effective_quota_bytes\x18\x05 \x01(\x03H\x00R\x13effectiveQuotaBytes\x88\x01\x01\x12#\n" +
+	"\rusage_percent\x18\x06 \x01(\x02R\fusagePercent\x12!\n" +
+	"\fhas_override\x18\a \x01(\bR\vhasOverride\x12Q\n" +
+	"\x14last_recalculated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x01R\x12lastRecalculatedAt\x88\x01\x01B\x18\n" +
+	"\x16_effective_quota_bytesB\x17\n" +
+	"\x15_last_recalculated_at\"k\n" +
+	"\x16GetStorageUsageRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_user_id\"K\n" +
+	"\x17GetStorageUsageResponse\x120\n" +
+	"\x05usage\x18\x01 \x01(\v2\x1a.files.v1.StorageUsageInfoR\x05usage\"E\n" +
+	"\x1aListOrgStorageUsageRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xa3\x01\n" +
+	"\x1bListOrgStorageUsageResponse\x120\n" +
+	"\x05users\x18\x01 \x03(\v2\x1a.files.v1.StorageUsageInfoR\x05users\x12(\n" +
+	"\x10total_used_bytes\x18\x02 \x01(\x03R\x0etotalUsedBytes\x12(\n" +
+	"\x10total_file_count\x18\x03 \x01(\x05R\x0etotalFileCount\"s\n" +
+	"\x1eRecalculateStorageUsageRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_user_id\"a\n" +
+	"\x1fRecalculateStorageUsageResponse\x12>\n" +
+	"\frecalculated\x18\x01 \x03(\v2\x1a.files.v1.StorageUsageInfoR\frecalculated\"n\n" +
+	"\x18CheckStorageQuotaRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12)\n" +
+	"\x10additional_bytes\x18\x02 \x01(\x03R\x0fadditionalBytes\"\x98\x02\n" +
+	"\x19CheckStorageQuotaResponse\x12\x18\n" +
+	"\aallowed\x18\x01 \x01(\bR\aallowed\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12,\n" +
+	"\x12current_used_bytes\x18\x03 \x01(\x03R\x10currentUsedBytes\x12$\n" +
+	"\vquota_bytes\x18\x04 \x01(\x03H\x00R\n" +
+	"quotaBytes\x88\x01\x01\x12,\n" +
+	"\x0fremaining_bytes\x18\x05 \x01(\x03H\x01R\x0eremainingBytes\x88\x01\x01\x12#\n" +
+	"\rusage_percent\x18\x06 \x01(\x02R\fusagePercentB\x0e\n" +
+	"\f_quota_bytesB\x12\n" +
+	"\x10_remaining_bytes\"Z\n" +
+	"\x0eFolderTreeNode\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x124\n" +
+	"\bchildren\x18\x02 \x03(\v2\x18.files.v1.FolderTreeNodeR\bchildren\"{\n" +
+	"\x11CreatedFolderInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12 \n" +
+	"\tparent_id\x18\x04 \x01(\tH\x00R\bparentId\x88\x01\x01B\f\n" +
+	"\n" +
+	"_parent_id\"\xc0\x02\n" +
+	"\x17CreateFolderTreeRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12-\n" +
+	"\x10parent_folder_id\x18\x02 \x01(\tH\x00R\x0eparentFolderId\x88\x01\x01\x12,\n" +
+	"\x04tree\x18\x03 \x03(\v2\x18.files.v1.FolderTreeNodeR\x04tree\x126\n" +
+	"\vaccess_mode\x18\x04 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\x13\n" +
+	"\x11_parent_folder_idB\x10\n" +
+	"\x0e_baseline_role\"Q\n" +
+	"\x18CreateFolderTreeResponse\x125\n" +
+	"\afolders\x18\x01 \x03(\v2\x1b.files.v1.CreatedFolderInfoR\afolders*\x9a\x01\n" +
 	"\fUploadStatus\x12\x1d\n" +
 	"\x19UPLOAD_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14UPLOAD_STATUS_ACTIVE\x10\x01\x12\x1b\n" +
@@ -4735,7 +6659,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x1cEXTRACTION_STATUS_PROCESSING\x10\x02\x12\x1f\n" +
 	"\x1bEXTRACTION_STATUS_COMPLETED\x10\x03\x12\x1c\n" +
 	"\x18EXTRACTION_STATUS_FAILED\x10\x04\x12\x1d\n" +
-	"\x19EXTRACTION_STATUS_SKIPPED\x10\x052\xad\x11\n" +
+	"\x19EXTRACTION_STATUS_SKIPPED\x10\x052\xce\x1b\n" +
 	"\fFilesService\x12S\n" +
 	"\x0eInitiateUpload\x12\x1f.files.v1.InitiateUploadRequest\x1a .files.v1.InitiateUploadResponse\x12J\n" +
 	"\vUploadChunk\x12\x1c.files.v1.UploadChunkRequest\x1a\x1d.files.v1.UploadChunkResponse\x12Q\n" +
@@ -4755,15 +6679,28 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\fCreateFolder\x12\x1d.files.v1.CreateFolderRequest\x1a\x18.files.v1.FolderResponse\x12G\n" +
 	"\fUpdateFolder\x12\x1d.files.v1.UpdateFolderRequest\x1a\x18.files.v1.FolderResponse\x12M\n" +
 	"\fDeleteFolder\x12\x1d.files.v1.DeleteFolderRequest\x1a\x1e.files.v1.DeleteFolderResponse\x12M\n" +
-	"\fGetFilesTree\x12\x1d.files.v1.GetFilesTreeRequest\x1a\x1e.files.v1.GetFilesTreeResponse\x12D\n" +
+	"\fGetFilesTree\x12\x1d.files.v1.GetFilesTreeRequest\x1a\x1e.files.v1.GetFilesTreeResponse\x12Y\n" +
+	"\x10CreateFolderTree\x12!.files.v1.CreateFolderTreeRequest\x1a\".files.v1.CreateFolderTreeResponse\x12D\n" +
 	"\tMoveItems\x12\x1a.files.v1.MoveItemsRequest\x1a\x1b.files.v1.MoveItemsResponse\x12D\n" +
 	"\tCopyItems\x12\x1a.files.v1.CopyItemsRequest\x1a\x1b.files.v1.CopyItemsResponse\x12G\n" +
 	"\n" +
 	"BulkDelete\x12\x1b.files.v1.BulkDeleteRequest\x1a\x1c.files.v1.BulkDeleteResponse\x12G\n" +
 	"\n" +
-	"EmptyTrash\x12\x1b.files.v1.EmptyTrashRequest\x1a\x1c.files.v1.EmptyTrashResponse\x12Y\n" +
+	"EmptyTrash\x12\x1b.files.v1.EmptyTrashRequest\x1a\x1c.files.v1.EmptyTrashResponse\x12D\n" +
+	"\tListTrash\x12\x1a.files.v1.ListTrashRequest\x1a\x1b.files.v1.ListTrashResponse\x12I\n" +
+	"\rRestoreFolder\x12\x1e.files.v1.RestoreFolderRequest\x1a\x18.files.v1.FolderResponse\x12Y\n" +
 	"\x10ListFileVersions\x12!.files.v1.ListFileVersionsRequest\x1a\".files.v1.ListFileVersionsResponse\x12Q\n" +
-	"\x12RestoreFileVersion\x12#.files.v1.RestoreFileVersionRequest\x1a\x16.files.v1.FileResponse\x12V\n" +
+	"\x12RestoreFileVersion\x12#.files.v1.RestoreFileVersionRequest\x1a\x16.files.v1.FileResponse\x12_\n" +
+	"\x12GetOrgStorageQuota\x12#.files.v1.GetOrgStorageQuotaRequest\x1a$.files.v1.GetOrgStorageQuotaResponse\x12_\n" +
+	"\x12SetOrgStorageQuota\x12#.files.v1.SetOrgStorageQuotaRequest\x1a$.files.v1.SetOrgStorageQuotaResponse\x12b\n" +
+	"\x13GetUserStorageQuota\x12$.files.v1.GetUserStorageQuotaRequest\x1a%.files.v1.GetUserStorageQuotaResponse\x12z\n" +
+	"\x1bSetUserStorageQuotaOverride\x12,.files.v1.SetUserStorageQuotaOverrideRequest\x1a-.files.v1.SetUserStorageQuotaOverrideResponse\x12\x83\x01\n" +
+	"\x1eRemoveUserStorageQuotaOverride\x12/.files.v1.RemoveUserStorageQuotaOverrideRequest\x1a0.files.v1.RemoveUserStorageQuotaOverrideResponse\x12\x80\x01\n" +
+	"\x1dListUserStorageQuotaOverrides\x12..files.v1.ListUserStorageQuotaOverridesRequest\x1a/.files.v1.ListUserStorageQuotaOverridesResponse\x12V\n" +
+	"\x0fGetStorageUsage\x12 .files.v1.GetStorageUsageRequest\x1a!.files.v1.GetStorageUsageResponse\x12b\n" +
+	"\x13ListOrgStorageUsage\x12$.files.v1.ListOrgStorageUsageRequest\x1a%.files.v1.ListOrgStorageUsageResponse\x12n\n" +
+	"\x17RecalculateStorageUsage\x12(.files.v1.RecalculateStorageUsageRequest\x1a).files.v1.RecalculateStorageUsageResponse\x12\\\n" +
+	"\x11CheckStorageQuota\x12\".files.v1.CheckStorageQuotaRequest\x1a#.files.v1.CheckStorageQuotaResponse\x12V\n" +
 	"\x11CreateSavedFilter\x12\".files.v1.CreateSavedFilterRequest\x1a\x1d.files.v1.SavedFilterResponse\x12P\n" +
 	"\x0eGetSavedFilter\x12\x1f.files.v1.GetSavedFilterRequest\x1a\x1d.files.v1.SavedFilterResponse\x12V\n" +
 	"\x11UpdateSavedFilter\x12\".files.v1.UpdateSavedFilterRequest\x1a\x1d.files.v1.SavedFilterResponse\x12\\\n" +
@@ -4783,184 +6720,260 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 }
 
 var file_files_v1_files_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 88)
 var file_files_v1_files_proto_goTypes = []any{
-	(UploadStatus)(0),                 // 0: files.v1.UploadStatus
-	(ExtractionStatus)(0),             // 1: files.v1.ExtractionStatus
-	(*InitiateUploadRequest)(nil),     // 2: files.v1.InitiateUploadRequest
-	(*InitiateUploadResponse)(nil),    // 3: files.v1.InitiateUploadResponse
-	(*UploadChunkRequest)(nil),        // 4: files.v1.UploadChunkRequest
-	(*UploadChunkResponse)(nil),       // 5: files.v1.UploadChunkResponse
-	(*CompleteUploadRequest)(nil),     // 6: files.v1.CompleteUploadRequest
-	(*UploadChunksResponse)(nil),      // 7: files.v1.UploadChunksResponse
-	(*GetUploadStatusRequest)(nil),    // 8: files.v1.GetUploadStatusRequest
-	(*GetUploadStatusResponse)(nil),   // 9: files.v1.GetUploadStatusResponse
-	(*AbortUploadRequest)(nil),        // 10: files.v1.AbortUploadRequest
-	(*AbortUploadResponse)(nil),       // 11: files.v1.AbortUploadResponse
-	(*DownloadFileRequest)(nil),       // 12: files.v1.DownloadFileRequest
-	(*DownloadChunkResponse)(nil),     // 13: files.v1.DownloadChunkResponse
-	(*StreamFileRangeRequest)(nil),    // 14: files.v1.StreamFileRangeRequest
-	(*StreamFileRangeResponse)(nil),   // 15: files.v1.StreamFileRangeResponse
-	(*File)(nil),                      // 16: files.v1.File
-	(*FileMetadata)(nil),              // 17: files.v1.FileMetadata
-	(*FileOwner)(nil),                 // 18: files.v1.FileOwner
-	(*FileResponse)(nil),              // 19: files.v1.FileResponse
-	(*GetFileRequest)(nil),            // 20: files.v1.GetFileRequest
-	(*UpdateFileRequest)(nil),         // 21: files.v1.UpdateFileRequest
-	(*DeleteFileRequest)(nil),         // 22: files.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),        // 23: files.v1.DeleteFileResponse
-	(*RestoreFileRequest)(nil),        // 24: files.v1.RestoreFileRequest
-	(*ListFilesRequest)(nil),          // 25: files.v1.ListFilesRequest
-	(*ListFilesResponse)(nil),         // 26: files.v1.ListFilesResponse
-	(*Folder)(nil),                    // 27: files.v1.Folder
-	(*FolderResponse)(nil),            // 28: files.v1.FolderResponse
-	(*CreateFolderRequest)(nil),       // 29: files.v1.CreateFolderRequest
-	(*UpdateFolderRequest)(nil),       // 30: files.v1.UpdateFolderRequest
-	(*DeleteFolderRequest)(nil),       // 31: files.v1.DeleteFolderRequest
-	(*DeleteFolderResponse)(nil),      // 32: files.v1.DeleteFolderResponse
-	(*GetFilesTreeRequest)(nil),       // 33: files.v1.GetFilesTreeRequest
-	(*GetFilesTreeResponse)(nil),      // 34: files.v1.GetFilesTreeResponse
-	(*TreeNode)(nil),                  // 35: files.v1.TreeNode
-	(*MoveItemsRequest)(nil),          // 36: files.v1.MoveItemsRequest
-	(*MoveItemsResponse)(nil),         // 37: files.v1.MoveItemsResponse
-	(*CopyItemsRequest)(nil),          // 38: files.v1.CopyItemsRequest
-	(*CopyItemsResponse)(nil),         // 39: files.v1.CopyItemsResponse
-	(*BulkDeleteRequest)(nil),         // 40: files.v1.BulkDeleteRequest
-	(*BulkDeleteResponse)(nil),        // 41: files.v1.BulkDeleteResponse
-	(*EmptyTrashRequest)(nil),         // 42: files.v1.EmptyTrashRequest
-	(*EmptyTrashResponse)(nil),        // 43: files.v1.EmptyTrashResponse
-	(*FileVersion)(nil),               // 44: files.v1.FileVersion
-	(*ListFileVersionsRequest)(nil),   // 45: files.v1.ListFileVersionsRequest
-	(*ListFileVersionsResponse)(nil),  // 46: files.v1.ListFileVersionsResponse
-	(*RestoreFileVersionRequest)(nil), // 47: files.v1.RestoreFileVersionRequest
-	(*FilterCriteria)(nil),            // 48: files.v1.FilterCriteria
-	(*IconValue)(nil),                 // 49: files.v1.IconValue
-	(*SavedFilter)(nil),               // 50: files.v1.SavedFilter
-	(*SavedFilterResponse)(nil),       // 51: files.v1.SavedFilterResponse
-	(*CreateSavedFilterRequest)(nil),  // 52: files.v1.CreateSavedFilterRequest
-	(*GetSavedFilterRequest)(nil),     // 53: files.v1.GetSavedFilterRequest
-	(*UpdateSavedFilterRequest)(nil),  // 54: files.v1.UpdateSavedFilterRequest
-	(*DeleteSavedFilterRequest)(nil),  // 55: files.v1.DeleteSavedFilterRequest
-	(*DeleteSavedFilterResponse)(nil), // 56: files.v1.DeleteSavedFilterResponse
-	(*ListSavedFiltersRequest)(nil),   // 57: files.v1.ListSavedFiltersRequest
-	(*ListSavedFiltersResponse)(nil),  // 58: files.v1.ListSavedFiltersResponse
-	nil,                               // 59: files.v1.FileMetadata.ExifEntry
-	(v1.AccessMode)(0),                // 60: common.v1.AccessMode
-	(v1.ContentRole)(0),               // 61: common.v1.ContentRole
-	(*timestamppb.Timestamp)(nil),     // 62: google.protobuf.Timestamp
+	(UploadStatus)(0),                              // 0: files.v1.UploadStatus
+	(ExtractionStatus)(0),                          // 1: files.v1.ExtractionStatus
+	(*InitiateUploadRequest)(nil),                  // 2: files.v1.InitiateUploadRequest
+	(*InitiateUploadResponse)(nil),                 // 3: files.v1.InitiateUploadResponse
+	(*UploadChunkRequest)(nil),                     // 4: files.v1.UploadChunkRequest
+	(*UploadChunkResponse)(nil),                    // 5: files.v1.UploadChunkResponse
+	(*CompleteUploadRequest)(nil),                  // 6: files.v1.CompleteUploadRequest
+	(*UploadChunksResponse)(nil),                   // 7: files.v1.UploadChunksResponse
+	(*GetUploadStatusRequest)(nil),                 // 8: files.v1.GetUploadStatusRequest
+	(*GetUploadStatusResponse)(nil),                // 9: files.v1.GetUploadStatusResponse
+	(*AbortUploadRequest)(nil),                     // 10: files.v1.AbortUploadRequest
+	(*AbortUploadResponse)(nil),                    // 11: files.v1.AbortUploadResponse
+	(*DownloadFileRequest)(nil),                    // 12: files.v1.DownloadFileRequest
+	(*DownloadChunkResponse)(nil),                  // 13: files.v1.DownloadChunkResponse
+	(*StreamFileRangeRequest)(nil),                 // 14: files.v1.StreamFileRangeRequest
+	(*StreamFileRangeResponse)(nil),                // 15: files.v1.StreamFileRangeResponse
+	(*File)(nil),                                   // 16: files.v1.File
+	(*FileMetadata)(nil),                           // 17: files.v1.FileMetadata
+	(*FileOwner)(nil),                              // 18: files.v1.FileOwner
+	(*FileResponse)(nil),                           // 19: files.v1.FileResponse
+	(*GetFileRequest)(nil),                         // 20: files.v1.GetFileRequest
+	(*UpdateFileRequest)(nil),                      // 21: files.v1.UpdateFileRequest
+	(*DeleteFileRequest)(nil),                      // 22: files.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),                     // 23: files.v1.DeleteFileResponse
+	(*RestoreFileRequest)(nil),                     // 24: files.v1.RestoreFileRequest
+	(*ListFilesRequest)(nil),                       // 25: files.v1.ListFilesRequest
+	(*ListFilesResponse)(nil),                      // 26: files.v1.ListFilesResponse
+	(*Folder)(nil),                                 // 27: files.v1.Folder
+	(*FolderResponse)(nil),                         // 28: files.v1.FolderResponse
+	(*CreateFolderRequest)(nil),                    // 29: files.v1.CreateFolderRequest
+	(*UpdateFolderRequest)(nil),                    // 30: files.v1.UpdateFolderRequest
+	(*DeleteFolderRequest)(nil),                    // 31: files.v1.DeleteFolderRequest
+	(*DeleteFolderResponse)(nil),                   // 32: files.v1.DeleteFolderResponse
+	(*GetFilesTreeRequest)(nil),                    // 33: files.v1.GetFilesTreeRequest
+	(*GetFilesTreeResponse)(nil),                   // 34: files.v1.GetFilesTreeResponse
+	(*TreeNode)(nil),                               // 35: files.v1.TreeNode
+	(*MoveItemsRequest)(nil),                       // 36: files.v1.MoveItemsRequest
+	(*MoveItemsResponse)(nil),                      // 37: files.v1.MoveItemsResponse
+	(*CopyItemsRequest)(nil),                       // 38: files.v1.CopyItemsRequest
+	(*CopyItemsResponse)(nil),                      // 39: files.v1.CopyItemsResponse
+	(*BulkDeleteRequest)(nil),                      // 40: files.v1.BulkDeleteRequest
+	(*BulkDeleteResponse)(nil),                     // 41: files.v1.BulkDeleteResponse
+	(*EmptyTrashRequest)(nil),                      // 42: files.v1.EmptyTrashRequest
+	(*EmptyTrashResponse)(nil),                     // 43: files.v1.EmptyTrashResponse
+	(*ListTrashRequest)(nil),                       // 44: files.v1.ListTrashRequest
+	(*ListTrashResponse)(nil),                      // 45: files.v1.ListTrashResponse
+	(*RestoreFolderRequest)(nil),                   // 46: files.v1.RestoreFolderRequest
+	(*FileVersion)(nil),                            // 47: files.v1.FileVersion
+	(*ListFileVersionsRequest)(nil),                // 48: files.v1.ListFileVersionsRequest
+	(*ListFileVersionsResponse)(nil),               // 49: files.v1.ListFileVersionsResponse
+	(*RestoreFileVersionRequest)(nil),              // 50: files.v1.RestoreFileVersionRequest
+	(*FilterCriteria)(nil),                         // 51: files.v1.FilterCriteria
+	(*IconValue)(nil),                              // 52: files.v1.IconValue
+	(*SavedFilter)(nil),                            // 53: files.v1.SavedFilter
+	(*SavedFilterResponse)(nil),                    // 54: files.v1.SavedFilterResponse
+	(*CreateSavedFilterRequest)(nil),               // 55: files.v1.CreateSavedFilterRequest
+	(*GetSavedFilterRequest)(nil),                  // 56: files.v1.GetSavedFilterRequest
+	(*UpdateSavedFilterRequest)(nil),               // 57: files.v1.UpdateSavedFilterRequest
+	(*DeleteSavedFilterRequest)(nil),               // 58: files.v1.DeleteSavedFilterRequest
+	(*DeleteSavedFilterResponse)(nil),              // 59: files.v1.DeleteSavedFilterResponse
+	(*ListSavedFiltersRequest)(nil),                // 60: files.v1.ListSavedFiltersRequest
+	(*ListSavedFiltersResponse)(nil),               // 61: files.v1.ListSavedFiltersResponse
+	(*OrgStorageQuota)(nil),                        // 62: files.v1.OrgStorageQuota
+	(*GetOrgStorageQuotaRequest)(nil),              // 63: files.v1.GetOrgStorageQuotaRequest
+	(*GetOrgStorageQuotaResponse)(nil),             // 64: files.v1.GetOrgStorageQuotaResponse
+	(*SetOrgStorageQuotaRequest)(nil),              // 65: files.v1.SetOrgStorageQuotaRequest
+	(*SetOrgStorageQuotaResponse)(nil),             // 66: files.v1.SetOrgStorageQuotaResponse
+	(*UserStorageQuotaOverrideInfo)(nil),           // 67: files.v1.UserStorageQuotaOverrideInfo
+	(*GetUserStorageQuotaRequest)(nil),             // 68: files.v1.GetUserStorageQuotaRequest
+	(*GetUserStorageQuotaResponse)(nil),            // 69: files.v1.GetUserStorageQuotaResponse
+	(*SetUserStorageQuotaOverrideRequest)(nil),     // 70: files.v1.SetUserStorageQuotaOverrideRequest
+	(*SetUserStorageQuotaOverrideResponse)(nil),    // 71: files.v1.SetUserStorageQuotaOverrideResponse
+	(*RemoveUserStorageQuotaOverrideRequest)(nil),  // 72: files.v1.RemoveUserStorageQuotaOverrideRequest
+	(*RemoveUserStorageQuotaOverrideResponse)(nil), // 73: files.v1.RemoveUserStorageQuotaOverrideResponse
+	(*ListUserStorageQuotaOverridesRequest)(nil),   // 74: files.v1.ListUserStorageQuotaOverridesRequest
+	(*ListUserStorageQuotaOverridesResponse)(nil),  // 75: files.v1.ListUserStorageQuotaOverridesResponse
+	(*StorageUsageInfo)(nil),                       // 76: files.v1.StorageUsageInfo
+	(*GetStorageUsageRequest)(nil),                 // 77: files.v1.GetStorageUsageRequest
+	(*GetStorageUsageResponse)(nil),                // 78: files.v1.GetStorageUsageResponse
+	(*ListOrgStorageUsageRequest)(nil),             // 79: files.v1.ListOrgStorageUsageRequest
+	(*ListOrgStorageUsageResponse)(nil),            // 80: files.v1.ListOrgStorageUsageResponse
+	(*RecalculateStorageUsageRequest)(nil),         // 81: files.v1.RecalculateStorageUsageRequest
+	(*RecalculateStorageUsageResponse)(nil),        // 82: files.v1.RecalculateStorageUsageResponse
+	(*CheckStorageQuotaRequest)(nil),               // 83: files.v1.CheckStorageQuotaRequest
+	(*CheckStorageQuotaResponse)(nil),              // 84: files.v1.CheckStorageQuotaResponse
+	(*FolderTreeNode)(nil),                         // 85: files.v1.FolderTreeNode
+	(*CreatedFolderInfo)(nil),                      // 86: files.v1.CreatedFolderInfo
+	(*CreateFolderTreeRequest)(nil),                // 87: files.v1.CreateFolderTreeRequest
+	(*CreateFolderTreeResponse)(nil),               // 88: files.v1.CreateFolderTreeResponse
+	nil,                                            // 89: files.v1.FileMetadata.ExifEntry
+	(v1.AccessMode)(0),                             // 90: common.v1.AccessMode
+	(v1.ContentRole)(0),                            // 91: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),                  // 92: google.protobuf.Timestamp
 }
 var file_files_v1_files_proto_depIdxs = []int32{
-	60, // 0: files.v1.InitiateUploadRequest.access_mode:type_name -> common.v1.AccessMode
-	61, // 1: files.v1.InitiateUploadRequest.baseline_role:type_name -> common.v1.ContentRole
-	16, // 2: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
-	0,  // 3: files.v1.GetUploadStatusResponse.status:type_name -> files.v1.UploadStatus
-	60, // 4: files.v1.File.access_mode:type_name -> common.v1.AccessMode
-	1,  // 5: files.v1.File.extraction_status:type_name -> files.v1.ExtractionStatus
-	62, // 6: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
-	62, // 7: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
-	62, // 8: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
-	61, // 9: files.v1.File.user_role:type_name -> common.v1.ContentRole
-	18, // 10: files.v1.File.owner_info:type_name -> files.v1.FileOwner
-	17, // 11: files.v1.File.metadata:type_name -> files.v1.FileMetadata
-	61, // 12: files.v1.File.baseline_role:type_name -> common.v1.ContentRole
-	59, // 13: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
-	16, // 14: files.v1.FileResponse.file:type_name -> files.v1.File
-	60, // 15: files.v1.UpdateFileRequest.access_mode:type_name -> common.v1.AccessMode
-	61, // 16: files.v1.UpdateFileRequest.baseline_role:type_name -> common.v1.ContentRole
-	60, // 17: files.v1.ListFilesRequest.access_mode:type_name -> common.v1.AccessMode
-	16, // 18: files.v1.ListFilesResponse.files:type_name -> files.v1.File
-	60, // 19: files.v1.Folder.access_mode:type_name -> common.v1.AccessMode
-	62, // 20: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
-	62, // 21: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
-	61, // 22: files.v1.Folder.baseline_role:type_name -> common.v1.ContentRole
-	27, // 23: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
-	60, // 24: files.v1.CreateFolderRequest.access_mode:type_name -> common.v1.AccessMode
-	61, // 25: files.v1.CreateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
-	60, // 26: files.v1.UpdateFolderRequest.access_mode:type_name -> common.v1.AccessMode
-	61, // 27: files.v1.UpdateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
-	35, // 28: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
-	60, // 29: files.v1.TreeNode.access_mode:type_name -> common.v1.AccessMode
-	35, // 30: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
-	61, // 31: files.v1.TreeNode.baseline_role:type_name -> common.v1.ContentRole
-	60, // 32: files.v1.MoveItemsRequest.target_access_mode:type_name -> common.v1.AccessMode
-	61, // 33: files.v1.MoveItemsRequest.target_baseline_role:type_name -> common.v1.ContentRole
-	16, // 34: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
-	62, // 35: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
-	44, // 36: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
-	60, // 37: files.v1.FilterCriteria.access_mode:type_name -> common.v1.AccessMode
-	62, // 38: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
-	62, // 39: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
-	49, // 40: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
-	48, // 41: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
-	62, // 42: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
-	62, // 43: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
-	50, // 44: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
-	49, // 45: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	48, // 46: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	49, // 47: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	48, // 48: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	50, // 49: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
-	2,  // 50: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
-	4,  // 51: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
-	6,  // 52: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
-	4,  // 53: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
-	8,  // 54: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
-	10, // 55: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
-	12, // 56: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
-	14, // 57: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
-	20, // 58: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
-	21, // 59: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
-	22, // 60: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
-	24, // 61: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
-	25, // 62: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
-	29, // 63: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
-	30, // 64: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
-	31, // 65: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
-	33, // 66: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
-	36, // 67: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
-	38, // 68: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
-	40, // 69: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
-	42, // 70: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
-	45, // 71: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
-	47, // 72: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
-	52, // 73: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
-	53, // 74: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
-	54, // 75: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
-	55, // 76: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
-	57, // 77: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
-	3,  // 78: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
-	5,  // 79: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
-	7,  // 80: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
-	7,  // 81: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
-	9,  // 82: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
-	11, // 83: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
-	13, // 84: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
-	15, // 85: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
-	19, // 86: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
-	19, // 87: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
-	23, // 88: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
-	19, // 89: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
-	26, // 90: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
-	28, // 91: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
-	28, // 92: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
-	32, // 93: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
-	34, // 94: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
-	37, // 95: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
-	39, // 96: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
-	41, // 97: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
-	43, // 98: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
-	46, // 99: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
-	19, // 100: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
-	51, // 101: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	51, // 102: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
-	51, // 103: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	56, // 104: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
-	58, // 105: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
-	78, // [78:106] is the sub-list for method output_type
-	50, // [50:78] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	90,  // 0: files.v1.InitiateUploadRequest.access_mode:type_name -> common.v1.AccessMode
+	91,  // 1: files.v1.InitiateUploadRequest.baseline_role:type_name -> common.v1.ContentRole
+	16,  // 2: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
+	0,   // 3: files.v1.GetUploadStatusResponse.status:type_name -> files.v1.UploadStatus
+	90,  // 4: files.v1.File.access_mode:type_name -> common.v1.AccessMode
+	1,   // 5: files.v1.File.extraction_status:type_name -> files.v1.ExtractionStatus
+	92,  // 6: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 7: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 8: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
+	91,  // 9: files.v1.File.user_role:type_name -> common.v1.ContentRole
+	18,  // 10: files.v1.File.owner_info:type_name -> files.v1.FileOwner
+	17,  // 11: files.v1.File.metadata:type_name -> files.v1.FileMetadata
+	91,  // 12: files.v1.File.baseline_role:type_name -> common.v1.ContentRole
+	89,  // 13: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
+	16,  // 14: files.v1.FileResponse.file:type_name -> files.v1.File
+	90,  // 15: files.v1.UpdateFileRequest.access_mode:type_name -> common.v1.AccessMode
+	91,  // 16: files.v1.UpdateFileRequest.baseline_role:type_name -> common.v1.ContentRole
+	90,  // 17: files.v1.ListFilesRequest.access_mode:type_name -> common.v1.AccessMode
+	16,  // 18: files.v1.ListFilesResponse.files:type_name -> files.v1.File
+	90,  // 19: files.v1.Folder.access_mode:type_name -> common.v1.AccessMode
+	92,  // 20: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 21: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 22: files.v1.Folder.baseline_role:type_name -> common.v1.ContentRole
+	27,  // 23: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
+	90,  // 24: files.v1.CreateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	91,  // 25: files.v1.CreateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	90,  // 26: files.v1.UpdateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	91,  // 27: files.v1.UpdateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	35,  // 28: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
+	90,  // 29: files.v1.TreeNode.access_mode:type_name -> common.v1.AccessMode
+	35,  // 30: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
+	91,  // 31: files.v1.TreeNode.baseline_role:type_name -> common.v1.ContentRole
+	90,  // 32: files.v1.MoveItemsRequest.target_access_mode:type_name -> common.v1.AccessMode
+	91,  // 33: files.v1.MoveItemsRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	16,  // 34: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
+	16,  // 35: files.v1.ListTrashResponse.files:type_name -> files.v1.File
+	27,  // 36: files.v1.ListTrashResponse.folders:type_name -> files.v1.Folder
+	92,  // 37: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
+	47,  // 38: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
+	90,  // 39: files.v1.FilterCriteria.access_mode:type_name -> common.v1.AccessMode
+	92,  // 40: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
+	92,  // 41: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
+	52,  // 42: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
+	51,  // 43: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
+	92,  // 44: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 45: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
+	53,  // 46: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
+	52,  // 47: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	51,  // 48: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	52,  // 49: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	51,  // 50: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	53,  // 51: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
+	92,  // 52: files.v1.OrgStorageQuota.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 53: files.v1.OrgStorageQuota.updated_at:type_name -> google.protobuf.Timestamp
+	62,  // 54: files.v1.GetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
+	62,  // 55: files.v1.SetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
+	92,  // 56: files.v1.UserStorageQuotaOverrideInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 57: files.v1.UserStorageQuotaOverrideInfo.updated_at:type_name -> google.protobuf.Timestamp
+	67,  // 58: files.v1.GetUserStorageQuotaResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	67,  // 59: files.v1.SetUserStorageQuotaOverrideResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	67,  // 60: files.v1.ListUserStorageQuotaOverridesResponse.overrides:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	92,  // 61: files.v1.StorageUsageInfo.last_recalculated_at:type_name -> google.protobuf.Timestamp
+	76,  // 62: files.v1.GetStorageUsageResponse.usage:type_name -> files.v1.StorageUsageInfo
+	76,  // 63: files.v1.ListOrgStorageUsageResponse.users:type_name -> files.v1.StorageUsageInfo
+	76,  // 64: files.v1.RecalculateStorageUsageResponse.recalculated:type_name -> files.v1.StorageUsageInfo
+	85,  // 65: files.v1.FolderTreeNode.children:type_name -> files.v1.FolderTreeNode
+	85,  // 66: files.v1.CreateFolderTreeRequest.tree:type_name -> files.v1.FolderTreeNode
+	90,  // 67: files.v1.CreateFolderTreeRequest.access_mode:type_name -> common.v1.AccessMode
+	91,  // 68: files.v1.CreateFolderTreeRequest.baseline_role:type_name -> common.v1.ContentRole
+	86,  // 69: files.v1.CreateFolderTreeResponse.folders:type_name -> files.v1.CreatedFolderInfo
+	2,   // 70: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
+	4,   // 71: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
+	6,   // 72: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
+	4,   // 73: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
+	8,   // 74: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
+	10,  // 75: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
+	12,  // 76: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
+	14,  // 77: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
+	20,  // 78: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
+	21,  // 79: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
+	22,  // 80: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
+	24,  // 81: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
+	25,  // 82: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
+	29,  // 83: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
+	30,  // 84: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
+	31,  // 85: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
+	33,  // 86: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
+	87,  // 87: files.v1.FilesService.CreateFolderTree:input_type -> files.v1.CreateFolderTreeRequest
+	36,  // 88: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
+	38,  // 89: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
+	40,  // 90: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
+	42,  // 91: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
+	44,  // 92: files.v1.FilesService.ListTrash:input_type -> files.v1.ListTrashRequest
+	46,  // 93: files.v1.FilesService.RestoreFolder:input_type -> files.v1.RestoreFolderRequest
+	48,  // 94: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
+	50,  // 95: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
+	63,  // 96: files.v1.FilesService.GetOrgStorageQuota:input_type -> files.v1.GetOrgStorageQuotaRequest
+	65,  // 97: files.v1.FilesService.SetOrgStorageQuota:input_type -> files.v1.SetOrgStorageQuotaRequest
+	68,  // 98: files.v1.FilesService.GetUserStorageQuota:input_type -> files.v1.GetUserStorageQuotaRequest
+	70,  // 99: files.v1.FilesService.SetUserStorageQuotaOverride:input_type -> files.v1.SetUserStorageQuotaOverrideRequest
+	72,  // 100: files.v1.FilesService.RemoveUserStorageQuotaOverride:input_type -> files.v1.RemoveUserStorageQuotaOverrideRequest
+	74,  // 101: files.v1.FilesService.ListUserStorageQuotaOverrides:input_type -> files.v1.ListUserStorageQuotaOverridesRequest
+	77,  // 102: files.v1.FilesService.GetStorageUsage:input_type -> files.v1.GetStorageUsageRequest
+	79,  // 103: files.v1.FilesService.ListOrgStorageUsage:input_type -> files.v1.ListOrgStorageUsageRequest
+	81,  // 104: files.v1.FilesService.RecalculateStorageUsage:input_type -> files.v1.RecalculateStorageUsageRequest
+	83,  // 105: files.v1.FilesService.CheckStorageQuota:input_type -> files.v1.CheckStorageQuotaRequest
+	55,  // 106: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
+	56,  // 107: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
+	57,  // 108: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
+	58,  // 109: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
+	60,  // 110: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
+	3,   // 111: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
+	5,   // 112: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
+	7,   // 113: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
+	7,   // 114: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
+	9,   // 115: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
+	11,  // 116: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
+	13,  // 117: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
+	15,  // 118: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
+	19,  // 119: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
+	19,  // 120: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
+	23,  // 121: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
+	19,  // 122: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
+	26,  // 123: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
+	28,  // 124: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
+	28,  // 125: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
+	32,  // 126: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
+	34,  // 127: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
+	88,  // 128: files.v1.FilesService.CreateFolderTree:output_type -> files.v1.CreateFolderTreeResponse
+	37,  // 129: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
+	39,  // 130: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
+	41,  // 131: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
+	43,  // 132: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
+	45,  // 133: files.v1.FilesService.ListTrash:output_type -> files.v1.ListTrashResponse
+	28,  // 134: files.v1.FilesService.RestoreFolder:output_type -> files.v1.FolderResponse
+	49,  // 135: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
+	19,  // 136: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
+	64,  // 137: files.v1.FilesService.GetOrgStorageQuota:output_type -> files.v1.GetOrgStorageQuotaResponse
+	66,  // 138: files.v1.FilesService.SetOrgStorageQuota:output_type -> files.v1.SetOrgStorageQuotaResponse
+	69,  // 139: files.v1.FilesService.GetUserStorageQuota:output_type -> files.v1.GetUserStorageQuotaResponse
+	71,  // 140: files.v1.FilesService.SetUserStorageQuotaOverride:output_type -> files.v1.SetUserStorageQuotaOverrideResponse
+	73,  // 141: files.v1.FilesService.RemoveUserStorageQuotaOverride:output_type -> files.v1.RemoveUserStorageQuotaOverrideResponse
+	75,  // 142: files.v1.FilesService.ListUserStorageQuotaOverrides:output_type -> files.v1.ListUserStorageQuotaOverridesResponse
+	78,  // 143: files.v1.FilesService.GetStorageUsage:output_type -> files.v1.GetStorageUsageResponse
+	80,  // 144: files.v1.FilesService.ListOrgStorageUsage:output_type -> files.v1.ListOrgStorageUsageResponse
+	82,  // 145: files.v1.FilesService.RecalculateStorageUsage:output_type -> files.v1.RecalculateStorageUsageResponse
+	84,  // 146: files.v1.FilesService.CheckStorageQuota:output_type -> files.v1.CheckStorageQuotaResponse
+	54,  // 147: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	54,  // 148: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
+	54,  // 149: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	59,  // 150: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
+	61,  // 151: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
+	111, // [111:152] is the sub-list for method output_type
+	70,  // [70:111] is the sub-list for method input_type
+	70,  // [70:70] is the sub-list for extension type_name
+	70,  // [70:70] is the sub-list for extension extendee
+	0,   // [0:70] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -4983,18 +6996,29 @@ func file_files_v1_files_proto_init() {
 	file_files_v1_files_proto_msgTypes[33].OneofWrappers = []any{}
 	file_files_v1_files_proto_msgTypes[34].OneofWrappers = []any{}
 	file_files_v1_files_proto_msgTypes[36].OneofWrappers = []any{}
-	file_files_v1_files_proto_msgTypes[42].OneofWrappers = []any{}
-	file_files_v1_files_proto_msgTypes[46].OneofWrappers = []any{}
-	file_files_v1_files_proto_msgTypes[48].OneofWrappers = []any{}
-	file_files_v1_files_proto_msgTypes[50].OneofWrappers = []any{}
-	file_files_v1_files_proto_msgTypes[52].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[45].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[49].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[51].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[53].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[55].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[60].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[63].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[65].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[67].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[68].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[74].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[75].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[79].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[82].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[84].OneofWrappers = []any{}
+	file_files_v1_files_proto_msgTypes[85].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   58,
+			NumMessages:   88,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

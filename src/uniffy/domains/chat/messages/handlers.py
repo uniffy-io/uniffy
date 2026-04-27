@@ -27,7 +27,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto
@@ -80,7 +80,7 @@ class MessageHandlers:
         metadata = dict(request.metadata) if request.metadata else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 access = ChatAccessChecker(session)
                 ops = ChatMessageOperations(session, access)
                 message, sender_name, sender_avatar = await ops.send_message(
@@ -120,13 +120,16 @@ class MessageHandlers:
 
         before_id = None
         after_id = None
+        around_id = None
         if request.HasField("before_id"):
             before_id = UUID(request.before_id)
         if request.HasField("after_id"):
             after_id = UUID(request.after_id)
+        if request.HasField("around_id"):
+            around_id = UUID(request.around_id)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
                 messages, has_more = await ops.get_messages(
                     user_id=user_id,
@@ -134,14 +137,13 @@ class MessageHandlers:
                     channel_id=channel_id,
                     before_id=before_id,
                     after_id=after_id,
+                    around_id=around_id,
                     limit=request.limit or 50,
                     root_only=request.root_only,
                 )
 
                 # Batch-fetch thread stats and sender info
-                proto_messages = await self._enrich_messages(
-                    session, messages, user_id
-                )
+                proto_messages = await self._enrich_messages(session, messages, user_id)
 
                 return GetMessagesResponse(
                     messages=proto_messages,
@@ -165,14 +167,10 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                msg = await ops.get_message(
-                    user_id, org_id, channel_id, message_id
-                )
-                return GetMessageResponse(
-                    message=message_to_proto(msg)
-                )
+                msg = await ops.get_message(user_id, org_id, channel_id, message_id)
+                return GetMessageResponse(message=message_to_proto(msg))
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -191,14 +189,12 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
                 msg = await ops.update_message(
                     user_id, org_id, channel_id, message_id, request.content
                 )
-                return UpdateMessageResponse(
-                    message=message_to_proto(msg)
-                )
+                return UpdateMessageResponse(message=message_to_proto(msg))
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
@@ -217,11 +213,9 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                await ops.delete_message(
-                    user_id, org_id, channel_id, message_id
-                )
+                await ops.delete_message(user_id, org_id, channel_id, message_id)
                 return DeleteMessageResponse()
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -241,11 +235,9 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                msg = await ops.pin_message(
-                    user_id, org_id, channel_id, message_id
-                )
+                msg = await ops.pin_message(user_id, org_id, channel_id, message_id)
                 return PinMessageResponse(message=message_to_proto(msg))
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -265,11 +257,9 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                msg = await ops.unpin_message(
-                    user_id, org_id, channel_id, message_id
-                )
+                msg = await ops.unpin_message(user_id, org_id, channel_id, message_id)
                 return UnpinMessageResponse(message=message_to_proto(msg))
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -288,14 +278,10 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                messages = await ops.get_pinned_messages(
-                    user_id, org_id, channel_id
-                )
-                return GetPinnedMessagesResponse(
-                    messages=[message_to_proto(m) for m in messages]
-                )
+                messages = await ops.get_pinned_messages(user_id, org_id, channel_id)
+                return GetPinnedMessagesResponse(messages=[message_to_proto(m) for m in messages])
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -329,9 +315,7 @@ class MessageHandlers:
         thread_participants_map: dict[UUID, list[UUID]] = defaultdict(list)
         if root_ids:
             stats_result = await session.execute(
-                select(ChatThreadStats).where(
-                    ChatThreadStats.root_message_id.in_(root_ids)
-                )
+                select(ChatThreadStats).where(ChatThreadStats.root_message_id.in_(root_ids))
             )
             for ts in stats_result.scalars().all():
                 thread_stats_map[ts.root_message_id] = ts
@@ -339,10 +323,15 @@ class MessageHandlers:
             # Batch fetch participants (limit 4 per thread) in single query
             if thread_stats_map:
                 thread_ids = list(thread_stats_map.keys())
-                rn = func.row_number().over(
-                    partition_by=ChatThreadParticipant.root_message_id,
-                    order_by=ChatThreadParticipant.created_at,
-                ).label("rn")
+                rn = (
+                    func
+                    .row_number()
+                    .over(
+                        partition_by=ChatThreadParticipant.root_message_id,
+                        order_by=ChatThreadParticipant.created_at,
+                    )
+                    .label("rn")
+                )
                 sub = (
                     select(
                         ChatThreadParticipant.root_message_id,
@@ -364,9 +353,7 @@ class MessageHandlers:
         sender_map: dict[UUID, tuple[str, str | None]] = {}
         if sender_ids:
             u_result = await session.execute(
-                select(User.id, User.full_name, User.avatar_key).where(
-                    User.id.in_(sender_ids)
-                )
+                select(User.id, User.full_name, User.avatar_key).where(User.id.in_(sender_ids))
             )
             for row in u_result.all():
                 sender_map[row[0]] = (row[1] or "Unknown", row[2])
@@ -378,14 +365,13 @@ class MessageHandlers:
             from uniffy.core.models.chat.message import ChatMessage as ChatMessageModel
 
             rto_result = await session.execute(
-                select(ChatMessageModel.id, ChatMessageModel.sender_id, ChatMessageModel.content)
-                .where(ChatMessageModel.id.in_(reply_to_ids))
+                select(
+                    ChatMessageModel.id, ChatMessageModel.sender_id, ChatMessageModel.content
+                ).where(ChatMessageModel.id.in_(reply_to_ids))
             )
             rto_data = {row[0]: (row[1], row[2]) for row in rto_result.all()}
             # Resolve sender names for quoted messages (reuse already-fetched senders)
-            missing_sender_ids = [
-                sid for sid, _ in rto_data.values() if sid not in sender_map
-            ]
+            missing_sender_ids = [sid for sid, _ in rto_data.values() if sid not in sender_map]
             if missing_sender_ids:
                 extra_result = await session.execute(
                     select(User.id, User.full_name).where(User.id.in_(missing_sender_ids))
@@ -400,9 +386,27 @@ class MessageHandlers:
         from uniffy_proto.chat.v1.chat_pb2 import ReactionGroup as ProtoReactionGroup
 
         reaction_ops = ChatReactionOperations(session)
-        reactions_map = await reaction_ops.get_reactions_for_messages(
-            message_ids, user_id
-        )
+        reactions_map = await reaction_ops.get_reactions_for_messages(message_ids, user_id)
+
+        # Batch fetch thread read cursors for the requesting user
+        thread_unread_map: dict[UUID, bool] = {}
+        if thread_stats_map:
+            from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
+
+            read_ops = ChatReadStateOperations(session)
+            thread_cursors = await read_ops.batch_get_thread_read_cursors(
+                user_id,
+                list(thread_stats_map.keys()),
+            )
+            for tid, ts in thread_stats_map.items():
+                cursor_time = thread_cursors.get(tid)
+                if cursor_time is None:
+                    # Never opened this thread - has unread if any replies exist
+                    thread_unread_map[tid] = ts.reply_count > 0
+                elif ts.last_reply_at and ts.last_reply_at > cursor_time:
+                    thread_unread_map[tid] = True
+                else:
+                    thread_unread_map[tid] = False
 
         # Build proto messages
         proto_messages = []
@@ -432,6 +436,7 @@ class MessageHandlers:
                     msg,
                     thread_stats=ts,
                     thread_participant_ids=participants,
+                    thread_has_unread=thread_unread_map.get(msg.id, False),
                     sender_name=sender[0],
                     sender_avatar_url=sender[1],
                     reactions=proto_reactions,

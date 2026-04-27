@@ -166,9 +166,7 @@ async def get_subtask_counts(
         select(
             Task.parent_id,
             func.count().label("total"),
-            func.count(
-                case((Task.status == "status_done", 1))
-            ).label("completed"),
+            func.count(case((Task.status == "status_done", 1))).label("completed"),
         )
         .where(
             and_(

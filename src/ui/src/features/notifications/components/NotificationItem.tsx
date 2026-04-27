@@ -1,9 +1,9 @@
 /**
  * Single notification item rendered in the notification panel.
  *
- * Displays actor avatar with type icon overlay, notification content,
- * source URN context, and hover actions. CALENDAR_INVITE notifications
- * include inline RSVP buttons (Accept/Maybe/Decline).
+ * Displays actor avatar via SubjectAvatar with type icon badge overlay,
+ * notification content with URN type color accent, source URN context,
+ * and hover actions. CALENDAR_INVITE notifications include inline RSVP buttons.
  */
 
 import { useState } from 'react';
@@ -19,6 +19,14 @@ import {
     ShieldCheck,
     ShieldSlash,
     Megaphone,
+    ListChecks,
+    ClockCountdown,
+    Warning,
+    ChatCircle,
+    ChatCenteredText,
+    UserPlus,
+    UserMinus,
+    ArrowBendUpLeft,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
@@ -26,14 +34,16 @@ import { cn } from '@/shared/utils/cn';
 import { parseUrn } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { getUrnTypeTheme } from '@/config/theme/urnColors';
+import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
+import { SUBJECT_TYPE } from '@/components/subject/types';
 import { updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
 import { markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { NotificationType } from '@uniffy/proto/notifications/v1/notifications_pb';
 import type { AttendeeStatus } from '@/features/calendar/types';
 import { UrnType } from '@/shared/utils/urnTypes';
-import { getInitials } from '@/components/subject/utils';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
+import { formatSmartDateTime } from '@/shared/utils/dateFormatting';
+import { MentionChipCompact } from '@/components/mention/MentionChip';
 
 interface NotificationTypeConfig {
     icon: Icon;
@@ -97,7 +107,86 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
         color: 'text-violet-400',
         bgColor: 'bg-violet-500',
     },
+    [NotificationType.TASK_ASSIGNED]: {
+        icon: ListChecks,
+        label: 'Assigned',
+        color: 'text-teal-400',
+        bgColor: 'bg-teal-500',
+    },
+    [NotificationType.TASK_DUE_SOON]: {
+        icon: ClockCountdown,
+        label: 'Due soon',
+        color: 'text-amber-400',
+        bgColor: 'bg-amber-500',
+    },
+    [NotificationType.TASK_OVERDUE]: {
+        icon: Warning,
+        label: 'Overdue',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500',
+    },
+    [NotificationType.CHAT_MENTION]: {
+        icon: ChatCircle,
+        label: 'Mention',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500',
+    },
+    [NotificationType.CHAT_DM]: {
+        icon: ChatCenteredText,
+        label: 'Message',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500',
+    },
+    [NotificationType.CHAT_CHANNEL_INVITE]: {
+        icon: UserPlus,
+        label: 'Channel invite',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500',
+    },
+    [NotificationType.CHAT_CHANNEL_REMOVED]: {
+        icon: UserMinus,
+        label: 'Removed',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500',
+    },
+    [NotificationType.CHAT_THREAD_REPLY]: {
+        icon: ArrowBendUpLeft,
+        label: 'Thread reply',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500',
+    },
 };
+
+const MENTION_REGEX = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+
+function NotificationBody({ text }: { text: string }) {
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    const regex = new RegExp(MENTION_REGEX.source, 'g');
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+        const label = match[1];
+        const urn = match[2];
+        parts.push(
+            <MentionChipCompact
+                key={`${urn}-${match.index}`}
+                urn={urn}
+                label={label}
+            />
+        );
+        lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return <>{parts}</>;
+}
 
 const DEFAULT_TYPE_CONFIG: NotificationTypeConfig = {
     icon: Bell,
@@ -111,6 +200,7 @@ interface NotificationItemProps {
     onMarkAsRead: (id: string) => void;
     onDelete: (id: string) => void;
     onClick?: (notification: SerializedNotification) => void;
+    hideRowBackground?: boolean;
 }
 
 export function NotificationItem({
@@ -118,13 +208,13 @@ export function NotificationItem({
     onMarkAsRead,
     onDelete,
     onClick,
+    hideRowBackground = false,
 }: NotificationItemProps) {
     const dispatch = useAppDispatch();
     const typeConfig = NOTIFICATION_TYPE_CONFIG[notification.notificationType] ?? DEFAULT_TYPE_CONFIG;
     const TypeIcon = typeConfig.icon;
     const [rsvpStatus, setRsvpStatus] = useState<AttendeeStatus | null>(null);
 
-    // Determine if this is a calendar invite that supports RSVP
     const isCalendarInvite = notification.notificationType === NotificationType.CALENDAR_INVITE;
     const inviteParsedUrn = isCalendarInvite && notification.sourceUrn
         ? parseUrn(notification.sourceUrn)
@@ -141,48 +231,51 @@ export function NotificationItem({
         dispatch(markNotificationAsRead(notification.id));
     };
 
-    // Resolve source URN for contextual display
     const parsedUrn = notification.sourceUrn ? parseUrn(notification.sourceUrn) : null;
     const sourceConfig = parsedUrn?.isValid ? getContentTypeConfig(parsedUrn.type) : null;
     const sourceTheme = parsedUrn?.isValid ? getUrnTypeTheme(parsedUrn.type) : null;
     const SourceIcon = sourceConfig?.icon;
 
+    const actorSubject = notification.actorId
+        ? {
+              id: notification.actorId,
+              type: SUBJECT_TYPE.USER,
+              name: notification.actorName || '',
+              avatarUrl: notification.actorAvatarUrl || undefined,
+          }
+        : null;
+
     return (
         <div
             className={cn(
-                'group relative flex gap-3 px-4 py-3 transition-colors cursor-pointer',
-                'hover:bg-muted/50',
-                !notification.isRead && 'bg-gradient-to-r from-primary/[0.06] to-transparent'
+                'group relative flex gap-3 py-3 transition-colors cursor-pointer',
+                hideRowBackground
+                    ? 'px-3'
+                    : cn(
+                        'px-4',
+                        notification.isRead
+                            ? 'hover:bg-muted/30'
+                            : 'bg-primary/10 hover:bg-primary/15',
+                    ),
             )}
             onClick={() => onClick?.(notification)}
         >
-            {/* Unread accent bar */}
-            {!notification.isRead && (
-                <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-primary" />
+            {!notification.isRead && !hideRowBackground && (
+                <span className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
             )}
 
-            {/* Avatar with type badge */}
             <div className="relative shrink-0 mt-0.5">
-                {notification.actorAvatarUrl ? (
-                    <img
-                        src={notification.actorAvatarUrl}
-                        alt={notification.actorName}
-                        className="w-8 h-8 rounded-full object-cover"
-                    />
+                {actorSubject ? (
+                    <SubjectAvatar subject={actorSubject} size="md" />
                 ) : (
                     <div className={cn(
                         'flex items-center justify-center w-8 h-8 rounded-full',
-                        'bg-muted text-muted-foreground text-xs font-semibold',
-                        notification.actorId && 'bg-primary/15 text-primary'
+                        'bg-muted text-muted-foreground'
                     )}>
-                        {notification.actorName
-                            ? getInitials(notification.actorName)
-                            : <TypeIcon size={16} weight="duotone" />
-                        }
+                        <TypeIcon size={16} weight="duotone" />
                     </div>
                 )}
 
-                {/* Type icon badge (only when avatar shows actor, not type icon) */}
                 {notification.actorName && (
                     <span className={cn(
                         'absolute -bottom-0.5 -right-0.5 flex items-center justify-center',
@@ -194,36 +287,29 @@ export function NotificationItem({
                 )}
             </div>
 
-            {/* Content */}
             <div className="flex-1 min-w-0">
-                {/* Title line */}
                 <p className={cn(
                     'text-[13px] leading-snug',
                     notification.isRead
                         ? 'text-muted-foreground'
-                        : 'text-foreground'
+                        : 'text-foreground font-medium'
                 )}>
                     {notification.actorName && (
                         <span className={cn(
-                            'font-semibold',
-                            notification.isRead ? 'text-foreground/70' : 'text-foreground'
+                            notification.isRead ? 'font-medium text-foreground/60' : 'font-semibold text-foreground'
                         )}>
                             {notification.actorName}{' '}
                         </span>
                     )}
-                    <span className={notification.isRead ? undefined : 'text-foreground/80'}>
-                        {notification.title}
-                    </span>
+                    {notification.title}
                 </p>
 
-                {/* Body preview */}
                 {notification.body && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {notification.body}
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        <NotificationBody text={notification.body} />
                     </p>
                 )}
 
-                {/* Meta row: source pill + time */}
                 <div className="flex items-center gap-2 mt-1.5">
                     {sourceConfig && SourceIcon && sourceTheme && (
                         <span className={cn(
@@ -236,11 +322,10 @@ export function NotificationItem({
                         </span>
                     )}
                     <span className="text-[11px] text-muted-foreground/70">
-                        {formatRelativeTime(notification.createdAt)}
+                        {formatSmartDateTime(notification.createdAt)}
                     </span>
                 </div>
 
-                {/* RSVP Buttons for Calendar Invites */}
                 {canRsvp && (
                     <div className="mt-2">
                         {rsvpStatus ? (
@@ -284,10 +369,9 @@ export function NotificationItem({
                 )}
             </div>
 
-            {/* Hover actions */}
             <div className={cn(
                 'flex items-start gap-0.5 pt-0.5 shrink-0',
-                'opacity-0 group-hover:opacity-100 transition-opacity'
+                'opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity'
             )}>
                 {!notification.isRead && (
                     <button

@@ -56,20 +56,22 @@ export function ConfirmDialog({
 
     return (
         <Modal onClose={onClose} closeDisabled={loading} maxWidth="max-w-md">
+            <div data-testid="confirm-dialog" data-variant={variant}>
             {/* Header */}
             <div className="flex items-start gap-4 p-6 pb-4">
                 <div className={cn('p-3 rounded-full', variant === 'default' && 'bg-primary/10 text-primary')} style={iconStyles[variant]}>
                     <Warning size={24} weight="duotone" />
                 </div>
                 <div className="flex-1 pt-1">
-                    <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                    <div className="mt-2 text-sm text-muted-foreground">{message}</div>
+                    <h3 className="text-lg font-semibold text-foreground" data-testid="confirm-dialog-title">{title}</h3>
+                    <div className="mt-2 text-sm text-muted-foreground" data-testid="confirm-dialog-message">{message}</div>
                 </div>
                 <button
                     type="button"
                     onClick={onClose}
                     disabled={loading}
                     className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    data-testid="confirm-dialog-close"
                 >
                     <X size={20} weight="bold" />
                 </button>
@@ -83,6 +85,7 @@ export function ConfirmDialog({
                     size="md"
                     onClick={onClose}
                     disabled={loading}
+                    data-testid="confirm-dialog-cancel"
                 >
                     {cancelLabel}
                 </Button>
@@ -94,9 +97,11 @@ export function ConfirmDialog({
                     onClick={onConfirm}
                     loading={loading}
                     disabled={loading}
+                    data-testid="confirm-dialog-confirm"
                 >
                     {loading ? 'Processing...' : confirmLabel}
                 </Button>
+            </div>
             </div>
         </Modal>
     );

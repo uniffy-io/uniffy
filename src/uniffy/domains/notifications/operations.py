@@ -4,7 +4,7 @@ This module handles all business logic for notifications including
 list, mark as read, delete, and push subscription management.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, select, update
@@ -252,6 +252,264 @@ class NotificationOperations:
         await self.session.delete(notification)
         await self.session.commit()
         return True
+
+    async def search_notifications(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        query: str = "",
+        page: int = 1,
+        page_size: int = 20,
+        is_read: bool | None = None,
+        notification_types: list[NotificationType] | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        actor_id: UUID | None = None,
+    ) -> tuple[list[Notification], int, int]:
+        """
+        Search notifications with full-text search and advanced filters.
+
+        Parameters
+        ----------
+        user_id : UUID
+            The recipient user ID.
+        organization_id : UUID
+            The organization context.
+        query : str
+            Free-text search query matching title and body.
+        page : int
+            Page number (1-indexed).
+        page_size : int
+            Number of notifications per page.
+        is_read : bool | None
+            Filter by read status (None for all).
+        notification_types : list[NotificationType] | None
+            Filter by notification types.
+        date_from : datetime | None
+            Start of date range filter (inclusive).
+        date_to : datetime | None
+            End of date range filter (inclusive).
+        actor_id : UUID | None
+            Filter by the actor who triggered the notification.
+
+        Returns
+        -------
+        tuple[list[Notification], int, int]
+            (notifications, total_count, unread_count).
+
+        """
+        base_conditions = [
+            Notification.user_id == user_id,
+            Notification.organization_id == organization_id,
+        ]
+
+        if is_read is not None:
+            base_conditions.append(Notification.is_read == is_read)
+
+        if notification_types:
+            base_conditions.append(Notification.notification_type.in_(notification_types))
+
+        if date_from is not None:
+            base_conditions.append(Notification.created_at >= date_from)
+
+        if date_to is not None:
+            base_conditions.append(Notification.created_at <= date_to)
+
+        if actor_id is not None:
+            base_conditions.append(Notification.actor_id == actor_id)
+
+        if query.strip():
+            search_term = f"%{query.strip().lower()}%"
+            base_conditions.append(
+                func.lower(Notification.title).like(search_term)
+                | func.lower(Notification.body).like(search_term)
+            )
+
+        base_query = select(Notification).where(and_(*base_conditions))
+
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_count = (await self.session.execute(count_query)).scalar() or 0
+
+        unread_query = select(func.count()).where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.organization_id == organization_id,
+                Notification.is_read == False,  # noqa: E712
+            )
+        )
+        unread_count = (await self.session.execute(unread_query)).scalar() or 0
+
+        results_query = base_query.order_by(Notification.created_at.desc())
+        results_query = results_query.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self.session.execute(results_query)
+        notifications = list(result.scalars().all())
+
+        return (notifications, total_count, unread_count)
+
+    async def get_notification_stats(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        days: int = 30,
+    ) -> tuple[
+        list[tuple[str, int, int, int]],
+        list[tuple[NotificationType, int]],
+        int,
+        int,
+        int,
+    ]:
+        """
+        Get aggregated notification statistics.
+
+        Parameters
+        ----------
+        user_id : UUID
+            The recipient user ID.
+        organization_id : UUID
+            The organization context.
+        days : int
+            Number of days to include in stats.
+
+        Returns
+        -------
+        tuple
+            (daily_stats, type_stats, total_count, unread_count, read_count).
+            daily_stats: list of (date_str, total, unread, read).
+            type_stats: list of (notification_type, count).
+
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        base_conditions = [
+            Notification.user_id == user_id,
+            Notification.organization_id == organization_id,
+            Notification.created_at >= cutoff,
+        ]
+
+        # Daily stats
+        date_col = func.date(Notification.created_at).label("day")
+        daily_query = (
+            select(
+                date_col,
+                func.count().label("total"),
+                func.count().filter(Notification.is_read == False).label("unread"),  # noqa: E712
+                func.count().filter(Notification.is_read == True).label("read"),  # noqa: E712
+            )
+            .where(and_(*base_conditions))
+            .group_by(date_col)
+            .order_by(date_col)
+        )
+        daily_result = await self.session.execute(daily_query)
+        daily_stats = [(str(row.day), row.total, row.unread, row.read) for row in daily_result.all()]
+
+        # Type stats
+        type_query = (
+            select(
+                Notification.notification_type,
+                func.count().label("count"),
+            )
+            .where(and_(*base_conditions))
+            .group_by(Notification.notification_type)
+            .order_by(func.count().desc())
+        )
+        type_result = await self.session.execute(type_query)
+        type_stats = [(row.notification_type, row.count) for row in type_result.all()]
+
+        # Totals
+        total_query = select(func.count()).where(and_(*base_conditions))
+        total_count = (await self.session.execute(total_query)).scalar() or 0
+
+        unread_query = select(func.count()).where(
+            and_(
+                *base_conditions,
+                Notification.is_read == False,  # noqa: E712
+            )
+        )
+        unread_count = (await self.session.execute(unread_query)).scalar() or 0
+
+        read_count = total_count - unread_count
+
+        return (daily_stats, type_stats, total_count, unread_count, read_count)
+
+    async def bulk_mark_as_read(
+        self,
+        user_id: UUID,
+        notification_ids: list[UUID],
+    ) -> int:
+        """
+        Mark multiple notifications as read.
+
+        Parameters
+        ----------
+        user_id : UUID
+            The user ID (for ownership validation).
+        notification_ids : list[UUID]
+            The notification IDs to mark as read.
+
+        Returns
+        -------
+        int
+            Number of notifications marked as read.
+
+        """
+        if not notification_ids:
+            return 0
+
+        now = datetime.now(UTC)
+        stmt = (
+            update(Notification)
+            .where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.id.in_(notification_ids),
+                    Notification.is_read == False,  # noqa: E712
+                )
+            )
+            .values(is_read=True, read_at=now)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return result.rowcount
+
+    async def bulk_delete_notifications(
+        self,
+        user_id: UUID,
+        notification_ids: list[UUID],
+    ) -> int:
+        """
+        Delete multiple notifications.
+
+        Parameters
+        ----------
+        user_id : UUID
+            The user ID (for ownership validation).
+        notification_ids : list[UUID]
+            The notification IDs to delete.
+
+        Returns
+        -------
+        int
+            Number of notifications deleted.
+
+        """
+        if not notification_ids:
+            return 0
+
+        result = await self.session.execute(
+            select(Notification).where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.id.in_(notification_ids),
+                )
+            )
+        )
+        notifications = list(result.scalars().all())
+
+        for notification in notifications:
+            await self.session.delete(notification)
+
+        await self.session.commit()
+        return len(notifications)
 
     async def create_notifications_batch(
         self,

@@ -17,6 +17,7 @@ def build_system_prompt(
     memory_context: list[str] | None = None,
     prompt_content: str | None = None,
     user_timezone: str | None = None,
+    chat_context: str | None = None,
 ) -> str:
     """Assemble the system prompt from modular sections.
 
@@ -93,12 +94,125 @@ def build_system_prompt(
     if prompt_content:
         sections.append(prompt_content)
 
+    # Section 7b: Chat-channel context (only set on chat-triggered turns).
+    # Placed just before the tools section so the agent has a fresh picture
+    # of where it is and who it's talking to right before the conversation
+    # history starts.
+    if chat_context:
+        sections.append(chat_context)
+
+    # Section 7c: Output formatting rules. Some providers reach for
+    # remark-directive syntax (`::: note`, `::: warning`, `::: writing
+    # block`, ...) when producing long-form content. Standard CommonMark
+    # (which the chat renderer uses) does not parse those fences, so
+    # they leak as raw `:::` lines in the bubble. Constrain the model
+    # explicitly.
+    sections.append(_OUTPUT_FORMATTING_RULES)
+
     # Section 8: Tool descriptions (last so tools are near the conversation)
     tool_section = _build_tool_section(enabled_tools)
     if tool_section:
         sections.append(tool_section)
 
     return "\n\n".join(sections)
+
+
+_OUTPUT_FORMATTING_RULES = (
+    "## Output formatting\n"
+    "\n"
+    "Reply in standard CommonMark only. Do not use directive blocks "
+    "(no `::: note`, `::: warning`, `::: writing block`, or any other "
+    "`:::` fences) -- the chat renderer treats them as plain text and "
+    "they appear as raw `:::` lines to the user. Use blockquotes (`>`), "
+    "headings, lists, and fenced code blocks instead.\n"
+    "\n"
+    "Mention chips use the `[[[label|urn:uniffy:...]]]` syntax and the "
+    "renderer expands them into a card on a line of their own. Two "
+    "rules when you write one:\n"
+    "\n"
+    "1. Never put a colon (`:`) directly after a mention chip. The "
+    "card already labels itself, so a trailing colon shows up as a "
+    "stray `:` floating above the next paragraph (e.g. write "
+    '"Here is a summary of [[[Foo|urn:...]]]" then a sentence on '
+    'the next line, NOT "Summary of [[[Foo|urn:...]]]:").\n'
+    "2. Always put a blank line (or a list-item break) immediately "
+    "after a mention chip before continuing with prose -- otherwise "
+    "the chip and the following text collapse into the same line and "
+    "the layout breaks."
+)
+
+
+def build_chat_context_section(
+    *,
+    channel_type: str,
+    channel_name: str,
+    channel_description: str | None,
+    participant_users: list[str],
+    participant_agents: list[str],
+    trigger_user_name: str,
+    trigger_rule: str | None,
+    in_thread: bool,
+) -> str:
+    """Assemble the chat-channel orientation block for the system prompt.
+
+    Surfaces what the agent needs to stay coherent in a shared conversation:
+    channel identity, who the other participants are (so references like
+    "Alice" / "@Bob" land), and how this turn was triggered. The writer
+    separately prefixes each user/agent message in the conversation
+    history with its author name, so the agent can match names here to
+    speakers below.
+    """
+    surface = _describe_surface(channel_type)
+    lines: list[str] = ["## Chat context", "", f'You are replying in {surface} "{channel_name}".']
+
+    if channel_description:
+        lines.append(f"Channel description: {channel_description}")
+
+    other_users = [n for n in participant_users if n and n != trigger_user_name]
+    other_agents = [n for n in participant_agents if n and n != "self"]
+    roster_parts: list[str] = []
+    if other_users:
+        roster_parts.append("users: " + ", ".join(other_users))
+    if other_agents:
+        roster_parts.append("other agents: " + ", ".join(other_agents))
+    if roster_parts:
+        lines.append("Other participants in this conversation — " + "; ".join(roster_parts) + ".")
+    else:
+        lines.append("You are alone in this conversation with the requester.")
+
+    trigger_desc = _describe_trigger_rule(trigger_rule, in_thread)
+    lines.append(f"This turn was triggered by {trigger_user_name} via {trigger_desc}.")
+    lines.append(
+        "Conversation history below is prefixed with each speaker's name in "
+        "square brackets, e.g. `[Alice]: hello`. Address people by the names "
+        "shown in the roster; do not invent new ones."
+    )
+
+    return "\n".join(lines)
+
+
+def _describe_surface(channel_type: str) -> str:
+    """Short human-readable name for a ChannelType value."""
+    mapping = {
+        "DIRECT": "a direct message (1:1)",
+        "GROUP_DM": "a group direct message",
+        "PUBLIC": "a public channel",
+        "PRIVATE": "a private channel",
+    }
+    return mapping.get(channel_type, "a chat channel")
+
+
+def _describe_trigger_rule(rule: str | None, in_thread: bool) -> str:
+    """Short human-readable name for a detector rule token."""
+    if in_thread and rule in (None, "thread"):
+        return "a reply in a thread you're following"
+    mapping = {
+        "dm": "a direct message",
+        "mention": "an @-mention in a channel message",
+        "reply": "a reply to one of your messages",
+        "thread": "a reply in a thread you're following",
+    }
+    return mapping.get(rule or "", "a chat trigger")
 
 
 def _build_user_section(

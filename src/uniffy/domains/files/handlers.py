@@ -17,7 +17,10 @@ from uniffy_proto.files.v1.files_pb2 import (
     CompleteUploadRequest,
     CopyItemsRequest,
     CopyItemsResponse,
+    CreatedFolderInfo,
     CreateFolderRequest,
+    CreateFolderTreeRequest,
+    CreateFolderTreeResponse,
     DeleteFileRequest,
     DeleteFileResponse,
     DeleteFolderRequest,
@@ -39,10 +42,13 @@ from uniffy_proto.files.v1.files_pb2 import (
     ListFilesResponse,
     ListFileVersionsRequest,
     ListFileVersionsResponse,
+    ListTrashRequest,
+    ListTrashResponse,
     MoveItemsRequest,
     MoveItemsResponse,
     RestoreFileRequest,
     RestoreFileVersionRequest,
+    RestoreFolderRequest,
     StreamFileRangeRequest,
     StreamFileRangeResponse,
     TreeNode,
@@ -62,7 +68,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import ContentType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.files.converters import (
     file_to_proto,
@@ -96,7 +102,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 access_mode = None
@@ -157,7 +163,7 @@ class FilesHandlers:
         s3 = get_s3_client()
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 # Get upload info and verify ownership
@@ -217,7 +223,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 # Complete the upload
@@ -259,7 +265,7 @@ class FilesHandlers:
         s3_upload_id: str | None = None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 async for chunk in request_iterator:
@@ -327,7 +333,7 @@ class FilesHandlers:
         get_user_id_from_context(ctx)  # Verify auth
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 upload = await ops.get_upload_status(upload_id)
 
@@ -365,7 +371,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 await ops.abort_upload(upload_id, user_id)
 
@@ -407,7 +413,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 # Get file and check permissions
@@ -469,7 +475,7 @@ class FilesHandlers:
         end_byte = request.end_byte if request.HasField("end_byte") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 # Get file and check permissions
@@ -529,7 +535,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
                 return FileResponse(file=file_to_proto(file))
@@ -564,20 +570,16 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 if request.access_mode:
                     new_access_mode = access_mode_from_proto(request.access_mode)
                     if new_access_mode is None:
-                        raise ConnectError(
-                            Code.INVALID_ARGUMENT, "Invalid access_mode"
-                        )
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access_mode")
                     new_baseline_role = None
                     if request.baseline_role:
-                        new_baseline_role = content_role_from_proto(
-                            request.baseline_role
-                        )
+                        new_baseline_role = content_role_from_proto(request.baseline_role)
                     members_ops = ContentMembersOperations(session)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
@@ -626,7 +628,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 await ops.delete(
                     user_id=user_id,
@@ -663,7 +665,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 file = await ops.restore(
                     user_id=user_id,
@@ -719,7 +721,7 @@ class FilesHandlers:
             access_mode_filter = access_mode_from_proto(request.access_mode)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 files, total = await ops.list_files(
                     user_id=user_id,
@@ -802,7 +804,7 @@ class FilesHandlers:
             baseline_role = content_role_from_proto(request.baseline_role)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FolderOperations(session)
                 folder = await ops.create(
                     user_id=user_id,
@@ -847,20 +849,16 @@ class FilesHandlers:
                     raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FolderOperations(session)
 
                 if request.access_mode:
                     new_access_mode = access_mode_from_proto(request.access_mode)
                     if new_access_mode is None:
-                        raise ConnectError(
-                            Code.INVALID_ARGUMENT, "Invalid access_mode"
-                        )
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access_mode")
                     new_baseline_role = None
                     if request.baseline_role:
-                        new_baseline_role = content_role_from_proto(
-                            request.baseline_role
-                        )
+                        new_baseline_role = content_role_from_proto(request.baseline_role)
                     members_ops = ContentMembersOperations(session)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
@@ -907,7 +905,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FolderOperations(session)
                 files_deleted, folders_deleted = await ops.delete(
                     user_id=user_id,
@@ -955,7 +953,7 @@ class FilesHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid root_folder_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 folder_ops = FolderOperations(session)
                 file_ops = FileOperations(session)
 
@@ -1049,7 +1047,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
                 files_deleted, folders_deleted = await ops.empty_trash(
                     user_id=user_id,
@@ -1069,6 +1067,71 @@ class FilesHandlers:
             logger.error(f"Error emptying trash: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
+    async def list_trash(
+        self,
+        request: ListTrashRequest,
+        ctx: RequestContext,
+    ) -> ListTrashResponse:
+        """List the authenticated user's soft-deleted files and folders."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = FileOperations(session)
+                files, folders = await ops.list_trashed_items(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                )
+                return ListTrashResponse(
+                    files=[file_to_proto(f) for f in files],
+                    folders=[folder_to_proto(f) for f in folders],
+                )
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error listing trash: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def restore_folder(
+        self,
+        request: RestoreFolderRequest,
+        ctx: RequestContext,
+    ) -> FolderResponse:
+        """Restore a soft-deleted folder (and its soft-deleted contents)."""
+        try:
+            folder_id = UUID(request.folder_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = FolderOperations(session)
+                folder = await ops.restore_folder(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    folder_id=folder_id,
+                )
+                return FolderResponse(folder=folder_to_proto(folder))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Folder not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error restoring folder: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
     async def list_file_versions(
         self,
         request: ListFileVersionsRequest,
@@ -1084,7 +1147,7 @@ class FilesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = FileOperations(session)
 
                 # Verify access
@@ -1110,6 +1173,77 @@ class FilesHandlers:
     # ─────────────────────────────────────────────────────────────
     # Unimplemented methods
     # ─────────────────────────────────────────────────────────────
+
+    async def create_folder_tree(
+        self,
+        request: CreateFolderTreeRequest,
+        ctx: RequestContext,
+    ) -> CreateFolderTreeResponse:
+        """Create a folder tree in a single transaction for recursive upload."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        user_id = get_user_id_from_context(ctx)
+
+        parent_folder_id = None
+        if request.HasField("parent_folder_id"):
+            try:
+                parent_folder_id = UUID(request.parent_folder_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_folder_id")
+
+        access_mode = None
+        if request.access_mode:
+            access_mode = access_mode_from_proto(request.access_mode)
+        baseline_role = None
+        if request.baseline_role:
+            baseline_role = content_role_from_proto(request.baseline_role)
+
+        def proto_tree_to_dict(nodes: list) -> list[dict]:
+            result = []
+            for node in nodes:
+                result.append({
+                    "name": node.name,
+                    "children": proto_tree_to_dict(list(node.children)),
+                })
+            return result
+
+        tree = proto_tree_to_dict(list(request.tree))
+
+        try:
+            async with open_session() as session:
+                ops = FolderOperations(session)
+                created = await ops.create_folder_tree(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    tree=tree,
+                    parent_id=parent_folder_id,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
+                )
+
+                proto_folders = []
+                for item in created:
+                    info = CreatedFolderInfo(
+                        id=str(item["id"]),
+                        name=item["name"],
+                        path=item["path"],
+                    )
+                    if item.get("parent_id"):
+                        info.parent_id = str(item["parent_id"])
+                    proto_folders.append(info)
+
+                return CreateFolderTreeResponse(folders=proto_folders)
+
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error creating folder tree: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def move_items(
         self,
@@ -1164,7 +1298,7 @@ class FilesHandlers:
             files_moved = 0
             folders_moved = 0
 
-            async for session in get_async_session():
+            async with open_session() as session:
                 file_ops = FileOperations(session)
                 folder_ops = FolderOperations(session)
                 members_ops = ContentMembersOperations(session)

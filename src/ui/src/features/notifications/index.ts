@@ -2,7 +2,8 @@
  * Notifications feature public exports.
  *
  * Provides real-time notification management with server streaming,
- * unread badge, and notification panel.
+ * unread badge, notification panel with search and filters, and
+ * full-page notifications view.
  */
 
 export { notificationsApi } from '@/features/notifications/api/notificationsApi';
@@ -15,6 +16,9 @@ export {
     addRealtimeNotification,
     setUnreadCount,
     clearError,
+    setSearchQuery,
+    setActiveFilter,
+    selectFilteredNotifications,
     fetchNotifications,
     fetchUnreadCount,
     markNotificationAsRead,
@@ -25,6 +29,7 @@ export {
 export type {
     SerializedNotification,
     NotificationsState,
+    NotificationFilterType,
 } from '@/features/notifications/store/notificationsSlice';
 
 export {
@@ -41,4 +46,22 @@ export type { UsePushSubscriptionResult, SubscribeResult } from '@/features/noti
 export { NotificationBell } from '@/features/notifications/components/NotificationBell';
 export { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 export { NotificationItem } from '@/features/notifications/components/NotificationItem';
+export { NotificationFilterBar } from '@/features/notifications/components/NotificationFilterBar';
+export { NotificationSearch } from '@/features/notifications/components/NotificationSearch';
 export { PushNotificationBanner } from '@/features/notifications/components/PushNotificationBanner';
+export { NotificationToast } from '@/features/notifications/components/NotificationToast';
+
+export {
+    notificationsPageReducer,
+    searchPageNotifications,
+    fetchPageNotificationStats,
+    bulkMarkAsReadPage,
+    bulkDeleteNotificationsPage,
+} from '@/features/notifications/store/notificationsPageSlice';
+
+export type {
+    NotificationsPageState,
+    SerializedPageNotification,
+    PageViewMode,
+    NotificationStats,
+} from '@/features/notifications/store/notificationsPageSlice';

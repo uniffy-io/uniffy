@@ -19,7 +19,7 @@ from uniffy_proto.agents.v1.memories_pb2 import (
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.memories.converters import memory_category_from_proto, memory_to_proto
 from uniffy.domains.agents.memories.operations import MemoryOperations
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -67,7 +67,7 @@ class MemoriesHandlers:
             importance = request.importance
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = MemoryOperations(session)
                 memory = await ops.create_memory(
                     user_id=user_id,
@@ -136,7 +136,7 @@ class MemoriesHandlers:
             )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = MemoryOperations(session)
                 memories, total = await ops.list_memories(
                     user_id=user_id,
@@ -203,7 +203,7 @@ class MemoriesHandlers:
             category = memory_category_from_proto(request.category)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = MemoryOperations(session)
                 memory = await ops.update_memory(
                     user_id=user_id,
@@ -256,7 +256,7 @@ class MemoriesHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = MemoryOperations(session)
                 await ops.delete_memory(
                     user_id=user_id,

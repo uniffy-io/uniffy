@@ -21,6 +21,7 @@ import {
     Door,
     Buildings,
     HardDrives,
+    Database,
 } from '@phosphor-icons/react';
 
 interface NavItem {
@@ -36,6 +37,7 @@ const orgNavItems: NavItem[] = [
     { name: 'Default Permissions', path: '/admin/permissions', icon: ShieldCheck },
     { name: 'Organization', path: '/admin/org-settings', icon: Gear },
     { name: 'Rooms', path: '/admin/rooms', icon: Door },
+    { name: 'Storage', path: '/admin/storage', icon: Database },
 ];
 
 const serverNavItems: NavItem[] = [

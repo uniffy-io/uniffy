@@ -56,7 +56,7 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.permissions.converters import (
     content_access_policy_to_proto,
@@ -132,7 +132,7 @@ class MembersHandlers:
         content_type = _resolve_content_type(request.content_type)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 members = await ops.list_members(
                     actor_user_id=user_id,
@@ -180,7 +180,7 @@ class MembersHandlers:
             expires_at = request.expires_at.ToDatetime()
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 member = await ops.add_member(
                     actor_user_id=user_id,
@@ -214,7 +214,7 @@ class MembersHandlers:
         new_role = _resolve_role(request.new_role)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 member = await ops.update_member_role(
                     actor_user_id=user_id,
@@ -246,7 +246,7 @@ class MembersHandlers:
         subject_type = _resolve_subject_type(request.subject_type)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 await ops.remove_member(
                     actor_user_id=user_id,
@@ -280,7 +280,7 @@ class MembersHandlers:
             baseline_role = _resolve_role(request.baseline_role)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 await ops.set_access_mode(
                     actor_user_id=user_id,
@@ -324,7 +324,7 @@ class MembersHandlers:
         content_type = _resolve_content_type(request.content_type)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 await ops.transfer_ownership(
                     actor_user_id=user_id,
@@ -389,7 +389,7 @@ class MembersHandlers:
         offset = (page - 1) * page_size
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ContentMembersOperations(session)
                 events = await ops.list_member_events(
                     actor_user_id=user_id,
@@ -405,9 +405,7 @@ class MembersHandlers:
                 )
 
                 response = ListMemberEventsResponse()
-                response.events.extend(
-                    content_member_event_to_proto(event) for event in events
-                )
+                response.events.extend(content_member_event_to_proto(event) for event in events)
 
                 # Pagination response: total_count is unknown without an
                 # extra count query, so we report the page contents and a

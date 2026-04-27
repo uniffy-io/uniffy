@@ -7,7 +7,6 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.members import (
     ContentMembersOperations,
@@ -319,35 +318,6 @@ class RoomOperations(BaseContentOperations[Room]):
 
         return rooms, total
 
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, self.content_type
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
-
 
 class BookingOperations:
     """Room booking operations (not content-indexed)."""
@@ -373,8 +343,7 @@ class BookingOperations:
         if room.status != RoomStatus.ACTIVE:
             raise ValidationError(
                 "room",
-                f"Room '{room.name}' is not available for booking "
-                f"(status: {room.status.value}).",
+                f"Room '{room.name}' is not available for booking (status: {room.status.value}).",
             )
 
         has_conflict = await queries.check_booking_conflict(

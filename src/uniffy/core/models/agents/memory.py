@@ -3,44 +3,36 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Float, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
 
 
 class AgentMemory(SQLModel, table=True):
-    """A persistent memory entry for an agent-user pair.
+    """A persistent memory entry scoped by agent + (user | channel).
 
-    Stores structured memories that persist across sessions,
-    enabling agents to remember user preferences, facts,
-    and context from previous interactions.
+    Memories can be scoped three ways:
+      - (agent, user)              personal across all channels
+      - (agent, channel)           channel-wide (user_id NULL)
+      - (agent, user, channel)     this user in this channel only
 
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    agent_id : UUID
-        Agent this memory belongs to.
-    user_id : UUID
-        User this memory is associated with.
-    organization_id : UUID
-        Organization context.
-    key : str
-        Unique key for this memory (per agent+user+org).
-    content : str
-        The memory content text.
-    category : str
-        Memory category: "preferences", "facts", "context", or "instructions".
-    importance : float
-        Importance weight (0.0 to 1.0, default 0.5).
-    access_count : int
-        Number of times this memory has been retrieved.
-    created_at : datetime
-        When the memory was first created.
-    updated_at : datetime
-        When the memory was last updated.
-
+    `organization_id` is no longer part of the uniqueness key: both
+    `agent_id` and `channel_id` are individually org-scoped, so including
+    org would be redundant. It stays on the row for observability and
+    simple org-wide cleanup. The unique constraint uses NULLS NOT DISTINCT
+    so null scope columns still participate in conflict detection.
     """
 
     __tablename__ = "agents_memories"
@@ -48,21 +40,40 @@ class AgentMemory(SQLModel, table=True):
         UniqueConstraint(
             "agent_id",
             "user_id",
-            "organization_id",
+            "channel_id",
             "key",
-            name="uq_agents_memories_agent_user_org_key",
+            name="uq_agents_memories_agent_user_channel_key",
+            postgresql_nulls_not_distinct=True,
+        ),
+        CheckConstraint(
+            "user_id IS NOT NULL OR channel_id IS NOT NULL",
+            name="agents_memories_scope_present",
         ),
         Index(
-            "ix_agents_memories_agent_user_org",
+            "ix_agents_memories_personal",
             "agent_id",
             "user_id",
-            "organization_id",
+            postgresql_where="user_id IS NOT NULL",
+        ),
+        Index(
+            "ix_agents_memories_channel",
+            "agent_id",
+            "channel_id",
+            postgresql_where="channel_id IS NOT NULL",
         ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     agent_id: UUID = Field(nullable=False)
-    user_id: UUID = Field(nullable=False)
+    user_id: UUID | None = Field(default=None, nullable=True)
+    channel_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("chat_channels.id", ondelete="CASCADE"),
+            nullable=True,
+        ),
+    )
     organization_id: UUID = Field(nullable=False)
     key: str = Field(
         sa_column=Column(String(255), nullable=False),

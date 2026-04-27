@@ -14,10 +14,15 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
+from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
@@ -62,6 +67,7 @@ class SearchOperations:
         tag_filters: list[str] | None = None,
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
+        metadata_filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> tuple[list[SearchResult], int]:
@@ -84,6 +90,8 @@ class SearchOperations:
             If True, only return content owned by the user.
         owner_filter : UUID | None
             Filter by specific owner ID.
+        metadata_filters : dict[str, str] | None
+            Filter by metadata fields (e.g., channel_id, sender_id).
         limit : int
             Maximum number of results (default 20).
         offset : int
@@ -109,6 +117,7 @@ class SearchOperations:
             tag_filters=tag_filters,
             my_content_only=my_content_only,
             owner_filter=owner_filter,
+            metadata_filters=metadata_filters,
             limit=limit,
             offset=offset,
         )
@@ -290,7 +299,10 @@ class SearchOperations:
         # Fetch documents from Meilisearch with permission filtering
         user_group_ids = await self._get_user_group_ids(user_id)
         accessible = await get_documents_by_urns(
-            urns, organization_id, user_id, user_group_ids,
+            urns,
+            organization_id,
+            user_id,
+            user_group_ids,
         )
 
         # Enrich with live state from the database
@@ -324,38 +336,58 @@ class SearchOperations:
         task_ids: list[UUID] = []
         file_ids: list[UUID] = []
         project_ids: list[UUID] = []
+        calendar_ids: list[UUID] = []
+        note_ids: list[UUID] = []
+        chat_ids: list[UUID] = []
+        agent_ids: list[UUID] = []
+        user_ids: list[UUID] = []
 
         urn_to_id: dict[str, UUID] = {}
 
         for urn, result in results.items():
             try:
-                # Parse UUID from URN (format: urn:uniffy:content:TYPE:uuid)
                 parts = urn.split(":")
                 if len(parts) < 5:
                     continue
                 content_id = UUID(parts[4])
                 urn_to_id[urn] = content_id
 
-                if result.entity_type == "task":
+                et = result.entity_type.lower()
+                if et == "task":
                     task_ids.append(content_id)
-                elif result.entity_type == "file":
+                elif et == "file":
                     file_ids.append(content_id)
-                elif result.entity_type == "project":
+                elif et == "project":
                     project_ids.append(content_id)
-            except (ValueError, IndexError):
+                elif et == "calendar_event":
+                    calendar_ids.append(content_id)
+                elif et == "note":
+                    note_ids.append(content_id)
+                elif et == "chat":
+                    chat_ids.append(content_id)
+                elif et == "agent":
+                    agent_ids.append(content_id)
+                elif et == "user":
+                    user_ids.append(content_id)
+            except ValueError, IndexError:
                 continue
 
-        # Enrich tasks with status, due_date, assignee
         if task_ids:
             await self._enrich_tasks(results, task_ids, urn_to_id)
-
-        # Enrich files with processing status
         if file_ids:
             await self._enrich_files(results, file_ids, urn_to_id)
-
-        # Enrich projects with completed/total task counts
         if project_ids:
             await self._enrich_projects(results, project_ids, urn_to_id, organization_id)
+        if calendar_ids:
+            await self._enrich_calendar_events(results, calendar_ids, urn_to_id)
+        if note_ids:
+            await self._enrich_notes(results, note_ids, urn_to_id)
+        if chat_ids:
+            await self._enrich_channels(results, chat_ids, urn_to_id)
+        if agent_ids:
+            await self._enrich_agents(results, agent_ids, urn_to_id)
+        if user_ids:
+            await self._enrich_users(results, user_ids, urn_to_id)
 
     async def _enrich_tasks(
         self,
@@ -364,7 +396,8 @@ class SearchOperations:
         urn_to_id: dict[str, UUID],
     ) -> None:
         """
-        Enrich task results with live status, due_date, and assignee name.
+        Enrich task results with live state including status, priority,
+        project context, subtask counts, and assignee info.
 
         Parameters
         ----------
@@ -377,19 +410,39 @@ class SearchOperations:
 
         """
         try:
-            stmt = select(
-                Task.id,
-                Task.status,
-                Task.due_date,
-                Task.assignee_ids,
-            ).where(
-                and_(
-                    Task.id.in_(task_ids),
-                    Task.is_deleted == False,  # noqa: E712
+            stmt = (
+                select(
+                    Task.id,
+                    Task.status,
+                    Task.priority,
+                    Task.due_date,
+                    Task.assignee_ids,
+                    Task.task_type,
+                    Task.number,
+                    Task.blocked_by_task_ids,
+                    Task.project_id,
+                    Project.name.label("project_name"),
+                    Project.slug.label("project_slug"),
+                    Project.color.label("project_color"),
+                )
+                .join(Project, Task.project_id == Project.id)
+                .where(
+                    and_(
+                        Task.id.in_(task_ids),
+                        Task.is_deleted == False,  # noqa: E712
+                    )
                 )
             )
             result = await self.session.execute(stmt)
             task_rows = result.all()
+
+            # Collect project IDs for field definition lookup
+            project_ids_set: set[UUID] = set()
+            for row in task_rows:
+                project_ids_set.add(row.project_id)
+
+            # Batch-load field definitions for status and priority options
+            field_options = await self._load_field_options(list(project_ids_set))
 
             # Collect assignee IDs for name resolution
             all_assignee_ids: set[UUID] = set()
@@ -413,6 +466,9 @@ class SearchOperations:
                 for name_row in name_result.all():
                     assignee_names[str(name_row[0])] = name_row[1] or name_row[2]
 
+            # Batch-load subtask counts
+            subtask_counts = await self._get_subtask_counts(task_ids)
+
             # Apply enrichment to results
             id_to_urn = {v: k for k, v in urn_to_id.items()}
             for row in task_rows:
@@ -422,12 +478,112 @@ class SearchOperations:
                 sr = results[urn]
                 sr.status = row.status
                 sr.due_date = row.due_date
-                # Get first assignee name
+                sr.priority = row.priority
+                sr.task_type = row.task_type
+                sr.task_number = row.number
+                sr.project_name = row.project_name
+                sr.project_slug = row.project_slug
+                sr.project_color = row.project_color
+
+                # Resolve status/priority label and color from field definitions
+                proj_fields = field_options.get(row.project_id, {})
+                status_opts = proj_fields.get("field_status", [])
+                for opt in status_opts:
+                    if opt.get("id") == row.status:
+                        sr.status_label = opt.get("label")
+                        sr.status_color = opt.get("color")
+                        break
+                priority_opts = proj_fields.get("field_priority", [])
+                for opt in priority_opts:
+                    if opt.get("id") == row.priority:
+                        sr.priority_label = opt.get("label")
+                        sr.priority_color = opt.get("color")
+                        break
+
+                # Blocked-by count
+                if row.blocked_by_task_ids:
+                    sr.blocked_by_count = len(row.blocked_by_task_ids)
+
+                # Subtask counts
+                sub_total, sub_done = subtask_counts.get(row.id, (0, 0))
+                sr.subtask_total = sub_total
+                sr.subtask_completed = sub_done
+
+                # Assignee IDs and first assignee name
                 aids = task_assignees.get(row.id)
                 if aids:
+                    sr.assignee_ids = aids
                     sr.assignee_name = assignee_names.get(aids[0])
-        except Exception:
-            logger.warning("Failed to enrich task live state", exc_info=True)
+        except Exception as exc:
+            logger.error(f"Failed to enrich task live state: {exc}", exc_info=True)
+
+    async def _load_field_options(
+        self,
+        project_ids: list[UUID],
+    ) -> dict[UUID, dict[str, list[dict]]]:
+        """
+        Load status and priority SelectOption arrays from field definitions.
+
+        Returns
+        -------
+        dict[UUID, dict[str, list[dict]]]
+            Mapping of project_id -> field_id -> list of SelectOption dicts.
+
+        """
+        if not project_ids:
+            return {}
+
+        stmt = select(
+            FieldDefinition.project_id,
+            FieldDefinition.id,
+            FieldDefinition.config,
+        ).where(
+            and_(
+                FieldDefinition.project_id.in_(project_ids),
+                FieldDefinition.id.in_(["field_status", "field_priority"]),
+            )
+        )
+        result = await self.session.execute(stmt)
+
+        field_map: dict[UUID, dict[str, list[dict]]] = {}
+        for row in result.all():
+            if row.config and "options" in row.config:
+                field_map.setdefault(row.project_id, {})[row.id] = row.config["options"]
+        return field_map
+
+    async def _get_subtask_counts(
+        self,
+        parent_ids: list[UUID],
+    ) -> dict[UUID, tuple[int, int]]:
+        """
+        Batch-load subtask counts (total, completed) for parent tasks.
+
+        Returns
+        -------
+        dict[UUID, tuple[int, int]]
+            Mapping of parent_id -> (total_count, completed_count).
+
+        """
+        if not parent_ids:
+            return {}
+
+        stmt = (
+            select(
+                Task.parent_id,
+                func.count(Task.id).label("total"),
+                func.count(Task.completed_at).label("completed"),
+            )
+            .where(
+                and_(
+                    Task.parent_id.in_(parent_ids),
+                    Task.is_deleted == False,  # noqa: E712
+                )
+            )
+            .group_by(Task.parent_id)
+        )
+        result = await self.session.execute(stmt)
+
+        return {row.parent_id: (row.total, row.completed) for row in result.all()}
 
     async def _enrich_files(
         self,
@@ -452,6 +608,8 @@ class SearchOperations:
             stmt = select(
                 File.id,
                 File.extraction_status,
+                File.mime_type,
+                File.size_bytes,
             ).where(
                 and_(
                     File.id.in_(file_ids),
@@ -466,6 +624,8 @@ class SearchOperations:
                 if not urn or urn not in results:
                     continue
                 results[urn].processing_status = row.extraction_status.value
+                results[urn].file_mime_type = row.mime_type
+                results[urn].file_size = row.size_bytes or 0
         except Exception:
             logger.warning("Failed to enrich file live state", exc_info=True)
 
@@ -493,17 +653,21 @@ class SearchOperations:
         """
         try:
             # Count total and completed tasks per project
-            stmt = select(
-                Task.project_id,
-                func.count(Task.id).label("total"),
-                func.count(Task.completed_at).label("completed"),
-            ).where(
-                and_(
-                    Task.project_id.in_(project_ids),
-                    Task.organization_id == organization_id,
-                    Task.is_deleted == False,  # noqa: E712
+            stmt = (
+                select(
+                    Task.project_id,
+                    func.count(Task.id).label("total"),
+                    func.count(Task.completed_at).label("completed"),
                 )
-            ).group_by(Task.project_id)
+                .where(
+                    and_(
+                        Task.project_id.in_(project_ids),
+                        Task.organization_id == organization_id,
+                        Task.is_deleted == False,  # noqa: E712
+                    )
+                )
+                .group_by(Task.project_id)
+            )
             result = await self.session.execute(stmt)
 
             id_to_urn = {v: k for k, v in urn_to_id.items()}
@@ -516,6 +680,148 @@ class SearchOperations:
         except Exception:
             logger.warning("Failed to enrich project live state", exc_info=True)
 
+    async def _enrich_calendar_events(
+        self,
+        results: dict[str, SearchResult],
+        event_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """Enrich calendar event results with time, location, and meeting URL."""
+        try:
+            stmt = select(
+                CalendarEvent.id,
+                CalendarEvent.start_time,
+                CalendarEvent.end_time,
+                CalendarEvent.is_all_day,
+                CalendarEvent.location,
+                CalendarEvent.meeting_url,
+            ).where(
+                and_(
+                    CalendarEvent.id.in_(event_ids),
+                    CalendarEvent.is_deleted == False,  # noqa: E712
+                )
+            )
+            result = await self.session.execute(stmt)
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                sr = results[urn]
+                sr.event_start_time = row.start_time.isoformat() if row.start_time else None
+                sr.event_end_time = row.end_time.isoformat() if row.end_time else None
+                sr.event_is_all_day = row.is_all_day or False
+                sr.event_location = row.location
+                sr.event_meeting_url = row.meeting_url
+        except Exception:
+            logger.warning("Failed to enrich calendar event live state", exc_info=True)
+
+    async def _enrich_notes(
+        self,
+        results: dict[str, SearchResult],
+        note_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """Enrich note results with node type and tags."""
+        try:
+            stmt = select(
+                Note.id,
+                Note.node_type,
+                Note.tags,
+            ).where(
+                and_(
+                    Note.id.in_(note_ids),
+                    Note.is_deleted == False,  # noqa: E712
+                )
+            )
+            result = await self.session.execute(stmt)
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                results[urn].note_node_type = row.node_type.value if row.node_type else None
+                results[urn].content_tags = row.tags
+        except Exception:
+            logger.warning("Failed to enrich note live state", exc_info=True)
+
+    async def _enrich_channels(
+        self,
+        results: dict[str, SearchResult],
+        channel_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """Enrich chat channel results with channel type and member count."""
+        try:
+            stmt = select(
+                ChatChannel.id,
+                ChatChannel.channel_type,
+            ).where(
+                and_(
+                    ChatChannel.id.in_(channel_ids),
+                    ChatChannel.is_deleted == False,  # noqa: E712
+                )
+            )
+            result = await self.session.execute(stmt)
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                results[urn].channel_type = row.channel_type.value if row.channel_type else None
+        except Exception:
+            logger.warning("Failed to enrich channel live state", exc_info=True)
+
+    async def _enrich_agents(
+        self,
+        results: dict[str, SearchResult],
+        agent_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """Enrich agent results with avatar emoji and theme color."""
+        try:
+            stmt = select(
+                Agent.id,
+                Agent.avatar_emoji,
+                Agent.theme_color,
+            ).where(Agent.id.in_(agent_ids))
+            result = await self.session.execute(stmt)
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                results[urn].agent_emoji = row.avatar_emoji
+                results[urn].agent_theme_color = row.theme_color
+        except Exception:
+            logger.warning("Failed to enrich agent live state", exc_info=True)
+
+    async def _enrich_users(
+        self,
+        results: dict[str, SearchResult],
+        user_ids_list: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """Enrich user results with avatar URL and email."""
+        try:
+            stmt = select(
+                User.id,
+                User.email,
+                User.avatar_key,
+            ).where(User.id.in_(user_ids_list))
+            result = await self.session.execute(stmt)
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                sr = results[urn]
+                sr.user_email = row.email
+                if row.avatar_key:
+                    sr.user_avatar_url = f"/api/avatars/{row.avatar_key}"
+        except Exception:
+            logger.warning("Failed to enrich user live state", exc_info=True)
+
     async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
         """Return the active group ids for a user."""
         result = await self.session.execute(
@@ -525,4 +831,3 @@ class SearchOperations:
             )
         )
         return [row[0] for row in result.all()]
-

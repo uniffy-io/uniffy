@@ -2,10 +2,6 @@
 
 set -euo pipefail
 
-
-
-
-
 # Colors
 CYAN='\033[36m'
 NC='\033[0m'
@@ -55,6 +51,11 @@ help() {
   echo -e "  ${CYAN}cli-run [args]${NC}  Run unictl without installing"
   echo -e "  ${CYAN}cli-lint${NC}        Run Go linters on unictl"
   echo -e "  ${CYAN}cli-test${NC}        Run unictl tests"
+  echo ""
+  echo -e "  ${CYAN}MCP${NC}"
+  echo -e "  ${CYAN}mcp-up${NC}          Start the Playwright MCP server (Claude Code -> browser)"
+  echo -e "  ${CYAN}mcp-down${NC}        Stop the Playwright MCP server"
+  echo -e "  ${CYAN}mcp-logs${NC}        Tail Playwright MCP server logs"
   echo ""
   echo -e "  ${CYAN}Ops${NC}"
   echo -e "  ${CYAN}licenses${NC}        Generate third-party license files"
@@ -217,6 +218,22 @@ db_drop_staging() {
   kubectl exec -it uniffy-db-1 -n uniffy -- psql -U postgres -c "CREATE DATABASE uniffy OWNER uniffy;"
 }
 
+mcp_up() {
+  echo "Starting Playwright MCP server..."
+  docker compose --profile mcp up -d mcp-playwright
+  echo "MCP server: http://localhost:8931/sse"
+  echo "Restart Claude Code to load .mcp.json and pick up the server."
+}
+
+mcp_down() {
+  echo "Stopping Playwright MCP server..."
+  docker compose --profile mcp down
+}
+
+mcp_logs() {
+  docker compose --profile mcp logs -f mcp-playwright
+}
+
 worker() {
   echo "Starting background worker..."
   uv run python -m uniffy.worker
@@ -304,5 +321,8 @@ cli-lint) cli_lint ;;
 cli-test) cli_test ;;
 docker-staging) docker_build_staging ;;
 drop-staging-db) db_drop_staging ;;
+mcp-up) mcp_up ;;
+mcp-down) mcp_down ;;
+mcp-logs) mcp_logs ;;
 help | *) help ;;
 esac

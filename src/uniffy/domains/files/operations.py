@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions import (
     PermissionChecker,
+    resolve_access_policy,
     resolve_content_defaults,
 )
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
@@ -32,6 +33,7 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
+from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 # Chunk size constants (in bytes)
@@ -222,27 +224,19 @@ class FileOperations(BaseContentOperations[File]):
             The created upload record with S3 upload ID.
 
         """
-        # Resolve access policy for the new file
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, ContentType.FILE
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
 
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-        else:
-            baseline_role = None
+        # Quota check before creating the S3 upload
+        quota_ops = QuotaOperations(self.session)
+        quota_result = await quota_ops.check_quota(
+            organization_id=organization_id,
+            user_id=user_id,
+            additional_bytes=total_size,
+        )
+        if not quota_result.allowed:
+            raise ValidationError("quota", quota_result.reason)
 
         storage_key = f"{organization_id}/{user_id}/{generate_id()}/{filename}"
 
@@ -436,6 +430,22 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.commit()
         await self.session.refresh(file)
 
+        # Increment storage usage tracking
+        try:
+            quota_ops = QuotaOperations(self.session)
+            await quota_ops.increment_usage(
+                organization_id=upload.organization_id,
+                user_id=upload.user_id,
+                bytes_delta=actual_size,
+                file_count_delta=1,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to increment storage usage",
+                file_id=str(file.id),
+                exc_info=True,
+            )
+
         # Index for search
         await self._index_for_search(
             model=file,
@@ -592,6 +602,8 @@ class FileOperations(BaseContentOperations[File]):
 
         filename_changed = filename is not None and filename != file.filename
         if filename is not None:
+            if len(filename) > 255:
+                raise ValidationError("Filename must be 255 characters or fewer")
             file.filename = filename
         if tags is not None:
             file.tags = tags
@@ -661,13 +673,25 @@ class FileOperations(BaseContentOperations[File]):
         await self._require_delete(user_id, organization_id, file)
 
         if permanent:
-            # Delete from S3
-            await self.s3.delete_object(file.storage_key)
-            # Delete all versions from S3
+            file_size = file.size_bytes
+            file_owner = file.owner_id
+            file_org = file.organization_id
+
+            # Break FK: clear current_version_id
+            file.current_version_id = None
+            await self.session.flush()
+
+            # Delete all versions (S3 + DB)
             versions = await self._get_file_versions(file_id)
             for v in versions:
-                if v.storage_key != file.storage_key:
-                    await self.s3.delete_object(v.storage_key)
+                await self.s3.delete_object(v.storage_key)
+                await self.session.delete(v)
+            await self.session.flush()
+
+            # Delete the file's own S3 object (if not already covered by a version)
+            if not versions or all(v.storage_key != file.storage_key for v in versions):
+                await self.s3.delete_object(file.storage_key)
+
             # Delete from database
             await self.session.delete(file)
         else:
@@ -675,6 +699,23 @@ class FileOperations(BaseContentOperations[File]):
             file.deleted_at = datetime.now(UTC)
 
         await self.session.commit()
+
+        # Decrement usage only on permanent delete (trash still uses storage)
+        if permanent:
+            try:
+                quota_ops = QuotaOperations(self.session)
+                await quota_ops.decrement_usage(
+                    organization_id=file_org,
+                    user_id=file_owner,
+                    bytes_delta=file_size,
+                    file_count_delta=1,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to decrement storage usage on permanent delete",
+                    file_id=str(file_id),
+                    exc_info=True,
+                )
 
         # Remove from search index
         await self.search_indexer.remove(build_content_urn(self.content_type, file_id))
@@ -724,6 +765,44 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.commit()
 
         return file
+
+    async def list_trashed_items(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> tuple[list[File], list[Folder]]:
+        """
+        List all soft-deleted files and folders owned by the user in an organization.
+
+        Returns a flat list of both. The caller decides which are shown at the
+        "trash root" (items whose parent is not itself deleted) and which are
+        shown as children when navigating into a trashed folder.
+
+        Returns
+        -------
+        tuple[list[File], list[Folder]]
+            (deleted_files, deleted_folders)
+
+        """
+        files_result = await self.session.execute(
+            select(File).where(
+                File.organization_id == organization_id,
+                File.owner_id == user_id,
+                File.is_deleted == True,  # noqa: E712
+            )
+        )
+        files = list(files_result.scalars().all())
+
+        folders_result = await self.session.execute(
+            select(Folder).where(
+                Folder.organization_id == organization_id,
+                Folder.owner_id == user_id,
+                Folder.is_deleted == True,  # noqa: E712
+            )
+        )
+        folders = list(folders_result.scalars().all())
+
+        return files, folders
 
     async def list_files(
         self,
@@ -790,40 +869,32 @@ class FileOperations(BaseContentOperations[File]):
             from uniffy.core.models.login.group_member import GroupMember
 
             now = datetime.now(UTC)
-            user_groups_subq = (
-                select(GroupMember.group_id)
-                .where(
-                    GroupMember.user_id == user_id,
-                    GroupMember.is_active == True,  # noqa: E712
-                )
+            user_groups_subq = select(GroupMember.group_id).where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active == True,  # noqa: E712
             )
-            shared_subq = (
-                select(ContentMember.content_id)
-                .where(
-                    ContentMember.organization_id == organization_id,
-                    ContentMember.content_type == self.content_type,
-                    ContentMember.role != ContentRole.BLOCKED,
-                    or_(
-                        ContentMember.expires_at.is_(None),
-                        ContentMember.expires_at > now,
+            shared_subq = select(ContentMember.content_id).where(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == self.content_type,
+                ContentMember.role != ContentRole.BLOCKED,
+                or_(
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
+                or_(
+                    and_(
+                        ContentMember.subject_type == SubjectType.USER,
+                        ContentMember.subject_id == user_id,
                     ),
-                    or_(
-                        and_(
-                            ContentMember.subject_type == SubjectType.USER,
-                            ContentMember.subject_id == user_id,
-                        ),
-                        and_(
-                            ContentMember.subject_type == SubjectType.GROUP,
-                            ContentMember.subject_id.in_(user_groups_subq),
-                        ),
+                    and_(
+                        ContentMember.subject_type == SubjectType.GROUP,
+                        ContentMember.subject_id.in_(user_groups_subq),
                     ),
-                )
+                ),
             )
             query = query.where(File.owner_id != user_id, File.id.in_(shared_subq))
         else:
-            is_org_admin = await self.permission_checker.is_org_admin(
-                user_id, organization_id
-            )
+            is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
             is_domain_admin = await self.permission_checker.is_domain_admin(
                 user_id, organization_id, self.content_type
             )
@@ -841,18 +912,16 @@ class FileOperations(BaseContentOperations[File]):
 
         if group_id is not None:
             now = datetime.now(UTC)
-            group_member_subq = (
-                select(ContentMember.content_id).where(
-                    ContentMember.organization_id == organization_id,
-                    ContentMember.content_type == self.content_type,
-                    ContentMember.subject_type == SubjectType.GROUP,
-                    ContentMember.subject_id == group_id,
-                    ContentMember.role != ContentRole.BLOCKED,
-                    or_(
-                        ContentMember.expires_at.is_(None),
-                        ContentMember.expires_at > now,
-                    ),
-                )
+            group_member_subq = select(ContentMember.content_id).where(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == self.content_type,
+                ContentMember.subject_type == SubjectType.GROUP,
+                ContentMember.subject_id == group_id,
+                ContentMember.role != ContentRole.BLOCKED,
+                or_(
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
             query = query.where(File.id.in_(group_member_subq))
 
@@ -970,8 +1039,10 @@ class FileOperations(BaseContentOperations[File]):
         # Flush version deletions before deleting files
         await self.session.flush()
 
-        # Delete files from S3 and DB
+        # Delete files from S3 and DB, track sizes for usage decrement
+        total_deleted_bytes = 0
         for file in files:
+            total_deleted_bytes += file.size_bytes
             await self.s3.delete_object(file.storage_key)
             await self.search_indexer.remove(build_content_urn(self.content_type, file.id))
             await self.session.delete(file)
@@ -1002,6 +1073,23 @@ class FileOperations(BaseContentOperations[File]):
 
         await self.session.commit()
 
+        # Decrement usage for permanently deleted files
+        if total_deleted_bytes > 0 or len(files) > 0:
+            try:
+                quota_ops = QuotaOperations(self.session)
+                await quota_ops.decrement_usage(
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    bytes_delta=total_deleted_bytes,
+                    file_count_delta=len(files),
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to decrement storage usage on empty trash",
+                    user_id=str(user_id),
+                    exc_info=True,
+                )
+
         return len(files), len(folders)
 
 
@@ -1031,26 +1119,13 @@ class FolderOperations:
         baseline_role: ContentRole | None = None,
     ) -> Folder:
         """Create a new folder."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, ContentType.FOLDER
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-        else:
-            baseline_role = None
+        access_mode, baseline_role = await resolve_access_policy(
+            self.session,
+            organization_id,
+            ContentType.FOLDER,
+            access_mode,
+            baseline_role,
+        )
 
         folder = Folder(
             organization_id=organization_id,
@@ -1114,6 +1189,8 @@ class FolderOperations:
                 raise PermissionDeniedError("edit", "folder")
 
         if name is not None:
+            if len(name) > 255:
+                raise ValidationError("Folder name must be 255 characters or fewer")
             folder.name = name
         if parent_id == "":
             folder.parent_id = None
@@ -1185,6 +1262,14 @@ class FolderOperations:
             )
 
         if permanent:
+            # Clean up any multipart uploads referencing this folder
+            uploads_result = await self.session.execute(
+                select(MultipartUpload).where(MultipartUpload.folder_id == folder_id)
+            )
+            for upload in uploads_result.scalars().all():
+                await self.session.delete(upload)
+            await self.session.flush()
+
             await self.session.delete(folder)
         else:
             folder.is_deleted = True
@@ -1193,6 +1278,73 @@ class FolderOperations:
         await self.session.commit()
 
         return files_deleted, folders_deleted + 1
+
+    async def restore_folder(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        folder_id: UUID,
+    ) -> Folder:
+        """
+        Restore a soft-deleted folder (and all of its contents) back to active.
+
+        Only the owner may restore. Cascades to every file and subfolder that
+        was soft-deleted alongside it.
+        """
+        folder = await self.session.execute(
+            select(Folder).where(
+                Folder.id == folder_id,
+                Folder.organization_id == organization_id,
+            )
+        )
+        folder_obj = folder.scalar_one_or_none()
+        if not folder_obj:
+            raise NotFoundError("Folder", str(folder_id))
+
+        if folder_obj.owner_id != user_id:
+            raise PermissionDeniedError("restore", "folder")
+
+        folder_obj.is_deleted = False
+        folder_obj.deleted_at = None
+
+        # Cascade restore to every descendant (file or folder) that was deleted.
+        await self._restore_contents(folder_id, organization_id, user_id)
+
+        await self.session.commit()
+        await self.session.refresh(folder_obj)
+        return folder_obj
+
+    async def _restore_contents(
+        self,
+        folder_id: UUID,
+        organization_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """Recursively un-delete files and subfolders owned by the user."""
+        files_result = await self.session.execute(
+            select(File).where(
+                File.folder_id == folder_id,
+                File.organization_id == organization_id,
+                File.owner_id == user_id,
+                File.is_deleted == True,  # noqa: E712
+            )
+        )
+        for file in files_result.scalars().all():
+            file.is_deleted = False
+            file.deleted_at = None
+
+        folders_result = await self.session.execute(
+            select(Folder).where(
+                Folder.parent_id == folder_id,
+                Folder.organization_id == organization_id,
+                Folder.owner_id == user_id,
+                Folder.is_deleted == True,  # noqa: E712
+            )
+        )
+        for child in folders_result.scalars().all():
+            child.is_deleted = False
+            child.deleted_at = None
+            await self._restore_contents(child.id, organization_id, user_id)
 
     async def _delete_contents(
         self,
@@ -1225,6 +1377,24 @@ class FolderOperations:
                 raise PermissionDeniedError("delete_nested", "file")
 
         # Safe to delete all files (ownership verified)
+        if permanent and files:
+            s3 = get_s3_client()
+
+            # Break FK constraint: clear current_version_id before deleting versions
+            for file in files:
+                file.current_version_id = None
+            await self.session.flush()
+
+            # Delete all file versions and their S3 objects
+            for file in files:
+                versions_result = await self.session.execute(
+                    select(FileVersion).where(FileVersion.file_id == file.id)
+                )
+                for version in versions_result.scalars().all():
+                    await s3.delete_object(version.storage_key)
+                    await self.session.delete(version)
+            await self.session.flush()
+
         for file in files:
             if permanent:
                 s3 = get_s3_client()
@@ -1234,6 +1404,9 @@ class FolderOperations:
                 file.is_deleted = True
                 file.deleted_at = datetime.now(UTC)
             files_deleted += 1
+
+        if permanent and files:
+            await self.session.flush()
 
         # Get child folders
         folders_result = await self.session.execute(
@@ -1249,9 +1422,19 @@ class FolderOperations:
             if child_folder.owner_id != user_id:
                 raise PermissionDeniedError("delete_nested", "folder")
 
+        # Clean up multipart uploads referencing these folders before deleting them
+        if permanent and folders:
+            folder_ids_to_delete = [f.id for f in folders]
+            uploads_result = await self.session.execute(
+                select(MultipartUpload).where(MultipartUpload.folder_id.in_(folder_ids_to_delete))
+            )
+            for upload in uploads_result.scalars().all():
+                await self.session.delete(upload)
+            await self.session.flush()
+
         # Safe to delete all folders (ownership verified)
         for child_folder in folders:
-            # Recurse (will perform ownership checks on nested contents)
+            # Recurse first so grandchildren are deleted before this child
             child_files, child_folders = await self._delete_contents(
                 child_folder.id, organization_id, user_id, permanent
             )
@@ -1260,12 +1443,115 @@ class FolderOperations:
 
             if permanent:
                 await self.session.delete(child_folder)
+                await self.session.flush()
             else:
                 child_folder.is_deleted = True
                 child_folder.deleted_at = datetime.now(UTC)
             folders_deleted += 1
 
         return files_deleted, folders_deleted
+
+    async def create_folder_tree(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        tree: list[dict],
+        parent_id: UUID | None = None,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
+    ) -> list[dict]:
+        """
+        Create a folder tree in a single transaction.
+
+        Recursively creates folders preserving the directory structure.
+        All folders are created with the same access mode.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User creating the folders.
+        organization_id : UUID
+            Organization ID.
+        tree : list[dict]
+            List of ``{"name": str, "children": list}`` nodes.
+        parent_id : UUID | None
+            Parent folder ID for the root of the tree.
+        access_mode : AccessMode | None
+            Access mode for all created folders.
+        baseline_role : ContentRole | None
+            Baseline role when access_mode is OPEN_TO_ORG.
+
+        Returns
+        -------
+        list[dict]
+            Flat list of created folders with id, name, path, parent_id.
+
+        """
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, ContentType.FOLDER
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+        else:
+            baseline_role = None
+
+        created: list[dict] = []
+
+        async def create_recursive(
+            nodes: list[dict],
+            current_parent_id: UUID | None,
+            path_prefix: str,
+            depth: int,
+        ) -> None:
+            if depth > 20:
+                return
+
+            for node in nodes:
+                name = node.get("name", "")
+                if not name:
+                    continue
+
+                path = f"{path_prefix}/{name}" if path_prefix else name
+
+                folder = Folder(
+                    organization_id=organization_id,
+                    owner_id=user_id,
+                    name=name,
+                    parent_id=current_parent_id,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
+                )
+                self.session.add(folder)
+                await self.session.flush()
+
+                created.append({
+                    "id": folder.id,
+                    "name": folder.name,
+                    "path": path,
+                    "parent_id": current_parent_id,
+                })
+
+                children = node.get("children", [])
+                if children:
+                    await create_recursive(children, folder.id, path, depth + 1)
+
+        await create_recursive(tree, parent_id, "", 0)
+        await self.session.commit()
+
+        return created
 
     async def list_folders(
         self,
@@ -1282,9 +1568,7 @@ class FolderOperations:
         if personal_only:
             query = query.where(Folder.owner_id == user_id)
         else:
-            is_org_admin = await self.permission_checker.is_org_admin(
-                user_id, organization_id
-            )
+            is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
             is_domain_admin = await self.permission_checker.is_domain_admin(
                 user_id, organization_id, self.content_type
             )

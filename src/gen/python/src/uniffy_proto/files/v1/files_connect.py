@@ -67,6 +67,9 @@ class FilesService(Protocol):
     async def get_files_tree(self, request: files_dot_v1_dot_files__pb2.GetFilesTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFilesTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -79,10 +82,46 @@ class FilesService(Protocol):
     async def empty_trash(self, request: files_dot_v1_dot_files__pb2.EmptyTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.EmptyTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_trash(self, request: files_dot_v1_dot_files__pb2.ListTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_file_versions(self, request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFileVersionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_user_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_user_storage_quota_override(self, request: files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def remove_user_storage_quota_override(self, request: files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_user_storage_quota_overrides(self, request: files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_storage_usage(self, request: files_dot_v1_dot_files__pb2.GetStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_org_storage_usage(self, request: files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def recalculate_storage_usage(self, request: files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def check_storage_quota(self, request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
@@ -276,6 +315,16 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                     ),
                     function=svc.get_files_tree,
                 ),
+                "/files.v1.FilesService/CreateFolderTree": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateFolderTree",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+                        output=files_dot_v1_dot_files__pb2.CreateFolderTreeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_folder_tree,
+                ),
                 "/files.v1.FilesService/MoveItems": Endpoint.unary(
                     method=MethodInfo(
                         name="MoveItems",
@@ -316,6 +365,26 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                     ),
                     function=svc.empty_trash,
                 ),
+                "/files.v1.FilesService/ListTrash": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListTrash",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListTrashRequest,
+                        output=files_dot_v1_dot_files__pb2.ListTrashResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_trash,
+                ),
+                "/files.v1.FilesService/RestoreFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RestoreFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.restore_folder,
+                ),
                 "/files.v1.FilesService/ListFileVersions": Endpoint.unary(
                     method=MethodInfo(
                         name="ListFileVersions",
@@ -335,6 +404,106 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_file_version,
+                ),
+                "/files.v1.FilesService/GetOrgStorageQuota": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetOrgStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_org_storage_quota,
+                ),
+                "/files.v1.FilesService/SetOrgStorageQuota": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetOrgStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_org_storage_quota,
+                ),
+                "/files.v1.FilesService/GetUserStorageQuota": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetUserStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_user_storage_quota,
+                ),
+                "/files.v1.FilesService/SetUserStorageQuotaOverride": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetUserStorageQuotaOverride",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+                        output=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_user_storage_quota_override,
+                ),
+                "/files.v1.FilesService/RemoveUserStorageQuotaOverride": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RemoveUserStorageQuotaOverride",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+                        output=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.remove_user_storage_quota_override,
+                ),
+                "/files.v1.FilesService/ListUserStorageQuotaOverrides": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListUserStorageQuotaOverrides",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+                        output=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_user_storage_quota_overrides,
+                ),
+                "/files.v1.FilesService/GetStorageUsage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.GetStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_storage_usage,
+                ),
+                "/files.v1.FilesService/ListOrgStorageUsage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListOrgStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_org_storage_usage,
+                ),
+                "/files.v1.FilesService/RecalculateStorageUsage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecalculateStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.recalculate_storage_usage,
+                ),
+                "/files.v1.FilesService/CheckStorageQuota": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CheckStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.check_storage_quota,
                 ),
                 "/files.v1.FilesService/CreateSavedFilter": Endpoint.unary(
                     method=MethodInfo(
@@ -738,6 +907,26 @@ class FilesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_folder_tree(
+        self,
+        request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateFolderTree",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+                output=files_dot_v1_dot_files__pb2.CreateFolderTreeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def move_items(
         self,
         request: files_dot_v1_dot_files__pb2.MoveItemsRequest,
@@ -818,6 +1007,46 @@ class FilesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_trash(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListTrashRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTrash",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListTrashRequest,
+                output=files_dot_v1_dot_files__pb2.ListTrashResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def restore_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestoreFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_file_versions(
         self,
         request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest,
@@ -852,6 +1081,206 @@ class FilesServiceClient(ConnectClient):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
                 output=files_dot_v1_dot_files__pb2.FileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_org_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOrgStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_org_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetOrgStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_user_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetUserStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_user_storage_quota_override(
+        self,
+        request: files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetUserStorageQuotaOverride",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+                output=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def remove_user_storage_quota_override(
+        self,
+        request: files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RemoveUserStorageQuotaOverride",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+                output=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_user_storage_quota_overrides(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListUserStorageQuotaOverrides",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+                output=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetStorageUsageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.GetStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_org_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def recalculate_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecalculateStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def check_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CheckStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -994,6 +1423,8 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_files_tree(self, request: files_dot_v1_dot_files__pb2.GetFilesTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFilesTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def copy_items(self, request: files_dot_v1_dot_files__pb2.CopyItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CopyItemsResponse:
@@ -1002,9 +1433,33 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def empty_trash(self, request: files_dot_v1_dot_files__pb2.EmptyTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.EmptyTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_trash(self, request: files_dot_v1_dot_files__pb2.ListTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_file_versions(self, request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFileVersionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_user_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_user_storage_quota_override(self, request: files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def remove_user_storage_quota_override(self, request: files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_user_storage_quota_overrides(self, request: files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_storage_usage(self, request: files_dot_v1_dot_files__pb2.GetStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_org_storage_usage(self, request: files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def recalculate_storage_usage(self, request: files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def check_storage_quota(self, request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1192,6 +1647,16 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.get_files_tree,
                 ),
+                "/files.v1.FilesService/CreateFolderTree": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateFolderTree",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+                        output=files_dot_v1_dot_files__pb2.CreateFolderTreeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_folder_tree,
+                ),
                 "/files.v1.FilesService/MoveItems": EndpointSync.unary(
                     method=MethodInfo(
                         name="MoveItems",
@@ -1232,6 +1697,26 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.empty_trash,
                 ),
+                "/files.v1.FilesService/ListTrash": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListTrash",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListTrashRequest,
+                        output=files_dot_v1_dot_files__pb2.ListTrashResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_trash,
+                ),
+                "/files.v1.FilesService/RestoreFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RestoreFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.restore_folder,
+                ),
                 "/files.v1.FilesService/ListFileVersions": EndpointSync.unary(
                     method=MethodInfo(
                         name="ListFileVersions",
@@ -1251,6 +1736,106 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_file_version,
+                ),
+                "/files.v1.FilesService/GetOrgStorageQuota": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetOrgStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_org_storage_quota,
+                ),
+                "/files.v1.FilesService/SetOrgStorageQuota": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetOrgStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_org_storage_quota,
+                ),
+                "/files.v1.FilesService/GetUserStorageQuota": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetUserStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_user_storage_quota,
+                ),
+                "/files.v1.FilesService/SetUserStorageQuotaOverride": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetUserStorageQuotaOverride",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+                        output=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_user_storage_quota_override,
+                ),
+                "/files.v1.FilesService/RemoveUserStorageQuotaOverride": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RemoveUserStorageQuotaOverride",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+                        output=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.remove_user_storage_quota_override,
+                ),
+                "/files.v1.FilesService/ListUserStorageQuotaOverrides": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListUserStorageQuotaOverrides",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+                        output=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_user_storage_quota_overrides,
+                ),
+                "/files.v1.FilesService/GetStorageUsage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.GetStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_storage_usage,
+                ),
+                "/files.v1.FilesService/ListOrgStorageUsage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListOrgStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_org_storage_usage,
+                ),
+                "/files.v1.FilesService/RecalculateStorageUsage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecalculateStorageUsage",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+                        output=files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.recalculate_storage_usage,
+                ),
+                "/files.v1.FilesService/CheckStorageQuota": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CheckStorageQuota",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+                        output=files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.check_storage_quota,
                 ),
                 "/files.v1.FilesService/CreateSavedFilter": EndpointSync.unary(
                     method=MethodInfo(
@@ -1654,6 +2239,26 @@ class FilesServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def create_folder_tree(
+        self,
+        request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateFolderTree",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
+                output=files_dot_v1_dot_files__pb2.CreateFolderTreeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def move_items(
         self,
         request: files_dot_v1_dot_files__pb2.MoveItemsRequest,
@@ -1734,6 +2339,46 @@ class FilesServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def list_trash(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListTrashRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTrash",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListTrashRequest,
+                output=files_dot_v1_dot_files__pb2.ListTrashResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def restore_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestoreFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
+                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def list_file_versions(
         self,
         request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest,
@@ -1768,6 +2413,206 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
                 output=files_dot_v1_dot_files__pb2.FileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_org_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOrgStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_org_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetOrgStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_user_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetUserStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetUserStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.GetUserStorageQuotaResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_user_storage_quota_override(
+        self,
+        request: files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetUserStorageQuotaOverride",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideRequest,
+                output=files_dot_v1_dot_files__pb2.SetUserStorageQuotaOverrideResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def remove_user_storage_quota_override(
+        self,
+        request: files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RemoveUserStorageQuotaOverride",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideRequest,
+                output=files_dot_v1_dot_files__pb2.RemoveUserStorageQuotaOverrideResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_user_storage_quota_overrides(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListUserStorageQuotaOverrides",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesRequest,
+                output=files_dot_v1_dot_files__pb2.ListUserStorageQuotaOverridesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetStorageUsageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.GetStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_org_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListOrgStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.ListOrgStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def recalculate_storage_usage(
+        self,
+        request: files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecalculateStorageUsage",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.RecalculateStorageUsageRequest,
+                output=files_dot_v1_dot_files__pb2.RecalculateStorageUsageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def check_storage_quota(
+        self,
+        request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CheckStorageQuota",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest,
+                output=files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

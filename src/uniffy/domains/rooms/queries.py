@@ -228,5 +228,3 @@ async def get_booking_for_event(
         )
     )
     return result.scalar_one_or_none()
-
-

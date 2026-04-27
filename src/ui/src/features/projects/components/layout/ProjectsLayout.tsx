@@ -163,7 +163,7 @@ export function ProjectsLayout() {
               defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
               minSize={LAYOUT.SIDEBAR_MIN_WIDTH}
               maxSize={LAYOUT.SIDEBAR_MAX_WIDTH}
-              className="bg-card border-r border-border"
+              className="bg-background border-r border-border"
             >
               <ProjectsSidebar />
             </Panel>

@@ -44,7 +44,7 @@ import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { MentionChipCompact } from '@/components/editor/plugins/mention';
+import { MentionChipCompact } from '@/components/mention';
 import {
   formatDateWithDay,
   formatTimeRange,

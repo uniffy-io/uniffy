@@ -108,7 +108,7 @@ export function NotesLayout({
               defaultSize={isMobileOrTablet ? 200 : 280}
               minSize={160}
               maxSize={isMobileOrTablet ? 300 : 500}
-              className="bg-card overflow-hidden"
+              className="bg-background overflow-hidden"
             >
               {sidebar}
             </Panel>

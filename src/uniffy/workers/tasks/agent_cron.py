@@ -16,7 +16,7 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 
 
 async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
@@ -43,7 +43,7 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
     errors = 0
 
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             from uniffy.domains.agents.cron.operations import CronTaskOperations
 
             ops = CronTaskOperations(session)
@@ -118,7 +118,7 @@ async def execute_single_agent_cron_task(
     log_uuid = UUID(run_log_id)
 
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             # Load task
             result = await session.execute(
                 select(AgentCronTask).where(AgentCronTask.id == task_uuid)

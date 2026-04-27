@@ -14,9 +14,16 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
 from sqlalchemy import select
 from uniffy_proto.notifications.v1.notifications_pb2 import (
+    BulkDeleteNotificationsRequest,
+    BulkDeleteNotificationsResponse,
+    BulkMarkAsReadRequest,
+    BulkMarkAsReadResponse,
+    DailyNotificationStat,
     DeleteNotificationRequest,
     DeleteNotificationResponse,
     FileUpdatePayload,
+    GetNotificationStatsRequest,
+    GetNotificationStatsResponse,
     GetUnreadCountRequest,
     GetUnreadCountResponse,
     GetVapidPublicKeyRequest,
@@ -31,8 +38,11 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
     PresenceChangedPayload,
     RegisterPushSubscriptionRequest,
     RegisterPushSubscriptionResponse,
+    SearchNotificationsRequest,
+    SearchNotificationsResponse,
     StreamNotificationEvent,
     StreamNotificationsRequest,
+    TypeNotificationStat,
     UnregisterPushSubscriptionRequest,
     UnregisterPushSubscriptionResponse,
 )
@@ -43,11 +53,12 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey import subscribe_channels
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
+    notification_type_to_proto,
 )
 from uniffy.domains.notifications.middleware import get_disconnect_event
 from uniffy.domains.notifications.operations import (
@@ -106,7 +117,7 @@ class NotificationsHandlers:
                     notification_types.append(nt)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = NotificationOperations(session)
                 notifications, total_count, unread_count = await ops.list_notifications(
                     user_id=user_id,
@@ -174,7 +185,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = NotificationOperations(session)
                 count = await ops.get_unread_count(user_id, organization_id)
                 return GetUnreadCountResponse(unread_count=count)
@@ -214,7 +225,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid notification_id format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = NotificationOperations(session)
                 notification = await ops.mark_as_read(user_id, notification_id)
 
@@ -260,7 +271,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = NotificationOperations(session)
                 count = await ops.mark_all_as_read(user_id, organization_id)
                 return MarkAllAsReadResponse(updated_count=count)
@@ -300,7 +311,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid notification_id format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = NotificationOperations(session)
                 deleted = await ops.delete_notification(user_id, notification_id)
 
@@ -346,7 +357,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "auth_key is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PushSubscriptionOperations(session)
                 subscription = await ops.register(
                     user_id=user_id,
@@ -390,7 +401,7 @@ class NotificationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Endpoint is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PushSubscriptionOperations(session)
                 removed = await ops.unregister(user_id, request.endpoint)
                 return UnregisterPushSubscriptionResponse(success=removed)
@@ -433,6 +444,272 @@ class NotificationsHandlers:
                 "Push notifications are not configured on this server",
             )
         return GetVapidPublicKeyResponse(public_key=config.public_key)
+
+    async def search_notifications(
+        self,
+        request: SearchNotificationsRequest,
+        ctx: RequestContext,
+    ) -> SearchNotificationsResponse:
+        """
+        Handle search_notifications RPC call.
+
+        Parameters
+        ----------
+        request : SearchNotificationsRequest
+            The search request with query and filters.
+        ctx : RequestContext
+            RPC request context.
+
+        Returns
+        -------
+        SearchNotificationsResponse
+            List of matching notifications with counts.
+
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        page = request.page if request.page > 0 else 1
+        page_size = request.page_size if request.page_size > 0 else 20
+        page_size = min(page_size, 100)
+
+        is_read = None
+        if request.HasField("is_read"):
+            is_read = request.is_read
+
+        notification_types = None
+        if request.notification_types:
+            notification_types = []
+            for proto_type in request.notification_types:
+                nt = notification_type_from_proto(proto_type)
+                if nt:
+                    notification_types.append(nt)
+
+        date_from = None
+        if request.HasField("date_from"):
+            date_from = request.date_from.ToDatetime().replace(tzinfo=datetime.now(UTC).tzinfo)
+
+        date_to = None
+        if request.HasField("date_to"):
+            date_to = request.date_to.ToDatetime().replace(tzinfo=datetime.now(UTC).tzinfo)
+
+        actor_id = None
+        if request.actor_id:
+            try:
+                actor_id = UUID(request.actor_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid actor_id format")
+
+        try:
+            async with open_session() as session:
+                ops = NotificationOperations(session)
+                notifications, total_count, unread_count = await ops.search_notifications(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    query=request.query,
+                    page=page,
+                    page_size=page_size,
+                    is_read=is_read,
+                    notification_types=notification_types,
+                    date_from=date_from,
+                    date_to=date_to,
+                    actor_id=actor_id,
+                )
+
+                actor_ids = {n.actor_id for n in notifications if n.actor_id}
+                actor_map: dict[UUID, str] = {}
+                if actor_ids:
+                    result = await session.execute(
+                        select(User.id, User.full_name, User.username).where(User.id.in_(actor_ids))
+                    )
+                    for row in result.all():
+                        actor_map[row[0]] = row[1] or row[2]
+
+                return SearchNotificationsResponse(
+                    notifications=[
+                        notification_to_proto(
+                            n,
+                            actor_name=actor_map.get(n.actor_id, "") if n.actor_id else "",
+                        )
+                        for n in notifications
+                    ],
+                    total_count=total_count,
+                    unread_count=unread_count,
+                )
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error searching notifications: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_notification_stats(
+        self,
+        request: GetNotificationStatsRequest,
+        ctx: RequestContext,
+    ) -> GetNotificationStatsResponse:
+        """
+        Handle get_notification_stats RPC call.
+
+        Parameters
+        ----------
+        request : GetNotificationStatsRequest
+            The stats request with organization_id and days.
+        ctx : RequestContext
+            RPC request context.
+
+        Returns
+        -------
+        GetNotificationStatsResponse
+            Aggregated notification statistics.
+
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        days = request.days if request.days > 0 else 30
+        days = min(days, 365)
+
+        try:
+            async with open_session() as session:
+                ops = NotificationOperations(session)
+                (
+                    daily_stats,
+                    type_stats,
+                    total_count,
+                    unread_count,
+                    read_count,
+                ) = await ops.get_notification_stats(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    days=days,
+                )
+
+                return GetNotificationStatsResponse(
+                    daily_stats=[
+                        DailyNotificationStat(
+                            date=date_str,
+                            total=total,
+                            unread=unread,
+                            read=read,
+                        )
+                        for date_str, total, unread, read in daily_stats
+                    ],
+                    type_stats=[
+                        TypeNotificationStat(
+                            notification_type=notification_type_to_proto(nt),
+                            count=count,
+                        )
+                        for nt, count in type_stats
+                    ],
+                    total_count=total_count,
+                    unread_count=unread_count,
+                    read_count=read_count,
+                )
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting notification stats: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def bulk_mark_as_read(
+        self,
+        request: BulkMarkAsReadRequest,
+        ctx: RequestContext,
+    ) -> BulkMarkAsReadResponse:
+        """
+        Handle bulk_mark_as_read RPC call.
+
+        Parameters
+        ----------
+        request : BulkMarkAsReadRequest
+            The request with notification IDs.
+        ctx : RequestContext
+            RPC request context.
+
+        Returns
+        -------
+        BulkMarkAsReadResponse
+            Count of updated notifications.
+
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        notification_ids = []
+        for nid in request.notification_ids:
+            try:
+                notification_ids.append(UUID(nid))
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid notification_id format: {nid}")
+
+        if not notification_ids:
+            return BulkMarkAsReadResponse(updated_count=0)
+
+        try:
+            async with open_session() as session:
+                ops = NotificationOperations(session)
+                count = await ops.bulk_mark_as_read(user_id, notification_ids)
+                return BulkMarkAsReadResponse(updated_count=count)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error bulk marking as read: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def bulk_delete_notifications(
+        self,
+        request: BulkDeleteNotificationsRequest,
+        ctx: RequestContext,
+    ) -> BulkDeleteNotificationsResponse:
+        """
+        Handle bulk_delete_notifications RPC call.
+
+        Parameters
+        ----------
+        request : BulkDeleteNotificationsRequest
+            The request with notification IDs.
+        ctx : RequestContext
+            RPC request context.
+
+        Returns
+        -------
+        BulkDeleteNotificationsResponse
+            Count of deleted notifications.
+
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        notification_ids = []
+        for nid in request.notification_ids:
+            try:
+                notification_ids.append(UUID(nid))
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid notification_id format: {nid}")
+
+        if not notification_ids:
+            return BulkDeleteNotificationsResponse(deleted_count=0)
+
+        try:
+            async with open_session() as session:
+                ops = NotificationOperations(session)
+                count = await ops.bulk_delete_notifications(user_id, notification_ids)
+                return BulkDeleteNotificationsResponse(deleted_count=count)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error bulk deleting notifications: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def stream_notifications(
         self,

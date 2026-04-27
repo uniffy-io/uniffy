@@ -18,6 +18,7 @@ import { PageErrorFallback } from '@/components/feedback/PageErrorFallback';
 import { AppErrorFallback } from '@/components/feedback/AppErrorFallback';
 import { NotFoundPage } from '@/components/feedback/NotFoundPage';
 import { AccessPolicyDialogProvider, AccessPolicyDialog } from '@/features/permissions';
+import { MentionStateProvider } from '@/components/mention';
 import { lazyImport } from '@/shared/utils/lazyImport';
 
 // Expose toast on window in dev mode for testing
@@ -43,6 +44,7 @@ const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSetti
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
 const UsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
 const ServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
+const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'), 'StoragePage');
 
 // Content pages
 const NotesPage = lazyImport(() => import('@/features/notes/pages/NotesPage'), 'NotesPage');
@@ -51,6 +53,7 @@ const CalendarPage = lazyImport(() => import('@/features/calendar/pages/Calendar
 const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), 'FilesPage');
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
 const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsPage'), 'FilesTagsPage');
+const FilesTrashPage = lazyImport(() => import('@/features/files/pages/FilesTrashPage'), 'FilesTrashPage');
 const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
@@ -59,6 +62,7 @@ const ProjectSettingsPage = lazyImport(() => import('@/features/projects/pages/P
 const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage'), 'AgentsPage');
 const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'ChatPage');
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
+const NotificationsPage = lazyImport(() => import('@/features/notifications/pages/NotificationsPage'), 'NotificationsPage');
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -188,6 +192,14 @@ export function App() {
                     <AccessPolicyDialogProvider>
                     <AccessPolicyDialog />
 
+                    {/*
+                     * MentionStateProvider sits above the router so every route
+                     * (including layout-bypassing surfaces like chat) gets live
+                     * mention chip state and the user's mentionDisplay setting.
+                     * Mounting once at the top also avoids cache thrash on
+                     * navigation.
+                     */}
+                    <MentionStateProvider>
                     <Routes>
                         <Route
                             path="/auth"
@@ -225,6 +237,9 @@ export function App() {
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
+
+                            {/* Storage Management */}
+                            <Route path="storage" element={<LazyRoute><StoragePage /></LazyRoute>} />
 
                             {/* Server Admin Pages */}
                             <Route path="organizations" element={<LazyRoute><OrganizationsPage /></LazyRoute>} />
@@ -336,6 +351,15 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><FilesTagsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/files/trash"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><FilesTrashPage /></LazyRoute>
                                 </ProtectedRoute>
                             }
                         />
@@ -465,6 +489,16 @@ export function App() {
                             }
                         />
 
+                        {/* Notifications full page */}
+                        <Route
+                            path="/notifications"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><NotificationsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
                         {/* User settings (personal preferences only) */}
                         <Route
                             path="/settings"
@@ -484,6 +518,7 @@ export function App() {
                         {/* Fallback for 404s */}
                         <Route path="*" element={<NotFoundPage />} />
                     </Routes>
+                    </MentionStateProvider>
                     </AccessPolicyDialogProvider>
                 </BrowserRouter>
             </ErrorBoundary>

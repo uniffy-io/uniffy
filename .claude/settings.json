@@ -29,6 +29,7 @@
             "Bash(git stash:*)",
             "Bash(git mv:*)",
             "Bash(gh pr:*)",
+            "Read(.claude/plans/**)",
             "Edit(.claude/plans/**)",
             "Write(.claude/plans/**)"
         ]

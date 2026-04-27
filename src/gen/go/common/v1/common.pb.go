@@ -109,7 +109,9 @@ func (ContentType) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{0}
 }
 
-// SubjectType defines who can be granted permissions.
+// SubjectType defines who can be granted permissions or participate in
+// chat channels/threads. AGENT is permitted as a chat participant and as a
+// content permission grantee.
 type SubjectType int32
 
 const (
@@ -117,6 +119,7 @@ const (
 	SubjectType_SUBJECT_TYPE_USER         SubjectType = 1
 	SubjectType_SUBJECT_TYPE_GROUP        SubjectType = 2
 	SubjectType_SUBJECT_TYPE_ORGANIZATION SubjectType = 3
+	SubjectType_SUBJECT_TYPE_AGENT        SubjectType = 4
 )
 
 // Enum value maps for SubjectType.
@@ -126,12 +129,14 @@ var (
 		1: "SUBJECT_TYPE_USER",
 		2: "SUBJECT_TYPE_GROUP",
 		3: "SUBJECT_TYPE_ORGANIZATION",
+		4: "SUBJECT_TYPE_AGENT",
 	}
 	SubjectType_value = map[string]int32{
 		"SUBJECT_TYPE_UNSPECIFIED":  0,
 		"SUBJECT_TYPE_USER":         1,
 		"SUBJECT_TYPE_GROUP":        2,
 		"SUBJECT_TYPE_ORGANIZATION": 3,
+		"SUBJECT_TYPE_AGENT":        4,
 	}
 )
 
@@ -1299,12 +1304,13 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x13CONTENT_TYPE_PROMPT\x10\x0f\x12\x15\n" +
 	"\x11CONTENT_TYPE_CHAT\x10\x10\x12\x15\n" +
 	"\x11CONTENT_TYPE_ROOM\x10\x11\x12 \n" +
-	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\x12*y\n" +
+	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\x12*\x91\x01\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +
 	"\x12SUBJECT_TYPE_GROUP\x10\x02\x12\x1d\n" +
-	"\x19SUBJECT_TYPE_ORGANIZATION\x10\x03*\xc3\x01\n" +
+	"\x19SUBJECT_TYPE_ORGANIZATION\x10\x03\x12\x16\n" +
+	"\x12SUBJECT_TYPE_AGENT\x10\x04*\xc3\x01\n" +
 	"\vContentRole\x12\x1c\n" +
 	"\x18CONTENT_ROLE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13CONTENT_ROLE_VIEWER\x10\x01\x12\x1a\n" +

@@ -261,6 +261,7 @@ memory_recall = ToolDefinition(
         "required": ["query"],
     },
     executor=_execute_memory_recall,
+    read_only=True,
 )
 
 memory_list = ToolDefinition(
@@ -286,6 +287,7 @@ memory_list = ToolDefinition(
         },
     },
     executor=_execute_memory_list,
+    read_only=True,
 )
 
 memory_forget = ToolDefinition(

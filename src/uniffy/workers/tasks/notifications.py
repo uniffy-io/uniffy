@@ -17,7 +17,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
 from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
@@ -57,7 +57,7 @@ async def process_notification_event(
         NOTIFICATION_EVENTS_TOTAL.labels(status="error").inc()
         return {"status": "error", "reason": "invalid_event"}
 
-    async for session in get_async_session():
+    async with open_session() as session:
         # Resolve recipients
         recipient_ids = await _resolve_recipients(session, event)
 
@@ -192,7 +192,7 @@ async def deliver_push_notification(
     )
 
     if isinstance(push_adapter, PushAdapter):
-        async for session in get_async_session():
+        async with open_session() as session:
             ok = await push_adapter.deliver_with_session(session, uid, event)
             await session.commit()
             return {"status": "success" if ok else "skipped"}

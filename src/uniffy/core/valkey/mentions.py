@@ -6,6 +6,10 @@ notification stream handler) relay these events to connected clients so
 MentionChip components can update in real-time.
 
 Channel pattern: mentions:{org_id}
+
+PUBLISH is a pubsub command so this module reuses the pubsub client.
+The publish call runs under the same fail-fast deadline guard as the
+ops calls so a slow Valkey can't block a content mutation.
 """
 
 import json
@@ -14,14 +18,10 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.valkey.ops import ops_call
+
 LOGGER_COMPONENT = "mentions"
-
-
-def _get_client():
-    """Return the Pub/Sub publisher connection (lazy import to avoid cycles)."""
-    from uniffy.core.valkey.pubsub import _publisher
-
-    return _publisher
+_NAMESPACE = "mentions"
 
 
 async def publish_mention_state(
@@ -33,23 +33,11 @@ async def publish_mention_state(
 
     Called by domain operations when content state changes (task status,
     calendar event time, file processing completion, etc.).
-
-    Parameters
-    ----------
-    organization_id : UUID
-        Organization scope for the channel.
-    urn : str
-        URN of the content whose state changed.
-    changes : dict[str, Any]
-        Changed fields as key-value pairs. Values are converted to strings.
-
     """
-    redis = _get_client()
+    from uniffy.core.valkey import pubsub
+
+    redis = pubsub._pubsub_client
     if redis is None:
-        logger.warning(
-            "publisher not initialized, skipping mention publish",
-            component=LOGGER_COMPONENT,
-        )
         return
 
     channel = f"mentions:{organization_id}"
@@ -60,8 +48,11 @@ async def publish_mention_state(
     }
 
     try:
-        message = json.dumps(payload)
-        await redis.publish(channel, message)
+        async with ops_call(_NAMESPACE, "mentions_publish"):
+            message = json.dumps(payload)
+            await redis.publish(channel, message)
         logger.debug(f"published mention state change for {urn}", component=LOGGER_COMPONENT)
+    except TimeoutError:
+        return
     except Exception:
         logger.warning(f"Failed to publish mention state to {channel}", component=LOGGER_COMPONENT)

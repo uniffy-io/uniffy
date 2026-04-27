@@ -849,6 +849,13 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
    */
   defaultEditor?: string;
 
+  /**
+   * Default mention chip display: "expanded" (rich card) or "compact" (inline chip)
+   *
+   * @generated from field: optional string mention_display = 7;
+   */
+  mentionDisplay?: string;
+
   constructor(data?: PartialMessage<AppearanceSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -863,6 +870,7 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
     { no: 4, name: "sidebar_collapsed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "compact_mode", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 6, name: "default_editor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "mention_display", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AppearanceSettings {
@@ -988,6 +996,13 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
    */
   defaultReminderIntervals: number[] = [];
 
+  /**
+   * Enable in-app toast notifications for real-time alerts
+   *
+   * @generated from field: optional bool toast_enabled = 9;
+   */
+  toastEnabled?: boolean;
+
   constructor(data?: PartialMessage<NotificationsSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1004,6 +1019,7 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
     { no: 6, name: "quiet_hours_end", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "channel_overrides", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: NotificationChannelPreference} },
     { no: 8, name: "default_reminder_intervals", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 9, name: "toast_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NotificationsSettings {

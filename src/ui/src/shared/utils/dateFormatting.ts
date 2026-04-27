@@ -111,6 +111,43 @@ export function formatRelativeTime(dateStr: string | undefined): string {
 }
 
 /**
+ * Format a date string as a smart date/time display:
+ * - Today: "2:30 PM"
+ * - Yesterday: "Yesterday, 4:15 PM"
+ * - This week: "Mon, 10:00 AM"
+ * - This year: "Apr 12, 2:30 PM"
+ * - Older: "Apr 12, 2025, 2:30 PM"
+ */
+export function formatSmartDateTime(dateStr: string | undefined): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 6);
+
+    const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+    if (date >= todayStart) {
+        return time;
+    }
+    if (date >= yesterdayStart) {
+        return `Yesterday, ${time}`;
+    }
+    if (date >= weekStart) {
+        const day = date.toLocaleDateString(undefined, { weekday: 'short' });
+        return `${day}, ${time}`;
+    }
+    if (date.getFullYear() === now.getFullYear()) {
+        const d = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        return `${d}, ${time}`;
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + `, ${time}`;
+}
+
+/**
  * Format seconds to media playback time: "1:23" or "1:02:03"
  */
 export function formatMediaTime(seconds: number): string {

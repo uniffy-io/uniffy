@@ -1,15 +1,88 @@
 """Database session management and initialization."""
 
 import os
-from collections.abc import AsyncGenerator, AsyncIterator
-from contextlib import asynccontextmanager
+import time
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager, contextmanager
 
+import psycopg2
 from alembic import command
 from alembic.config import Config
 from loguru import logger
+from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
+
+from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
+
+# Stable 64-bit advisory-lock ids for the startup races we serialise across
+# Granian workers (one Python process per WORKERS slot, all running lifespan in
+# parallel). Each lock guards an idempotent step so late workers can drop in
+# behind the leader without re-doing work. Add new ids here, never reuse.
+MIGRATION_LOCK_ID = 0x756E_6966_6679_4D31  # "unifyM1"
+SEED_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
+
+
+def _build_sync_db_url() -> str:
+    """Build the synchronous psycopg2 URL for tooling that cannot use asyncpg."""
+    db_host = os.getenv("POSTGRES_HOST", "localhost")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    db_user = os.getenv("POSTGRES_USER", "uniffy")
+    db_password = os.getenv("POSTGRES_PASSWORD", "uniffy")
+    db_name = os.getenv("POSTGRES_DB", "uniffy")
+    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+
+@contextmanager
+def startup_advisory_lock(lock_id: int, name: str) -> Iterator[None]:
+    """Serialise a startup step across Granian workers / k8s replicas.
+
+    Uses pg_try_advisory_lock + sleep-poll, NOT pg_advisory_lock. A blocking
+    SELECT keeps a transaction open on the waiting connection, which deadlocks
+    against migrations that use CREATE INDEX CONCURRENTLY (CONCURRENTLY waits
+    for all open transactions to finish). Each try-probe is a one-shot
+    autocommitted statement, so waiters do not hold transactions between
+    attempts.
+
+    The lock is released when the connection closes -- if a worker crashes
+    mid-step Postgres reclaims the lock automatically and a follower takes
+    over. The followed-by-step body must therefore be idempotent (re-checking
+    "is this already done?" before doing it).
+
+    Usage::
+
+        with startup_advisory_lock(MY_LOCK_ID, "my step"):
+            run_my_idempotent_step()
+    """
+    conn = psycopg2.connect(_build_sync_db_url())
+    try:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            attempt = 0
+            while True:
+                cur.execute(
+                    "SELECT pg_try_advisory_lock(%s)",
+                    (lock_id,),
+                )
+                if cur.fetchone()[0]:
+                    break
+                attempt += 1
+                if attempt == 1:
+                    logger.info(
+                        f"Another worker is running {name}, waiting for the lock",
+                    )
+                time.sleep(1)
+            try:
+                yield
+            finally:
+                cur.execute(
+                    "SELECT pg_advisory_unlock(%s)",
+                    (lock_id,),
+                )
+    finally:
+        conn.close()
+
 
 # Global engine and session maker
 _engine: AsyncEngine | None = None
@@ -83,16 +156,12 @@ def run_migrations() -> None:
     alembic_cfg.attributes["configure_logger"] = False
 
     # Override the database URL to use synchronous driver for migrations
-    db_host = os.getenv("POSTGRES_HOST", "localhost")
-    db_port = os.getenv("POSTGRES_PORT", "5432")
-    db_user = os.getenv("POSTGRES_USER", "uniffy")
-    db_password = os.getenv("POSTGRES_PASSWORD", "uniffy")
-    db_name = os.getenv("POSTGRES_DB", "uniffy")
+    alembic_cfg.set_main_option("sqlalchemy.url", _build_sync_db_url())
 
-    sync_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
-
-    command.upgrade(alembic_cfg, "head")
+    with startup_advisory_lock(MIGRATION_LOCK_ID, "migrations"):
+        # Followers run upgrade(head) against an already-current schema --
+        # Alembic emits no DDL, so the run is a fast no-op for them.
+        command.upgrade(alembic_cfg, "head")
 
     logger.info("Migrations completed successfully")
 
@@ -172,52 +241,38 @@ async def init_db(*, skip_migrations: bool = False) -> None:
     logger.info("Database initialized successfully")
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession]:
-    """
-    Get an async database session (async generator form).
-
-    Yields
-    ------
-    AsyncSession
-        An async SQLAlchemy session.
-
-    """
-    if _async_session_maker is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-
-    async with _async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 @asynccontextmanager
 async def open_session() -> AsyncIterator[AsyncSession]:
     """
     Open an async database session as a context manager.
 
-    Use this instead of ``get_async_session`` in RPC handlers so the
-    type checker can prove that the ``async with`` body always executes
-    and the ``return`` inside it is guaranteed reachable::
+    Always use this to acquire a DB session in handlers, workers, and
+    scripts::
 
         async with open_session() as session:
             ops = NoteOperations(session)
             note = await ops.create(...)
             return NoteResponse(note=note_to_proto(note))
 
-    ``get_async_session`` is kept for FastAPI ``Depends`` callers and for
-    background tasks that iterate explicitly; new handler code should
-    prefer ``open_session``.
+    Context-manager cleanup (``__aexit__``) is awaited deterministically,
+    so the pooled connection is always returned. The older
+    ``async for session in get_async_session(): ...`` form has been removed
+    because ``return`` / ``break`` inside the loop did not call ``aclose()``
+    on the generator, leaving connections to be reclaimed by the garbage
+    collector and triggering SAWarnings about non-checked-in connections.
     """
     if _async_session_maker is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
 
-    async with _async_session_maker() as session:
-        try:
+    try:
+        async with _async_session_maker() as session:
             yield session
-        finally:
-            await session.close()
+    except sa_exc.TimeoutError:
+        # Pool checkout exceeded DB_POOL_TIMEOUT. Re-raise so the caller
+        # still surfaces the failure; the counter lets us alert on the
+        # event as soon as it shows up on /metrics.
+        DB_POOL_TIMEOUT_TOTAL.inc()
+        raise
 
 
 async def close_db() -> None:

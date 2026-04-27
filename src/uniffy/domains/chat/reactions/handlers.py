@@ -15,7 +15,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.reactions.operations import ChatReactionOperations
 
@@ -49,17 +49,19 @@ class ReactionHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatReactionOperations(session)
                 await ops.add_reaction(
-                    user_id, org_id, channel_id, message_id, request.emoji,
+                    user_id,
+                    org_id,
+                    channel_id,
+                    message_id,
+                    request.emoji,
                     display_name=jwt_name,
                 )
 
                 # Build reaction group for response
-                reactions = await ops.get_reactions_for_messages(
-                    [message_id], user_id
-                )
+                reactions = await ops.get_reactions_for_messages([message_id], user_id)
                 groups = reactions.get(message_id, [])
                 for g in groups:
                     if g["emoji"] == request.emoji:
@@ -97,10 +99,14 @@ class ReactionHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatReactionOperations(session)
                 await ops.remove_reaction(
-                    user_id, org_id, channel_id, message_id, request.emoji,
+                    user_id,
+                    org_id,
+                    channel_id,
+                    message_id,
+                    request.emoji,
                     display_name=jwt_name,
                 )
                 return RemoveReactionResponse()

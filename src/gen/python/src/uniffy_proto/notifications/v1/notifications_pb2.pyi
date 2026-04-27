@@ -269,3 +269,101 @@ class GetVapidPublicKeyResponse(_message.Message):
     PUBLIC_KEY_FIELD_NUMBER: _ClassVar[int]
     public_key: str
     def __init__(self, public_key: _Optional[str] = ...) -> None: ...
+
+class SearchNotificationsRequest(_message.Message):
+    __slots__ = ("organization_id", "query", "page", "page_size", "is_read", "notification_types", "date_from", "date_to", "actor_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    IS_READ_FIELD_NUMBER: _ClassVar[int]
+    NOTIFICATION_TYPES_FIELD_NUMBER: _ClassVar[int]
+    DATE_FROM_FIELD_NUMBER: _ClassVar[int]
+    DATE_TO_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    query: str
+    page: int
+    page_size: int
+    is_read: bool
+    notification_types: _containers.RepeatedScalarFieldContainer[NotificationType]
+    date_from: _timestamp_pb2.Timestamp
+    date_to: _timestamp_pb2.Timestamp
+    actor_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., is_read: _Optional[bool] = ..., notification_types: _Optional[_Iterable[_Union[NotificationType, str]]] = ..., date_from: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., date_to: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., actor_id: _Optional[str] = ...) -> None: ...
+
+class SearchNotificationsResponse(_message.Message):
+    __slots__ = ("notifications", "total_count", "unread_count")
+    NOTIFICATIONS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    notifications: _containers.RepeatedCompositeFieldContainer[Notification]
+    total_count: int
+    unread_count: int
+    def __init__(self, notifications: _Optional[_Iterable[_Union[Notification, _Mapping]]] = ..., total_count: _Optional[int] = ..., unread_count: _Optional[int] = ...) -> None: ...
+
+class GetNotificationStatsRequest(_message.Message):
+    __slots__ = ("organization_id", "days")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    DAYS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    days: int
+    def __init__(self, organization_id: _Optional[str] = ..., days: _Optional[int] = ...) -> None: ...
+
+class DailyNotificationStat(_message.Message):
+    __slots__ = ("date", "total", "unread", "read")
+    DATE_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_FIELD_NUMBER: _ClassVar[int]
+    READ_FIELD_NUMBER: _ClassVar[int]
+    date: str
+    total: int
+    unread: int
+    read: int
+    def __init__(self, date: _Optional[str] = ..., total: _Optional[int] = ..., unread: _Optional[int] = ..., read: _Optional[int] = ...) -> None: ...
+
+class TypeNotificationStat(_message.Message):
+    __slots__ = ("notification_type", "count")
+    NOTIFICATION_TYPE_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    notification_type: NotificationType
+    count: int
+    def __init__(self, notification_type: _Optional[_Union[NotificationType, str]] = ..., count: _Optional[int] = ...) -> None: ...
+
+class GetNotificationStatsResponse(_message.Message):
+    __slots__ = ("daily_stats", "type_stats", "total_count", "unread_count", "read_count")
+    DAILY_STATS_FIELD_NUMBER: _ClassVar[int]
+    TYPE_STATS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    READ_COUNT_FIELD_NUMBER: _ClassVar[int]
+    daily_stats: _containers.RepeatedCompositeFieldContainer[DailyNotificationStat]
+    type_stats: _containers.RepeatedCompositeFieldContainer[TypeNotificationStat]
+    total_count: int
+    unread_count: int
+    read_count: int
+    def __init__(self, daily_stats: _Optional[_Iterable[_Union[DailyNotificationStat, _Mapping]]] = ..., type_stats: _Optional[_Iterable[_Union[TypeNotificationStat, _Mapping]]] = ..., total_count: _Optional[int] = ..., unread_count: _Optional[int] = ..., read_count: _Optional[int] = ...) -> None: ...
+
+class BulkMarkAsReadRequest(_message.Message):
+    __slots__ = ("notification_ids",)
+    NOTIFICATION_IDS_FIELD_NUMBER: _ClassVar[int]
+    notification_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, notification_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BulkMarkAsReadResponse(_message.Message):
+    __slots__ = ("updated_count",)
+    UPDATED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    updated_count: int
+    def __init__(self, updated_count: _Optional[int] = ...) -> None: ...
+
+class BulkDeleteNotificationsRequest(_message.Message):
+    __slots__ = ("notification_ids",)
+    NOTIFICATION_IDS_FIELD_NUMBER: _ClassVar[int]
+    notification_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, notification_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BulkDeleteNotificationsResponse(_message.Message):
+    __slots__ = ("deleted_count",)
+    DELETED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    deleted_count: int
+    def __init__(self, deleted_count: _Optional[int] = ...) -> None: ...

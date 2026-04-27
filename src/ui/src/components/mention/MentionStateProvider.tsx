@@ -18,6 +18,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -32,6 +33,9 @@ import {
 } from '@/components/mention/mentionStateEmitter';
 import type { MentionLiveState } from '@/components/mention/types';
 import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
+import { useAppearanceSettings } from '@/features/settings/hooks/useSettings';
+
+export type MentionDisplayMode = 'expanded' | 'compact';
 
 // Debounce interval for batch resolution (ms)
 const RESOLVE_DEBOUNCE = 200;
@@ -40,6 +44,7 @@ interface MentionStateContextValue {
   states: Map<string, MentionLiveState>;
   register: (urn: string) => void;
   unregister: (urn: string) => void;
+  mentionDisplay: MentionDisplayMode;
 }
 
 /** Stable sentinel used to detect whether the provider is mounted */
@@ -49,6 +54,7 @@ export const MentionStateContext = createContext<MentionStateContextValue>({
   states: new Map(),
   register: MENTION_NOOP,
   unregister: MENTION_NOOP,
+  mentionDisplay: 'expanded',
 });
 
 /**
@@ -65,34 +71,68 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
     updatedByName: m.updated_by_name || undefined,
   };
 
+  // Shared tags
+  if (meta.contentTags?.length) state.contentTags = [...meta.contentTags];
+
   switch (parsed.type) {
     case UrnType.TASK:
-      if (m.status) state.taskStatus = m.status as MentionLiveState['taskStatus'];
-      if (m.due_date) state.taskDueDate = m.due_date;
-      if (m.assignee_name) state.taskAssignee = m.assignee_name;
+      if (m.status || meta.status) state.taskStatus = (meta.status || m.status) as MentionLiveState['taskStatus'];
+      if (m.due_date || meta.dueDate) state.taskDueDate = meta.dueDate || m.due_date;
+      if (m.assignee_name || meta.assigneeName) state.taskAssignee = meta.assigneeName || m.assignee_name;
+      state.taskPriority = meta.priority || m.priority || undefined;
+      state.taskPriorityLabel = meta.priorityLabel || m.priority_label || undefined;
+      state.taskPriorityColor = meta.priorityColor || m.priority_color || undefined;
+      state.taskStatusLabel = meta.statusLabel || m.status_label || undefined;
+      state.taskStatusColor = meta.statusColor || m.status_color || undefined;
+      state.taskType = meta.taskType || m.task_type || undefined;
+      if (meta.taskNumber) state.taskNumber = meta.taskNumber;
+      state.taskProjectName = meta.projectName || m.project_name || undefined;
+      state.taskProjectSlug = meta.projectSlug || m.project_slug || undefined;
+      state.taskProjectColor = meta.projectColor || m.project_color || undefined;
+      if (meta.subtaskCompleted) state.taskSubtaskCompleted = meta.subtaskCompleted;
+      if (meta.subtaskTotal) state.taskSubtaskTotal = meta.subtaskTotal;
+      if (meta.blockedByCount) state.taskBlockedByCount = meta.blockedByCount;
+      if (meta.assigneeIds?.length) state.taskAssigneeIds = [...meta.assigneeIds];
       break;
 
     case UrnType.CALENDAR_EVENT:
-      if (m.start_time) state.eventStartTime = m.start_time;
-      if (m.end_time) state.eventEndTime = m.end_time;
-      if (m.is_all_day) state.eventIsAllDay = m.is_all_day === 'true';
+      state.eventStartTime = meta.eventStartTime || m.start_time || undefined;
+      state.eventEndTime = meta.eventEndTime || m.end_time || undefined;
+      state.eventIsAllDay = meta.eventIsAllDay || m.is_all_day === 'true';
+      state.eventLocation = meta.eventLocation || undefined;
+      state.eventMeetingUrl = meta.eventMeetingUrl || undefined;
       break;
 
     case UrnType.FILE:
-      if (m.processing_status) state.fileProcessingStatus = m.processing_status as MentionLiveState['fileProcessingStatus'];
-      if (m.mime_type) state.fileMimeType = m.mime_type;
-      if (m.size) state.fileSize = parseInt(m.size, 10) || undefined;
+      if (m.processing_status || meta.processingStatus) state.fileProcessingStatus = (meta.processingStatus || m.processing_status) as MentionLiveState['fileProcessingStatus'];
+      state.fileMimeType = meta.fileMimeType || m.mime_type || undefined;
+      if (meta.fileSize) state.fileSize = Number(meta.fileSize) || undefined;
+      else if (m.size) state.fileSize = parseInt(m.size, 10) || undefined;
+      break;
+
+    case UrnType.NOTE:
+      state.noteNodeType = meta.noteNodeType || undefined;
       break;
 
     case UrnType.PROJECT:
-      if (m.completed_tasks) state.projectCompletedTasks = parseInt(m.completed_tasks, 10) || 0;
-      if (m.total_tasks) state.projectTotalTasks = parseInt(m.total_tasks, 10) || 0;
-      if (m.status) state.projectStatus = m.status;
+      if (meta.completedTasks || m.completed_tasks) state.projectCompletedTasks = meta.completedTasks || parseInt(m.completed_tasks, 10) || 0;
+      if (meta.totalTasks || m.total_tasks) state.projectTotalTasks = meta.totalTasks || parseInt(m.total_tasks, 10) || 0;
+      if (meta.status || m.status) state.projectStatus = meta.status || m.status;
       break;
 
     case UrnType.CHAT:
-    case UrnType.UNKNOWN:
-      if (m.member_count) state.memberCount = parseInt(m.member_count, 10) || 0;
+      state.channelType = meta.channelType || undefined;
+      if (meta.memberCount || m.member_count) state.memberCount = meta.memberCount || parseInt(m.member_count, 10) || 0;
+      break;
+
+    case UrnType.AGENT:
+      state.agentEmoji = meta.agentEmoji || undefined;
+      state.agentThemeColor = meta.agentThemeColor || undefined;
+      break;
+
+    case UrnType.USER:
+      state.userAvatarUrl = meta.userAvatarUrl || undefined;
+      state.userEmail = meta.userEmail || undefined;
       break;
   }
 
@@ -105,6 +145,7 @@ interface MentionStateProviderProps {
 
 export function MentionStateProvider({ children }: MentionStateProviderProps) {
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+  const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
 
   // Registered URNs (currently visible in viewport)
   const registeredUrns = useRef(new Map<string, number>()); // urn -> refcount
@@ -224,7 +265,36 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   }, [organizationId, scheduleBatch]);
 
   return (
-    <MentionStateContext.Provider value={{ states, register, unregister }}>
+    <MentionStateContext.Provider value={{ states, register, unregister, mentionDisplay }}>
+      {children}
+    </MentionStateContext.Provider>
+  );
+}
+
+const EMPTY_STATES: Map<string, MentionLiveState> = new Map();
+
+/**
+ * Lightweight bridge for React roots mounted outside the main app tree (e.g.
+ * the editor's per-chip ProseMirror NodeView roots). Supplies only
+ * `mentionDisplay` via context; live-state delivery falls back to the
+ * module-level emitter inside `useMentionState`.
+ *
+ * Use this when you cannot mount the full `MentionStateProvider` (which would
+ * spin up a redundant batch resolver and own the global state lifecycle).
+ */
+export function MentionDisplayBridge({ children }: MentionStateProviderProps) {
+  const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
+  const value = useMemo<MentionStateContextValue>(
+    () => ({
+      states: EMPTY_STATES,
+      register: MENTION_NOOP,
+      unregister: MENTION_NOOP,
+      mentionDisplay,
+    }),
+    [mentionDisplay],
+  );
+  return (
+    <MentionStateContext.Provider value={value}>
       {children}
     </MentionStateContext.Provider>
   );

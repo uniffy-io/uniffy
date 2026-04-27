@@ -20,35 +20,32 @@
  * +------------------------------------------------+
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import {
   Clock,
   ArrowSquareOut,
   Link,
-  CalendarDots,
-  MapPin,
-  FrameCorners,
   CopySimple,
   Check,
 } from '@phosphor-icons/react';
 import type { UrnPreviewData } from '@/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
+import { buildLiveStateFromMetadata } from '@/components/mention/buildLiveState';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { formatRelativeTime, formatTimeRemaining } from '@/shared/utils/dateFormatting';
-import { usePresence } from '@/features/presence/hooks/usePresence';
-import { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
-import {
-  TaskStatusIndicator,
-  CalendarTemporalIndicator,
-  NoteEditingIndicator,
-  FileProcessingIndicator,
-  ProjectProgressIndicator,
-} from '@/components/mention/LiveIndicators';
+import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { cn } from '@/shared/utils/cn';
 import type { MentionLiveState } from '@/components/mention/types';
+import {
+  TaskMentionPreview,
+  CalendarMentionPreview,
+  ProjectMentionPreview,
+  FileMentionPreview,
+  NoteMentionPreview,
+  UserMentionPreview,
+  ChatMentionPreview,
+  AgentMentionPreview,
+} from '@/components/mention/previews';
 import type { Icon } from '@phosphor-icons/react';
 
 interface MentionPreviewProps {
@@ -83,67 +80,11 @@ function getTypeTheme(type: UrnType): TypeTheme {
   };
 }
 
-function isRecentlyUpdated(dateStr: string | undefined): boolean {
-  if (!dateStr) return false;
-  return Date.now() - new Date(dateStr).getTime() < 5 * 60 * 1000;
-}
-
-function getMediaEmbedLabel(metadata?: Record<string, string>): string | null {
-  const mime = metadata?.mime_type;
-  if (!mime) return null;
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
-  return null;
-}
-
-function formatEventTimeRange(metadata: Record<string, string>): string {
-  const startStr = metadata.start_time;
-  const endStr = metadata.end_time;
-  const isAllDay = metadata.is_all_day === 'true';
-
-  if (!startStr) return '';
-
-  const start = new Date(startStr);
-  const end = endStr ? new Date(endStr) : null;
-
-  const dateOpts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-  const timeOpts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
-
-  if (isAllDay) {
-    if (!end || start.toDateString() === end.toDateString()) {
-      return `${start.toLocaleDateString(undefined, dateOpts)} (all day)`;
-    }
-    return `${start.toLocaleDateString(undefined, dateOpts)} - ${end.toLocaleDateString(undefined, dateOpts)} (all day)`;
-  }
-
-  const startDate = start.toLocaleDateString(undefined, dateOpts);
-  const startTime = start.toLocaleTimeString(undefined, timeOpts);
-
-  if (!end) return `${startDate} at ${startTime}`;
-
-  const endTime = end.toLocaleTimeString(undefined, timeOpts);
-
-  if (start.toDateString() === end.toDateString()) {
-    return `${startDate}, ${startTime} - ${endTime}`;
-  }
-
-  const endDate = end.toLocaleDateString(undefined, dateOpts);
-  return `${startDate} ${startTime} - ${endDate} ${endTime}`;
-}
-
-function PreviewAvatar({ src, fallback }: { src: string; fallback: React.ReactNode }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <>{fallback}</>;
-  return (
-    <img
-      src={src}
-      alt=""
-      className="w-11 h-11 rounded-xl object-cover shadow-lg ring-2 ring-background"
-      onError={() => setFailed(true)}
-    />
-  );
-}
+/** Known types that have dedicated preview components */
+const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
+  UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE,
+  UrnType.NOTE, UrnType.USER, UrnType.CHAT, UrnType.AGENT,
+]);
 
 export function MentionPreview({
   preview,
@@ -158,6 +99,13 @@ export function MentionPreview({
 }: MentionPreviewProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+
+  // Build effective liveState: merge provider state with preview.metadata fallback
+  const effectiveLiveState = useMemo((): MentionLiveState | null => {
+    if (liveState) return liveState;
+    if (!preview?.metadata) return null;
+    return buildLiveStateFromMetadata(preview.urn, preview.title, preview.metadata);
+  }, [liveState, preview]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -184,12 +132,6 @@ export function MentionPreview({
   const parsed = preview ? parseUrn(preview.urn) : null;
   const theme = parsed ? getTypeTheme(parsed.type) : getTypeTheme(UrnType.UNKNOWN);
   const TypeIcon = theme.icon;
-  const recentlyUpdated = preview ? isRecentlyUpdated(preview.updatedAt) : false;
-
-  const isUserMention = parsed?.type === UrnType.USER && !!parsed.id;
-  const presenceStatus = usePresence(isUserMention ? parsed.id! : '');
-  const customStatus = useCustomStatus(isUserMention ? parsed.id! : '');
-  const userAvatarSrc = useAvatarUrl(isUserMention ? parsed.id! : '', 'md');
 
   return (
     <div
@@ -249,132 +191,108 @@ export function MentionPreview({
           </div>
         )}
 
-        {/* Content preview */}
-        {preview && !isLoading && !error && (
+        {/* Type-specific preview cards */}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.TASK && (
+          <TaskMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.CALENDAR_EVENT && (
+          <CalendarMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.PROJECT && (
+          <ProjectMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.FILE && (
+          <FileMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+            onEmbed={onEmbed}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.NOTE && (
+          <NoteMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.USER && (
+          <UserMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.CHAT && (
+          <ChatMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.AGENT && (
+          <AgentMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+
+        {/* Generic fallback for unknown types or missing live state */}
+        {preview && !isLoading && !error && !(effectiveLiveState && parsed && KNOWN_PREVIEW_TYPES.has(parsed.type)) && (
           <>
-            {/* Left accent stripe */}
-            <div
-              className={cn(
-                'absolute left-0 top-0 bottom-0 w-[3px]',
-                theme.iconBg,
-              )}
-            />
+            <div className={cn('absolute left-0 top-0 bottom-0 w-[3px]', theme.iconBg)} />
+            <div className={cn('absolute inset-x-0 top-0 h-16 bg-gradient-to-b pointer-events-none opacity-60', theme.gradient)} />
 
-            {/* Type gradient wash at top */}
-            <div className={cn(
-              'absolute inset-x-0 top-0 h-16 bg-gradient-to-b pointer-events-none opacity-60',
-              theme.gradient,
-            )} />
-
-            {/* Header */}
             <div className="relative px-4 pt-3.5 pb-2 pl-5">
               <div className="flex items-start gap-3">
-                {/* Icon badge or avatar */}
-                {isUserMention && parsed?.id ? (
-                  <div className="relative shrink-0">
-                    <PreviewAvatar
-                      src={userAvatarSrc}
-                      fallback={
-                        <div className={cn(
-                          'flex items-center justify-center w-11 h-11 rounded-xl shadow-lg',
-                          theme.iconBg,
-                        )}>
-                          <TypeIcon size={20} weight="duotone" className="text-white" />
-                        </div>
-                      }
-                    />
-                    <PresenceIndicator status={presenceStatus} size="md" />
-                  </div>
-                ) : (
-                  <div className={cn(
-                    'flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md',
-                    theme.iconBg,
-                  )}>
-                    <TypeIcon size={18} weight="duotone" className="text-white" />
-                  </div>
-                )}
-
-                {/* Title and subtitle */}
+                <div className={cn('flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md', theme.iconBg)}>
+                  <TypeIcon size={18} weight="duotone" className="text-white" />
+                </div>
                 <div className="flex-1 min-w-0 pt-0.5">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-sm truncate flex-1">
-                      {preview.title}
-                    </h4>
-                    {recentlyUpdated && (
-                      <span className="relative flex shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        <span className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-primary animate-ping opacity-50" />
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Subtitle: type, presence, or live status */}
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    {isUserMention ? (
-                      <>
-                        <span className={cn(
-                          'text-xs font-medium capitalize',
-                          presenceStatus === 'online' ? 'text-green-600 dark:text-green-400'
-                            : presenceStatus === 'away' ? 'text-amber-600 dark:text-amber-400'
-                            : presenceStatus === 'dnd' ? 'text-red-600 dark:text-red-400'
-                            : 'text-muted-foreground',
-                        )}>
-                          {presenceStatus === 'dnd' ? 'Do Not Disturb' : presenceStatus}
-                        </span>
-                        {customStatus && (
-                          <>
-                            <span className="text-muted-foreground/40">.</span>
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground truncate">
-                              {customStatus.emoji && <span>{customStatus.emoji}</span>}
-                              <span className="truncate">
-                                {customStatus.text}
-                                {customStatus.expiresAt && (
-                                  <span className="text-muted-foreground/60">
-                                    {' '}{formatTimeRemaining(customStatus.expiresAt)}
-                                  </span>
-                                )}
-                              </span>
-                            </span>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <span className={cn('text-xs font-medium', theme.accentText)}>
-                          {getUrnTypeLabel(preview.urn)}
-                        </span>
-
-                        {/* Inline live status in subtitle */}
-                        {liveState?.taskStatus && (
-                          <>
-                            <span className="text-muted-foreground/40">.</span>
-                            <TaskStatusIndicator status={liveState.taskStatus} />
-                          </>
-                        )}
-                        {liveState?.eventStartTime && (
-                          <>
-                            <span className="text-muted-foreground/40">.</span>
-                            <CalendarTemporalIndicator
-                              startTime={liveState.eventStartTime}
-                              endTime={liveState.eventEndTime}
-                              isAllDay={liveState.eventIsAllDay}
-                            />
-                          </>
-                        )}
-                        {liveState?.noteIsBeingEdited && (
-                          <>
-                            <span className="text-muted-foreground/40">.</span>
-                            <NoteEditingIndicator editorName={liveState.noteEditorName} />
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  <h4 className="font-semibold text-sm truncate">{preview.title}</h4>
+                  <span className={cn('text-xs font-medium', theme.accentText)}>
+                    {getUrnTypeLabel(preview.urn)}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Description / content preview */}
             {preview.description && (
               <div className="px-4 pb-2.5 pl-5">
                 <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
@@ -383,93 +301,10 @@ export function MentionPreview({
               </div>
             )}
 
-            {/* Type-specific detail sections */}
-
-            {/* Calendar event details */}
-            {preview.type === UrnType.CALENDAR_EVENT && preview.metadata?.start_time && (
-              <div className="px-4 pb-2.5 pl-5 space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDots size={14} weight="duotone" className="text-rose-500 shrink-0" />
-                  <span className="text-xs">{formatEventTimeRange(preview.metadata)}</span>
-                </div>
-                {preview.metadata.location && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin size={14} weight="duotone" className="text-rose-500 shrink-0" />
-                    <span className="text-xs truncate">{preview.metadata.location}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Task details */}
-            {liveState?.taskDueDate && parsed?.type === UrnType.TASK && (
-              <div className="px-4 pb-2.5 pl-5">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Clock size={13} weight="duotone" className="text-teal-500 shrink-0" />
-                  <span>Due {new Date(liveState.taskDueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                  {liveState.taskAssignee && (
-                    <>
-                      <span className="text-muted-foreground/40">.</span>
-                      <span className="truncate">{liveState.taskAssignee}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Project progress */}
-            {liveState && parsed?.type === UrnType.PROJECT && (liveState.projectTotalTasks ?? 0) > 0 && (
-              <div className="px-4 pb-2.5 pl-5">
-                <div className="flex items-center gap-3">
-                  <ProjectProgressIndicator
-                    completed={liveState.projectCompletedTasks ?? 0}
-                    total={liveState.projectTotalTasks!}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {liveState.projectCompletedTasks}/{liveState.projectTotalTasks} tasks
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* File processing / embed */}
-            {liveState?.fileProcessingStatus && parsed?.type === UrnType.FILE && (
-              <div className="px-4 pb-2 pl-5">
-                <FileProcessingIndicator
-                  status={liveState.fileProcessingStatus}
-                  mimeType={liveState.fileMimeType}
-                  fileSize={liveState.fileSize}
-                />
-              </div>
-            )}
-
-            {onEmbed && preview.type === UrnType.FILE && (() => {
-              const mediaLabel = getMediaEmbedLabel(preview.metadata);
-              if (!mediaLabel) return null;
-              return (
-                <div className="px-4 pb-2 pl-5">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onEmbed(); }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <FrameCorners size={13} weight="duotone" />
-                    <span>Embed as {mediaLabel}</span>
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* Footer */}
             <div className="px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock size={12} weight="duotone" />
                 <span>{formatRelativeTime(preview.updatedAt) || 'No date'}</span>
-                {liveState?.updatedByName && (
-                  <>
-                    <span className="text-muted-foreground/40">.</span>
-                    <span className="truncate max-w-[80px]">{liveState.updatedByName}</span>
-                  </>
-                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -477,11 +312,7 @@ export function MentionPreview({
                   className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                   title="Copy URN"
                 >
-                  {copied ? (
-                    <Check size={12} weight="bold" className="text-green-500" />
-                  ) : (
-                    <CopySimple size={12} weight="bold" />
-                  )}
+                  {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
                 </button>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
                   <ArrowSquareOut size={11} weight="bold" />

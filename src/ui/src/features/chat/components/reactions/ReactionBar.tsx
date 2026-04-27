@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Plus } from '@phosphor-icons/react';
 
 import { cn } from '@/shared/utils/cn';
@@ -42,7 +43,7 @@ interface ReactionBarProps {
   onToggleReaction?: (emoji: string) => void;
 }
 
-export function ReactionBar({
+function ReactionBarInner({
   reactions,
   onAddReaction,
   onToggleReaction,
@@ -50,7 +51,7 @@ export function ReactionBar({
   if (reactions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
+    <div className="flex flex-wrap gap-1 mt-1" data-testid="chat-reaction-bar">
       {reactions.map((reaction) => (
         <button
           key={reaction.emoji}
@@ -62,6 +63,9 @@ export function ReactionBar({
           )}
           title={buildTooltip(reaction.emoji, reaction.userIds)}
           onClick={() => onToggleReaction?.(reaction.emoji)}
+          data-testid={`chat-reaction-${reaction.emoji}`}
+          data-active={reaction.hasCurrentUser ? 'true' : 'false'}
+          data-count={reaction.count}
         >
           <span className="text-[14px] leading-none">{renderEmoji(reaction.emoji)}</span>
           <span className="font-medium">{reaction.count}</span>
@@ -75,9 +79,12 @@ export function ReactionBar({
         )}
         title="Add reaction"
         onClick={onAddReaction}
+        data-testid="chat-reaction-add"
       >
         <Plus size={12} />
       </button>
     </div>
   );
 }
+
+export const ReactionBar = memo(ReactionBarInner);

@@ -10,7 +10,6 @@ from sqlalchemy import and_, delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
@@ -261,9 +260,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         if not include_deleted:
             query = query.where(Project.is_deleted == False)  # noqa: E712
 
-        count_result = await self.session.execute(
-            select(func.count()).select_from(query.subquery())
-        )
+        count_result = await self.session.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()
 
         query = query.order_by(Project.updated_at.desc())
@@ -273,35 +270,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         projects = list(result.scalars().all())
 
         return projects, total
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, self.content_type
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
 
     def _generate_slug_candidate(self, name: str) -> str:
         """Generate an uppercase slug candidate from a project name."""
@@ -320,9 +288,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         requested_slug: str | None,
     ) -> str:
         """Resolve a unique slug for a project within an organization."""
-        candidate = (
-            requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
-        )
+        candidate = requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
         if not _SLUG_PATTERN.match(candidate):
             raise ValidationError(
                 "slug",
@@ -603,8 +569,7 @@ class TaskOperations(BaseContentOperations[Task]):
                     ContentMember.subject_type,
                     ContentMember.subject_id,
                     ContentMember.role,
-                )
-                .where(
+                ).where(
                     ContentMember.content_type == ContentType.PROJECT,
                     ContentMember.content_id == project.id,
                 )
@@ -672,9 +637,7 @@ class TaskOperations(BaseContentOperations[Task]):
         )
 
         description = kwargs.get("description", "")
-        outgoing_references = (
-            queries.extract_urns_from_content(description) if description else []
-        )
+        outgoing_references = queries.extract_urns_from_content(description) if description else []
 
         max_sort_order = await self.session.execute(
             select(func.max(Task.sort_order)).where(
@@ -768,6 +731,7 @@ class TaskOperations(BaseContentOperations[Task]):
         title_changed = "title" in kwargs and kwargs["title"] != task.title
         old_status = task.status
         old_due_date = task.due_date
+        old_priority = task.priority
         old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
         old_title = task.title
 
@@ -847,9 +811,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 )
 
         if "description" in kwargs:
-            task.outgoing_references = (
-                queries.extract_urns_from_content(task.description) or None
-            )
+            task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 
         task.version += 1
         task.updated_at = datetime.now(UTC)
@@ -859,9 +821,7 @@ class TaskOperations(BaseContentOperations[Task]):
 
         await self._index_for_search(task)
 
-        await self._emit_assignment_notifications(
-            task, user_id, old_assignee_ids, task.assignee_ids
-        )
+        await self._emit_assignment_notifications(task, user_id, old_assignee_ids, task.assignee_ids)
         await self._emit_mention_notifications(
             task, user_id, old_references, task.outgoing_references
         )
@@ -902,12 +862,20 @@ class TaskOperations(BaseContentOperations[Task]):
             mention_changes["title"] = task.title
         if task.due_date != old_due_date:
             mention_changes["due_date"] = task.due_date or ""
+        if task.priority != old_priority:
+            mention_changes["priority"] = task.priority
         current_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
         if current_assignee_ids != old_assignee_ids:
             mention_changes["assignee_ids"] = ",".join(current_assignee_ids)
 
         if mention_changes:
             try:
+                resolved = await self._resolve_field_option_labels(
+                    task.project_id,
+                    task.status,
+                    task.priority,
+                )
+                mention_changes.update(resolved)
                 await publish_mention_state(
                     organization_id=organization_id,
                     urn=task.urn,
@@ -942,11 +910,7 @@ class TaskOperations(BaseContentOperations[Task]):
                         previous_value=old_parent_status,
                         new_value="status_done",
                     )
-        elif (
-            task.parent_id
-            and old_status == "status_done"
-            and task.status != "status_done"
-        ):
+        elif task.parent_id and old_status == "status_done" and task.status != "status_done":
             parent = await self.session.get(Task, task.parent_id)
             if parent and parent.status == "status_done" and not parent.is_deleted:
                 parent.status = "status_in_progress"
@@ -966,11 +930,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 )
 
         spawned_task: Task | None = None
-        if (
-            task.recurrence_rule
-            and task.status == "status_done"
-            and old_status != "status_done"
-        ):
+        if task.recurrence_rule and task.status == "status_done" and old_status != "status_done":
             spawned_task = await self._spawn_next_recurring_instance(task, organization_id)
 
         return task, spawned_task
@@ -1090,9 +1050,7 @@ class TaskOperations(BaseContentOperations[Task]):
         await self._require_delete(user_id, organization_id, task)
 
         if permanent:
-            await self.session.execute(
-                delete(TaskActivity).where(TaskActivity.task_id == task_id)
-            )
+            await self.session.execute(delete(TaskActivity).where(TaskActivity.task_id == task_id))
             await self.session.delete(task)
         else:
             task.is_deleted = True
@@ -1140,9 +1098,7 @@ class TaskOperations(BaseContentOperations[Task]):
         elif backlog_only:
             query = query.where(Task.sprint_id.is_(None))
 
-        count_result = await self.session.execute(
-            select(func.count()).select_from(query.subquery())
-        )
+        count_result = await self.session.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()
 
         query = query.order_by(Task.sort_order.asc(), Task.created_at.asc())
@@ -1256,6 +1212,48 @@ class TaskOperations(BaseContentOperations[Task]):
         )
         if errors:
             raise ValidationError("field_values", "; ".join(errors))
+
+    async def _resolve_field_option_labels(
+        self,
+        project_id: UUID,
+        status_id: str,
+        priority_id: str,
+    ) -> dict[str, str]:
+        """Resolve status and priority labels/colors from project field definitions.
+
+        Parameters
+        ----------
+        project_id : UUID
+            Project to look up field definitions for.
+        status_id : str
+            Status option ID (e.g., "status_todo").
+        priority_id : str
+            Priority option ID (e.g., "priority_high").
+
+        Returns
+        -------
+        dict[str, str]
+            Resolved fields: status_label, status_color, priority_label, priority_color.
+
+        """
+        from uniffy.core.models.projects.field_definition import FieldDefinition
+
+        stmt = select(FieldDefinition.id, FieldDefinition.config).where(
+            FieldDefinition.project_id == project_id,
+            FieldDefinition.id.in_(["field_status", "field_priority"]),
+        )
+        result = await self.session.execute(stmt)
+        resolved: dict[str, str] = {}
+        for row in result.all():
+            options = (row.config or {}).get("options", [])
+            target_id = status_id if row.id == "field_status" else priority_id
+            prefix = "status" if row.id == "field_status" else "priority"
+            for opt in options:
+                if opt.get("id") == target_id:
+                    resolved[f"{prefix}_label"] = opt.get("label", "")
+                    resolved[f"{prefix}_color"] = opt.get("color", "")
+                    break
+        return resolved
 
     async def _emit_assignment_notifications(
         self,

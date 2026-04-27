@@ -22,7 +22,7 @@ from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.valkey import publish_notification
-from uniffy.db.session import get_async_session
+from uniffy.db.session import open_session
 
 # Thumbnail configuration
 THUMB_MAX_SIZE = (400, 400)  # Max dimensions (maintains aspect ratio)
@@ -87,7 +87,7 @@ async def generate_image_thumbnail(
 
     s3 = get_s3_client()
 
-    async for session in get_async_session():
+    async with open_session() as session:
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
@@ -213,7 +213,7 @@ async def generate_pdf_thumbnail(
 
     s3 = get_s3_client()
 
-    async for session in get_async_session():
+    async with open_session() as session:
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
@@ -333,7 +333,7 @@ async def generate_video_thumbnail(
 
     s3 = get_s3_client()
 
-    async for session in get_async_session():
+    async with open_session() as session:
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:

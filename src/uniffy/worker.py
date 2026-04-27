@@ -17,6 +17,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
+
+bootstrap_multiproc_metrics("worker")
+
 from arq import run_worker
 from loguru import logger
 from redis.exceptions import ConnectionError as RedisConnectionError

@@ -27,6 +27,7 @@ export { SubjectAvatar, SubjectAvatarById } from '@/components/subject/SubjectAv
 export { SubjectAvatarStack } from '@/components/subject/SubjectAvatarStack';
 export { SubjectChip } from '@/components/subject/SubjectChip';
 export { SubjectPicker } from '@/components/subject/SubjectPicker';
+export { UserHoverCard } from '@/components/subject/UserHoverCard';
 
 // Hooks
 export { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';

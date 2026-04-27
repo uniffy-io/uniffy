@@ -43,6 +43,18 @@ class NotificationsService(Protocol):
     async def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def search_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_notification_stats(self, request: notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def bulk_mark_as_read(self, request: notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def bulk_delete_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsService]):
     def __init__(self, service: NotificationsService | AsyncGenerator[NotificationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -138,6 +150,46 @@ class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_vapid_public_key,
+                ),
+                "/notifications.v1.NotificationsService/SearchNotifications": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SearchNotifications",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.search_notifications,
+                ),
+                "/notifications.v1.NotificationsService/GetNotificationStats": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetNotificationStats",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_notification_stats,
+                ),
+                "/notifications.v1.NotificationsService/BulkMarkAsRead": Endpoint.unary(
+                    method=MethodInfo(
+                        name="BulkMarkAsRead",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.bulk_mark_as_read,
+                ),
+                "/notifications.v1.NotificationsService/BulkDeleteNotifications": Endpoint.unary(
+                    method=MethodInfo(
+                        name="BulkDeleteNotifications",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.bulk_delete_notifications,
                 ),
             },
             interceptors=interceptors,
@@ -331,6 +383,86 @@ class NotificationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def search_notifications(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SearchNotifications",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_notification_stats(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetNotificationStats",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def bulk_mark_as_read(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkMarkAsRead",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def bulk_delete_notifications(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkDeleteNotifications",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class NotificationsServiceSync(Protocol):
     def list_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.ListNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.ListNotificationsResponse:
@@ -350,6 +482,14 @@ class NotificationsServiceSync(Protocol):
     def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def search_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_notification_stats(self, request: notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def bulk_mark_as_read(self, request: notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def bulk_delete_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -446,6 +586,46 @@ class NotificationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_vapid_public_key,
+                ),
+                "/notifications.v1.NotificationsService/SearchNotifications": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SearchNotifications",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.search_notifications,
+                ),
+                "/notifications.v1.NotificationsService/GetNotificationStats": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetNotificationStats",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_notification_stats,
+                ),
+                "/notifications.v1.NotificationsService/BulkMarkAsRead": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="BulkMarkAsRead",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.bulk_mark_as_read,
+                ),
+                "/notifications.v1.NotificationsService/BulkDeleteNotifications": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="BulkDeleteNotifications",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.bulk_delete_notifications,
                 ),
             },
             interceptors=interceptors,
@@ -633,6 +813,86 @@ class NotificationsServiceClientSync(ConnectClientSync):
                 service_name="notifications.v1.NotificationsService",
                 input=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
                 output=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def search_notifications(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SearchNotifications",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.SearchNotificationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_notification_stats(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetNotificationStats",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.GetNotificationStatsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def bulk_mark_as_read(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkMarkAsRead",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.BulkMarkAsReadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def bulk_delete_notifications(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkDeleteNotifications",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.BulkDeleteNotificationsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

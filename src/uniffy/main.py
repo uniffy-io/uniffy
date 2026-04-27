@@ -1,3 +1,11 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
+
+bootstrap_multiproc_metrics("backend")
+
 import os
 
 from granian import Granian

@@ -40,7 +40,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Input } from '@/components/ui/input';
 import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
-import { setSplitChannel } from '@/features/chat/store/chatChannelsSlice';
+import { setSplitChannel, selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleDmSection,
   collapseSidebar,
@@ -76,6 +76,19 @@ export function ChatSidebar() {
     state.chatThreads.threadsInbox.filter(t => t.hasUnread).length
   );
   const { canManageChat } = useChatPermissions();
+  const channelPreferences = useAppSelector(selectChannelPreferences);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
+
+  const isChannelMuted = useCallback((channelId: string) => {
+    if (channelPreferences[channelId]?.isMuted) return true;
+    const members = allChannelMembers[channelId];
+    if (members) {
+      const me = members.find((m) => m.userId === currentUserId);
+      if (me?.isMuted) return true;
+    }
+    return false;
+  }, [channelPreferences, allChannelMembers, currentUserId]);
 
   // Unread counts from channel data (populated by API)
   const unreadCounts: Record<string, number> = useMemo(() => {
@@ -192,7 +205,7 @@ export function ChatSidebar() {
   }, [navigate]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-testid="chat-sidebar-root">
       {/* Header */}
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         {canManageChat && (
@@ -201,6 +214,7 @@ export function ChatSidebar() {
               onClick={() => dispatch(openCreateChannelModal(null))}
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="New channel"
+              data-testid="chat-sidebar-create-channel-button"
             >
               <PencilSimple size={16} />
             </button>
@@ -208,6 +222,7 @@ export function ChatSidebar() {
               onClick={() => dispatch(openCreateCategoryModal())}
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="New category"
+              data-testid="chat-sidebar-create-category-button"
             >
               <Plus size={16} />
             </button>
@@ -219,6 +234,7 @@ export function ChatSidebar() {
             onClick={() => dispatch(isOverlay ? expandSidebar() : collapseSidebar())}
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
             title={isOverlay ? 'Pin sidebar' : 'Collapse sidebar'}
+            data-testid="chat-sidebar-collapse-toggle"
           >
             {isOverlay
               ? <CaretDoubleRight size={16} weight="bold" className="text-primary" />
@@ -241,6 +257,7 @@ export function ChatSidebar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-7 pl-8 text-xs bg-muted/50"
+            data-testid="chat-sidebar-search"
           />
         </div>
       </div>
@@ -250,14 +267,18 @@ export function ChatSidebar() {
         {/* Threads link */}
         <button
           onClick={handleThreadsClick}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          data-testid="chat-sidebar-threads-link"
         >
           <span className="flex items-center gap-2">
             <ChatsCircle size={16} />
             <span className="font-medium">Threads</span>
           </span>
           {unreadThreadCount > 0 && (
-            <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+            <span
+              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
+              data-testid="chat-sidebar-threads-unread-badge"
+            >
               {unreadThreadCount}
             </span>
           )}
@@ -266,14 +287,18 @@ export function ChatSidebar() {
         {/* Unreads link */}
         <button
           onClick={() => navigate('/chat/unreads')}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          data-testid="chat-sidebar-unreads-link"
         >
           <span className="flex items-center gap-2">
             <Tray size={16} />
             <span className="font-medium">Unreads</span>
           </span>
           {totalUnread > 0 && (
-            <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+            <span
+              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
+              data-testid="chat-sidebar-unreads-badge"
+            >
               {totalUnread}
             </span>
           )}
@@ -282,7 +307,8 @@ export function ChatSidebar() {
         {/* Browse channels */}
         <button
           onClick={() => dispatch(openBrowseChannelsModal())}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          data-testid="chat-sidebar-browse-channels-button"
         >
           <Compass size={16} />
           <span className="font-medium">Browse Channels</span>
@@ -297,6 +323,7 @@ export function ChatSidebar() {
                 id={group.categoryId}
                 name={group.categoryName}
                 sortable={group.categoryId !== null}
+                canManage={canManageChat}
                 onAddChannel={canManageChat ? () => dispatch(openCreateChannelModal(group.categoryId)) : undefined}
               >
                 {group.channels.map(channel => (
@@ -305,6 +332,8 @@ export function ChatSidebar() {
                     channel={channel}
                     isActive={channel.id === activeChannelId}
                     unreadCount={unreadCounts[channel.id] ?? 0}
+                    mentionCount={channel.mentionCount ?? 0}
+                    isMuted={isChannelMuted(channel.id)}
                     onClick={() => handleChannelSelect(channel.id)}
                   />
                 ))}
@@ -314,24 +343,27 @@ export function ChatSidebar() {
         </DndContext>
 
         {/* Direct Messages section */}
-        <div className="mt-1">
-          <button
-            onClick={() => dispatch(toggleDmSection())}
-            className="flex items-center justify-between w-full px-3 py-1.5 group"
-          >
-            <span className="flex items-center gap-1 text-xs uppercase font-medium tracking-wider text-muted-foreground">
+        <div className="mt-1" data-testid="chat-sidebar-dm-section" data-state={dmSectionCollapsed ? 'collapsed' : 'expanded'}>
+          <div className="flex items-center justify-between w-full px-3 py-1.5 group">
+            <button
+              type="button"
+              onClick={() => dispatch(toggleDmSection())}
+              className="flex items-center gap-1 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="chat-sidebar-dm-toggle"
+            >
               {dmSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
               Direct Messages
-            </span>
-            <Plus
-              size={14}
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(openNewDmModal())}
+              aria-label="New direct message"
               className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch(openNewDmModal());
-              }}
-            />
-          </button>
+              data-testid="chat-sidebar-new-dm-button"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
 
           {!dmSectionCollapsed && (
             <div className="space-y-px">
@@ -341,6 +373,7 @@ export function ChatSidebar() {
                   channel={channel}
                   isActive={channel.id === activeChannelId}
                   unreadCount={unreadCounts[channel.id] ?? 0}
+                  isMuted={isChannelMuted(channel.id)}
                   onClick={() => handleChannelSelect(channel.id)}
                 />
               ))}

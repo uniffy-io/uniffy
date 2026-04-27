@@ -12,7 +12,6 @@ interface ChatUiState {
   density: ChatDensity;
   activePanel: ChatActivePanel;
   selectedMessageIds: string[];
-  searchOpen: boolean;
   channelHeaderExpanded: boolean;
   channelsSectionCollapsed: boolean;
   dmSectionCollapsed: boolean;
@@ -32,6 +31,11 @@ interface ChatUiState {
     senderName: string;
     contentPreview: string;
   } | null;
+  editingMessage: {
+    id: string;
+    channelId: string;
+    content: string;
+  } | null;
 }
 
 const initialState: ChatUiState = {
@@ -42,7 +46,6 @@ const initialState: ChatUiState = {
   density: 'comfortable',
   activePanel: null,
   selectedMessageIds: [],
-  searchOpen: false,
   channelHeaderExpanded: false,
   channelsSectionCollapsed: false,
   dmSectionCollapsed: false,
@@ -57,6 +60,7 @@ const initialState: ChatUiState = {
   channelSettingsModalOpen: false,
   channelSettingsModalTab: 'overview' as const,
   replyToMessage: null,
+  editingMessage: null,
 };
 
 export const chatUiSlice = createSlice({
@@ -121,12 +125,6 @@ export const chatUiSlice = createSlice({
     },
     clearSelection: (state) => {
       state.selectedMessageIds = [];
-    },
-    toggleSearch: (state) => {
-      state.searchOpen = !state.searchOpen;
-    },
-    setSearchOpen: (state, action: PayloadAction<boolean>) => {
-      state.searchOpen = action.payload;
     },
     toggleChannelHeaderExpanded: (state) => {
       state.channelHeaderExpanded = !state.channelHeaderExpanded;
@@ -198,6 +196,18 @@ export const chatUiSlice = createSlice({
     clearReplyToMessage: (state) => {
       state.replyToMessage = null;
     },
+    setEditingMessage: (state, action: PayloadAction<{
+      id: string;
+      channelId: string;
+      content: string;
+    }>) => {
+      state.editingMessage = action.payload;
+      state.replyToMessage = null;
+    },
+    clearEditingMessage: (state) => {
+      state.editingMessage = null;
+    },
+    clearChatUi: () => initialState,
   },
 });
 
@@ -217,8 +227,6 @@ export const {
   selectMessage,
   deselectMessage,
   clearSelection,
-  toggleSearch,
-  setSearchOpen,
   toggleChannelHeaderExpanded,
   toggleChannelsSection,
   toggleDmSection,
@@ -239,6 +247,9 @@ export const {
   closeChannelSettingsModal,
   setReplyToMessage,
   clearReplyToMessage,
+  setEditingMessage,
+  clearEditingMessage,
+  clearChatUi,
 } = chatUiSlice.actions;
 
 // -- Selectors --
@@ -263,9 +274,6 @@ export const selectActivePanel = (state: RootState): ChatActivePanel =>
 
 export const selectSelectedMessageIds = (state: RootState): string[] =>
   state.chatUi.selectedMessageIds;
-
-export const selectSearchOpen = (state: RootState): boolean =>
-  state.chatUi.searchOpen;
 
 export const selectChannelHeaderExpanded = (state: RootState): boolean =>
   state.chatUi.channelHeaderExpanded;
@@ -293,5 +301,8 @@ export const selectChannelSettingsModalTab = (state: RootState): 'overview' | 'm
 
 export const selectReplyToMessage = (state: RootState) =>
   state.chatUi.replyToMessage;
+
+export const selectEditingMessage = (state: RootState) =>
+  state.chatUi.editingMessage;
 
 export const chatUiReducer = chatUiSlice.reducer;

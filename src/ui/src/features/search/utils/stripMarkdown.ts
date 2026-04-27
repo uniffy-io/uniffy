@@ -53,6 +53,10 @@ export function stripMarkdown(text: string): string {
         .replace(/^[\s]*[-*+]\s+/gm, '')
         // Ordered list markers
         .replace(/^[\s]*\d+\.\s+/gm, '')
+        // Table separator rows (|:---|:---|)
+        .replace(/^\|?[\s:]*[-]{2,}[\s:]*(\|[\s:]*[-]{2,}[\s:]*)*\|?\s*$/gm, '')
+        // Table cell pipes (| cell | cell |) -> cell cell
+        .replace(/\|/g, ' ')
         // Horizontal rules
         .replace(/^[-*_]{3,}\s*$/gm, '')
         // Multiple spaces/newlines -> single space

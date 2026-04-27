@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.avatars import delete_avatar as s3_delete_avatar
 from uniffy.core.avatars import upload_avatar as s3_upload_avatar
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -18,8 +17,36 @@ from uniffy.core.content.members import (
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
+from uniffy.core.users.cache import invalidate_agent_profile
 from uniffy.domains.agents.audit import create_audit_log
+from uniffy.domains.agents.cache import (
+    fetch_agent_row,
+    invalidate_cached_agent,
+    invalidate_cached_agent_prompt,
+    invalidate_cached_agent_skills,
+    set_cached_agent,
+    track_agent_prompt_ref,
+    track_agent_skill_refs,
+)
 from uniffy.domains.agents.content_policy import check_admin_content
+
+
+def _coerce_uuid_list(values: list | None) -> list[UUID]:
+    """Convert an ``enabled_skills`` JSONB list to a ``list[UUID]``.
+
+    JSONB stores strings; the cache reverse-index keys on UUID. Bad
+    entries are skipped so a single corrupt value doesn't poison the
+    set update.
+    """
+    out: list[UUID] = []
+    if not values:
+        return out
+    for raw in values:
+        try:
+            out.append(UUID(str(raw)))
+        except (ValueError, AttributeError):
+            continue
+    return out
 
 
 class AgentOperations(BaseContentOperations[Agent]):
@@ -46,6 +73,34 @@ class AgentOperations(BaseContentOperations[Agent]):
     def _get_url_path(self, model: Agent) -> str:
         """Return the frontend route for this agent."""
         return f"/agents/{model.id}"
+
+    async def resolve_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        agent: Agent,
+    ) -> ContentRole | None:
+        """Public wrapper over ``_resolve_role`` for handlers/converters."""
+        return await self._resolve_role(user_id, organization_id, agent)
+
+    async def get_for_runtime(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        agent_id: UUID,
+    ) -> Agent:
+        """Cached agent fetch with view-permission check.
+
+        Read-only path used by the runtime pre-flight phase. Returns a
+        transient row from Valkey on hit; falls through to PG on miss
+        and write-throughs the cache. Mutating callers must keep using
+        ``_fetch_by_id`` so the row stays attached to the session.
+        """
+        agent = await fetch_agent_row(self.session, agent_id, organization_id)
+        if not agent:
+            raise NotFoundError(self.content_type.value, agent_id)
+        await self._require_view(user_id, organization_id, agent)
+        return agent
 
     def _get_search_description(self, model: Agent) -> str | None:
         """Return a description snippet from the soul prompt."""
@@ -144,6 +199,17 @@ class AgentOperations(BaseContentOperations[Agent]):
         )
         await self.session.commit()
 
+        await set_cached_agent(agent)
+        added_skill_uuids = _coerce_uuid_list(agent.enabled_skills)
+        if added_skill_uuids:
+            await track_agent_skill_refs(
+                agent.id, added_skill_ids=added_skill_uuids
+            )
+        if agent.prompt_id is not None:
+            await track_agent_prompt_ref(
+                agent.id, old_prompt_id=None, new_prompt_id=agent.prompt_id
+            )
+
         return agent
 
     async def list_agents(
@@ -171,24 +237,20 @@ class AgentOperations(BaseContentOperations[Agent]):
             query = query.where(Agent.owner_id == user_id)
         elif group_id:
             now = datetime.now(UTC)
-            group_subq = (
-                select(ContentMember.content_id).where(
-                    ContentMember.organization_id == organization_id,
-                    ContentMember.content_type == self.content_type,
-                    ContentMember.subject_type == SubjectType.GROUP,
-                    ContentMember.subject_id == group_id,
-                    ContentMember.role != ContentRole.BLOCKED,
-                    or_(
-                        ContentMember.expires_at.is_(None),
-                        ContentMember.expires_at > now,
-                    ),
-                )
+            group_subq = select(ContentMember.content_id).where(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == self.content_type,
+                ContentMember.subject_type == SubjectType.GROUP,
+                ContentMember.subject_id == group_id,
+                ContentMember.role != ContentRole.BLOCKED,
+                or_(
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
             query = query.where(Agent.id.in_(group_subq))
         else:
-            is_admin = await self.permission_checker.is_org_admin(
-                user_id, organization_id
-            )
+            is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
             if not is_admin:
                 is_admin = await self.permission_checker.is_domain_admin(
                     user_id, organization_id, self.content_type
@@ -221,6 +283,46 @@ class AgentOperations(BaseContentOperations[Agent]):
         agents = list(result.scalars().all())
 
         return agents, total
+
+    async def get_agents_usable_by_user(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> list[Agent]:
+        """Return agents the user has at least VIEWER access to.
+
+        Thin wrapper over the permission-filtered list used by the chat
+        sidebar agent picker: returns all non-deleted agents the user can
+        view, unsorted by the caller's preference (recency ordering lives
+        in the builder/picker UI).
+
+        BLOCKED and out-of-scope agents are excluded by
+        `ContentAccessQuery.build_accessible_filter`.
+        """
+        query = select(Agent).where(
+            Agent.organization_id == organization_id,
+            Agent.is_deleted == False,  # noqa: E712
+        )
+
+        is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
+        if not is_admin:
+            is_admin = await self.permission_checker.is_domain_admin(
+                user_id, organization_id, self.content_type
+            )
+        if not is_admin:
+            access_filter = self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=Agent.id,
+                owner_id_column=Agent.owner_id,
+                access_mode_column=Agent.access_mode,
+                baseline_role_column=Agent.baseline_role,
+            )
+            query = query.where(access_filter)
+
+        result = await self.session.execute(query.order_by(Agent.name))
+        return list(result.scalars().all())
 
     async def update_agent(
         self,
@@ -261,6 +363,9 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         if is_default is not None and is_default and not agent.is_default:
             await self._clear_existing_default(organization_id)
+
+        old_skill_ids = _coerce_uuid_list(agent.enabled_skills)
+        old_prompt_id = agent.prompt_id
 
         updates: dict[str, Any] = {}
         if name is not None:
@@ -321,6 +426,28 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         await self._index_for_search(agent)
         await self.session.commit()
+
+        await invalidate_agent_profile(agent_id)
+        await set_cached_agent(agent)
+        await invalidate_cached_agent_skills(agent_id)
+        await invalidate_cached_agent_prompt(agent_id)
+
+        new_skill_ids = _coerce_uuid_list(agent.enabled_skills)
+        added_skill_ids = [s for s in new_skill_ids if s not in old_skill_ids]
+        removed_skill_ids = [s for s in old_skill_ids if s not in new_skill_ids]
+        if added_skill_ids or removed_skill_ids:
+            await track_agent_skill_refs(
+                agent_id,
+                added_skill_ids=added_skill_ids,
+                removed_skill_ids=removed_skill_ids,
+            )
+
+        if agent.prompt_id != old_prompt_id:
+            await track_agent_prompt_ref(
+                agent_id,
+                old_prompt_id=old_prompt_id,
+                new_prompt_id=agent.prompt_id,
+            )
 
         audit_fields = {
             k: v
@@ -385,6 +512,10 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         await self.session.commit()
         await self.session.refresh(agent)
+
+        await invalidate_agent_profile(agent_id)
+        await set_cached_agent(agent)
+
         return agent
 
     async def delete_avatar(
@@ -403,6 +534,8 @@ class AgentOperations(BaseContentOperations[Agent]):
             agent.avatar_key = None
             await self.session.commit()
             await self.session.refresh(agent)
+            await invalidate_agent_profile(agent_id)
+            await set_cached_agent(agent)
 
         return agent
 
@@ -420,6 +553,9 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         await self._require_delete(user_id, organization_id, agent)
 
+        old_skill_ids = _coerce_uuid_list(agent.enabled_skills)
+        old_prompt_id = agent.prompt_id
+
         agent.is_deleted = True
         agent.deleted_at = datetime.now(UTC)
         await self.session.commit()
@@ -430,6 +566,19 @@ class AgentOperations(BaseContentOperations[Agent]):
             build_content_urn(self.content_type, agent_id), organization_id
         )
         await self.session.commit()
+
+        await invalidate_agent_profile(agent_id)
+        await invalidate_cached_agent(agent_id)
+        await invalidate_cached_agent_skills(agent_id)
+        await invalidate_cached_agent_prompt(agent_id)
+        if old_skill_ids:
+            await track_agent_skill_refs(
+                agent_id, removed_skill_ids=old_skill_ids
+            )
+        if old_prompt_id is not None:
+            await track_agent_prompt_ref(
+                agent_id, old_prompt_id=old_prompt_id, new_prompt_id=None
+            )
 
     async def get_default_agent(
         self,
@@ -445,35 +594,6 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
         )
         return result.scalar_one_or_none()
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, self.content_type
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
 
     async def _get_default_bundled_prompt_id(self) -> UUID | None:
         """Return the id of the first bundled prompt template, if any."""

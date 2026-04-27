@@ -141,7 +141,11 @@ export function AgentsView() {
         [selectedAgentId, agentsMap]
     );
 
-    const selectedAgentRole = useMyContentRole(ContentType.AGENT, selectedAgentId ?? "");
+    const selectedAgentRole = useMyContentRole(
+        ContentType.AGENT,
+        selectedAgentId ?? "",
+        selectedAgent?.userRole,
+    );
     const canShareSelectedAgent = roleCanManage(selectedAgentRole);
     const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
 
@@ -219,7 +223,7 @@ export function AgentsView() {
     }
 
     return (
-        <div className="flex h-full overflow-hidden">
+        <div className="flex h-full overflow-hidden" data-testid="agents-view">
             <Group
                 orientation="horizontal"
                 className="h-full w-full flex"
@@ -233,7 +237,7 @@ export function AgentsView() {
                 maxSize={400}
                 className="border-r border-border bg-card overflow-hidden"
             >
-            <div className="h-full flex flex-col">
+            <div className="h-full flex flex-col" data-testid="agents-list-panel">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                     <span className="font-semibold text-foreground">Agents</span>
                     <div className="flex items-center gap-1">
@@ -241,6 +245,7 @@ export function AgentsView() {
                             variant="ghost"
                             size="icon"
                             onClick={() => dispatch(fetchAgents())}
+                            data-testid="agents-refresh-button"
                         >
                             <ArrowClockwise size={16} />
                         </Button>
@@ -249,6 +254,8 @@ export function AgentsView() {
                             size="icon"
                             className={showCreateForm ? "text-primary bg-primary/10" : ""}
                             onClick={() => setShowCreateForm(!showCreateForm)}
+                            data-testid="agents-create-button"
+                            data-state={showCreateForm ? 'open' : 'closed'}
                         >
                             <Plus size={16} />
                         </Button>
@@ -256,7 +263,7 @@ export function AgentsView() {
                 </div>
 
                 {showCreateForm && (
-                    <div className="px-3 py-3 border-b border-border space-y-2 bg-muted/30">
+                    <div className="px-3 py-3 border-b border-border space-y-2 bg-muted/30" data-testid="agents-create-form">
                         <Input
                             value={newAgentName}
                             onChange={(e) => setNewAgentName(e.target.value)}
@@ -267,6 +274,7 @@ export function AgentsView() {
                                 if (e.key === "Escape") setShowCreateForm(false);
                             }}
                             autoFocus
+                            data-testid="agents-create-name-input"
                         />
                         <div className="space-y-1">
                             {([
@@ -294,6 +302,7 @@ export function AgentsView() {
                             disabled={!newAgentName.trim() || creating}
                             className="w-full"
                             size="sm"
+                            data-testid="agents-create-submit"
                         >
                             {creating ? "Creating..." : "Create Agent"}
                         </Button>
@@ -332,6 +341,9 @@ export function AgentsView() {
                                                     ? "bg-primary/10 border-l-2 border-primary"
                                                     : "hover:bg-muted border-l-2 border-transparent"
                                             )}
+                                            data-testid={`agents-list-row-${agent.id}`}
+                                            data-section={section.id}
+                                            data-selected={isSelected ? 'true' : 'false'}
                                         >
                                             <AgentAvatar
                                                 avatarKey={agent.avatarKey}
@@ -366,7 +378,12 @@ export function AgentsView() {
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
             <Panel id="agents-detail" minSize={400}>
-            <div className="h-full flex flex-col overflow-hidden">
+            <div
+                className="h-full flex flex-col overflow-hidden"
+                data-testid="agents-detail-panel"
+                data-agent-id={selectedAgentId ?? ''}
+                data-panel={agentsPanel}
+            >
                 {selectedAgent ? (
                     <>
                         <div className="px-6 py-4 border-b border-border">
@@ -378,7 +395,7 @@ export function AgentsView() {
                                     size="xl"
                                 />
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-xl font-semibold text-foreground">
+                                    <h2 className="text-xl font-semibold text-foreground" data-testid="agents-detail-name">
                                         {selectedAgent.name}
                                     </h2>
                                     <p className="text-sm text-muted-foreground font-mono truncate">
@@ -390,6 +407,7 @@ export function AgentsView() {
                                     size="icon"
                                     onClick={handleCloneAgent}
                                     title="Clone agent"
+                                    data-testid="agents-clone-button"
                                 >
                                     <Copy size={18} />
                                 </Button>
@@ -399,6 +417,7 @@ export function AgentsView() {
                                         size="icon"
                                         onClick={() => setShowMoveToOrgConfirm(true)}
                                         title="Move to Organization"
+                                        data-testid="agents-move-to-org-button"
                                     >
                                         <Buildings size={18} />
                                     </Button>
@@ -413,6 +432,7 @@ export function AgentsView() {
                                             selectedAgent.name,
                                         )}
                                         title="Share"
+                                        data-testid="agents-share-button"
                                     >
                                         <UsersThree size={18} />
                                     </Button>
@@ -432,6 +452,8 @@ export function AgentsView() {
                                             ? "text-primary border-b-2 border-primary font-medium"
                                             : "text-muted-foreground hover:text-foreground"
                                     )}
+                                    data-testid={`agents-detail-tab-${tab.key}`}
+                                    data-active={agentsPanel === tab.key ? 'true' : 'false'}
                                 >
                                     {tab.label}
                                 </button>

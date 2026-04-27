@@ -1,8 +1,11 @@
 """Background task implementations."""
 
 from uniffy.domains.chat.read_state.flush import flush_chat_read_cursors
+from uniffy.workers.tasks.agent_chat import respond_to_chat_message
+from uniffy.workers.tasks.agent_compaction import compact_session
 from uniffy.workers.tasks.agent_cron import execute_agent_cron_tasks, execute_single_agent_cron_task
 from uniffy.workers.tasks.base import on_job_end, on_job_start, on_shutdown, on_startup
+from uniffy.workers.tasks.chat_mute import auto_unmute_channels
 from uniffy.workers.tasks.content_extraction import extract_document_content
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
 from uniffy.workers.tasks.notifications import (
@@ -12,6 +15,7 @@ from uniffy.workers.tasks.notifications import (
     send_email_digest,
 )
 from uniffy.workers.tasks.reminders import check_calendar_reminders
+from uniffy.workers.tasks.storage_recalculation import recalculate_all_storage_usage
 from uniffy.workers.tasks.task_reminders import check_task_due_dates
 from uniffy.workers.tasks.thumbnails import (
     generate_image_thumbnail,
@@ -44,6 +48,11 @@ __all__ = [
     # Agent cron tasks
     "execute_agent_cron_tasks",
     "execute_single_agent_cron_task",
+    # Agent chat responses
+    "respond_to_chat_message",
+    "compact_session",
     # Chat read state flush
     "flush_chat_read_cursors",
+    "auto_unmute_channels",
+    "recalculate_all_storage_usage",
 ]

@@ -30,7 +30,7 @@ from uniffy_proto.auth.v1.auth_pb2 import (
 
 from uniffy.core.converters import domain_type_to_proto
 from uniffy.core.models.shared import DomainType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_session_id_from_context,
     get_user_agent_from_context,
@@ -70,7 +70,7 @@ class AuthHandlers:
         try:
             user_agent = get_user_agent_from_context(ctx)
 
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 result = await auth_ops.register(
                     email=request.email,
@@ -106,7 +106,7 @@ class AuthHandlers:
         try:
             user_agent = get_user_agent_from_context(ctx)
 
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 result = await auth_ops.authenticate(
                     email=request.email,
@@ -141,7 +141,7 @@ class AuthHandlers:
     ) -> AuthResponse:
         """Refresh access token."""
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 result = await auth_ops.refresh_token(
                     refresh_token=request.refresh_token,
@@ -176,7 +176,7 @@ class AuthHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 from uniffy.domains.users.operations import UserOperations
 
                 user_ops = UserOperations(session)
@@ -221,7 +221,7 @@ class AuthHandlers:
                     user_id = get_user_id_from_context(ctx)
 
             if session_id and user_id:
-                async for session in get_async_session():
+                async with open_session() as session:
                     auth_ops = AuthOperations(session)
                     await auth_ops.logout_session(user_id, session_id)
 
@@ -241,7 +241,7 @@ class AuthHandlers:
         current_session_id = get_session_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 sessions = await auth_ops.list_sessions(user_id)
 
@@ -266,7 +266,7 @@ class AuthHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid session ID")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 await auth_ops.revoke_session(user_id, target_session_id)
                 return RevokeSessionResponse(success=True)
@@ -292,7 +292,7 @@ class AuthHandlers:
             )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 revoked_count = await auth_ops.revoke_other_sessions(user_id, current_session_id)
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
@@ -309,7 +309,7 @@ class AuthHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 seed = await auth_ops.get_cache_key_seed(user_id)
                 return GetCacheKeySeedResponse(cache_key_seed=seed)
@@ -337,7 +337,7 @@ class AuthHandlers:
             # Admin action: verify caller is system admin
             if target_user_id != user_id:
                 try:
-                    async for session in get_async_session():
+                    async with open_session() as session:
                         from uniffy.domains.users.operations import UserOperations
 
                         user_ops = UserOperations(session)
@@ -349,7 +349,7 @@ class AuthHandlers:
                     )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 new_seed = await auth_ops.rotate_cache_key_seed(user_id, target_user_id)
                 return RotateCacheKeySeedResponse(new_cache_key_seed=new_seed)

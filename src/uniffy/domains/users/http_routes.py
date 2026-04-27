@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
 from uniffy.domains.users.avatars import AVATAR_SIZES
 
@@ -59,7 +59,7 @@ async def get_avatar(
         )
 
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             result = await session.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
 

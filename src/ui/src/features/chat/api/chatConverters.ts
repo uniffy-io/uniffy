@@ -5,6 +5,7 @@ import {
   SenderType as ProtoSenderType,
   ChatNotificationLevel as ProtoNotificationLevel,
 } from '@uniffy/proto/chat/v1/chat_pb';
+import { SubjectType as ProtoSubjectType } from '@uniffy/proto/common/v1/common_pb';
 import type {
   ChatChannel as ProtoChatChannel,
   ChatMessage as ProtoChatMessage,
@@ -111,11 +112,12 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
     isPinned: proto.isPinned,
     metadata: { ...proto.metadata },
     createdAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
-    updatedAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
+    updatedAt: timestampToIso(proto.editedAt) ?? timestampToIso(proto.createdAt) ?? new Date().toISOString(),
     thread: proto.thread ? {
       replyCount: proto.thread.replyCount,
       lastReplyAt: timestampToIso(proto.thread.lastReplyAt) ?? new Date().toISOString(),
       participantIds: [...proto.thread.participantIds],
+      hasUnread: proto.thread.hasUnread,
     } : undefined,
     reactions: proto.reactions.map(reactionGroupToPlain),
     senderName: proto.senderName || undefined,
@@ -124,12 +126,21 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
 }
 
 export function memberToPlain(proto: ProtoChatChannelMember): ChatChannelMember {
+  const subjectType: 'USER' | 'AGENT' =
+    proto.subject?.type === ProtoSubjectType.AGENT ? 'AGENT' : 'USER';
+  const subjectId = proto.subject?.id || proto.userId;
   return {
     channelId: proto.channelId,
     userId: proto.userId,
+    subjectType,
+    subjectId,
+    displayName: proto.displayName || undefined,
+    avatarUrl: proto.avatarUrl || undefined,
     role: CHANNEL_ROLE_MAP[proto.role] ?? 'MEMBER',
     notificationLevel: NOTIFICATION_LEVEL_MAP[proto.notificationLevel] ?? 'ALL',
     isMuted: proto.isMuted,
+    mutedUntil: timestampToIso(proto.mutedUntil),
+    followAllThreads: proto.followAllThreads,
     joinedAt: timestampToIso(proto.joinedAt) ?? new Date().toISOString(),
   };
 }

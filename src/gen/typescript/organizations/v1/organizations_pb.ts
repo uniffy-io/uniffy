@@ -1094,6 +1094,160 @@ export class ContentTypeDefaults extends Message<ContentTypeDefaults> {
 }
 
 /**
+ * @generated from message organizations.v1.OrganizationSettings
+ */
+export class OrganizationSettings extends Message<OrganizationSettings> {
+  /**
+   * @generated from field: organizations.v1.ChatSettings chat = 1;
+   */
+  chat?: ChatSettings;
+
+  constructor(data?: PartialMessage<OrganizationSettings>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.OrganizationSettings";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "chat", kind: "message", T: ChatSettings },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationSettings {
+    return new OrganizationSettings().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationSettings {
+    return new OrganizationSettings().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationSettings {
+    return new OrganizationSettings().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationSettings | PlainMessage<OrganizationSettings> | undefined, b: OrganizationSettings | PlainMessage<OrganizationSettings> | undefined): boolean {
+    return proto3.util.equals(OrganizationSettings, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.ChatSettings
+ */
+export class ChatSettings extends Message<ChatSettings> {
+  /**
+   * @generated from field: bool agents_enabled = 1;
+   */
+  agentsEnabled = false;
+
+  constructor(data?: PartialMessage<ChatSettings>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.ChatSettings";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agents_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatSettings {
+    return new ChatSettings().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChatSettings {
+    return new ChatSettings().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChatSettings {
+    return new ChatSettings().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChatSettings | PlainMessage<ChatSettings> | undefined, b: ChatSettings | PlainMessage<ChatSettings> | undefined): boolean {
+    return proto3.util.equals(ChatSettings, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.GetOrganizationSettingsRequest
+ */
+export class GetOrganizationSettingsRequest extends Message<GetOrganizationSettingsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<GetOrganizationSettingsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.GetOrganizationSettingsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationSettingsRequest {
+    return new GetOrganizationSettingsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationSettingsRequest {
+    return new GetOrganizationSettingsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationSettingsRequest {
+    return new GetOrganizationSettingsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationSettingsRequest | PlainMessage<GetOrganizationSettingsRequest> | undefined, b: GetOrganizationSettingsRequest | PlainMessage<GetOrganizationSettingsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationSettingsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.UpdateOrganizationSettingsRequest
+ */
+export class UpdateOrganizationSettingsRequest extends Message<UpdateOrganizationSettingsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional organizations.v1.ChatSettings chat = 2;
+   */
+  chat?: ChatSettings;
+
+  constructor(data?: PartialMessage<UpdateOrganizationSettingsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.UpdateOrganizationSettingsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "chat", kind: "message", T: ChatSettings, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationSettingsRequest {
+    return new UpdateOrganizationSettingsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationSettingsRequest {
+    return new UpdateOrganizationSettingsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationSettingsRequest {
+    return new UpdateOrganizationSettingsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationSettingsRequest | PlainMessage<UpdateOrganizationSettingsRequest> | undefined, b: UpdateOrganizationSettingsRequest | PlainMessage<UpdateOrganizationSettingsRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationSettingsRequest, a, b);
+  }
+}
+
+/**
  * @generated from message organizations.v1.GrantDomainAdminRequest
  */
 export class GrantDomainAdminRequest extends Message<GrantDomainAdminRequest> {

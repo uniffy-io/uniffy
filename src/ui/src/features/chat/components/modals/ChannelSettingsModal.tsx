@@ -22,6 +22,7 @@ import {
   MagnifyingGlass,
   CalendarBlank,
   Info,
+  Gauge,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,9 @@ import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
 import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
 import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
 import { SUBJECT_TYPE } from '@/components/subject/types';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+import { AgentContextBar } from '@/features/chat/components/channel/AgentContextBar';
+import { selectAllAgents } from '@/features/agents/store/agentsSlice';
 import { adminApi } from '@/features/admin/api/adminApi';
 import { cn } from '@/shared/utils/cn';
 import { selectActiveChannel, selectChannelMembers, selectCategories } from '@/features/chat/store/chatChannelsSlice';
@@ -99,6 +103,7 @@ export function ChannelSettingsModal() {
   const [memberToRemove, setMemberToRemove] = useState<ChatChannelMember | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
 
   const addInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,6 +174,20 @@ export function ChannelSettingsModal() {
     search(addMemberQuery);
   }, [addMemberQuery, search]);
 
+  // Agents don't live in the subject search index; surface them client-side
+  // from the agents slice. `existingMemberIds` carries user ids only, so
+  // already-added agents still show up here — the backend rejects duplicates
+  // via the (channel_id, subject_type, subject_id) PK and the thunk's
+  // rejection surfaces as a toast.
+  const agentsMap = useAppSelector(selectAllAgents);
+  const agentMatches = useMemo(() => {
+    const needle = addMemberQuery.trim().toLowerCase();
+    if (needle.length < 2) return [];
+    return Object.values(agentsMap)
+      .filter((a) => a.name.toLowerCase().includes(needle))
+      .slice(0, 10);
+  }, [agentsMap, addMemberQuery]);
+
   // Don't render for DM channels
   if (!activeChannel || activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM') {
     return null;
@@ -217,12 +236,35 @@ export function ChannelSettingsModal() {
     }
   };
 
-  const handleRemoveMember = async () => {
-    if (!memberToRemove) return;
-    setRemovingMemberId(memberToRemove.userId);
+  const handleAddAgent = async (agentId: string) => {
+    setIsAddingMembers(true);
     try {
       await dispatch(
-        removeMemberThunk({ channelId, userId: memberToRemove.userId }),
+        addMembersThunk({
+          channelId,
+          subjects: [{ type: 'AGENT', id: agentId }],
+        }),
+      ).unwrap();
+      setAddMemberQuery('');
+      addInputRef.current?.focus();
+    } finally {
+      setIsAddingMembers(false);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+    const subjectKey = memberToRemove.subjectId || memberToRemove.userId;
+    setRemovingMemberId(subjectKey);
+    try {
+      await dispatch(
+        removeMemberThunk({
+          channelId,
+          subject: {
+            type: memberToRemove.subjectType === 'AGENT' ? 'AGENT' : 'USER',
+            id: subjectKey,
+          },
+        }),
       ).unwrap();
       setShowRemoveConfirm(false);
       setMemberToRemove(null);
@@ -247,6 +289,7 @@ export function ChannelSettingsModal() {
     try {
       await dispatch(archiveChannel(channelId)).unwrap();
       handleClose();
+      navigate('/chat');
     } finally {
       setIsArchiving(false);
     }
@@ -255,7 +298,7 @@ export function ChannelSettingsModal() {
   return (
     <>
       <Modal onClose={handleClose} closeDisabled={isSaving || isDeleting} maxWidth="max-w-lg">
-        <div className="flex flex-col" style={{ maxHeight: '75vh' }}>
+        <div className="flex flex-col" style={{ maxHeight: '75vh' }} data-testid="chat-channel-settings-modal" data-tab={activeTab}>
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
             <h2 className="text-xl font-semibold text-foreground">
@@ -266,6 +309,7 @@ export function ChannelSettingsModal() {
               onClick={handleClose}
               disabled={isSaving || isDeleting}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              data-testid="chat-channel-settings-close"
             >
               <X size={20} />
             </button>
@@ -315,6 +359,8 @@ export function ChannelSettingsModal() {
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                 )}
+                data-testid={`chat-channel-settings-tab-${tab}`}
+                data-active={activeTab === tab ? 'true' : 'false'}
               >
                 {tab === 'overview' ? 'Overview' : `Members (${members.length})`}
               </button>
@@ -444,7 +490,7 @@ export function ChannelSettingsModal() {
                           if (!showAddMember) setShowAddMember(true);
                         }}
                         onFocus={() => setShowAddMember(true)}
-                        placeholder="Search people or groups to add..."
+                        placeholder="Search people, groups, or agents to add..."
                         disabled={isAddingMembers}
                         className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                       />
@@ -452,46 +498,83 @@ export function ChannelSettingsModal() {
 
                     {/* Search results dropdown */}
                     {showAddMember && addMemberQuery.length >= 2 && (
-                      <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[200px] overflow-y-auto">
-                        {searchLoading && searchResults.length === 0 ? (
+                      <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[260px] overflow-y-auto">
+                        {searchLoading && searchResults.length === 0 && agentMatches.length === 0 ? (
                           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                             Searching...
                           </div>
-                        ) : searchResults.length === 0 ? (
+                        ) : searchResults.length === 0 && agentMatches.length === 0 ? (
                           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                             No results found
                           </div>
                         ) : (
-                          <div className="py-1">
-                            {searchResults.map((subject) => (
-                              <button
-                                key={subject.id}
-                                type="button"
-                                onClick={() => handleAddSubject(subject)}
-                                disabled={isAddingMembers}
-                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
-                              >
-                                <SubjectAvatar subject={subject} size="sm" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-foreground truncate">
-                                    {subject.name}
-                                  </p>
-                                  {subject.type === SUBJECT_TYPE.GROUP ? (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      Group{subject.memberCount ? ` (${subject.memberCount} members)` : ''}
-                                    </p>
-                                  ) : subject.email ? (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {subject.email}
-                                    </p>
-                                  ) : null}
+                          <>
+                            {searchResults.length > 0 && (
+                              <div className="py-1">
+                                {searchResults.map((subject) => (
+                                  <button
+                                    key={subject.id}
+                                    type="button"
+                                    onClick={() => handleAddSubject(subject)}
+                                    disabled={isAddingMembers}
+                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                                  >
+                                    <SubjectAvatar subject={subject} size="sm" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {subject.name}
+                                      </p>
+                                      {subject.type === SUBJECT_TYPE.GROUP ? (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          Group{subject.memberCount ? ` (${subject.memberCount} members)` : ''}
+                                        </p>
+                                      ) : subject.email ? (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          {subject.email}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                      <UserPlus size={12} weight="bold" />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {agentMatches.length > 0 && (
+                              <div className="py-1 border-t border-border">
+                                <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">
+                                  Agents
                                 </div>
-                                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                                  <UserPlus size={12} weight="bold" />
-                                </div>
-                              </button>
-                            ))}
-                          </div>
+                                {agentMatches.map((agent) => (
+                                  <button
+                                    key={agent.id}
+                                    type="button"
+                                    onClick={() => handleAddAgent(agent.id)}
+                                    disabled={isAddingMembers}
+                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                                  >
+                                    <AgentAvatar
+                                      avatarKey={agent.avatarKey}
+                                      avatarEmoji={agent.avatarEmoji}
+                                      agentName={agent.name}
+                                      size="sm"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {agent.name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground truncate">Agent</p>
+                                    </div>
+                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                      <UserPlus size={12} weight="bold" />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -507,61 +590,116 @@ export function ChannelSettingsModal() {
                     </div>
                   ) : (
                     sortedMembers.map((member) => {
+                      const isAgentMember = member.subjectType === 'AGENT';
+                      const agent = isAgentMember ? agentsMap[member.subjectId] : null;
                       const subject = memberSubjectMap[member.userId];
-                      const displayName = subject?.name ?? member.userId.slice(-6);
+                      const displayName = isAgentMember
+                        ? (agent?.name ?? member.displayName ?? member.subjectId.slice(-6))
+                        : (subject?.name ?? member.displayName ?? member.userId.slice(-6));
+                      const memberKey = isAgentMember ? member.subjectId : member.userId;
                       const RoleIcon = ROLE_ICONS[member.role];
                       const isOwner = member.role === 'OWNER';
-                      const isSelf = member.userId === currentUserId;
-                      const isRemoving = removingMemberId === member.userId;
+                      const isSelf = !isAgentMember && member.userId === currentUserId;
+                      const isRemoving = removingMemberId === memberKey;
+                      const isAgentExpanded = isAgentMember && expandedAgentId === member.subjectId;
 
                       return (
                         <div
-                          key={member.userId}
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 group transition-colors"
+                          key={memberKey}
+                          className={cn(
+                            'rounded-lg transition-colors',
+                            isAgentExpanded ? 'bg-muted/40' : 'hover:bg-muted/50',
+                          )}
                         >
-                          <SubjectAvatarById
-                            userId={member.userId}
-                            displayName={displayName}
-                            size="md"
-                            showPresence
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium text-foreground truncate">
-                                {displayName}
-                              </span>
-                              {isSelf && (
-                                <span className="text-xs text-muted-foreground shrink-0">(you)</span>
+                          <div className="flex items-center gap-3 px-3 py-2 group">
+                            {isAgentMember ? (
+                              <AgentAvatar
+                                avatarKey={agent?.avatarKey}
+                                avatarEmoji={agent?.avatarEmoji}
+                                agentName={displayName}
+                                size="md"
+                              />
+                            ) : (
+                              <SubjectAvatarById
+                                userId={member.userId}
+                                displayName={displayName}
+                                size="md"
+                                showPresence
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-medium text-foreground truncate">
+                                  {displayName}
+                                </span>
+                                {isSelf && (
+                                  <span className="text-xs text-muted-foreground shrink-0">(you)</span>
+                                )}
+                                {isAgentMember && (
+                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full shrink-0">
+                                    Agent
+                                  </span>
+                                )}
+                              </div>
+                              {!isAgentMember && subject?.email && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {subject.email}
+                                </p>
                               )}
                             </div>
-                            {subject?.email && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {subject.email}
-                              </p>
+                            {/* Role badge */}
+                            <span className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
+                              ROLE_BADGE_STYLES[member.role],
+                            )}>
+                              {RoleIcon && <RoleIcon size={11} weight="fill" />}
+                              {member.role}
+                            </span>
+                            {/* Agent context toggle */}
+                            {isAgentMember && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedAgentId((prev) =>
+                                    prev === member.subjectId ? null : member.subjectId,
+                                  )
+                                }
+                                className={cn(
+                                  'p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+                                  isAgentExpanded && 'text-primary bg-primary/10',
+                                )}
+                                aria-label={isAgentExpanded ? 'Hide agent context' : 'Show agent context'}
+                                title="Agent context"
+                              >
+                                <Gauge size={14} />
+                              </button>
+                            )}
+                            {/* Remove button */}
+                            {canEdit && !isOwner && !isSelf && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMemberToRemove(member);
+                                  setShowRemoveConfirm(true);
+                                }}
+                                disabled={isRemoving}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
+                                aria-label={`Remove ${displayName}`}
+                              >
+                                <UserMinus size={14} />
+                              </button>
                             )}
                           </div>
-                          {/* Role badge */}
-                          <span className={cn(
-                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
-                            ROLE_BADGE_STYLES[member.role],
-                          )}>
-                            {RoleIcon && <RoleIcon size={11} weight="fill" />}
-                            {member.role}
-                          </span>
-                          {/* Remove button */}
-                          {canEdit && !isOwner && !isSelf && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMemberToRemove(member);
-                                setShowRemoveConfirm(true);
-                              }}
-                              disabled={isRemoving}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
-                              aria-label={`Remove ${displayName}`}
-                            >
-                              <UserMinus size={14} />
-                            </button>
+                          {isAgentExpanded && (
+                            <div className="border-t border-border/50 mx-3">
+                              <AgentContextBar
+                                channelId={channelId}
+                                agentId={member.subjectId}
+                                agentName={displayName}
+                                variant="compact"
+                                canMutate={canEdit}
+                              />
+                            </div>
                           )}
                         </div>
                       );
@@ -584,6 +722,7 @@ export function ChannelSettingsModal() {
                   setCategoryId(activeChannel.categoryId ?? undefined);
                 }}
                 disabled={isSaving}
+                data-testid="chat-channel-settings-discard"
               >
                 Discard
               </Button>
@@ -592,6 +731,7 @@ export function ChannelSettingsModal() {
                 onClick={handleSave}
                 disabled={!isDirty || isSaving}
                 loading={isSaving}
+                data-testid="chat-channel-settings-save"
               >
                 Save changes
               </Button>

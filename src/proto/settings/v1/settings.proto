@@ -183,6 +183,8 @@ message AppearanceSettings {
   optional bool compact_mode = 5;
   // Default editor mode for notes: "crepe", "markdown", "readonly"
   optional string default_editor = 6;
+  // Default mention chip display: "expanded" (rich card) or "compact" (inline chip)
+  optional string mention_display = 7;
 }
 
 // Keyboard shortcuts settings
@@ -212,6 +214,8 @@ message NotificationsSettings {
   map<string, NotificationChannelPreference> channel_overrides = 7;
   // Default reminder intervals in minutes for new calendar events
   repeated int32 default_reminder_intervals = 8;
+  // Enable in-app toast notifications for real-time alerts
+  optional bool toast_enabled = 9;
 }
 
 // Per-channel preference for a notification type

@@ -23,11 +23,27 @@ export interface MentionLiveState {
   taskStatus?: TaskStatus;
   taskDueDate?: string;
   taskAssignee?: string;
+  taskPriority?: string;
+  taskPriorityLabel?: string;
+  taskPriorityColor?: string;
+  taskStatusLabel?: string;
+  taskStatusColor?: string;
+  taskType?: string;
+  taskNumber?: number;
+  taskProjectName?: string;
+  taskProjectSlug?: string;
+  taskProjectColor?: string;
+  taskSubtaskCompleted?: number;
+  taskSubtaskTotal?: number;
+  taskBlockedByCount?: number;
+  taskAssigneeIds?: string[];
 
   // CALENDAR_EVENT
   eventStartTime?: string;
   eventEndTime?: string;
   eventIsAllDay?: boolean;
+  eventLocation?: string;
+  eventMeetingUrl?: string;
 
   // FILE
   fileProcessingStatus?: FileProcessingStatus;
@@ -37,6 +53,7 @@ export interface MentionLiveState {
   // NOTE
   noteIsBeingEdited?: boolean;
   noteEditorName?: string;
+  noteNodeType?: string;
 
   // PROJECT
   projectCompletedTasks?: number;
@@ -46,6 +63,18 @@ export interface MentionLiveState {
   // GROUP / CHAT
   memberCount?: number;
   unreadCount?: number;
+  channelType?: string;
+
+  // AGENT
+  agentEmoji?: string;
+  agentThemeColor?: string;
+
+  // USER
+  userAvatarUrl?: string;
+  userEmail?: string;
+
+  // Shared
+  contentTags?: string[];
 }
 
 /** State change event from the streaming system */

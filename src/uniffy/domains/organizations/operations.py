@@ -4,9 +4,12 @@ This module handles all business logic for organizations including
 CRUD, membership management, and permission defaults.
 """
 
+import copy
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +20,26 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
+from uniffy.core.valkey.cache import cache_invalidate_by_tag
+from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
+
+
+async def _drop_user_perm_cache(user_id: UUID) -> None:
+    """Bulk-drop every cached perm entry tied to ``user_id``.
+
+    Org-membership mutations change the user's org_admin / domain_admin
+    bits and the OPEN_TO_ORG baseline-role answer for every piece of
+    content in the org. The shared ``user:{user_id}`` cache tag covers
+    all three. Non-fatal: a Valkey hiccup leaves the perm cache to age
+    out via TTL rather than aborting the membership change.
+    """
+    try:
+        await cache_invalidate_by_tag(f"user:{user_id}")
+    except Exception:
+        logger.warning(
+            f"Perm-cache invalidation failed for user {user_id}",
+            component="org-ops",
+        )
 
 
 class OrganizationOperations:
@@ -121,6 +144,7 @@ class OrganizationOperations:
             slug=slug,
             domain=domain,
             plan=plan,
+            settings=copy.deepcopy(DEFAULT_ORG_SETTINGS),
         )
         self._session.add(org)
         await self._session.flush()
@@ -651,6 +675,8 @@ class OrganizationOperations:
         await chat_ops.join_default_channels(user_id, org_id)
         await self._session.commit()
 
+        await _drop_user_perm_cache(user_id)
+
         return membership
 
     async def update_member_role(
@@ -707,6 +733,8 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(member)
 
+        await _drop_user_perm_cache(target_user_id)
+
         return (member, user)
 
     async def remove_member(
@@ -757,6 +785,8 @@ class OrganizationOperations:
         # Remove user from search index for this organization
         await self._user_indexer.remove_from_organization(target_user_id, org_id)
         await self._session.commit()
+
+        await _drop_user_perm_cache(target_user_id)
 
         return True
 
@@ -820,9 +850,7 @@ class OrganizationOperations:
             from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
 
             base = ORG_PERMISSION_DEFAULTS.get(content_type, {})
-            mode = default_access_mode or base.get(
-                "default_access_mode", AccessMode.OWNER_ONLY
-            )
+            mode = default_access_mode or base.get("default_access_mode", AccessMode.OWNER_ONLY)
             baseline = (
                 default_baseline_role
                 if default_baseline_role is not None
@@ -842,6 +870,34 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(defaults)
         return defaults
+
+    async def get_organization_settings(self, org_id: UUID) -> dict[str, Any]:
+        """Return the organization's settings JSON blob (empty if unset)."""
+        org = await self.get_by_id(org_id)
+        return dict(org.settings or {})
+
+    async def update_organization_settings(
+        self,
+        user_id: UUID,
+        org_id: UUID,
+        chat_agents_enabled: bool | None = None,
+    ) -> dict[str, Any]:
+        """Merge-update the organization's settings blob. Org admin only.
+
+        Only provided sub-values are touched; others are preserved. JSONB is
+        reassigned as a whole new dict so SQLAlchemy picks up the mutation.
+        """
+        await self.require_org_admin(user_id, org_id)
+        org = await self.get_by_id(org_id)
+        settings = dict(org.settings or {})
+        if chat_agents_enabled is not None:
+            chat = dict(settings.get("chat") or {})
+            chat["agents_enabled"] = chat_agents_enabled
+            settings["chat"] = chat
+        org.settings = settings
+        await self._session.commit()
+        await self._session.refresh(org)
+        return dict(org.settings or {})
 
     # ─────────────────────────────────────────────────────────────
     # Domain Admin Management
@@ -889,9 +945,7 @@ class OrganizationOperations:
         )
         existing = result.scalar_one_or_none()
         if existing:
-            user_result = await self._session.execute(
-                select(User).where(User.id == target_user_id)
-            )
+            user_result = await self._session.execute(select(User).where(User.id == target_user_id))
             user = user_result.scalar_one()
             return existing, user
 
@@ -908,13 +962,9 @@ class OrganizationOperations:
         # Notify target user to refresh permissions
         from uniffy.core.valkey.pubsub import publish_notification
 
-        await publish_notification(
-            target_user_id, {"_type": "permissions_changed"}
-        )
+        await publish_notification(target_user_id, {"_type": "permissions_changed"})
 
-        user_result = await self._session.execute(
-            select(User).where(User.id == target_user_id)
-        )
+        user_result = await self._session.execute(select(User).where(User.id == target_user_id))
         user = user_result.scalar_one()
         return da, user
 
@@ -969,9 +1019,7 @@ class OrganizationOperations:
         # Notify target user to refresh permissions
         from uniffy.core.valkey.pubsub import publish_notification
 
-        await publish_notification(
-            target_user_id, {"_type": "permissions_changed"}
-        )
+        await publish_notification(target_user_id, {"_type": "permissions_changed"})
 
         return True
 

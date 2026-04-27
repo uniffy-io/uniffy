@@ -7,6 +7,8 @@ export interface Theme {
     foreground: string;
     muted: string;
     mutedForeground: string;
+    accent: string;
+    accentForeground: string;
     card: string;
     cardForeground: string;
     border: string;
@@ -20,16 +22,18 @@ export interface Theme {
 export const defaultTheme: Theme = {
   name: 'default',
   colors: {
-    primary: '217 91% 50%', // Blue
-    primaryForeground: '210 40% 98%', // White-ish
-    background: '0 0% 100%', // White
-    foreground: '222.2 84% 4.9%', // Dark
-    muted: '220 14.3% 93%', // Slightly darker for visibility
-    mutedForeground: '220 8.9% 40%', // Darker for better readability
-    card: '0 0% 100%', // White
-    cardForeground: '222.2 84% 4.9%',
-    border: '220 13% 82%', // Darker for visible borders
-    input: '220 13% 82%', // Match border
+    primary: '217 91% 50%',
+    primaryForeground: '210 40% 98%',
+    background: '220 20% 99%',
+    foreground: '222 47% 11%',
+    muted: '220 14% 93%',
+    mutedForeground: '220 10% 42%',
+    accent: '220 14% 94%',
+    accentForeground: '222 47% 11%',
+    card: '220 16% 96%',
+    cardForeground: '222 47% 11%',
+    border: '220 12% 86%',
+    input: '220 14% 91%',
     ring: '217 91% 50%',
   },
 };
@@ -38,15 +42,17 @@ export const darkTheme: Theme = {
   name: 'dark',
   colors: {
     primary: '217 91% 60%',
-    primaryForeground: '222.2 47.4% 11.2%',
-    background: '228 16% 8%',
-    foreground: '220 14% 95%',
-    muted: '228 10% 16%',
-    mutedForeground: '225 10% 64%',
-    card: '228 12% 12%',
-    cardForeground: '220 14% 95%',
-    border: '228 10% 21%',
-    input: '228 12% 10%',
-    ring: '217 91% 55%',
+    primaryForeground: '210 40% 98%',
+    background: '215 28% 7%',
+    foreground: '210 29% 93%',
+    muted: '215 18% 16%',
+    mutedForeground: '215 10% 65%',
+    accent: '215 20% 14%',
+    accentForeground: '210 29% 93%',
+    card: '214 25% 11%',
+    cardForeground: '210 29% 93%',
+    border: '212 12% 21%',
+    input: '215 25% 9%',
+    ring: '217 91% 58%',
   },
 };

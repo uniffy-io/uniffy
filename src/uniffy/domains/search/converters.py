@@ -140,7 +140,7 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
     if item.updated_at:
         metadata["updated_at"] = item.updated_at.isoformat()
 
-    # Merge live state fields into metadata map
+    # Merge live state fields into metadata map (consumed by useUrnPreview)
     if item.status:
         metadata["status"] = item.status
     if item.due_date:
@@ -158,10 +158,94 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
     if item.updated_by_name:
         metadata["updated_by_name"] = item.updated_by_name
 
+    # Extended enrichment fields
+    if item.priority:
+        metadata["priority"] = item.priority
+    if item.priority_label:
+        metadata["priority_label"] = item.priority_label
+    if item.priority_color:
+        metadata["priority_color"] = item.priority_color
+    if item.status_label:
+        metadata["status_label"] = item.status_label
+    if item.status_color:
+        metadata["status_color"] = item.status_color
+    if item.task_type:
+        metadata["task_type"] = item.task_type
+    if item.task_number:
+        metadata["task_number"] = str(item.task_number)
+    if item.project_name:
+        metadata["project_name"] = item.project_name
+    if item.project_slug:
+        metadata["project_slug"] = item.project_slug
+    if item.project_color:
+        metadata["project_color"] = item.project_color
+    if item.subtask_completed:
+        metadata["subtask_completed"] = str(item.subtask_completed)
+    if item.subtask_total:
+        metadata["subtask_total"] = str(item.subtask_total)
+    if item.blocked_by_count:
+        metadata["blocked_by_count"] = str(item.blocked_by_count)
+    if item.assignee_ids:
+        metadata["assignee_ids"] = ",".join(item.assignee_ids)
+    if item.event_start_time:
+        metadata["start_time"] = item.event_start_time
+    if item.event_end_time:
+        metadata["end_time"] = item.event_end_time
+    if item.event_is_all_day:
+        metadata["is_all_day"] = "true"
+    if item.event_location:
+        metadata["location"] = item.event_location
+    if item.event_meeting_url:
+        metadata["meeting_url"] = item.event_meeting_url
+    if item.file_mime_type:
+        metadata["mime_type"] = item.file_mime_type
+    if item.file_size:
+        metadata["file_size"] = str(item.file_size)
+    if item.note_node_type:
+        metadata["node_type"] = item.note_node_type
+    if item.channel_type:
+        metadata["channel_type"] = item.channel_type
+    if item.agent_emoji:
+        metadata["agent_emoji"] = item.agent_emoji
+    if item.agent_theme_color:
+        metadata["agent_theme_color"] = item.agent_theme_color
+    if item.user_avatar_url:
+        metadata["user_avatar_url"] = item.user_avatar_url
+    if item.user_email:
+        metadata["user_email"] = item.user_email
+
     return UrnMetadata(
         title=item.title,
         description=item.description or "",
         type=entity_type_to_proto(item.entity_type),
         url=item.url_path,
         metadata=metadata,
+        priority=item.priority or "",
+        priority_label=item.priority_label or "",
+        priority_color=item.priority_color or "",
+        status_label=item.status_label or "",
+        status_color=item.status_color or "",
+        task_type=item.task_type or "",
+        task_number=item.task_number,
+        project_name=item.project_name or "",
+        project_slug=item.project_slug or "",
+        project_color=item.project_color or "",
+        subtask_completed=item.subtask_completed,
+        subtask_total=item.subtask_total,
+        blocked_by_count=item.blocked_by_count,
+        event_start_time=item.event_start_time or "",
+        event_end_time=item.event_end_time or "",
+        event_is_all_day=item.event_is_all_day,
+        event_location=item.event_location or "",
+        event_meeting_url=item.event_meeting_url or "",
+        file_mime_type=item.file_mime_type or "",
+        file_size=item.file_size,
+        note_node_type=item.note_node_type or "",
+        channel_type=item.channel_type or "",
+        agent_emoji=item.agent_emoji or "",
+        agent_theme_color=item.agent_theme_color or "",
+        user_avatar_url=item.user_avatar_url or "",
+        user_email=item.user_email or "",
+        assignee_ids=item.assignee_ids or [],
+        content_tags=item.content_tags or [],
     )

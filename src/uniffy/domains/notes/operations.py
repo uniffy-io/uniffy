@@ -10,7 +10,6 @@ from loguru import logger
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
@@ -21,7 +20,7 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.errors import NotFoundError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
@@ -168,9 +167,7 @@ class NoteOperations(BaseContentOperations[Note]):
         )
 
         slug = await self._unique_slug(slug or queries.slugify(title), organization_id)
-        fields = self._extract_content_fields(
-            node_type, content, canvas_content, organization_id
-        )
+        fields = self._extract_content_fields(node_type, content, canvas_content, organization_id)
 
         note = Note(
             organization_id=organization_id,
@@ -212,9 +209,7 @@ class NoteOperations(BaseContentOperations[Note]):
 
         if access_mode != AccessMode.OWNER_ONLY or group_ids:
             await self._emit_shared_notification(user_id, organization_id, note)
-        await self._notify_new_mentions(
-            user_id, organization_id, note, old_refs=None
-        )
+        await self._notify_new_mentions(user_id, organization_id, note, old_refs=None)
 
         return note
 
@@ -298,9 +293,7 @@ class NoteOperations(BaseContentOperations[Note]):
             )
 
         if content_changed:
-            await self._notify_new_mentions(
-                user_id, organization_id, note, old_refs=old_refs
-            )
+            await self._notify_new_mentions(user_id, organization_id, note, old_refs=old_refs)
 
         return note
 
@@ -399,9 +392,7 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(note)
         await self.session.commit()
 
-        await self._notify_new_mentions(
-            user_id, organization_id, note, old_refs=old_refs
-        )
+        await self._notify_new_mentions(user_id, organization_id, note, old_refs=old_refs)
 
         return note
 
@@ -467,9 +458,7 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_view(user_id, organization_id, note)
 
-        all_backlinks = await queries.get_backlinks(
-            self.session, note_id, organization_id
-        )
+        all_backlinks = await queries.get_backlinks(self.session, note_id, organization_id)
 
         accessible: list[Note] = []
         for backlink in all_backlinks:
@@ -528,9 +517,7 @@ class NoteOperations(BaseContentOperations[Note]):
         )
 
         if group_id is not None:
-            query = query.where(Note.id.in_(self._group_member_subquery(
-                organization_id, group_id
-            )))
+            query = query.where(Note.id.in_(self._group_member_subquery(organization_id, group_id)))
         if parent_id == "root":
             query = query.where(Note.parent_id.is_(None))
         elif parent_id:
@@ -544,9 +531,7 @@ class NoteOperations(BaseContentOperations[Note]):
                 query = query.where(Note.tags.contains([tag]))
 
         total = (
-            await self.session.execute(
-                select(func.count()).select_from(query.subquery())
-            )
+            await self.session.execute(select(func.count()).select_from(query.subquery()))
         ).scalar() or 0
 
         sort_col = getattr(Note, sort_by, Note.updated_at)
@@ -581,11 +566,9 @@ class NoteOperations(BaseContentOperations[Note]):
                 )
 
         if owned_notes:
-            members_by_note = await self._load_members_by_note(
-                [n.id for n in owned_notes]
-            )
-            user_lookup, group_lookup, group_counts = (
-                await self._load_subject_lookups(members_by_note)
+            members_by_note = await self._load_members_by_note([n.id for n in owned_notes])
+            user_lookup, group_lookup, group_counts = await self._load_subject_lookups(
+                members_by_note
             )
             for note in owned_notes:
                 shared_with = self._build_shared_with(
@@ -594,45 +577,9 @@ class NoteOperations(BaseContentOperations[Note]):
                     group_lookup,
                     group_counts,
                 )
-                result[note.id] = NoteSharingInfo(
-                    shared_with=shared_with if shared_with else None
-                )
+                result[note.id] = NoteSharingInfo(shared_with=shared_with if shared_with else None)
 
         return result
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair.
-
-        Used by ``create()`` to turn optional caller args into the canonical
-        tuple stored on the row. Domains rewriting against the new model
-        should call this same helper from their own ``create()`` paths.
-        """
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, self.content_type
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
 
     async def _unique_slug(self, base: str, organization_id: UUID) -> str:
         """Return ``base`` if it is free in the org; otherwise add a suffix."""
@@ -658,16 +605,12 @@ class NoteOperations(BaseContentOperations[Note]):
         """
         if node_type == NodeType.CANVAS:
             outgoing = (
-                extract_all_outgoing_references_from_canvas(
-                    canvas_content, organization_id
-                )
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
                 if canvas_content
                 else None
             ) or None
             inline = (
-                queries.extract_inline_tags_from_canvas(canvas_content)
-                if canvas_content
-                else None
+                queries.extract_inline_tags_from_canvas(canvas_content) if canvas_content else None
             ) or None
             return _NoteContentFields(
                 content="",
@@ -677,13 +620,9 @@ class NoteOperations(BaseContentOperations[Note]):
             )
 
         outgoing = (
-            extract_all_outgoing_references(content, organization_id)
-            if content
-            else None
+            extract_all_outgoing_references(content, organization_id) if content else None
         ) or None
-        inline = (
-            queries.extract_inline_tags_from_content(content) if content else None
-        ) or None
+        inline = (queries.extract_inline_tags_from_content(content) if content else None) or None
         return _NoteContentFields(
             content=content,
             canvas_content=None,
@@ -818,27 +757,23 @@ class NoteOperations(BaseContentOperations[Note]):
     def _group_member_subquery(self, organization_id: UUID, group_id: UUID):
         """Subquery: ids of notes the given group is an explicit member of."""
         now = datetime.now(UTC)
-        return (
-            select(ContentMember.content_id).where(
-                ContentMember.organization_id == organization_id,
-                ContentMember.content_type == self.content_type,
-                ContentMember.subject_type == SubjectType.GROUP,
-                ContentMember.subject_id == group_id,
-                ContentMember.role != ContentRole.BLOCKED,
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
-                ),
-            )
+        return select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == self.content_type,
+            ContentMember.subject_type == SubjectType.GROUP,
+            ContentMember.subject_id == group_id,
+            ContentMember.role != ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
         )
 
     async def _load_owners(self, owner_ids: set[UUID]) -> dict[UUID, User]:
         """Bulk-load users by id, returning a lookup map."""
         if not owner_ids:
             return {}
-        result = await self.session.execute(
-            select(User).where(User.id.in_(owner_ids))
-        )
+        result = await self.session.execute(select(User).where(User.id.in_(owner_ids)))
         return {u.id: u for u in result.scalars().all()}
 
     @staticmethod
@@ -893,17 +828,13 @@ class NoteOperations(BaseContentOperations[Note]):
 
         user_lookup: dict[UUID, User] = {}
         if user_ids:
-            users_result = await self.session.execute(
-                select(User).where(User.id.in_(user_ids))
-            )
+            users_result = await self.session.execute(select(User).where(User.id.in_(user_ids)))
             user_lookup = {u.id: u for u in users_result.scalars().all()}
 
         group_lookup: dict[UUID, Group] = {}
         group_counts: dict[UUID, int] = {}
         if group_ids:
-            groups_result = await self.session.execute(
-                select(Group).where(Group.id.in_(group_ids))
-            )
+            groups_result = await self.session.execute(select(Group).where(Group.id.in_(group_ids)))
             group_lookup = {g.id: g for g in groups_result.scalars().all()}
 
             counts_result = await self.session.execute(

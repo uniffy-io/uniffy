@@ -8,6 +8,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.chat.v1.chat_pb2 import (
     AddMembersRequest,
     AddMembersResponse,
@@ -39,10 +40,16 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     RemoveMembersResponse,
     SetTypingRequest,
     SetTypingResponse,
+    UpdateChannelMemberRequest,
+    UpdateChannelMemberResponse,
     UpdateChannelRequest,
     UpdateChannelResponse,
 )
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ChatNotificationLevel as ProtoNL,
+)
 
+from uniffy.core.converters import SUBJECT_TYPE_FROM_PROTO
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -51,15 +58,61 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
-from uniffy.db import get_async_session
+from uniffy.core.types import SubjectType
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.cache import (
+    get_cached_dm_peers,
+    get_cached_dm_peers_many,
+    set_cached_dm_peers,
+)
 from uniffy.domains.chat.channels.converters import (
     channel_to_proto,
     channel_type_from_proto,
     member_to_proto,
 )
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.subjects import ChatSubject
+
+
+def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSubject]:
+    """Parse proto ChatSubject[] with legacy user_ids fallback.
+
+    When both are populated, subjects wins and user_ids are merged in as
+    USER subjects (server-side union per chat.proto:350). Unsupported
+    subject types (GROUP, ORGANIZATION) are rejected with INVALID_ARGUMENT.
+    """
+    out: list[ChatSubject] = []
+    seen: set[tuple[SubjectType, UUID]] = set()
+
+    for s in proto_subjects or ():
+        dtype = SUBJECT_TYPE_FROM_PROTO.get(s.type)
+        if dtype not in (SubjectType.USER, SubjectType.AGENT):
+            raise ConnectError(
+                Code.INVALID_ARGUMENT,
+                "ChatSubject.type must be USER or AGENT",
+            )
+        try:
+            sid = UUID(s.id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid subject id")
+        key = (dtype, sid)
+        if key not in seen:
+            seen.add(key)
+            out.append(ChatSubject(dtype, sid))
+
+    for raw in user_ids_fallback or ():
+        try:
+            uid = UUID(raw)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user id")
+        key = (SubjectType.USER, uid)
+        if key not in seen:
+            seen.add(key)
+            out.append(ChatSubject.user(uid))
+
+    return out
 
 
 def _handle_error(e: Exception) -> None:
@@ -92,7 +145,10 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         channel_type = channel_type_from_proto(request.channel_type)
-        member_ids = [UUID(m) for m in request.member_ids] if request.member_ids else None
+        subjects = _parse_subjects(
+            getattr(request, "members", None),
+            list(request.member_ids) if request.member_ids else [],
+        )
 
         category_id = None
         if request.HasField("category_id"):
@@ -102,19 +158,22 @@ class ChannelHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid category_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 access = ChatAccessChecker(session)
                 ops = ChatChannelOperations(session, access)
 
                 from uniffy.core.models.chat.channel import ChannelType
 
                 if channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
-                    channel = await ops.create_dm(
+                    channel = await ops.create_dm_with_subjects(
                         user_id=user_id,
                         organization_id=org_id,
-                        target_user_ids=member_ids or [],
+                        subjects=subjects,
                     )
                 else:
+                    user_member_ids = [
+                        s.subject_id for s in subjects if s.subject_type == SubjectType.USER
+                    ]
                     channel = await ops.create_channel(
                         user_id=user_id,
                         organization_id=org_id,
@@ -124,8 +183,16 @@ class ChannelHandlers:
                         icon=request.icon if request.HasField("icon") else "",
                         is_default=request.is_default if request.HasField("is_default") else False,
                         category_id=category_id,
-                        member_ids=member_ids,
+                        member_ids=user_member_ids or None,
                     )
+                    agent_subjects = [s for s in subjects if s.subject_type == SubjectType.AGENT]
+                    if agent_subjects:
+                        await ops.add_members_with_subjects(
+                            user_id=user_id,
+                            organization_id=org_id,
+                            channel_id=channel.id,
+                            subjects=agent_subjects,
+                        )
 
                 # Fetch stats for response
                 from sqlalchemy import select
@@ -133,15 +200,11 @@ class ChannelHandlers:
                 from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
-                    select(ChatChannelStats).where(
-                        ChatChannelStats.channel_id == channel.id
-                    )
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return CreateChannelResponse(
-                    channel=channel_to_proto(channel, stats)
-                )
+                return CreateChannelResponse(channel=channel_to_proto(channel, stats))
         except (NotFoundError, PermissionDeniedError, ValidationError, ConflictError) as e:
             _handle_error(e)
 
@@ -159,7 +222,7 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 access = ChatAccessChecker(session)
                 ops = ChatChannelOperations(session, access)
                 channel = await ops.get_by_id(user_id, org_id, channel_id)
@@ -169,28 +232,36 @@ class ChannelHandlers:
                 from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
-                    select(ChatChannelStats).where(
-                        ChatChannelStats.channel_id == channel.id
-                    )
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
                 stats = stats_result.scalar_one_or_none()
 
                 membership = await access.get_membership(channel_id, user_id)
                 role = membership.role if membership else None
 
-                # Fetch DM member IDs for DM channels
+                # Fetch DM member IDs for DM channels. Read `subject_id` so
+                # agent members surface too - `user_id` is NULL for AGENT rows.
+                # Valkey DM-peer cache short-circuits the per-channel join.
                 dm_ids: list[str] | None = None
                 if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
-                    member_rows = await session.execute(
-                        select(ChatChannelMemberModel.user_id).where(
-                            ChatChannelMemberModel.channel_id == channel_id
+                    cached_peers = await get_cached_dm_peers(channel_id)
+                    if cached_peers is not None:
+                        dm_ids = cached_peers
+                    else:
+                        member_rows = await session.execute(
+                            select(ChatChannelMemberModel.subject_id).where(
+                                ChatChannelMemberModel.channel_id == channel_id
+                            )
                         )
-                    )
-                    dm_ids = [str(r[0]) for r in member_rows.all()]
+                        dm_ids = [
+                            str(r[0]) for r in member_rows.all() if r[0] is not None
+                        ]
+                        await set_cached_dm_peers(channel_id, dm_ids)
 
                 return GetChannelResponse(
                     channel=channel_to_proto(
-                        channel, stats,
+                        channel,
+                        stats,
                         current_user_role=role,
                         is_member=membership is not None,
                         dm_member_ids=dm_ids,
@@ -223,26 +294,20 @@ class ChannelHandlers:
             updates["is_default"] = request.is_default
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
-                channel = await ops.update(
-                    user_id, org_id, channel_id, **updates
-                )
+                channel = await ops.update(user_id, org_id, channel_id, **updates)
 
                 from sqlalchemy import select
 
                 from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
-                    select(ChatChannelStats).where(
-                        ChatChannelStats.channel_id == channel.id
-                    )
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return UpdateChannelResponse(
-                    channel=channel_to_proto(channel, stats)
-                )
+                return UpdateChannelResponse(channel=channel_to_proto(channel, stats))
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
@@ -260,7 +325,7 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
                 await ops.archive_channel(user_id, org_id, channel_id)
                 return ArchiveChannelResponse()
@@ -281,11 +346,11 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
-                await ops.delete(user_id, org_id, channel_id)
+                await ops.delete_channel(user_id, org_id, channel_id)
                 return DeleteChannelResponse()
-        except (NotFoundError, PermissionDeniedError) as e:
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
     async def list_channels(
@@ -300,42 +365,71 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
+        cursor = request.cursor if request.HasField("cursor") else None
+        page_size = (
+            request.page_size if request.HasField("page_size") and request.page_size > 0 else None
+        )
+
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
 
                 if request.browse_public:
-                    rows = await ops.list_public_channels(org_id)
-                    channels = [
-                        channel_to_proto(ch, stats, is_member=False)
-                        for ch, stats in rows
-                    ]
+                    rows, next_cursor = await ops.list_public_channels(
+                        org_id,
+                        cursor=cursor,
+                        limit=page_size,
+                    )
+                    channels = [channel_to_proto(ch, stats, is_member=False) for ch, stats in rows]
                 else:
-                    rows = await ops.list_user_channels(user_id, org_id)
+                    rows, next_cursor = await ops.list_user_channels(
+                        user_id,
+                        org_id,
+                        cursor=cursor,
+                        limit=page_size,
+                    )
 
-                    # Batch-fetch member IDs for DM channels
+                    # Batch-fetch member IDs for DM channels via the
+                    # DM-peer cache: one MGET against Valkey covers the
+                    # hits, and a single PG round-trip backfills the misses.
                     dm_channel_ids = [
-                        ch.id for ch, _, _ in rows
+                        ch.id
+                        for ch, _, _ in rows
                         if ch.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM)
                     ]
                     dm_members_map: dict[str, list[str]] = {}
                     if dm_channel_ids:
-                        member_rows = await session.execute(
-                            select(
-                                ChatChannelMemberModel.channel_id,
-                                ChatChannelMemberModel.user_id,
-                            ).where(
-                                ChatChannelMemberModel.channel_id.in_(dm_channel_ids)
-                            )
+                        hit_map, miss_cids = await get_cached_dm_peers_many(
+                            dm_channel_ids
                         )
-                        for row in member_rows.all():
-                            cid = str(row[0])
-                            uid = str(row[1])
-                            dm_members_map.setdefault(cid, []).append(uid)
+                        for cid, peers in hit_map.items():
+                            dm_members_map[str(cid)] = peers
+                        if miss_cids:
+                            member_rows = await session.execute(
+                                select(
+                                    ChatChannelMemberModel.channel_id,
+                                    ChatChannelMemberModel.subject_id,
+                                ).where(
+                                    ChatChannelMemberModel.channel_id.in_(miss_cids)
+                                )
+                            )
+                            miss_buckets: dict[UUID, list[str]] = {
+                                cid: [] for cid in miss_cids
+                            }
+                            for row in member_rows.all():
+                                if row[1] is None:
+                                    continue
+                                miss_buckets.setdefault(row[0], []).append(
+                                    str(row[1])
+                                )
+                            for cid, peers in miss_buckets.items():
+                                dm_members_map[str(cid)] = peers
+                                await set_cached_dm_peers(cid, peers)
 
                     channels = [
                         channel_to_proto(
-                            ch, stats,
+                            ch,
+                            stats,
                             current_user_role=role,
                             is_member=True,
                             dm_member_ids=dm_members_map.get(str(ch.id)),
@@ -343,7 +437,10 @@ class ChannelHandlers:
                         for ch, stats, role in rows
                     ]
 
-                return ListChannelsResponse(channels=channels)
+                response = ListChannelsResponse(channels=channels)
+                if next_cursor:
+                    response.next_cursor = next_cursor
+                return response
         except Exception as e:
             _handle_error(e)
 
@@ -361,7 +458,7 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
                 channel = await ops.join_channel(user_id, org_id, channel_id)
 
@@ -370,15 +467,11 @@ class ChannelHandlers:
                 from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
-                    select(ChatChannelStats).where(
-                        ChatChannelStats.channel_id == channel.id
-                    )
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return JoinChannelResponse(
-                    channel=channel_to_proto(channel, stats, is_member=True)
-                )
+                return JoinChannelResponse(channel=channel_to_proto(channel, stats, is_member=True))
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -396,7 +489,7 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
                 await ops.leave_channel(user_id, org_id, channel_id)
                 return LeaveChannelResponse()
@@ -413,19 +506,16 @@ class ChannelHandlers:
         try:
             org_id = UUID(request.organization_id)
             channel_id = UUID(request.channel_id)
-            member_ids = [UUID(m) for m in request.user_ids]
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
+        subjects = _parse_subjects(getattr(request, "subjects", None), list(request.user_ids))
+
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
-                added = await ops.add_members(
-                    user_id, org_id, channel_id, member_ids
-                )
-                return AddMembersResponse(
-                    members=[member_to_proto(m) for m in added]
-                )
+                added = await ops.add_members_with_subjects(user_id, org_id, channel_id, subjects)
+                return AddMembersResponse(members=[member_to_proto(m) for m in added])
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
@@ -439,16 +529,15 @@ class ChannelHandlers:
         try:
             org_id = UUID(request.organization_id)
             channel_id = UUID(request.channel_id)
-            member_ids = [UUID(m) for m in request.user_ids]
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
+        subjects = _parse_subjects(getattr(request, "subjects", None), list(request.user_ids))
+
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
-                await ops.remove_members(
-                    user_id, org_id, channel_id, member_ids
-                )
+                await ops.remove_members_with_subjects(user_id, org_id, channel_id, subjects)
                 return RemoveMembersResponse()
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
@@ -466,14 +555,92 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
+        cursor = request.cursor if request.HasField("cursor") else None
+        page_size = (
+            request.page_size if request.HasField("page_size") and request.page_size > 0 else None
+        )
+
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatChannelOperations(session)
-                rows = await ops.get_members(user_id, org_id, channel_id)
-                return GetMembersResponse(
-                    members=[member_to_proto(m, u) for m, u in rows]
+                rows, next_cursor = await ops.get_members(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    cursor=cursor,
+                    limit=page_size,
                 )
-        except (NotFoundError, PermissionDeniedError) as e:
+                response = GetMembersResponse(
+                    members=[
+                        member_to_proto(
+                            m,
+                            u,
+                            display_name=a.name if a else None,
+                            avatar_key=a.avatar_key if a else None,
+                        )
+                        for m, u, a in rows
+                    ]
+                )
+                if next_cursor:
+                    response.next_cursor = next_cursor
+                return response
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def update_channel_member(
+        self,
+        request: UpdateChannelMemberRequest,
+        ctx: RequestContext,
+    ) -> UpdateChannelMemberResponse:
+        """Update a channel member's preferences (mute, notification level)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+            target_user_id = UUID(request.user_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        is_muted = request.is_muted if request.HasField("is_muted") else None
+        notification_level = None
+        if request.HasField("notification_level"):
+            nl_map = {
+                ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL: "ALL",
+                ProtoNL.CHAT_NOTIFICATION_LEVEL_MENTIONS: "MENTIONS",
+                ProtoNL.CHAT_NOTIFICATION_LEVEL_NONE: "NONE",
+            }
+            notification_level = nl_map.get(request.notification_level)
+
+        muted_until = ChatChannelOperations._MUTED_UNTIL_UNSET
+        if request.HasField("muted_until"):
+            muted_until = request.muted_until.ToDatetime()
+
+        follow_all_threads = None
+        if request.HasField("follow_all_threads"):
+            follow_all_threads = request.follow_all_threads
+
+        badge_all_messages = None
+        if request.HasField("badge_all_messages"):
+            badge_all_messages = request.badge_all_messages
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                member, user = await ops.update_member(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    target_user_id,
+                    is_muted=is_muted,
+                    notification_level=notification_level,
+                    muted_until=muted_until,
+                    follow_all_threads=follow_all_threads,
+                    badge_all_messages=badge_all_messages,
+                )
+                return UpdateChannelMemberResponse(
+                    member=member_to_proto(member, user),
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
     async def set_typing(
@@ -501,7 +668,7 @@ class ChannelHandlers:
                 publish_channel_event_to_members,
             )
 
-            async for session in get_async_session():
+            async with open_session() as session:
                 member_result = await session.execute(
                     select(ChatChannelMember.user_id).where(
                         ChatChannelMember.channel_id == channel_id
@@ -542,7 +709,7 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        async for session in get_async_session():
+        async with open_session() as session:
             from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
 
             ops = ChatReadStateOperations(session)
@@ -561,7 +728,7 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid root_message_id")
 
-        async for session in get_async_session():
+        async with open_session() as session:
             from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
 
             ops = ChatReadStateOperations(session)
@@ -580,28 +747,58 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        async for session in get_async_session():
+        async with open_session() as session:
+            from sqlalchemy import select as sa_select
+
+            from uniffy.core.models.chat.channel_member import (
+                ChatChannelMember as MemberModel,
+            )
+            from uniffy.domains.chat.channels.converters import NOTIFICATION_LEVEL_TO_PROTO
             from uniffy.domains.chat.channels.operations import ChatChannelOperations
             from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
 
             ch_ops = ChatChannelOperations(session)
-            rows = await ch_ops.list_user_channels(user_id, org_id)
-            channel_ids = [ch.id for ch, _, _ in rows]
+            channel_ids = await ch_ops.list_user_channel_ids(user_id, org_id)
 
             read_ops = ChatReadStateOperations(session)
             counts = await read_ops.get_unread_counts(user_id, channel_ids)
 
+            prefs_result = await session.execute(
+                sa_select(
+                    MemberModel.channel_id,
+                    MemberModel.is_muted,
+                    MemberModel.notification_level,
+                    MemberModel.muted_until,
+                ).where(
+                    MemberModel.user_id == user_id,
+                    MemberModel.channel_id.in_(channel_ids),
+                )
+            )
+            prefs_map = {row[0]: (row[1], row[2], row[3]) for row in prefs_result.all()}
+
             from uniffy_proto.chat.v1.chat_pb2 import ChannelUnreadCount
+
+            from uniffy.core.converters import datetime_to_timestamp
 
             items = []
             for cid, data in counts.items():
+                is_muted, nl, muted_until = prefs_map.get(cid, (False, None, None))
+                nl_proto = (
+                    NOTIFICATION_LEVEL_TO_PROTO.get(nl, ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL)
+                    if nl
+                    else ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL
+                )
                 item = ChannelUnreadCount(
                     channel_id=str(cid),
                     unread_count=data["unread_count"],
                     mention_count=data["mention_count"],
+                    is_muted=is_muted,
+                    notification_level=nl_proto,
                 )
                 if data["last_read_message_id"]:
                     item.last_read_message_id = str(data["last_read_message_id"])
+                if muted_until:
+                    item.muted_until.CopyFrom(datetime_to_timestamp(muted_until))
                 items.append(item)
 
             return GetUnreadCountsResponse(channels=items)
@@ -620,7 +817,7 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 # Verify access
                 access = ChatAccessChecker(session)
                 channel = await access.get_channel(channel_id, org_id)
@@ -642,18 +839,42 @@ class ChannelHandlers:
                     offset=request.offset or 0,
                 )
 
-                from uniffy_proto.chat.v1.chat_pb2 import ChatResource
+                # Resolve titles for mention-tracked resources (single Meilisearch call)
+                title_map = await self._resolve_resource_titles(
+                    session,
+                    resources,
+                    org_id,
+                )
 
+                from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
+
+                # Collect URNs from mention-tracked resources to deduplicate against attachments
+                mention_urns: set[str] = set()
                 proto_resources = []
                 for r in resources:
-                    proto_resources.append(ChatResource(
-                        id=str(r.id),
-                        channel_id=str(r.channel_id),
-                        urn=r.urn,
-                        content_type=r.content_type.value,
-                        mention_count=r.mention_count,
-                        first_mentioned_by=str(r.first_mentioned_by),
-                    ))
+                    mention_urns.add(r.urn)
+                    title = title_map.get(r.urn, "")
+                    proto_resources.append(
+                        ProtoChatResource(
+                            id=str(r.id),
+                            channel_id=str(r.channel_id),
+                            urn=r.urn,
+                            content_type=r.content_type.value,
+                            mention_count=r.mention_count,
+                            first_mentioned_by=str(r.first_mentioned_by),
+                            title=title,
+                        )
+                    )
+
+                # Fetch inline file attachments for this channel's messages
+                if not ct_filter or ct_filter.upper() == "FILE":
+                    attachment_resources = await self._get_channel_attachments(
+                        session,
+                        channel_id,
+                        mention_urns,
+                    )
+                    proto_resources.extend(attachment_resources)
+                    total += len(attachment_resources)
 
                 return GetChannelResourcesResponse(
                     resources=proto_resources,
@@ -661,3 +882,122 @@ class ChannelHandlers:
                 )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
+
+    async def _get_channel_attachments(
+        self,
+        session: AsyncSession,
+        channel_id: UUID,
+        exclude_urns: set[str],
+    ) -> list:
+        """Fetch file attachments from channel messages, excluding already-tracked URNs."""
+        from uniffy.core.models.attachments.attachment import Attachment
+        from uniffy.core.models.chat.message import ChatMessage
+        from uniffy.core.models.files.file import File
+        from uniffy.core.models.shared import ContentType
+
+        try:
+            result = await session.execute(
+                select(
+                    Attachment.id,
+                    Attachment.file_id,
+                    Attachment.attached_by_user_id,
+                    Attachment.attached_at,
+                    File.filename,
+                )
+                .join(
+                    ChatMessage,
+                    (Attachment.content_id == ChatMessage.id)
+                    & (Attachment.content_type == ContentType.CHAT_MESSAGE),
+                )
+                .join(
+                    File,
+                    File.id == Attachment.file_id,
+                )
+                .where(
+                    ChatMessage.channel_id == channel_id,
+                    ChatMessage.is_deleted == False,  # noqa: E712
+                )
+                .order_by(Attachment.attached_at.desc())
+            )
+            rows = result.all()
+
+            from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
+
+            items = []
+            for row in rows:
+                att_id, file_id, user_id, attached_at, filename = row
+                urn = f"urn:uniffy:content:FILE:{file_id}"
+                if urn in exclude_urns:
+                    continue
+                items.append(
+                    ProtoChatResource(
+                        id=str(att_id),
+                        channel_id=str(channel_id),
+                        urn=urn,
+                        content_type="FILE",
+                        mention_count=1,
+                        first_mentioned_by=str(user_id),
+                        title=filename or "Untitled File",
+                    )
+                )
+            return items
+        except Exception:
+            logger.warning(f"Failed to fetch attachments for channel {channel_id}")
+            return []
+
+    async def _resolve_resource_titles(
+        self,
+        session: AsyncSession,
+        resources: list,
+        organization_id: UUID,
+    ) -> dict[str, str]:
+        """Resolve display titles for resources via Meilisearch (single batch fetch).
+
+        All indexed content stores `title` in Meilisearch, so one call resolves
+        everything regardless of content type - no per-type PG queries needed.
+        Falls back to User table for USER type since users may not be in the
+        search index.
+        """
+        if not resources:
+            return {}
+
+        urns = [r.urn for r in resources]
+
+        title_map: dict[str, str] = {}
+
+        try:
+            from uniffy.core.search.meilisearch import MeilisearchClient
+
+            async with MeilisearchClient() as ms_client:
+                docs = await ms_client.get_documents_by_urns(urns, organization_id)
+                for urn, doc in docs.items():
+                    title_map[urn] = doc.get("title", "")
+        except Exception:
+            logger.warning("Meilisearch title resolve failed, skipping")
+
+        # Fallback for USER type (may not be in search index)
+        user_urns = [
+            r.urn for r in resources if r.content_type.value == "USER" and r.urn not in title_map
+        ]
+        if user_urns:
+            from uniffy.core.models.login.user import User
+
+            user_ids = []
+            urn_id_map: dict[UUID, str] = {}
+            for urn in user_urns:
+                parts = urn.split(":")
+                if len(parts) >= 5:
+                    uid = UUID(parts[-1])
+                    user_ids.append(uid)
+                    urn_id_map[uid] = urn
+
+            if user_ids:
+                result = await session.execute(
+                    select(User.id, User.full_name).where(User.id.in_(user_ids))
+                )
+                for row in result.all():
+                    urn = urn_id_map.get(row[0])
+                    if urn:
+                        title_map[urn] = row[1] or "Unknown User"
+
+        return title_map

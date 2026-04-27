@@ -73,6 +73,12 @@ const (
 	// OrganizationsServiceUpdatePermissionDefaultsProcedure is the fully-qualified name of the
 	// OrganizationsService's UpdatePermissionDefaults RPC.
 	OrganizationsServiceUpdatePermissionDefaultsProcedure = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
+	// OrganizationsServiceGetOrganizationSettingsProcedure is the fully-qualified name of the
+	// OrganizationsService's GetOrganizationSettings RPC.
+	OrganizationsServiceGetOrganizationSettingsProcedure = "/organizations.v1.OrganizationsService/GetOrganizationSettings"
+	// OrganizationsServiceUpdateOrganizationSettingsProcedure is the fully-qualified name of the
+	// OrganizationsService's UpdateOrganizationSettings RPC.
+	OrganizationsServiceUpdateOrganizationSettingsProcedure = "/organizations.v1.OrganizationsService/UpdateOrganizationSettings"
 	// OrganizationsServiceGrantDomainAdminProcedure is the fully-qualified name of the
 	// OrganizationsService's GrantDomainAdmin RPC.
 	OrganizationsServiceGrantDomainAdminProcedure = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
@@ -107,6 +113,9 @@ type OrganizationsServiceClient interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.PermissionDefaultsResponse], error)
 	UpdatePermissionDefaults(context.Context, *connect.Request[v1.UpdatePermissionDefaultsRequest]) (*connect.Response[v1.ContentTypeDefaults], error)
+	// Organization settings (Org Admin) — org-scoped JSONB preferences.
+	GetOrganizationSettings(context.Context, *connect.Request[v1.GetOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error)
+	UpdateOrganizationSettings(context.Context, *connect.Request[v1.UpdateOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error)
 	// Domain Admin management (Org Admin)
 	GrantDomainAdmin(context.Context, *connect.Request[v1.GrantDomainAdminRequest]) (*connect.Response[v11.DomainAdminInfo], error)
 	RevokeDomainAdmin(context.Context, *connect.Request[v1.RevokeDomainAdminRequest]) (*connect.Response[v1.RevokeDomainAdminResponse], error)
@@ -203,6 +212,18 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(organizationsServiceMethods.ByName("UpdatePermissionDefaults")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrganizationSettings: connect.NewClient[v1.GetOrganizationSettingsRequest, v1.OrganizationSettings](
+			httpClient,
+			baseURL+OrganizationsServiceGetOrganizationSettingsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("GetOrganizationSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationSettings: connect.NewClient[v1.UpdateOrganizationSettingsRequest, v1.OrganizationSettings](
+			httpClient,
+			baseURL+OrganizationsServiceUpdateOrganizationSettingsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganizationSettings")),
+			connect.WithClientOptions(opts...),
+		),
 		grantDomainAdmin: connect.NewClient[v1.GrantDomainAdminRequest, v11.DomainAdminInfo](
 			httpClient,
 			baseURL+OrganizationsServiceGrantDomainAdminProcedure,
@@ -232,23 +253,25 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 
 // organizationsServiceClient implements OrganizationsServiceClient.
 type organizationsServiceClient struct {
-	listMyOrganizations      *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
-	listOrganizations        *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
-	getOrganization          *connect.Client[v1.GetOrganizationRequest, v1.OrganizationDetail]
-	createOrganization       *connect.Client[v1.CreateOrganizationRequest, v11.OrganizationInfo]
-	updateOrganization       *connect.Client[v1.UpdateOrganizationRequest, v11.OrganizationInfo]
-	deleteOrganization       *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
-	getOrganizationOverview  *connect.Client[v1.GetOrganizationOverviewRequest, v1.OrganizationOverview]
-	listMembers              *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	addMember                *connect.Client[v1.AddMemberRequest, v11.MemberInfo]
-	updateMemberRole         *connect.Client[v1.UpdateMemberRoleRequest, v11.MemberInfo]
-	removeMember             *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
-	getPermissionDefaults    *connect.Client[v1.GetPermissionDefaultsRequest, v1.PermissionDefaultsResponse]
-	updatePermissionDefaults *connect.Client[v1.UpdatePermissionDefaultsRequest, v1.ContentTypeDefaults]
-	grantDomainAdmin         *connect.Client[v1.GrantDomainAdminRequest, v11.DomainAdminInfo]
-	revokeDomainAdmin        *connect.Client[v1.RevokeDomainAdminRequest, v1.RevokeDomainAdminResponse]
-	listDomainAdmins         *connect.Client[v1.ListDomainAdminsRequest, v1.ListDomainAdminsResponse]
-	getUserDomainAdmins      *connect.Client[v1.GetUserDomainAdminsRequest, v1.GetUserDomainAdminsResponse]
+	listMyOrganizations        *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
+	listOrganizations          *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	getOrganization            *connect.Client[v1.GetOrganizationRequest, v1.OrganizationDetail]
+	createOrganization         *connect.Client[v1.CreateOrganizationRequest, v11.OrganizationInfo]
+	updateOrganization         *connect.Client[v1.UpdateOrganizationRequest, v11.OrganizationInfo]
+	deleteOrganization         *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	getOrganizationOverview    *connect.Client[v1.GetOrganizationOverviewRequest, v1.OrganizationOverview]
+	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	addMember                  *connect.Client[v1.AddMemberRequest, v11.MemberInfo]
+	updateMemberRole           *connect.Client[v1.UpdateMemberRoleRequest, v11.MemberInfo]
+	removeMember               *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
+	getPermissionDefaults      *connect.Client[v1.GetPermissionDefaultsRequest, v1.PermissionDefaultsResponse]
+	updatePermissionDefaults   *connect.Client[v1.UpdatePermissionDefaultsRequest, v1.ContentTypeDefaults]
+	getOrganizationSettings    *connect.Client[v1.GetOrganizationSettingsRequest, v1.OrganizationSettings]
+	updateOrganizationSettings *connect.Client[v1.UpdateOrganizationSettingsRequest, v1.OrganizationSettings]
+	grantDomainAdmin           *connect.Client[v1.GrantDomainAdminRequest, v11.DomainAdminInfo]
+	revokeDomainAdmin          *connect.Client[v1.RevokeDomainAdminRequest, v1.RevokeDomainAdminResponse]
+	listDomainAdmins           *connect.Client[v1.ListDomainAdminsRequest, v1.ListDomainAdminsResponse]
+	getUserDomainAdmins        *connect.Client[v1.GetUserDomainAdminsRequest, v1.GetUserDomainAdminsResponse]
 }
 
 // ListMyOrganizations calls organizations.v1.OrganizationsService.ListMyOrganizations.
@@ -316,6 +339,17 @@ func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Contex
 	return c.updatePermissionDefaults.CallUnary(ctx, req)
 }
 
+// GetOrganizationSettings calls organizations.v1.OrganizationsService.GetOrganizationSettings.
+func (c *organizationsServiceClient) GetOrganizationSettings(ctx context.Context, req *connect.Request[v1.GetOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error) {
+	return c.getOrganizationSettings.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationSettings calls
+// organizations.v1.OrganizationsService.UpdateOrganizationSettings.
+func (c *organizationsServiceClient) UpdateOrganizationSettings(ctx context.Context, req *connect.Request[v1.UpdateOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error) {
+	return c.updateOrganizationSettings.CallUnary(ctx, req)
+}
+
 // GrantDomainAdmin calls organizations.v1.OrganizationsService.GrantDomainAdmin.
 func (c *organizationsServiceClient) GrantDomainAdmin(ctx context.Context, req *connect.Request[v1.GrantDomainAdminRequest]) (*connect.Response[v11.DomainAdminInfo], error) {
 	return c.grantDomainAdmin.CallUnary(ctx, req)
@@ -357,6 +391,9 @@ type OrganizationsServiceHandler interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.PermissionDefaultsResponse], error)
 	UpdatePermissionDefaults(context.Context, *connect.Request[v1.UpdatePermissionDefaultsRequest]) (*connect.Response[v1.ContentTypeDefaults], error)
+	// Organization settings (Org Admin) — org-scoped JSONB preferences.
+	GetOrganizationSettings(context.Context, *connect.Request[v1.GetOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error)
+	UpdateOrganizationSettings(context.Context, *connect.Request[v1.UpdateOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error)
 	// Domain Admin management (Org Admin)
 	GrantDomainAdmin(context.Context, *connect.Request[v1.GrantDomainAdminRequest]) (*connect.Response[v11.DomainAdminInfo], error)
 	RevokeDomainAdmin(context.Context, *connect.Request[v1.RevokeDomainAdminRequest]) (*connect.Response[v1.RevokeDomainAdminResponse], error)
@@ -449,6 +486,18 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		connect.WithSchema(organizationsServiceMethods.ByName("UpdatePermissionDefaults")),
 		connect.WithHandlerOptions(opts...),
 	)
+	organizationsServiceGetOrganizationSettingsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceGetOrganizationSettingsProcedure,
+		svc.GetOrganizationSettings,
+		connect.WithSchema(organizationsServiceMethods.ByName("GetOrganizationSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceUpdateOrganizationSettingsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceUpdateOrganizationSettingsProcedure,
+		svc.UpdateOrganizationSettings,
+		connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganizationSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	organizationsServiceGrantDomainAdminHandler := connect.NewUnaryHandler(
 		OrganizationsServiceGrantDomainAdminProcedure,
 		svc.GrantDomainAdmin,
@@ -501,6 +550,10 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 			organizationsServiceGetPermissionDefaultsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceUpdatePermissionDefaultsProcedure:
 			organizationsServiceUpdatePermissionDefaultsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceGetOrganizationSettingsProcedure:
+			organizationsServiceGetOrganizationSettingsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceUpdateOrganizationSettingsProcedure:
+			organizationsServiceUpdateOrganizationSettingsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGrantDomainAdminProcedure:
 			organizationsServiceGrantDomainAdminHandler.ServeHTTP(w, r)
 		case OrganizationsServiceRevokeDomainAdminProcedure:
@@ -568,6 +621,14 @@ func (UnimplementedOrganizationsServiceHandler) GetPermissionDefaults(context.Co
 
 func (UnimplementedOrganizationsServiceHandler) UpdatePermissionDefaults(context.Context, *connect.Request[v1.UpdatePermissionDefaultsRequest]) (*connect.Response[v1.ContentTypeDefaults], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.UpdatePermissionDefaults is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) GetOrganizationSettings(context.Context, *connect.Request[v1.GetOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetOrganizationSettings is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) UpdateOrganizationSettings(context.Context, *connect.Request[v1.UpdateOrganizationSettingsRequest]) (*connect.Response[v1.OrganizationSettings], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.UpdateOrganizationSettings is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) GrantDomainAdmin(context.Context, *connect.Request[v1.GrantDomainAdminRequest]) (*connect.Response[v11.DomainAdminInfo], error) {

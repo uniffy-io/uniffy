@@ -29,6 +29,7 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
         sidebarCollapsed: appearance.sidebarCollapsed,
         compactMode: appearance.compactMode,
         defaultEditor: appearance.defaultEditor || undefined,
+        mentionDisplay: appearance.mentionDisplay || undefined,
     };
 };
 
@@ -73,6 +74,7 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
         defaultReminderIntervals: notifications.defaultReminderIntervals?.length
             ? [...notifications.defaultReminderIntervals]
             : [15],
+        toastEnabled: notifications.toastEnabled,
     };
 };
 
@@ -102,6 +104,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         sidebarCollapsed: false,
         compactMode: false,
         defaultEditor: 'crepe',
+        mentionDisplay: 'expanded',
     },
     keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
         bindings: {},
@@ -113,8 +116,9 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         emailFrequency: 'instant',
         quietHoursStart: undefined,
         quietHoursEnd: undefined,
-        channelOverrides: {},
+        channelOverrides: {} as Record<string, Record<string, boolean>>,
         defaultReminderIntervals: [15],
+        toastEnabled: false,
     },
 });
 

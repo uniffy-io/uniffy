@@ -763,6 +763,56 @@ class AttachmentOperations:
             # Queue not available - non-fatal, file stays PENDING
             logger.warning(f"Could not enqueue jobs for attachment {file.id}: {e}")
 
+    async def _verify_chat_message_access(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+        require_sender: bool = False,
+    ) -> None:
+        """Verify chat access by delegating to ChatAccessChecker.
+
+        Chat messages use channel membership for access control, not the
+        generic access_mode/baseline_role model. This method loads the
+        parent message, resolves its channel, and checks membership.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User requesting access.
+        organization_id : UUID
+            Organization ID.
+        message_id : UUID
+            Chat message ID.
+        require_sender : bool
+            If True, also require the user to be the message sender or
+            have an elevated channel role (admin/owner). Used for edit
+            operations like detaching files.
+
+        """
+        from uniffy.core.models.chat.message import ChatMessage
+        from uniffy.domains.chat.access import ChatAccessChecker
+
+        result = await self._session.execute(
+            select(ChatMessage.channel_id, ChatMessage.sender_id).where(
+                ChatMessage.id == message_id,
+                ChatMessage.is_deleted == False,  # noqa: E712
+            )
+        )
+        row = result.one_or_none()
+        if not row:
+            raise NotFoundError("ChatMessage", str(message_id))
+
+        channel_id, sender_id = row[0], row[1]
+        checker = ChatAccessChecker(self._session)
+        channel = await checker.get_channel(channel_id, organization_id)
+        await checker.check_access(user_id, organization_id, channel)
+
+        if require_sender and sender_id != user_id:
+            is_elevated = await checker.require_elevated(user_id, organization_id, channel.id)
+            if not is_elevated:
+                raise PermissionDeniedError("edit", "chat message")
+
     async def _load_parent_policy(
         self,
         organization_id: UUID,
@@ -834,9 +884,7 @@ class AttachmentOperations:
             project_id = task_row[0]
 
             proj_result = await self._session.execute(
-                select(
-                    Project.owner_id, Project.access_mode, Project.baseline_role
-                ).where(
+                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
                     Project.id == project_id,
                     Project.organization_id == organization_id,
                 )
@@ -845,6 +893,44 @@ class AttachmentOperations:
             if not proj_row:
                 raise NotFoundError("Project", str(project_id))
             return proj_row[0], proj_row[1], proj_row[2], ContentType.PROJECT, project_id
+
+        if content_type == ContentType.CHAT_MESSAGE:
+            from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+            from uniffy.core.models.chat.message import ChatMessage
+
+            msg_result = await self._session.execute(
+                select(ChatMessage.channel_id).where(
+                    ChatMessage.id == content_id,
+                )
+            )
+            channel_id = msg_result.scalar_one_or_none()
+            if not channel_id:
+                raise NotFoundError("ChatMessage", str(content_id))
+
+            ch_result = await self._session.execute(
+                select(ChatChannel.owner_id, ChatChannel.channel_type).where(
+                    ChatChannel.id == channel_id,
+                    ChatChannel.organization_id == organization_id,
+                )
+            )
+            ch_row = ch_result.one_or_none()
+            if not ch_row:
+                raise NotFoundError("ChatChannel", str(channel_id))
+
+            # PUBLIC channels: files inherit OPEN_TO_ORG so inline previews
+            # work for all org members. PRIVATE/DM: files stay OWNER_ONLY
+            # in the uploader's Attachments folder. Access for other channel
+            # members goes through the attachment system which checks channel
+            # membership via _verify_chat_message_access().
+            if ch_row[1] == ChannelType.PUBLIC:
+                return (
+                    ch_row[0],
+                    AccessMode.OPEN_TO_ORG,
+                    ContentRole.VIEWER,
+                    ContentType.CHAT,
+                    channel_id,
+                )
+            return ch_row[0], AccessMode.OWNER_ONLY, None, ContentType.CHAT, channel_id
 
         raise NotFoundError("Content", str(content_id))
 
@@ -858,11 +944,13 @@ class AttachmentOperations:
         """Return the user's effective role on the parent content."""
         from uniffy.core.auth.permissions.checker import PermissionChecker
 
-        owner_id, access_mode, baseline_role, resolved_type, resolved_id = (
-            await self._load_parent_policy(
-                organization_id, content_type, content_id
-            )
-        )
+        (
+            owner_id,
+            access_mode,
+            baseline_role,
+            resolved_type,
+            resolved_id,
+        ) = await self._load_parent_policy(organization_id, content_type, content_id)
 
         checker = PermissionChecker(self._session)
         return await checker.effective_role(
@@ -883,9 +971,10 @@ class AttachmentOperations:
         content_id: UUID,
     ) -> None:
         """Verify the user can view the parent content."""
-        role = await self._resolve_parent_role(
-            user_id, organization_id, content_type, content_id
-        )
+        if content_type == ContentType.CHAT_MESSAGE:
+            await self._verify_chat_message_access(user_id, organization_id, content_id)
+            return
+        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_view(role):
             raise PermissionDeniedError("access", "content")
 
@@ -897,8 +986,11 @@ class AttachmentOperations:
         content_id: UUID,
     ) -> None:
         """Verify the user can edit the parent content."""
-        role = await self._resolve_parent_role(
-            user_id, organization_id, content_type, content_id
-        )
+        if content_type == ContentType.CHAT_MESSAGE:
+            await self._verify_chat_message_access(
+                user_id, organization_id, content_id, require_sender=True
+            )
+            return
+        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_edit(role):
             raise PermissionDeniedError("edit", "content")

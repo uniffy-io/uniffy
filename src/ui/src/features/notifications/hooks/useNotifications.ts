@@ -2,7 +2,7 @@
  * React hooks for notifications feature.
  *
  * Provides hooks for accessing notification state, managing the
- * notification panel, and interacting with notifications.
+ * notification panel, filtering, and interacting with notifications.
  */
 
 import { useCallback, useEffect } from 'react';
@@ -15,7 +15,11 @@ import {
     deleteNotification,
     togglePanel,
     setPanel,
+    setSearchQuery,
+    setActiveFilter,
+    selectFilteredNotifications,
 } from '@/features/notifications/store/notificationsSlice';
+import type { NotificationFilterType } from '@/features/notifications/store/notificationsSlice';
 
 /**
  * Main notifications hook. Provides full notifications state and actions.
@@ -24,6 +28,7 @@ export function useNotifications() {
     const dispatch = useAppDispatch();
     const state = useAppSelector((s) => s.notifications);
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const filteredNotifications = useAppSelector(selectFilteredNotifications);
 
     const refresh = useCallback(() => {
         if (organizationId) {
@@ -51,20 +56,33 @@ export function useNotifications() {
         dispatch(setPanel(false));
     }, [dispatch]);
 
+    const updateSearchQuery = useCallback((query: string) => {
+        dispatch(setSearchQuery(query));
+    }, [dispatch]);
+
+    const updateFilter = useCallback((filter: NotificationFilterType) => {
+        dispatch(setActiveFilter(filter));
+    }, [dispatch]);
+
     return {
         notifications: state.notifications,
+        filteredNotifications,
         unreadCount: state.unreadCount,
         totalCount: state.totalCount,
         loading: state.loading,
         updating: state.updating,
         error: state.error,
         panelOpen: state.panelOpen,
+        searchQuery: state.searchQuery,
+        activeFilter: state.activeFilter,
         refresh,
         markAsRead,
         markAllAsRead,
         remove,
         toggle,
         close,
+        updateSearchQuery,
+        updateFilter,
     };
 }
 
@@ -96,7 +114,6 @@ export function useUnreadCountPolling(intervalMs: number = 60000) {
     useEffect(() => {
         if (!organizationId) return;
 
-        // Initial fetch
         dispatch(fetchUnreadCount());
 
         const interval = setInterval(() => {

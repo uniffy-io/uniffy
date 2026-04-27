@@ -1,6 +1,6 @@
 /**
  * Notification bell icon for the app header.
- * Shows unread count badge and opens the notification panel.
+ * Shows unread count badge capped at 99+ and opens the notification panel.
  */
 
 import { useRef } from 'react';
@@ -16,7 +16,6 @@ export function NotificationBell() {
     const unreadCount = useUnreadCountPolling();
     const bellRef = useRef<HTMLDivElement>(null);
 
-    // Keep push subscription active (re-subscribes if permission granted but no subscription)
     usePushSubscription();
 
     return (
@@ -34,13 +33,15 @@ export function NotificationBell() {
             >
                 <Bell size={20} weight={panelOpen ? 'fill' : 'duotone'} />
 
-                {/* Unread badge */}
                 {unreadCount > 0 && (
-                    <span className={cn(
-                        'absolute -top-1 -right-1 z-20 flex items-center justify-center',
-                        'min-w-[16px] h-4 px-1 rounded-full',
-                        'text-white text-[10px] font-bold leading-none'
-                    )} style={{ backgroundColor: 'var(--status-error)' }}>
+                    <span
+                        className={cn(
+                            'absolute -top-1 -right-1 z-20 flex items-center justify-center',
+                            'min-w-[16px] h-4 px-1 rounded-full',
+                            'text-white text-[10px] font-bold leading-none'
+                        )}
+                        style={{ backgroundColor: 'var(--status-error)' }}
+                    >
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}

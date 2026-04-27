@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { ChannelRole, ChatChannel, ChatMessage } from "./chat_pb.js";
+import { AgentConfirmationDecision, ChannelRole, ChatChannel, ChatMessage } from "./chat_pb.js";
 
 /**
  * @generated from enum chat.v1.ChatEventType
@@ -75,6 +75,52 @@ export enum ChatEventType {
    * @generated from enum value: CHAT_EVENT_TYPE_HEARTBEAT = 12;
    */
   HEARTBEAT = 12,
+
+  /**
+   * Batched membership change events. The non-batched MEMBER_JOINED /
+   * MEMBER_LEFT remain for single-actor flows (self-join, leave). Batch
+   * adds/removes initiated by an admin go through these so the server
+   * sends ONE event per call instead of one per affected user.
+   *
+   * @generated from enum value: CHAT_EVENT_TYPE_MEMBERS_ADDED = 22;
+   */
+  MEMBERS_ADDED = 22,
+
+  /**
+   * @generated from enum value: CHAT_EVENT_TYPE_MEMBERS_REMOVED = 23;
+   */
+  MEMBERS_REMOVED = 23,
+
+  /**
+   * Agent runtime events. AGENT_TYPING fires while the runtime is generating
+   * tokens (analogous to a human typing). AGENT_TOKEN_DELTA carries
+   * incremental content for an in-flight agent message. AGENT_TOOL_CALL
+   * signals the runtime is executing a tool. AGENT_CONFIRMATION_REQUESTED
+   * and AGENT_CONFIRMATION_RESOLVED bracket destructive-tool approvals.
+   *
+   * @generated from enum value: CHAT_EVENT_TYPE_AGENT_TYPING = 13;
+   */
+  AGENT_TYPING = 13,
+
+  /**
+   * @generated from enum value: CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA = 14;
+   */
+  AGENT_TOKEN_DELTA = 14,
+
+  /**
+   * @generated from enum value: CHAT_EVENT_TYPE_AGENT_TOOL_CALL = 15;
+   */
+  AGENT_TOOL_CALL = 15,
+
+  /**
+   * @generated from enum value: CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED = 16;
+   */
+  AGENT_CONFIRMATION_REQUESTED = 16,
+
+  /**
+   * @generated from enum value: CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED = 17;
+   */
+  AGENT_CONFIRMATION_RESOLVED = 17,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ChatEventType)
 proto3.util.setEnumType(ChatEventType, "chat.v1.ChatEventType", [
@@ -91,6 +137,13 @@ proto3.util.setEnumType(ChatEventType, "chat.v1.ChatEventType", [
   { no: 10, name: "CHAT_EVENT_TYPE_CHANNEL_UPDATED" },
   { no: 11, name: "CHAT_EVENT_TYPE_THREAD_UPDATED" },
   { no: 12, name: "CHAT_EVENT_TYPE_HEARTBEAT" },
+  { no: 22, name: "CHAT_EVENT_TYPE_MEMBERS_ADDED" },
+  { no: 23, name: "CHAT_EVENT_TYPE_MEMBERS_REMOVED" },
+  { no: 13, name: "CHAT_EVENT_TYPE_AGENT_TYPING" },
+  { no: 14, name: "CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA" },
+  { no: 15, name: "CHAT_EVENT_TYPE_AGENT_TOOL_CALL" },
+  { no: 16, name: "CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED" },
+  { no: 17, name: "CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED" },
 ]);
 
 /**
@@ -218,12 +271,52 @@ export class ChatEvent extends Message<ChatEvent> {
     /**
      * THREAD_UPDATED
      *
-     * HEARTBEAT (no payload needed)
-     *
      * @generated from field: chat.v1.ThreadUpdatedPayload thread_updated = 16;
      */
     value: ThreadUpdatedPayload;
     case: "threadUpdated";
+  } | {
+    /**
+     * HEARTBEAT (no payload needed)
+     * AGENT_TYPING, AGENT_TOKEN_DELTA, AGENT_TOOL_CALL,
+     * AGENT_CONFIRMATION_REQUESTED, AGENT_CONFIRMATION_RESOLVED
+     *
+     * @generated from field: chat.v1.AgentTypingPayload agent_typing = 17;
+     */
+    value: AgentTypingPayload;
+    case: "agentTyping";
+  } | {
+    /**
+     * @generated from field: chat.v1.AgentTokenDeltaPayload agent_token_delta = 18;
+     */
+    value: AgentTokenDeltaPayload;
+    case: "agentTokenDelta";
+  } | {
+    /**
+     * @generated from field: chat.v1.AgentToolCallPayload agent_tool_call = 19;
+     */
+    value: AgentToolCallPayload;
+    case: "agentToolCall";
+  } | {
+    /**
+     * @generated from field: chat.v1.AgentConfirmationRequestedPayload agent_confirmation_requested = 20;
+     */
+    value: AgentConfirmationRequestedPayload;
+    case: "agentConfirmationRequested";
+  } | {
+    /**
+     * @generated from field: chat.v1.AgentConfirmationResolvedPayload agent_confirmation_resolved = 21;
+     */
+    value: AgentConfirmationResolvedPayload;
+    case: "agentConfirmationResolved";
+  } | {
+    /**
+     * MEMBERS_ADDED, MEMBERS_REMOVED
+     *
+     * @generated from field: chat.v1.MembersChangedPayload members_changed = 22;
+     */
+    value: MembersChangedPayload;
+    case: "membersChanged";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<ChatEvent>) {
@@ -244,6 +337,12 @@ export class ChatEvent extends Message<ChatEvent> {
     { no: 14, name: "member", kind: "message", T: MemberPayload, oneof: "payload" },
     { no: 15, name: "channel_updated", kind: "message", T: ChatChannel, oneof: "payload" },
     { no: 16, name: "thread_updated", kind: "message", T: ThreadUpdatedPayload, oneof: "payload" },
+    { no: 17, name: "agent_typing", kind: "message", T: AgentTypingPayload, oneof: "payload" },
+    { no: 18, name: "agent_token_delta", kind: "message", T: AgentTokenDeltaPayload, oneof: "payload" },
+    { no: 19, name: "agent_tool_call", kind: "message", T: AgentToolCallPayload, oneof: "payload" },
+    { no: 20, name: "agent_confirmation_requested", kind: "message", T: AgentConfirmationRequestedPayload, oneof: "payload" },
+    { no: 21, name: "agent_confirmation_resolved", kind: "message", T: AgentConfirmationResolvedPayload, oneof: "payload" },
+    { no: 22, name: "members_changed", kind: "message", T: MembersChangedPayload, oneof: "payload" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatEvent {
@@ -460,6 +559,48 @@ export class MemberPayload extends Message<MemberPayload> {
 }
 
 /**
+ * MembersChangedPayload announces a batched add or remove. A single
+ * MEMBERS_ADDED or MEMBERS_REMOVED event covers all subjects affected
+ * by the same admin call so the frontend can refresh the member list
+ * once instead of per affected user.
+ *
+ * @generated from message chat.v1.MembersChangedPayload
+ */
+export class MembersChangedPayload extends Message<MembersChangedPayload> {
+  /**
+   * @generated from field: repeated string user_ids = 1;
+   */
+  userIds: string[] = [];
+
+  constructor(data?: PartialMessage<MembersChangedPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.MembersChangedPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MembersChangedPayload {
+    return new MembersChangedPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MembersChangedPayload {
+    return new MembersChangedPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MembersChangedPayload {
+    return new MembersChangedPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MembersChangedPayload | PlainMessage<MembersChangedPayload> | undefined, b: MembersChangedPayload | PlainMessage<MembersChangedPayload> | undefined): boolean {
+    return proto3.util.equals(MembersChangedPayload, a, b);
+  }
+}
+
+/**
  * @generated from message chat.v1.ThreadUpdatedPayload
  */
 export class ThreadUpdatedPayload extends Message<ThreadUpdatedPayload> {
@@ -511,6 +652,395 @@ export class ThreadUpdatedPayload extends Message<ThreadUpdatedPayload> {
 
   static equals(a: ThreadUpdatedPayload | PlainMessage<ThreadUpdatedPayload> | undefined, b: ThreadUpdatedPayload | PlainMessage<ThreadUpdatedPayload> | undefined): boolean {
     return proto3.util.equals(ThreadUpdatedPayload, a, b);
+  }
+}
+
+/**
+ * AgentTypingPayload announces an agent is generating a response.
+ * Mirrors TypingPayload but identifies the agent rather than a user.
+ *
+ * @generated from message chat.v1.AgentTypingPayload
+ */
+export class AgentTypingPayload extends Message<AgentTypingPayload> {
+  /**
+   * @generated from field: string agent_id = 1;
+   */
+  agentId = "";
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName = "";
+
+  /**
+   * Empty when the agent stops typing (paired AGENT_TYPING events).
+   *
+   * @generated from field: bool started = 3;
+   */
+  started = false;
+
+  /**
+   * Set when the trigger was a thread reply. Frontend scopes the typing
+   * indicator to the thread panel identified by this root. When unset the
+   * indicator renders at the channel root.
+   *
+   * @generated from field: optional string root_id = 4;
+   */
+  rootId?: string;
+
+  constructor(data?: PartialMessage<AgentTypingPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.AgentTypingPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "started", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "root_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentTypingPayload {
+    return new AgentTypingPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentTypingPayload {
+    return new AgentTypingPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentTypingPayload {
+    return new AgentTypingPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentTypingPayload | PlainMessage<AgentTypingPayload> | undefined, b: AgentTypingPayload | PlainMessage<AgentTypingPayload> | undefined): boolean {
+    return proto3.util.equals(AgentTypingPayload, a, b);
+  }
+}
+
+/**
+ * AgentTokenDeltaPayload patches an in-flight agent message with new tokens.
+ * The frontend appends `delta` to the message identified by `message_id`.
+ * `sequence` is monotonic per message and lets clients drop late deltas.
+ *
+ * @generated from message chat.v1.AgentTokenDeltaPayload
+ */
+export class AgentTokenDeltaPayload extends Message<AgentTokenDeltaPayload> {
+  /**
+   * @generated from field: string message_id = 1;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * @generated from field: string delta = 3;
+   */
+  delta = "";
+
+  /**
+   * @generated from field: int32 sequence = 4;
+   */
+  sequence = 0;
+
+  /**
+   * True on the final delta; clients may persist message state on this edge.
+   *
+   * @generated from field: bool final = 5;
+   */
+  final = false;
+
+  constructor(data?: PartialMessage<AgentTokenDeltaPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.AgentTokenDeltaPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "delta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "sequence", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "final", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentTokenDeltaPayload {
+    return new AgentTokenDeltaPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentTokenDeltaPayload {
+    return new AgentTokenDeltaPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentTokenDeltaPayload {
+    return new AgentTokenDeltaPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentTokenDeltaPayload | PlainMessage<AgentTokenDeltaPayload> | undefined, b: AgentTokenDeltaPayload | PlainMessage<AgentTokenDeltaPayload> | undefined): boolean {
+    return proto3.util.equals(AgentTokenDeltaPayload, a, b);
+  }
+}
+
+/**
+ * AgentToolCallPayload signals a tool invocation by an agent.
+ * Status follows: STARTED -> COMPLETED/FAILED.
+ *
+ * @generated from message chat.v1.AgentToolCallPayload
+ */
+export class AgentToolCallPayload extends Message<AgentToolCallPayload> {
+  /**
+   * @generated from field: string message_id = 1;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * @generated from field: string tool_name = 3;
+   */
+  toolName = "";
+
+  /**
+   * Stable identifier for matching STARTED to COMPLETED.
+   *
+   * @generated from field: string tool_call_id = 4;
+   */
+  toolCallId = "";
+
+  /**
+   * @generated from field: chat.v1.AgentToolCallPayload.Status status = 5;
+   */
+  status = AgentToolCallPayload_Status.UNSPECIFIED;
+
+  /**
+   * Arguments preview (truncated JSON) for STARTED; result preview for
+   * COMPLETED/FAILED. Heavy payloads are persisted on the message metadata.
+   *
+   * @generated from field: optional string preview = 6;
+   */
+  preview?: string;
+
+  /**
+   * @generated from field: optional string error_message = 7;
+   */
+  errorMessage?: string;
+
+  constructor(data?: PartialMessage<AgentToolCallPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.AgentToolCallPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "tool_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "tool_call_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "status", kind: "enum", T: proto3.getEnumType(AgentToolCallPayload_Status) },
+    { no: 6, name: "preview", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "error_message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentToolCallPayload {
+    return new AgentToolCallPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentToolCallPayload {
+    return new AgentToolCallPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentToolCallPayload {
+    return new AgentToolCallPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentToolCallPayload | PlainMessage<AgentToolCallPayload> | undefined, b: AgentToolCallPayload | PlainMessage<AgentToolCallPayload> | undefined): boolean {
+    return proto3.util.equals(AgentToolCallPayload, a, b);
+  }
+}
+
+/**
+ * @generated from enum chat.v1.AgentToolCallPayload.Status
+ */
+export enum AgentToolCallPayload_Status {
+  /**
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: STATUS_STARTED = 1;
+   */
+  STARTED = 1,
+
+  /**
+   * @generated from enum value: STATUS_COMPLETED = 2;
+   */
+  COMPLETED = 2,
+
+  /**
+   * @generated from enum value: STATUS_FAILED = 3;
+   */
+  FAILED = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(AgentToolCallPayload_Status)
+proto3.util.setEnumType(AgentToolCallPayload_Status, "chat.v1.AgentToolCallPayload.Status", [
+  { no: 0, name: "STATUS_UNSPECIFIED" },
+  { no: 1, name: "STATUS_STARTED" },
+  { no: 2, name: "STATUS_COMPLETED" },
+  { no: 3, name: "STATUS_FAILED" },
+]);
+
+/**
+ * AgentConfirmationRequestedPayload mirrors the runtime confirmation event
+ * but is published into the chat stream so the chat UI can render an inline
+ * approval card. The card is interactive only for `actor_user_id`.
+ *
+ * @generated from message chat.v1.AgentConfirmationRequestedPayload
+ */
+export class AgentConfirmationRequestedPayload extends Message<AgentConfirmationRequestedPayload> {
+  /**
+   * @generated from field: string message_id = 1;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * Opaque correlation id used by RespondToAgentConfirmation.
+   *
+   * @generated from field: string request_id = 3;
+   */
+  requestId = "";
+
+  /**
+   * @generated from field: string tool_name = 4;
+   */
+  toolName = "";
+
+  /**
+   * @generated from field: string args_preview = 5;
+   */
+  argsPreview = "";
+
+  /**
+   * Only this user can approve/deny; others see disabled UI.
+   *
+   * @generated from field: string actor_user_id = 6;
+   */
+  actorUserId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp;
+
+  constructor(data?: PartialMessage<AgentConfirmationRequestedPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.AgentConfirmationRequestedPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "tool_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "args_preview", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "actor_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "expires_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentConfirmationRequestedPayload {
+    return new AgentConfirmationRequestedPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentConfirmationRequestedPayload {
+    return new AgentConfirmationRequestedPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentConfirmationRequestedPayload {
+    return new AgentConfirmationRequestedPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentConfirmationRequestedPayload | PlainMessage<AgentConfirmationRequestedPayload> | undefined, b: AgentConfirmationRequestedPayload | PlainMessage<AgentConfirmationRequestedPayload> | undefined): boolean {
+    return proto3.util.equals(AgentConfirmationRequestedPayload, a, b);
+  }
+}
+
+/**
+ * AgentConfirmationResolvedPayload announces approval/denial.
+ * Reuses chat.v1.AgentConfirmationDecision via the chat.proto import above.
+ *
+ * @generated from message chat.v1.AgentConfirmationResolvedPayload
+ */
+export class AgentConfirmationResolvedPayload extends Message<AgentConfirmationResolvedPayload> {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId = "";
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: chat.v1.AgentConfirmationDecision decision = 3;
+   */
+  decision = AgentConfirmationDecision.UNSPECIFIED;
+
+  /**
+   * @generated from field: string decided_by_user_id = 4;
+   */
+  decidedByUserId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp decided_at = 5;
+   */
+  decidedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<AgentConfirmationResolvedPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.AgentConfirmationResolvedPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "request_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "decision", kind: "enum", T: proto3.getEnumType(AgentConfirmationDecision) },
+    { no: 4, name: "decided_by_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "decided_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentConfirmationResolvedPayload {
+    return new AgentConfirmationResolvedPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentConfirmationResolvedPayload {
+    return new AgentConfirmationResolvedPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentConfirmationResolvedPayload {
+    return new AgentConfirmationResolvedPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentConfirmationResolvedPayload | PlainMessage<AgentConfirmationResolvedPayload> | undefined, b: AgentConfirmationResolvedPayload | PlainMessage<AgentConfirmationResolvedPayload> | undefined): boolean {
+    return proto3.util.equals(AgentConfirmationResolvedPayload, a, b);
   }
 }
 

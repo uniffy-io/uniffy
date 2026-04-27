@@ -14,8 +14,11 @@ import { FilesLayout } from '@/features/files/components/FilesLayout';
 import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { FilesList } from '@/features/files/components/list/FilesList';
 import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
+import { FolderUploadConfirmDialog } from '@/features/files/components/FolderUploadConfirmDialog';
 import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
+import { useFolderUpload } from '@/features/files/hooks/useFolderUpload';
+import { scanInputFiles, isFolderUploadSupported } from '@/features/files/utils/folderScanner';
 import { initializeFilesData, setFolderId, setDetailsPanelOpen, toggleSidebar } from '@/features/files/store/filesSlice';
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
@@ -28,8 +31,6 @@ import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export function FilesPage() {
     useDocumentTitle('Files');
-
-    // Process upload queue
     useUploadProcessor();
 
     const dispatch = useAppDispatch();
@@ -68,6 +69,17 @@ export function FilesPage() {
 
     // File input ref for upload
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
+
+    // Folder upload flow (scan + confirm + createFolderTree + queue)
+    const folderUploadSupported = isFolderUploadSupported();
+    const {
+        scanResult: folderScanResult,
+        showConfirm: showFolderConfirm,
+        openConfirmDialog: openFolderConfirm,
+        cancelUpload: cancelFolderUpload,
+        confirmUpload: confirmFolderUpload,
+    } = useFolderUpload();
 
     // Track if we've already opened viewer for deep link (prevent re-opening)
     const deepLinkHandledRef = useRef(false);
@@ -198,6 +210,25 @@ export function FilesPage() {
         fileInputRef.current?.click();
     }, [canUpload]);
 
+    const handleUploadFolder = useCallback(() => {
+        if (!canUpload) return;
+        folderInputRef.current?.click();
+    }, [canUpload]);
+
+    const handleFolderInputChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const selected = e.target.files;
+            if (!selected || selected.length === 0) return;
+
+            const result = scanInputFiles(selected);
+            openFolderConfirm(result, currentFolderId ?? undefined);
+
+            // Reset so the same folder can be re-selected
+            e.target.value = '';
+        },
+        [openFolderConfirm, currentFolderId]
+    );
+
     // Handle file input change
     const handleFileInputChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,7 +301,7 @@ export function FilesPage() {
                 onToggleSidebar={handleToggleSidebar}
                 onCloseSidebar={handleCloseSidebar}
                 onCloseDetailPanel={handleCloseDetailPanel}
-                sidebar={<FilesSidebar onToggleSidebar={handleToggleSidebar} onUpload={handleUpload} />}
+                sidebar={<FilesSidebar onToggleSidebar={handleToggleSidebar} onUpload={handleUpload} onUploadFolder={canUpload && folderUploadSupported ? handleUploadFolder : undefined} />}
                 content={
                     <FilesList
                         files={files}
@@ -279,6 +310,7 @@ export function FilesPage() {
                         onDownload={handleDownload}
                         onBulkDownload={handleBulkDownload}
                         onUpload={handleUpload}
+                        onUploadFolder={canUpload && folderUploadSupported ? handleUploadFolder : undefined}
                         onCreateFolder={handleCreateFolder}
                         onToggleSidebar={handleToggleSidebar}
                         folderTree={folderTree}
@@ -295,11 +327,23 @@ export function FilesPage() {
                 className="hidden"
                 onChange={handleFileInputChange}
             />
+            <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFolderInputChange}
+                {...{ webkitdirectory: 'true', directory: 'true' } as React.InputHTMLAttributes<HTMLInputElement>}
+            />
 
-            {/* Upload progress panel */}
+            <FolderUploadConfirmDialog
+                open={showFolderConfirm}
+                scanResult={folderScanResult}
+                onConfirm={confirmFolderUpload}
+                onCancel={cancelFolderUpload}
+            />
+
             <UploadPanel />
-
-            {/* FileViewerModal is now global (in App.tsx), no need to render here */}
         </>
     );
 }

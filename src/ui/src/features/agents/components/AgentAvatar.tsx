@@ -59,6 +59,9 @@ export function AgentAvatar({
                     sizeClass,
                     className,
                 )}
+                data-testid="agent-avatar"
+                data-agent-name={agentName}
+                data-fallback="image"
             />
         );
     }
@@ -72,6 +75,9 @@ export function AgentAvatar({
                 sizeClass,
                 className,
             )}
+            data-testid="agent-avatar"
+            data-agent-name={agentName}
+            data-fallback={fallback ? "emoji" : "initial"}
         >
             {fallback || (
                 agentName

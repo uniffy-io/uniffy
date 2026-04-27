@@ -9,7 +9,7 @@
  * - Links, GFM tables
  */
 
-import { useState, useCallback, useMemo, type ReactNode } from 'react';
+import { memo, useState, useCallback, useMemo, type ReactNode } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -26,6 +26,28 @@ const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
 function preprocessMentions(content: string): string {
   return content.replace(MENTION_RE, '[@$1]($2)');
+}
+
+// Markdown collapses single newlines into spaces, so an agent reply
+// like "Line one\nLine two" renders as "Line one Line two" once it
+// settles -- which looks like text was eaten between the streaming
+// view (plain pre-wrap) and the markdown view. Convert single
+// newlines into hard breaks (`  \n`) so the laid-out result matches
+// what the user saw mid-stream. Existing blank-line paragraph breaks
+// (`\n\n`) and code blocks are left alone.
+const FENCED_CODE_RE = /(```[\s\S]*?```)/g;
+
+function preserveSingleNewlines(content: string): string {
+  if (!content.includes('\n')) return content;
+  // Split on fenced code blocks so we don't rewrite newlines inside
+  // them; rejoin with the originals untouched.
+  return content
+    .split(FENCED_CODE_RE)
+    .map((segment, i) => {
+      if (i % 2 === 1) return segment; // fenced code -- leave alone
+      return segment.replace(/([^\n])\n(?!\n)/g, '$1  \n');
+    })
+    .join('');
 }
 
 // Emoticon to emoji conversion
@@ -256,7 +278,7 @@ interface MessageContentProps {
   className?: string;
 }
 
-export function MessageContent({ content, className }: MessageContentProps) {
+function MessageContentInner({ content, className }: MessageContentProps) {
   const withEmoticons = convertEmoticons(content ?? '');
   const jumbo = useMemo(() => isEmojiOnly(withEmoticons), [withEmoticons]);
 
@@ -269,18 +291,22 @@ export function MessageContent({ content, className }: MessageContentProps) {
     );
   }
 
-  const processed = preprocessMentions(withEmoticons);
+  const processed = preserveSingleNewlines(preprocessMentions(withEmoticons));
 
   return (
     <div
       className={cn(
         'prose prose-sm dark:prose-invert max-w-none',
-        'text-foreground text-sm leading-relaxed',
-        'prose-p:my-0.5 prose-pre:my-0 prose-ul:my-1 prose-ol:my-1',
+        'text-foreground/90 text-sm leading-[1.625]',
+        // `my-2` gives blank-line paragraph breaks visible breathing
+        // room. With my-0.5 (2px) the stanza separators in long agent
+        // replies collapsed to nothing and the prose looked like one
+        // wall of text, even though `\n\n` was preserved in the source.
+        'prose-p:my-2 prose-pre:my-0 prose-ul:my-1 prose-ol:my-1',
         'prose-headings:my-2 prose-headings:text-foreground',
         'prose-code:before:content-none prose-code:after:content-none',
-        'prose-blockquote:border-l-primary/50 prose-blockquote:text-muted-foreground',
-        'prose-strong:text-foreground prose-em:text-foreground',
+        'prose-blockquote:border-l-primary/40 prose-blockquote:text-muted-foreground',
+        'prose-strong:text-foreground prose-em:text-foreground/90',
         'prose-li:my-0',
         'break-words',
         className,
@@ -297,3 +323,9 @@ export function MessageContent({ content, className }: MessageContentProps) {
     </div>
   );
 }
+
+// Memoized so the heavy react-markdown + rehype-highlight pass only
+// runs when content/className actually change. Without this, every
+// streaming AGENT_TOKEN_DELTA causes the parent message list to
+// re-render which re-parses every other message in the channel.
+export const MessageContent = memo(MessageContentInner);

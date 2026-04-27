@@ -8,7 +8,6 @@ from croniter import croniter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.members import (
     ContentMembersOperations,
@@ -255,9 +254,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         elif personal_only:
             query = query.where(AgentCronTask.owner_id == user_id)
         else:
-            is_admin = await self.permission_checker.is_org_admin(
-                user_id, organization_id
-            )
+            is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
             if not is_admin:
                 is_admin = await self.permission_checker.is_domain_admin(
                     user_id, organization_id, self.content_type
@@ -311,9 +308,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         error: str | None = None,
     ) -> None:
         """Update task state after execution (system-level, no access check)."""
-        result = await self.session.execute(
-            select(AgentCronTask).where(AgentCronTask.id == task_id)
-        )
+        result = await self.session.execute(select(AgentCronTask).where(AgentCronTask.id == task_id))
         task = result.scalar_one_or_none()
         if not task:
             return
@@ -467,35 +462,6 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
                 "limit",
                 f"Maximum of {MAX_CRON_TASKS_PER_USER} scheduled tasks per user",
             )
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, self.content_type
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
 
 
 def _validate_cron_expression(expr: str) -> None:

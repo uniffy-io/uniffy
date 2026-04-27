@@ -28,12 +28,15 @@ enum ContentType {
   CONTENT_TYPE_AGENT_CRON_TASK = 18;
 }
 
-// SubjectType defines who can be granted permissions.
+// SubjectType defines who can be granted permissions or participate in
+// chat channels/threads. AGENT is permitted as a chat participant and as a
+// content permission grantee.
 enum SubjectType {
   SUBJECT_TYPE_UNSPECIFIED = 0;
   SUBJECT_TYPE_USER = 1;
   SUBJECT_TYPE_GROUP = 2;
   SUBJECT_TYPE_ORGANIZATION = 3;
+  SUBJECT_TYPE_AGENT = 4;
 }
 
 // ContentRole defines the role a subject has on a piece of content.

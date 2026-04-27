@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.reaction import ChatReaction
+from uniffy.core.types import SubjectType
 from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.cache import fetch_channel_members
 
 
 class ChatReactionOperations:
@@ -29,14 +31,20 @@ class ChatReactionOperations:
         emoji: str,
         display_name: str = "",
     ) -> ChatReaction:
-        """Add a reaction to a message. Idempotent (unique constraint)."""
-        await self._verify_message_access(
-            user_id, organization_id, channel_id, message_id
-        )
+        """Add a reaction to a message. Idempotent (unique constraint).
+
+        Uses ``ON CONFLICT DO NOTHING RETURNING created_at`` so the inserted
+        row's authoritative timestamp is captured in one round-trip. When
+        the row already existed RETURNING yields no rows; in that case
+        ``now`` is returned as an approximate ``created_at`` to avoid the
+        extra SELECT round-trip - the value is only used for the realtime
+        payload, not stored.
+        """
+        await self._verify_message_access(user_id, organization_id, channel_id, message_id)
 
         now = datetime.now(UTC)
 
-        await self.session.execute(
+        result = await self.session.execute(
             pg_insert(ChatReaction)
             .values(
                 message_id=message_id,
@@ -44,25 +52,29 @@ class ChatReactionOperations:
                 emoji=emoji,
                 created_at=now,
             )
-            .on_conflict_do_nothing(
-                index_elements=["message_id", "user_id", "emoji"]
-            )
+            .on_conflict_do_nothing(index_elements=["message_id", "user_id", "emoji"])
+            .returning(ChatReaction.created_at)
         )
         await self.session.commit()
+        returned = result.scalar_one_or_none()
+        created_at = returned if returned is not None else now
 
-        # Fetch the reaction (may be existing)
-        result = await self.session.execute(
-            select(ChatReaction).where(
-                ChatReaction.message_id == message_id,
-                ChatReaction.user_id == user_id,
-                ChatReaction.emoji == emoji,
-            )
+        reaction = ChatReaction(
+            message_id=message_id,
+            user_id=user_id,
+            emoji=emoji,
+            created_at=created_at,
         )
-        reaction = result.scalar_one()
 
-        # Fan out REACTION_ADDED to channel members
+        member_ids = await self._get_channel_member_ids(channel_id)
         await self._publish_reaction_event(
-            channel_id, message_id, emoji, user_id, "added", display_name,
+            channel_id,
+            message_id,
+            emoji,
+            user_id,
+            "added",
+            display_name,
+            member_ids,
         )
 
         return reaction
@@ -77,9 +89,7 @@ class ChatReactionOperations:
         display_name: str = "",
     ) -> None:
         """Remove a reaction from a message."""
-        await self._verify_message_access(
-            user_id, organization_id, channel_id, message_id
-        )
+        await self._verify_message_access(user_id, organization_id, channel_id, message_id)
 
         await self.session.execute(
             delete(ChatReaction).where(
@@ -90,9 +100,15 @@ class ChatReactionOperations:
         )
         await self.session.commit()
 
-        # Fan out REACTION_REMOVED to channel members
+        member_ids = await self._get_channel_member_ids(channel_id)
         await self._publish_reaction_event(
-            channel_id, message_id, emoji, user_id, "removed", display_name,
+            channel_id,
+            message_id,
+            emoji,
+            user_id,
+            "removed",
+            display_name,
+            member_ids,
         )
 
     async def _publish_reaction_event(
@@ -102,11 +118,15 @@ class ChatReactionOperations:
         emoji: str,
         user_id: UUID,
         action: str,
-        display_name: str = "",
+        display_name: str,
+        member_ids: list[UUID],
     ) -> None:
-        """Publish a reaction event to all channel members."""
+        """Publish a reaction event to channel members.
+
+        Caller passes pre-fetched ``member_ids`` so reactions never re-query
+        the channel-member list per emoji-tap.
+        """
         try:
-            from uniffy.core.models.chat.channel_member import ChatChannelMember
             from uniffy.domains.chat.streaming.events import (
                 REACTION_ADDED,
                 REACTION_REMOVED,
@@ -115,13 +135,6 @@ class ChatReactionOperations:
             from uniffy.domains.chat.streaming.publisher import (
                 publish_channel_event_to_members,
             )
-
-            member_result = await self.session.execute(
-                select(ChatChannelMember.user_id).where(
-                    ChatChannelMember.channel_id == channel_id
-                )
-            )
-            member_ids = [r[0] for r in member_result.all()]
 
             event_type = REACTION_ADDED if action == "added" else REACTION_REMOVED
             await publish_channel_event_to_members(
@@ -132,6 +145,26 @@ class ChatReactionOperations:
             )
         except Exception:
             pass  # Non-fatal, best-effort
+
+    async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
+        """Fetch USER member ids for a channel via the member-id cache.
+
+        Filters to ``subject_type=USER`` so AGENT rows whose ``user_id``
+        is NULL never leak into fan-out target lists.
+        """
+        members = await fetch_channel_members(self.session, channel_id)
+        ids: list[UUID] = []
+        for member in members:
+            if member.get("subject_type") != SubjectType.USER.value:
+                continue
+            uid = member.get("user_id")
+            if not uid:
+                continue
+            try:
+                ids.append(UUID(uid))
+            except ValueError:
+                continue
+        return ids
 
     async def get_reactions_for_messages(
         self,
@@ -151,9 +184,7 @@ class ChatReactionOperations:
                 ChatReaction.message_id,
                 ChatReaction.emoji,
                 func.count().label("count"),
-                func.bool_or(
-                    ChatReaction.user_id == current_user_id
-                ).label("current_user_reacted"),
+                func.bool_or(ChatReaction.user_id == current_user_id).label("current_user_reacted"),
             )
             .where(ChatReaction.message_id.in_(message_ids))
             .group_by(ChatReaction.message_id, ChatReaction.emoji)

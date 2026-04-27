@@ -683,11 +683,13 @@ class CommentOperations:
         """
         from uniffy.core.auth.permissions.checker import PermissionChecker
 
-        owner_id, access_mode, baseline_role, resolved_type, resolved_id = (
-            await self._load_parent_policy(
-                organization_id, content_type, content_id
-            )
-        )
+        (
+            owner_id,
+            access_mode,
+            baseline_role,
+            resolved_type,
+            resolved_id,
+        ) = await self._load_parent_policy(organization_id, content_type, content_id)
 
         checker = PermissionChecker(self._session)
         return await checker.effective_role(
@@ -760,9 +762,7 @@ class CommentOperations:
             from uniffy.core.models.projects.project import Project
 
             result = await self._session.execute(
-                select(
-                    Project.owner_id, Project.access_mode, Project.baseline_role
-                ).where(
+                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
                     Project.id == content_id,
                     Project.organization_id == organization_id,
                 )
@@ -788,9 +788,7 @@ class CommentOperations:
             project_id = task_row[0]
 
             proj_result = await self._session.execute(
-                select(
-                    Project.owner_id, Project.access_mode, Project.baseline_role
-                ).where(
+                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
                     Project.id == project_id,
                     Project.organization_id == organization_id,
                 )
@@ -810,9 +808,7 @@ class CommentOperations:
         content_id: UUID,
     ) -> None:
         """Verify the user can view the parent content."""
-        role = await self._resolve_parent_role(
-            user_id, organization_id, content_type, content_id
-        )
+        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_view(role):
             raise PermissionDeniedError("access", "content")
 
@@ -824,8 +820,6 @@ class CommentOperations:
         content_id: UUID,
     ) -> None:
         """Verify the user can edit the parent content."""
-        role = await self._resolve_parent_role(
-            user_id, organization_id, content_type, content_id
-        )
+        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_edit(role):
             raise PermissionDeniedError("edit", "content")

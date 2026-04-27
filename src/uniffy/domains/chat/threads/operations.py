@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,52 @@ from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
+from uniffy.core.types import SubjectType
 from uniffy.domains.chat.access import ChatAccessChecker
+
+THREAD_PARTICIPANT_PREVIEW_LIMIT = 20
+THREAD_INBOX_CONTENT_PREVIEW_CHARS = 200
+
+
+class ThreadInboxRow:
+    """Lightweight row returned by `get_threads_inbox`.
+
+    Avoids fetching full `ChatMessage` (with `mentioned_urns`, `metadata`,
+    `edited_at`, etc.) for thread roots that the inbox view never reads.
+    Content is trimmed to ``THREAD_INBOX_CONTENT_PREVIEW_CHARS`` at the SQL
+    level so wide-text messages don't pay TOAST detoast on inbox loads.
+    """
+
+    __slots__ = (
+        "thread",
+        "stats",
+        "root_message_id",
+        "sender_id",
+        "sender_type",
+        "created_at",
+        "content_preview",
+        "channel",
+    )
+
+    def __init__(
+        self,
+        thread: ChatThread,
+        stats: ChatThreadStats,
+        root_message_id: UUID,
+        sender_id: UUID,
+        sender_type,
+        created_at,
+        content_preview: str,
+        channel: ChatChannel,
+    ) -> None:
+        self.thread = thread
+        self.stats = stats
+        self.root_message_id = root_message_id
+        self.sender_id = sender_id
+        self.sender_type = sender_type
+        self.created_at = created_at
+        self.content_preview = content_preview
+        self.channel = channel
 
 
 class ChatThreadOperations:
@@ -27,8 +72,15 @@ class ChatThreadOperations:
         organization_id: UUID,
         channel_id: UUID,
         root_message_id: UUID,
-    ) -> tuple[ChatMessage, ChatThreadStats | None, list[UUID], bool]:
-        """Get thread info: root message, stats, participants, is_following."""
+    ) -> tuple[ChatMessage, ChatThreadStats | None, list[UUID], int, bool]:
+        """Get thread info.
+
+        Returns ``(root_message, stats, participant preview list,
+        total_participants, is_following)``. Participant preview is capped
+        at ``THREAD_PARTICIPANT_PREVIEW_LIMIT`` for the avatar stack; the
+        absolute count is returned separately so the UI can render
+        "+N more" without hydrating every participant row.
+        """
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
@@ -45,22 +97,28 @@ class ChatThreadOperations:
 
         # Fetch thread stats
         stats_result = await self.session.execute(
-            select(ChatThreadStats).where(
-                ChatThreadStats.root_message_id == root_message_id
-            )
+            select(ChatThreadStats).where(ChatThreadStats.root_message_id == root_message_id)
         )
         stats = stats_result.scalar_one_or_none()
 
-        # Fetch participants
         p_result = await self.session.execute(
             select(ChatThreadParticipant.user_id)
             .where(ChatThreadParticipant.root_message_id == root_message_id)
             .order_by(ChatThreadParticipant.created_at)
-            .limit(10)
+            .limit(THREAD_PARTICIPANT_PREVIEW_LIMIT)
         )
         participant_ids = [r[0] for r in p_result.all()]
 
-        # Check if user follows
+        if len(participant_ids) < THREAD_PARTICIPANT_PREVIEW_LIMIT:
+            total_participants = len(participant_ids)
+        else:
+            count_result = await self.session.execute(
+                select(func.count())
+                .select_from(ChatThreadParticipant)
+                .where(ChatThreadParticipant.root_message_id == root_message_id)
+            )
+            total_participants = int(count_result.scalar_one() or 0)
+
         follow_result = await self.session.execute(
             select(ChatThreadFollow).where(
                 ChatThreadFollow.root_message_id == root_message_id,
@@ -69,7 +127,7 @@ class ChatThreadOperations:
         )
         is_following = follow_result.scalar_one_or_none() is not None
 
-        return root_msg, stats, participant_ids, is_following
+        return root_msg, stats, participant_ids, total_participants, is_following
 
     async def get_thread_messages(
         self,
@@ -94,38 +152,26 @@ class ChatThreadOperations:
 
         if before_id:
             cursor_result = await self.session.execute(
-                select(ChatMessage.created_at, ChatMessage.id).where(
-                    ChatMessage.id == before_id
-                )
+                select(ChatMessage.created_at, ChatMessage.id).where(ChatMessage.id == before_id)
             )
             cursor = cursor_result.one_or_none()
             if cursor:
                 query = query.where(
-                    (ChatMessage.created_at, ChatMessage.id)
-                    < (cursor[0], cursor[1])
+                    (ChatMessage.created_at, ChatMessage.id) < (cursor[0], cursor[1])
                 )
-            query = query.order_by(
-                ChatMessage.created_at.desc(), ChatMessage.id.desc()
-            )
+            query = query.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
         elif after_id:
             cursor_result = await self.session.execute(
-                select(ChatMessage.created_at, ChatMessage.id).where(
-                    ChatMessage.id == after_id
-                )
+                select(ChatMessage.created_at, ChatMessage.id).where(ChatMessage.id == after_id)
             )
             cursor = cursor_result.one_or_none()
             if cursor:
                 query = query.where(
-                    (ChatMessage.created_at, ChatMessage.id)
-                    > (cursor[0], cursor[1])
+                    (ChatMessage.created_at, ChatMessage.id) > (cursor[0], cursor[1])
                 )
-            query = query.order_by(
-                ChatMessage.created_at.asc(), ChatMessage.id.asc()
-            )
+            query = query.order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         else:
-            query = query.order_by(
-                ChatMessage.created_at.desc(), ChatMessage.id.desc()
-            )
+            query = query.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
 
         query = query.limit(limit + 1)
         result = await self.session.execute(query)
@@ -146,15 +192,34 @@ class ChatThreadOperations:
         organization_id: UUID,
         unread_only: bool = False,
         limit: int = 20,
-    ) -> list[tuple[ChatThread, ChatThreadStats, ChatMessage, ChatChannel]]:
-        """Get threads the user is following, sorted by last_reply_at."""
+    ) -> list[ThreadInboxRow]:
+        """Get threads relevant to the user, sorted by last_reply_at.
+
+        A thread is surfaced if the viewer is following it, rooted it
+        (sent the root message), or participated in it (sent a reply).
+        Following alone misses self-rooted-and-self-replied threads,
+        which the inbox should still expose -- mirrors the Slack/Discord
+        "All Threads" convention.
+
+        Selects preview columns instead of hydrating full ``ChatMessage``
+        rows for each thread root: only id, sender, created_at, and a
+        SQL-trimmed content head (``left(content, N)``) make the network
+        trip. Saves a TOAST detoast for wide root messages.
+        """
         limit = min(max(limit, 1), 50)
 
         query = (
-            select(ChatThread, ChatThreadStats, ChatMessage, ChatChannel)
-            .join(
-                ChatThreadFollow,
-                ChatThreadFollow.root_message_id == ChatThread.root_message_id,
+            select(
+                ChatThread,
+                ChatThreadStats,
+                ChatMessage.id,
+                ChatMessage.sender_id,
+                ChatMessage.sender_type,
+                ChatMessage.created_at,
+                func.left(ChatMessage.content, THREAD_INBOX_CONTENT_PREVIEW_CHARS).label(
+                    "content_preview"
+                ),
+                ChatChannel,
             )
             .join(
                 ChatThreadStats,
@@ -168,17 +233,49 @@ class ChatThreadOperations:
                 ChatChannel,
                 ChatChannel.id == ChatThread.channel_id,
             )
+            .outerjoin(
+                ChatThreadFollow,
+                and_(
+                    ChatThreadFollow.root_message_id == ChatThread.root_message_id,
+                    ChatThreadFollow.user_id == user_id,
+                ),
+            )
+            .outerjoin(
+                ChatThreadParticipant,
+                and_(
+                    ChatThreadParticipant.root_message_id == ChatThread.root_message_id,
+                    ChatThreadParticipant.subject_type == SubjectType.USER,
+                    ChatThreadParticipant.subject_id == user_id,
+                ),
+            )
             .where(
-                ChatThreadFollow.user_id == user_id,
                 ChatChannel.organization_id == organization_id,
                 ChatChannel.is_deleted == False,  # noqa: E712
+                or_(
+                    ChatThreadFollow.user_id.is_not(None),
+                    ChatThreadParticipant.subject_id.is_not(None),
+                    ChatMessage.sender_id == user_id,
+                ),
             )
+            .distinct()
             .order_by(ChatThreadStats.last_reply_at.desc().nullslast())
             .limit(limit)
         )
 
         result = await self.session.execute(query)
-        return list(result.all())
+        return [
+            ThreadInboxRow(
+                thread=row[0],
+                stats=row[1],
+                root_message_id=row[2],
+                sender_id=row[3],
+                sender_type=row[4],
+                created_at=row[5],
+                content_preview=row[6] or "",
+                channel=row[7],
+            )
+            for row in result.all()
+        ]
 
     async def follow_thread(
         self,
@@ -191,9 +288,7 @@ class ChatThreadOperations:
 
         # Verify thread exists
         result = await self.session.execute(
-            select(ChatThread).where(
-                ChatThread.root_message_id == root_message_id
-            )
+            select(ChatThread).where(ChatThread.root_message_id == root_message_id)
         )
         thread = result.scalar_one_or_none()
         if not thread:
@@ -203,12 +298,12 @@ class ChatThreadOperations:
             pg_insert(ChatThreadFollow)
             .values(
                 root_message_id=root_message_id,
+                subject_type=SubjectType.USER,
+                subject_id=user_id,
                 user_id=user_id,
                 created_at=datetime.now(UTC),
             )
-            .on_conflict_do_nothing(
-                index_elements=["root_message_id", "user_id"]
-            )
+            .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
         )
         await self.session.commit()
 

@@ -20,23 +20,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrganizationsService_ListMyOrganizations_FullMethodName      = "/organizations.v1.OrganizationsService/ListMyOrganizations"
-	OrganizationsService_ListOrganizations_FullMethodName        = "/organizations.v1.OrganizationsService/ListOrganizations"
-	OrganizationsService_GetOrganization_FullMethodName          = "/organizations.v1.OrganizationsService/GetOrganization"
-	OrganizationsService_CreateOrganization_FullMethodName       = "/organizations.v1.OrganizationsService/CreateOrganization"
-	OrganizationsService_UpdateOrganization_FullMethodName       = "/organizations.v1.OrganizationsService/UpdateOrganization"
-	OrganizationsService_DeleteOrganization_FullMethodName       = "/organizations.v1.OrganizationsService/DeleteOrganization"
-	OrganizationsService_GetOrganizationOverview_FullMethodName  = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
-	OrganizationsService_ListMembers_FullMethodName              = "/organizations.v1.OrganizationsService/ListMembers"
-	OrganizationsService_AddMember_FullMethodName                = "/organizations.v1.OrganizationsService/AddMember"
-	OrganizationsService_UpdateMemberRole_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateMemberRole"
-	OrganizationsService_RemoveMember_FullMethodName             = "/organizations.v1.OrganizationsService/RemoveMember"
-	OrganizationsService_GetPermissionDefaults_FullMethodName    = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
-	OrganizationsService_UpdatePermissionDefaults_FullMethodName = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
-	OrganizationsService_GrantDomainAdmin_FullMethodName         = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
-	OrganizationsService_RevokeDomainAdmin_FullMethodName        = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
-	OrganizationsService_ListDomainAdmins_FullMethodName         = "/organizations.v1.OrganizationsService/ListDomainAdmins"
-	OrganizationsService_GetUserDomainAdmins_FullMethodName      = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
+	OrganizationsService_ListMyOrganizations_FullMethodName        = "/organizations.v1.OrganizationsService/ListMyOrganizations"
+	OrganizationsService_ListOrganizations_FullMethodName          = "/organizations.v1.OrganizationsService/ListOrganizations"
+	OrganizationsService_GetOrganization_FullMethodName            = "/organizations.v1.OrganizationsService/GetOrganization"
+	OrganizationsService_CreateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/CreateOrganization"
+	OrganizationsService_UpdateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateOrganization"
+	OrganizationsService_DeleteOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/DeleteOrganization"
+	OrganizationsService_GetOrganizationOverview_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
+	OrganizationsService_ListMembers_FullMethodName                = "/organizations.v1.OrganizationsService/ListMembers"
+	OrganizationsService_AddMember_FullMethodName                  = "/organizations.v1.OrganizationsService/AddMember"
+	OrganizationsService_UpdateMemberRole_FullMethodName           = "/organizations.v1.OrganizationsService/UpdateMemberRole"
+	OrganizationsService_RemoveMember_FullMethodName               = "/organizations.v1.OrganizationsService/RemoveMember"
+	OrganizationsService_GetPermissionDefaults_FullMethodName      = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
+	OrganizationsService_UpdatePermissionDefaults_FullMethodName   = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
+	OrganizationsService_GetOrganizationSettings_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationSettings"
+	OrganizationsService_UpdateOrganizationSettings_FullMethodName = "/organizations.v1.OrganizationsService/UpdateOrganizationSettings"
+	OrganizationsService_GrantDomainAdmin_FullMethodName           = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
+	OrganizationsService_RevokeDomainAdmin_FullMethodName          = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
+	OrganizationsService_ListDomainAdmins_FullMethodName           = "/organizations.v1.OrganizationsService/ListDomainAdmins"
+	OrganizationsService_GetUserDomainAdmins_FullMethodName        = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -61,6 +63,9 @@ type OrganizationsServiceClient interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*PermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*ContentTypeDefaults, error)
+	// Organization settings (Org Admin) — org-scoped JSONB preferences.
+	GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error)
+	UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error)
 	// Domain Admin management (Org Admin)
 	GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error)
 	RevokeDomainAdmin(ctx context.Context, in *RevokeDomainAdminRequest, opts ...grpc.CallOption) (*RevokeDomainAdminResponse, error)
@@ -206,6 +211,26 @@ func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Contex
 	return out, nil
 }
 
+func (c *organizationsServiceClient) GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrganizationSettings)
+	err := c.cc.Invoke(ctx, OrganizationsService_GetOrganizationSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrganizationSettings)
+	err := c.cc.Invoke(ctx, OrganizationsService_UpdateOrganizationSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *organizationsServiceClient) GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DomainAdminInfo)
@@ -268,6 +293,9 @@ type OrganizationsServiceServer interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*PermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error)
+	// Organization settings (Org Admin) — org-scoped JSONB preferences.
+	GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*OrganizationSettings, error)
+	UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*OrganizationSettings, error)
 	// Domain Admin management (Org Admin)
 	GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error)
 	RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error)
@@ -321,6 +349,12 @@ func (UnimplementedOrganizationsServiceServer) GetPermissionDefaults(context.Con
 }
 func (UnimplementedOrganizationsServiceServer) UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePermissionDefaults not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*OrganizationSettings, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrganizationSettings not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*OrganizationSettings, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOrganizationSettings not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantDomainAdmin not implemented")
@@ -589,6 +623,42 @@ func _OrganizationsService_UpdatePermissionDefaults_Handler(srv interface{}, ctx
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_GetOrganizationSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrganizationSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).GetOrganizationSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_GetOrganizationSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).GetOrganizationSettings(ctx, req.(*GetOrganizationSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_UpdateOrganizationSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrganizationSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).UpdateOrganizationSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_UpdateOrganizationSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).UpdateOrganizationSettings(ctx, req.(*UpdateOrganizationSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrganizationsService_GrantDomainAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GrantDomainAdminRequest)
 	if err := dec(in); err != nil {
@@ -719,6 +789,14 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePermissionDefaults",
 			Handler:    _OrganizationsService_UpdatePermissionDefaults_Handler,
+		},
+		{
+			MethodName: "GetOrganizationSettings",
+			Handler:    _OrganizationsService_GetOrganizationSettings_Handler,
+		},
+		{
+			MethodName: "UpdateOrganizationSettings",
+			Handler:    _OrganizationsService_UpdateOrganizationSettings_Handler,
 		},
 		{
 			MethodName: "GrantDomainAdmin",

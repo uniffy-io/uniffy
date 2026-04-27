@@ -16,9 +16,7 @@ class ChatReadCursor(SQLModel, table=True):
     """
 
     __tablename__ = "chat_read_cursors"
-    __table_args__ = (
-        Index("ix_chat_read_cursors_user", "user_id"),
-    )
+    __table_args__ = (Index("ix_chat_read_cursors_user", "user_id"),)
 
     channel_id: UUID = Field(
         sa_column=Column(ForeignKey("chat_channels.id", ondelete="CASCADE"), primary_key=True),

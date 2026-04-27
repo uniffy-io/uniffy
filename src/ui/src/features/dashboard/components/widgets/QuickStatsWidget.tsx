@@ -1,124 +1,134 @@
 /**
- * QuickStatsWidget - Displays key metrics across all content domains
+ * QuickStatsWidget - Horizontal row of compact stat cards
  *
- * Shows counts for:
- * - Notes
- * - Files
- * - Upcoming events (this week)
- * - Bookmarks
+ * Shows: unread notifications, tasks due today, events today, team online.
+ * Clickable cards navigate to relevant pages.
  */
 
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Bell, Target, CalendarDots, Users, ArrowRight } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { ArrowRight, BookmarkSimple } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { UrnType } from '@/shared/utils/urnTypes';
+import type { CalendarEvent } from '@/features/calendar/types';
+import type { Task } from '@/features/projects/types/project';
 
 interface StatCardProps {
   icon: Icon;
   label: string;
   value: number;
   href: string;
-  theme: {
-    iconBg: string;
-    accentText: string;
-  };
+  iconColor: string;
   loading?: boolean;
 }
 
-function StatCard({ icon: IconComponent, label, value, href, theme, loading }: StatCardProps) {
+function StatCard({ icon: IconComponent, label, value, href, iconColor, loading }: StatCardProps) {
   return (
     <Link
       to={href}
       className={cn(
-        'group relative rounded-xl border border-border bg-card p-4 transition-all duration-200',
-        'hover:border-primary/30 hover:shadow-md'
+        'group relative flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all duration-200',
+        'hover:border-primary/30 hover:shadow-md',
       )}
     >
-      <div className="flex items-center justify-between">
-        <div className={cn('rounded-lg p-2', theme.iconBg)}>
-          <IconComponent size={20} weight="fill" className="text-white" />
-        </div>
-        <ArrowRight
-          size={16}
-          className="text-muted-foreground opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0.5"
-        />
+      <div className={cn('rounded-lg p-2', iconColor)}>
+        <IconComponent size={18} weight="fill" className="text-white" />
       </div>
-      <div className="mt-3">
+      <div className="min-w-0">
         {loading ? (
-          <div className="h-7 w-12 rounded bg-muted animate-pulse" />
+          <div className="h-6 w-8 rounded bg-muted animate-pulse" />
         ) : (
-          <p className={cn('text-2xl font-bold', theme.accentText)}>{value.toLocaleString()}</p>
+          <p className="text-xl font-bold leading-none">{value.toLocaleString()}</p>
         )}
-        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </div>
+      <ArrowRight
+        size={14}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-0 transition-all duration-200 group-hover:opacity-100"
+      />
     </Link>
   );
 }
 
 export function QuickStatsWidget() {
-  // Get data from all domain slices
-  const notesCount = useAppSelector((state) => state.notes?.pagination?.totalCount ?? 0);
-  const notesLoading = useAppSelector((state) => state.notes?.loading ?? false);
+  const unreadCount = useAppSelector((state) => state.notifications?.unreadCount ?? 0);
+  const notificationsLoading = useAppSelector((state) => state.notifications?.loading ?? false);
 
-  const filesCount = useAppSelector((state) => state.files?.pagination?.totalCount ?? 0);
-  const filesLoading = useAppSelector((state) => state.files?.loading ?? false);
+  const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
+  const tasksLoading = useAppSelector((state) => state.projects?.loading?.tasks ?? false);
+  const userId = useAppSelector((state) => state.auth.user?.id ?? '');
 
-  const bookmarksCount = useAppSelector((state) => state.bookmarks?.totalCount ?? 0);
-  const bookmarksLoading = useAppSelector((state) => state.bookmarks?.loading ?? false);
-
-  // Calculate upcoming events count (events in the next 7 days)
   const events = useAppSelector((state) => state.calendar?.events ?? {});
   const eventsLoading = useAppSelector((state) => state.calendar?.loading?.events ?? false);
 
-  const upcomingEventsCount = Object.values(events).filter((event) => {
-    const eventDate = new Date(event.startTime);
+  const presenceStatuses = useAppSelector((state) => state.presence?.statuses ?? {});
+
+  const tasksDueToday = useMemo(() => {
     const now = new Date();
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return eventDate >= now && eventDate <= weekFromNow;
-  }).length;
+    return Object.values(tasks).filter((task: Task) => {
+      if (task.deletedAt || task.completedAt) return false;
+      if (!task.assigneeIds.includes(userId)) return false;
+      if (!task.dueDate) return false;
+      const due = new Date(task.dueDate);
+      return (
+        due.getFullYear() === now.getFullYear() &&
+        due.getMonth() === now.getMonth() &&
+        due.getDate() === now.getDate()
+      );
+    }).length;
+  }, [tasks, userId]);
 
-  const noteConfig = getContentTypeConfig(UrnType.NOTE);
-  const fileConfig = getContentTypeConfig(UrnType.FILE);
-  const calendarConfig = getContentTypeConfig(UrnType.CALENDAR_EVENT);
+  const eventsToday = useMemo(() => {
+    const now = new Date();
+    return Object.values(events).filter((event: CalendarEvent) => {
+      const start = new Date(event.startTime);
+      return (
+        start.getFullYear() === now.getFullYear() &&
+        start.getMonth() === now.getMonth() &&
+        start.getDate() === now.getDate()
+      );
+    }).length;
+  }, [events]);
 
-  const stats = [
+  const teamOnline = useMemo(() => {
+    return Object.values(presenceStatuses).filter(
+      (status) => status === 'online' || status === 'away' || status === 'dnd',
+    ).length;
+  }, [presenceStatuses]);
+
+  const stats: StatCardProps[] = [
     {
-      icon: noteConfig.icon,
-      label: noteConfig.labelPlural,
-      value: notesCount,
-      href: '/notes',
-      theme: noteConfig.theme,
-      loading: notesLoading,
+      icon: Bell,
+      label: 'Unread',
+      value: unreadCount,
+      href: '/notifications',
+      iconColor: 'bg-gradient-to-br from-amber-500 to-amber-600',
+      loading: notificationsLoading,
     },
     {
-      icon: fileConfig.icon,
-      label: fileConfig.labelPlural,
-      value: filesCount,
-      href: '/files',
-      theme: fileConfig.theme,
-      loading: filesLoading,
+      icon: Target,
+      label: 'Tasks due',
+      value: tasksDueToday,
+      href: '/projects',
+      iconColor: 'bg-gradient-to-br from-teal-500 to-teal-600',
+      loading: tasksLoading,
     },
     {
-      icon: calendarConfig.icon,
-      label: 'This Week',
-      value: upcomingEventsCount,
+      icon: CalendarDots,
+      label: 'Events today',
+      value: eventsToday,
       href: '/calendar',
-      theme: calendarConfig.theme,
+      iconColor: 'bg-gradient-to-br from-rose-500 to-rose-600',
       loading: eventsLoading,
     },
     {
-      icon: BookmarkSimple,
-      label: 'Bookmarks',
-      value: bookmarksCount,
-      href: '/notes',
-      theme: {
-        iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-        accentText: 'text-amber-600 dark:text-amber-400',
-      },
-      loading: bookmarksLoading,
+      icon: Users,
+      label: 'Team online',
+      value: teamOnline,
+      href: '/chat',
+      iconColor: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+      loading: false,
     },
   ];
 

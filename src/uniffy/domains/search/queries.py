@@ -51,6 +51,50 @@ class SearchResult:
     member_count: int = 0
     updated_by_name: str | None = None
 
+    # Extended task fields
+    priority: str | None = None
+    priority_label: str | None = None
+    priority_color: str | None = None
+    status_label: str | None = None
+    status_color: str | None = None
+    task_type: str | None = None
+    task_number: int = 0
+    project_name: str | None = None
+    project_slug: str | None = None
+    project_color: str | None = None
+    subtask_completed: int = 0
+    subtask_total: int = 0
+    blocked_by_count: int = 0
+    assignee_ids: list[str] | None = None
+
+    # Calendar fields
+    event_start_time: str | None = None
+    event_end_time: str | None = None
+    event_is_all_day: bool = False
+    event_location: str | None = None
+    event_meeting_url: str | None = None
+
+    # File fields
+    file_mime_type: str | None = None
+    file_size: int = 0
+
+    # Note fields
+    note_node_type: str | None = None
+
+    # Chat fields
+    channel_type: str | None = None
+
+    # Agent fields
+    agent_emoji: str | None = None
+    agent_theme_color: str | None = None
+
+    # User fields
+    user_avatar_url: str | None = None
+    user_email: str | None = None
+
+    # Shared
+    content_tags: list[str] | None = None
+
     @classmethod
     def from_meilisearch_hit(cls, hit: dict[str, Any]) -> SearchResult:
         """
@@ -101,6 +145,7 @@ async def execute_search(
     tag_filters: list[str] | None = None,
     my_content_only: bool = False,
     owner_filter: UUID | None = None,
+    metadata_filters: dict[str, str] | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> tuple[list[SearchResult], int]:
@@ -125,6 +170,8 @@ async def execute_search(
         If True, only return content owned by the user.
     owner_filter : UUID | None
         Filter by specific owner ID.
+    metadata_filters : dict[str, str] | None
+        Filter by metadata fields (e.g., channel_id, sender_id).
     limit : int
         Maximum number of results.
     offset : int
@@ -148,6 +195,7 @@ async def execute_search(
         tag_filters=tag_filters,
         my_content_only=my_content_only,
         owner_filter=owner_filter,
+        metadata_filters=metadata_filters,
         limit=limit,
         offset=offset,
     )

@@ -22,7 +22,7 @@ from uniffy_proto.attachments.v1.attachments_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.attachments.converters import (
     attachment_to_proto,
     content_type_from_proto,
@@ -55,7 +55,7 @@ class AttachmentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AttachmentOperations(session)
                 attachment = await ops.attach_file(
                     user_id=user_id,
@@ -109,7 +109,7 @@ class AttachmentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AttachmentOperations(session)
                 success = await ops.detach_file(
                     user_id=user_id,
@@ -150,7 +150,7 @@ class AttachmentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AttachmentOperations(session)
                 attachments = await ops.list_attachments(
                     user_id=user_id,
@@ -193,7 +193,7 @@ class AttachmentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AttachmentOperations(session)
                 attachments, total = await ops.list_shared_attachments(
                     user_id=user_id,
@@ -255,7 +255,7 @@ class AttachmentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AttachmentOperations(session)
                 folder = await ops.get_or_create_attachments_folder(
                     user_id=user_id,

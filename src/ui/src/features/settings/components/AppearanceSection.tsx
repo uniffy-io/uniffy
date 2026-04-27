@@ -2,7 +2,7 @@
  * Appearance settings section for theme, accent color, and font.
  */
 
-import { Sun, Moon, Desktop, Check } from '@phosphor-icons/react';
+import { Sun, Moon, Desktop, Check, CardsThree, Minus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
@@ -116,6 +116,10 @@ export function AppearanceSection() {
 
     const handleDefaultEditorChange = (defaultEditor: string) => {
         updateSettings({ appearance: { defaultEditor } });
+    };
+
+    const handleMentionDisplayChange = (mentionDisplay: string) => {
+        updateSettings({ appearance: { mentionDisplay } });
     };
 
     return (
@@ -287,6 +291,39 @@ export function AppearanceSection() {
                             {appearance.defaultEditor === id && (
                                 <Check size={20} weight="bold" className="text-primary" />
                             )}
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            {/* Mention Display */}
+            <section className="space-y-4">
+                <div>
+                    <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Choose how mentions appear in chat, notes, and other content.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 md:gap-4">
+                    {[
+                        { id: 'expanded', label: 'Expanded', icon: CardsThree, description: 'Rich card with metadata' },
+                        { id: 'compact', label: 'Compact', icon: Minus, description: 'Inline chip with label' },
+                    ].map(({ id, label, icon: Icon, description }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            disabled={saving}
+                            className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-colors ${
+                                appearance.mentionDisplay === id
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50 bg-card'
+                            }`}
+                            onClick={() => handleMentionDisplayChange(id)}
+                        >
+                            <Icon size={32} weight="duotone" className="text-foreground" />
+                            <span className="text-sm font-medium text-foreground">{label}</span>
+                            <span className="text-xs text-muted-foreground text-center">{description}</span>
                         </button>
                     ))}
                 </div>

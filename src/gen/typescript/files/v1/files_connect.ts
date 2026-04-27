@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetSavedFilterRequest, GetUploadStatusRequest, GetUploadStatusResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, MoveItemsRequest, MoveItemsResponse, RestoreFileRequest, RestoreFileVersionRequest, SavedFilterResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
+import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CheckStorageQuotaRequest, CheckStorageQuotaResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateFolderTreeRequest, CreateFolderTreeResponse, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetOrgStorageQuotaRequest, GetOrgStorageQuotaResponse, GetSavedFilterRequest, GetStorageUsageRequest, GetStorageUsageResponse, GetUploadStatusRequest, GetUploadStatusResponse, GetUserStorageQuotaRequest, GetUserStorageQuotaResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListOrgStorageUsageRequest, ListOrgStorageUsageResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTrashRequest, ListTrashResponse, ListUserStorageQuotaOverridesRequest, ListUserStorageQuotaOverridesResponse, MoveItemsRequest, MoveItemsResponse, RecalculateStorageUsageRequest, RecalculateStorageUsageResponse, RemoveUserStorageQuotaOverrideRequest, RemoveUserStorageQuotaOverrideResponse, RestoreFileRequest, RestoreFileVersionRequest, RestoreFolderRequest, SavedFilterResponse, SetOrgStorageQuotaRequest, SetOrgStorageQuotaResponse, SetUserStorageQuotaOverrideRequest, SetUserStorageQuotaOverrideResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -207,6 +207,17 @@ export const FilesService = {
       kind: MethodKind.Unary,
     },
     /**
+     * Create a folder tree in a single transaction (for recursive folder upload).
+     *
+     * @generated from rpc files.v1.FilesService.CreateFolderTree
+     */
+    createFolderTree: {
+      name: "CreateFolderTree",
+      I: CreateFolderTreeRequest,
+      O: CreateFolderTreeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * Move files/folders to a different parent.
      *
      * @generated from rpc files.v1.FilesService.MoveItems
@@ -251,6 +262,28 @@ export const FilesService = {
       kind: MethodKind.Unary,
     },
     /**
+     * List deleted files and folders (trash).
+     *
+     * @generated from rpc files.v1.FilesService.ListTrash
+     */
+    listTrash: {
+      name: "ListTrash",
+      I: ListTrashRequest,
+      O: ListTrashResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Restore a soft-deleted folder (and its contents) back to its parent.
+     *
+     * @generated from rpc files.v1.FilesService.RestoreFolder
+     */
+    restoreFolder: {
+      name: "RestoreFolder",
+      I: RestoreFolderRequest,
+      O: FolderResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * List version history for a file.
      *
      * @generated from rpc files.v1.FilesService.ListFileVersions
@@ -270,6 +303,116 @@ export const FilesService = {
       name: "RestoreFileVersion",
       I: RestoreFileVersionRequest,
       O: FileResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get the organization storage quota configuration.
+     *
+     * @generated from rpc files.v1.FilesService.GetOrgStorageQuota
+     */
+    getOrgStorageQuota: {
+      name: "GetOrgStorageQuota",
+      I: GetOrgStorageQuotaRequest,
+      O: GetOrgStorageQuotaResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Set or update the organization storage quota configuration.
+     *
+     * @generated from rpc files.v1.FilesService.SetOrgStorageQuota
+     */
+    setOrgStorageQuota: {
+      name: "SetOrgStorageQuota",
+      I: SetOrgStorageQuotaRequest,
+      O: SetOrgStorageQuotaResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get a user's effective storage quota and current usage.
+     *
+     * @generated from rpc files.v1.FilesService.GetUserStorageQuota
+     */
+    getUserStorageQuota: {
+      name: "GetUserStorageQuota",
+      I: GetUserStorageQuotaRequest,
+      O: GetUserStorageQuotaResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Set or update a per-user quota override.
+     *
+     * @generated from rpc files.v1.FilesService.SetUserStorageQuotaOverride
+     */
+    setUserStorageQuotaOverride: {
+      name: "SetUserStorageQuotaOverride",
+      I: SetUserStorageQuotaOverrideRequest,
+      O: SetUserStorageQuotaOverrideResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Remove a per-user quota override (reverts to org default).
+     *
+     * @generated from rpc files.v1.FilesService.RemoveUserStorageQuotaOverride
+     */
+    removeUserStorageQuotaOverride: {
+      name: "RemoveUserStorageQuotaOverride",
+      I: RemoveUserStorageQuotaOverrideRequest,
+      O: RemoveUserStorageQuotaOverrideResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List all per-user quota overrides in an organization.
+     *
+     * @generated from rpc files.v1.FilesService.ListUserStorageQuotaOverrides
+     */
+    listUserStorageQuotaOverrides: {
+      name: "ListUserStorageQuotaOverrides",
+      I: ListUserStorageQuotaOverridesRequest,
+      O: ListUserStorageQuotaOverridesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get storage usage for a specific user (own usage for regular users).
+     *
+     * @generated from rpc files.v1.FilesService.GetStorageUsage
+     */
+    getStorageUsage: {
+      name: "GetStorageUsage",
+      I: GetStorageUsageRequest,
+      O: GetStorageUsageResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List storage usage for all users in an organization (admin only).
+     *
+     * @generated from rpc files.v1.FilesService.ListOrgStorageUsage
+     */
+    listOrgStorageUsage: {
+      name: "ListOrgStorageUsage",
+      I: ListOrgStorageUsageRequest,
+      O: ListOrgStorageUsageResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Recalculate storage usage from actual files (admin, drift correction).
+     *
+     * @generated from rpc files.v1.FilesService.RecalculateStorageUsage
+     */
+    recalculateStorageUsage: {
+      name: "RecalculateStorageUsage",
+      I: RecalculateStorageUsageRequest,
+      O: RecalculateStorageUsageResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Pre-check whether an upload of a given size is allowed under quota.
+     *
+     * @generated from rpc files.v1.FilesService.CheckStorageQuota
+     */
+    checkStorageQuota: {
+      name: "CheckStorageQuota",
+      I: CheckStorageQuotaRequest,
+      O: CheckStorageQuotaResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -93,6 +93,8 @@ search_query = ToolDefinition(
         "required": ["query"],
     },
     executor=_execute_search_query,
+    read_only=True,
+    timeout_seconds=30,
 )
 
 list_members = ToolDefinition(
@@ -112,6 +114,7 @@ list_members = ToolDefinition(
         },
     },
     executor=_execute_list_members,
+    read_only=True,
 )
 
 SEARCH_TOOLS: list[ToolDefinition] = [search_query]

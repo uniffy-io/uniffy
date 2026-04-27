@@ -2,10 +2,11 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from chat.v1 import chat_pb2 as _chat_pb2
+from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Mapping as _Mapping
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
@@ -25,6 +26,13 @@ class ChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CHAT_EVENT_TYPE_CHANNEL_UPDATED: _ClassVar[ChatEventType]
     CHAT_EVENT_TYPE_THREAD_UPDATED: _ClassVar[ChatEventType]
     CHAT_EVENT_TYPE_HEARTBEAT: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MEMBERS_ADDED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MEMBERS_REMOVED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_AGENT_TYPING: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_AGENT_TOOL_CALL: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED: _ClassVar[ChatEventType]
 
 class UserChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -47,6 +55,13 @@ CHAT_EVENT_TYPE_MEMBER_LEFT: ChatEventType
 CHAT_EVENT_TYPE_CHANNEL_UPDATED: ChatEventType
 CHAT_EVENT_TYPE_THREAD_UPDATED: ChatEventType
 CHAT_EVENT_TYPE_HEARTBEAT: ChatEventType
+CHAT_EVENT_TYPE_MEMBERS_ADDED: ChatEventType
+CHAT_EVENT_TYPE_MEMBERS_REMOVED: ChatEventType
+CHAT_EVENT_TYPE_AGENT_TYPING: ChatEventType
+CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA: ChatEventType
+CHAT_EVENT_TYPE_AGENT_TOOL_CALL: ChatEventType
+CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED: ChatEventType
+CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED: ChatEventType
 USER_CHAT_EVENT_TYPE_UNSPECIFIED: UserChatEventType
 USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED: UserChatEventType
 USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY: UserChatEventType
@@ -55,7 +70,7 @@ USER_CHAT_EVENT_TYPE_HEARTBEAT: UserChatEventType
 USER_CHAT_EVENT_TYPE_CHANNEL_EVENT: UserChatEventType
 
 class ChatEvent(_message.Message):
-    __slots__ = ("event_type", "timestamp", "channel_id", "message", "message_deleted", "reaction", "typing", "member", "channel_updated", "thread_updated")
+    __slots__ = ("event_type", "timestamp", "channel_id", "message", "message_deleted", "reaction", "typing", "member", "channel_updated", "thread_updated", "agent_typing", "agent_token_delta", "agent_tool_call", "agent_confirmation_requested", "agent_confirmation_resolved", "members_changed")
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
@@ -66,6 +81,12 @@ class ChatEvent(_message.Message):
     MEMBER_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_UPDATED_FIELD_NUMBER: _ClassVar[int]
     THREAD_UPDATED_FIELD_NUMBER: _ClassVar[int]
+    AGENT_TYPING_FIELD_NUMBER: _ClassVar[int]
+    AGENT_TOKEN_DELTA_FIELD_NUMBER: _ClassVar[int]
+    AGENT_TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
+    AGENT_CONFIRMATION_REQUESTED_FIELD_NUMBER: _ClassVar[int]
+    AGENT_CONFIRMATION_RESOLVED_FIELD_NUMBER: _ClassVar[int]
+    MEMBERS_CHANGED_FIELD_NUMBER: _ClassVar[int]
     event_type: ChatEventType
     timestamp: _timestamp_pb2.Timestamp
     channel_id: str
@@ -76,7 +97,13 @@ class ChatEvent(_message.Message):
     member: MemberPayload
     channel_updated: _chat_pb2.ChatChannel
     thread_updated: ThreadUpdatedPayload
-    def __init__(self, event_type: _Optional[_Union[ChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., channel_id: _Optional[str] = ..., message: _Optional[_Union[_chat_pb2.ChatMessage, _Mapping]] = ..., message_deleted: _Optional[_Union[MessageDeletedPayload, _Mapping]] = ..., reaction: _Optional[_Union[ReactionPayload, _Mapping]] = ..., typing: _Optional[_Union[TypingPayload, _Mapping]] = ..., member: _Optional[_Union[MemberPayload, _Mapping]] = ..., channel_updated: _Optional[_Union[_chat_pb2.ChatChannel, _Mapping]] = ..., thread_updated: _Optional[_Union[ThreadUpdatedPayload, _Mapping]] = ...) -> None: ...
+    agent_typing: AgentTypingPayload
+    agent_token_delta: AgentTokenDeltaPayload
+    agent_tool_call: AgentToolCallPayload
+    agent_confirmation_requested: AgentConfirmationRequestedPayload
+    agent_confirmation_resolved: AgentConfirmationResolvedPayload
+    members_changed: MembersChangedPayload
+    def __init__(self, event_type: _Optional[_Union[ChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., channel_id: _Optional[str] = ..., message: _Optional[_Union[_chat_pb2.ChatMessage, _Mapping]] = ..., message_deleted: _Optional[_Union[MessageDeletedPayload, _Mapping]] = ..., reaction: _Optional[_Union[ReactionPayload, _Mapping]] = ..., typing: _Optional[_Union[TypingPayload, _Mapping]] = ..., member: _Optional[_Union[MemberPayload, _Mapping]] = ..., channel_updated: _Optional[_Union[_chat_pb2.ChatChannel, _Mapping]] = ..., thread_updated: _Optional[_Union[ThreadUpdatedPayload, _Mapping]] = ..., agent_typing: _Optional[_Union[AgentTypingPayload, _Mapping]] = ..., agent_token_delta: _Optional[_Union[AgentTokenDeltaPayload, _Mapping]] = ..., agent_tool_call: _Optional[_Union[AgentToolCallPayload, _Mapping]] = ..., agent_confirmation_requested: _Optional[_Union[AgentConfirmationRequestedPayload, _Mapping]] = ..., agent_confirmation_resolved: _Optional[_Union[AgentConfirmationResolvedPayload, _Mapping]] = ..., members_changed: _Optional[_Union[MembersChangedPayload, _Mapping]] = ...) -> None: ...
 
 class MessageDeletedPayload(_message.Message):
     __slots__ = ("message_id", "deleted_at")
@@ -118,6 +145,12 @@ class MemberPayload(_message.Message):
     role: _chat_pb2.ChannelRole
     def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., avatar_url: _Optional[str] = ..., role: _Optional[_Union[_chat_pb2.ChannelRole, str]] = ...) -> None: ...
 
+class MembersChangedPayload(_message.Message):
+    __slots__ = ("user_ids",)
+    USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    user_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class ThreadUpdatedPayload(_message.Message):
     __slots__ = ("root_message_id", "reply_count", "last_reply_at", "latest_participant_id")
     ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -129,6 +162,92 @@ class ThreadUpdatedPayload(_message.Message):
     last_reply_at: _timestamp_pb2.Timestamp
     latest_participant_id: str
     def __init__(self, root_message_id: _Optional[str] = ..., reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_participant_id: _Optional[str] = ...) -> None: ...
+
+class AgentTypingPayload(_message.Message):
+    __slots__ = ("agent_id", "display_name", "started", "root_id")
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    STARTED_FIELD_NUMBER: _ClassVar[int]
+    ROOT_ID_FIELD_NUMBER: _ClassVar[int]
+    agent_id: str
+    display_name: str
+    started: bool
+    root_id: str
+    def __init__(self, agent_id: _Optional[str] = ..., display_name: _Optional[str] = ..., started: _Optional[bool] = ..., root_id: _Optional[str] = ...) -> None: ...
+
+class AgentTokenDeltaPayload(_message.Message):
+    __slots__ = ("message_id", "agent_id", "delta", "sequence", "final")
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    FINAL_FIELD_NUMBER: _ClassVar[int]
+    message_id: str
+    agent_id: str
+    delta: str
+    sequence: int
+    final: bool
+    def __init__(self, message_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., delta: _Optional[str] = ..., sequence: _Optional[int] = ..., final: _Optional[bool] = ...) -> None: ...
+
+class AgentToolCallPayload(_message.Message):
+    __slots__ = ("message_id", "agent_id", "tool_name", "tool_call_id", "status", "preview", "error_message")
+    class Status(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        STATUS_UNSPECIFIED: _ClassVar[AgentToolCallPayload.Status]
+        STATUS_STARTED: _ClassVar[AgentToolCallPayload.Status]
+        STATUS_COMPLETED: _ClassVar[AgentToolCallPayload.Status]
+        STATUS_FAILED: _ClassVar[AgentToolCallPayload.Status]
+    STATUS_UNSPECIFIED: AgentToolCallPayload.Status
+    STATUS_STARTED: AgentToolCallPayload.Status
+    STATUS_COMPLETED: AgentToolCallPayload.Status
+    STATUS_FAILED: AgentToolCallPayload.Status
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message_id: str
+    agent_id: str
+    tool_name: str
+    tool_call_id: str
+    status: AgentToolCallPayload.Status
+    preview: str
+    error_message: str
+    def __init__(self, message_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., status: _Optional[_Union[AgentToolCallPayload.Status, str]] = ..., preview: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...
+
+class AgentConfirmationRequestedPayload(_message.Message):
+    __slots__ = ("message_id", "agent_id", "request_id", "tool_name", "args_preview", "actor_user_id", "expires_at")
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    ARGS_PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    message_id: str
+    agent_id: str
+    request_id: str
+    tool_name: str
+    args_preview: str
+    actor_user_id: str
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, message_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., request_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., args_preview: _Optional[str] = ..., actor_user_id: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class AgentConfirmationResolvedPayload(_message.Message):
+    __slots__ = ("request_id", "message_id", "decision", "decided_by_user_id", "decided_at")
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    DECISION_FIELD_NUMBER: _ClassVar[int]
+    DECIDED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DECIDED_AT_FIELD_NUMBER: _ClassVar[int]
+    request_id: str
+    message_id: str
+    decision: _chat_pb2.AgentConfirmationDecision
+    decided_by_user_id: str
+    decided_at: _timestamp_pb2.Timestamp
+    def __init__(self, request_id: _Optional[str] = ..., message_id: _Optional[str] = ..., decision: _Optional[_Union[_chat_pb2.AgentConfirmationDecision, str]] = ..., decided_by_user_id: _Optional[str] = ..., decided_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class StreamUserChatEventsRequest(_message.Message):
     __slots__ = ("organization_id",)

@@ -20,6 +20,10 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.cache import (
+    get_or_load_effective_role,
+    get_or_load_org_admin,
+)
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
 from uniffy.core.types import (
     AccessMode,
@@ -117,48 +121,45 @@ class PermissionChecker:
             The effective role, or None if the user has no access.
 
         """
-        # 1. Org admin / owner bypass: always full control over everything
-        #    in their organization.
-        if await self._is_org_admin(user_id, organization_id):
-            return ContentRole.OWNER
 
-        # 2. Domain admin bypass: full control over their domain's
-        #    content types.
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return ContentRole.ADMIN
+        async def _compute() -> ContentRole | None:
+            if await self._is_org_admin(user_id, organization_id):
+                return ContentRole.OWNER
 
-        # 3. Owner of the content.
-        if owner_id == user_id:
-            return ContentRole.OWNER
+            if await self._is_domain_admin_for_content(
+                user_id, organization_id, content_type
+            ):
+                return ContentRole.ADMIN
 
-        # 4. Explicit member grant (direct user or via group).
-        member_role = await self._get_member_role(
-            organization_id, content_type, content_id, user_id
+            if owner_id == user_id:
+                return ContentRole.OWNER
+
+            member_role = await self._get_member_role(
+                organization_id, content_type, content_id, user_id
+            )
+            if member_role == ContentRole.BLOCKED:
+                return None
+            if member_role is not None:
+                return member_role
+
+            if access_mode == AccessMode.OWNER_ONLY:
+                return None
+            if access_mode == AccessMode.EXPLICIT_MEMBERS:
+                return None
+            if access_mode == AccessMode.OPEN_TO_ORG:
+                if baseline_role is None:
+                    return None
+                if not await self._is_user_in_organization(
+                    user_id, organization_id
+                ):
+                    return None
+                return baseline_role
+
+            return None
+
+        return await get_or_load_effective_role(
+            organization_id, user_id, content_type, content_id, _compute
         )
-
-        # 4a. BLOCKED is an explicit deny regardless of baseline access.
-        if member_role == ContentRole.BLOCKED:
-            return None
-
-        # 4b. Non-blocked explicit grants always beat the baseline.
-        if member_role is not None:
-            return member_role
-
-        # 5. Baseline from the content's access mode.
-        if access_mode == AccessMode.OWNER_ONLY:
-            return None
-
-        if access_mode == AccessMode.EXPLICIT_MEMBERS:
-            return None
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                return None
-            if not await self._is_user_in_organization(user_id, organization_id):
-                return None
-            return baseline_role
-
-        return None
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
         """Public accessor used by callers that need to bypass role checks."""
@@ -171,9 +172,7 @@ class PermissionChecker:
         content_type: ContentType,
     ) -> bool:
         """Public accessor for the domain-admin bypass."""
-        return await self._is_domain_admin_for_content(
-            user_id, organization_id, content_type
-        )
+        return await self._is_domain_admin_for_content(user_id, organization_id, content_type)
 
     async def get_user_org_role(
         self,
@@ -205,8 +204,7 @@ class PermissionChecker:
 
         # Direct user grant -- at most one row due to unique constraint.
         direct_result = await self.session.execute(
-            select(ContentMember.role)
-            .where(
+            select(ContentMember.role).where(
                 ContentMember.organization_id == organization_id,
                 ContentMember.content_type == content_type,
                 ContentMember.content_id == content_id,
@@ -222,17 +220,13 @@ class PermissionChecker:
         if direct_role == ContentRole.BLOCKED:
             return ContentRole.BLOCKED
 
-        user_groups_subq = (
-            select(GroupMember.group_id)
-            .where(
-                GroupMember.user_id == user_id,
-                GroupMember.is_active == True,  # noqa: E712
-            )
+        user_groups_subq = select(GroupMember.group_id).where(
+            GroupMember.user_id == user_id,
+            GroupMember.is_active == True,  # noqa: E712
         )
 
         group_result = await self.session.execute(
-            select(ContentMember.role)
-            .where(
+            select(ContentMember.role).where(
                 ContentMember.organization_id == organization_id,
                 ContentMember.content_type == content_type,
                 ContentMember.content_id == content_id,
@@ -271,8 +265,7 @@ class PermissionChecker:
             return self._org_role_cache[key]
 
         result = await self.session.execute(
-            select(OrganizationMember.role)
-            .where(
+            select(OrganizationMember.role).where(
                 OrganizationMember.user_id == user_id,
                 OrganizationMember.organization_id == organization_id,
                 OrganizationMember.is_active == True,  # noqa: E712
@@ -287,11 +280,22 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Return True if the user is an org OWNER or ADMIN."""
-        from uniffy.core.models.login.organization_member import OrganizationRole
+        """Return True if the user is an org OWNER or ADMIN.
 
-        role = await self._get_user_org_role(user_id, organization_id)
-        return role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+        Wrapped in the Valkey perm cache (TTL 600s). The local
+        per-request cache (``_org_role_cache``) still serves the inner
+        loader so the same request never goes through Valkey twice.
+        """
+
+        async def _load() -> bool:
+            from uniffy.core.models.login.organization_member import (
+                OrganizationRole,
+            )
+
+            role = await self._get_user_org_role(user_id, organization_id)
+            return role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+
+        return await get_or_load_org_admin(organization_id, user_id, _load)
 
     async def _is_user_in_organization(
         self,

@@ -1,6 +1,5 @@
 """Proto <-> domain converters for chat channels."""
 
-
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChannelRole as ProtoChannelRole,
 )
@@ -19,6 +18,10 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatNotificationLevel as ProtoNotificationLevel,
 )
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ChatSubject as ProtoChatSubject,
+)
+from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
@@ -29,6 +32,14 @@ from uniffy.core.models.chat.channel_member import (
     ChatNotificationLevel,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.types import SubjectType
+
+_SUBJECT_TYPE_TO_PROTO = {
+    SubjectType.USER: ProtoSubjectType.SUBJECT_TYPE_USER,
+    SubjectType.GROUP: ProtoSubjectType.SUBJECT_TYPE_GROUP,
+    SubjectType.ORGANIZATION: ProtoSubjectType.SUBJECT_TYPE_ORGANIZATION,
+    SubjectType.AGENT: ProtoSubjectType.SUBJECT_TYPE_AGENT,
+}
 
 # Channel type mappings
 CHANNEL_TYPE_TO_PROTO = {
@@ -113,13 +124,9 @@ def channel_to_proto(
         proto.root_message_count = stats.root_message_count
         proto.member_count = stats.member_count
         if stats.last_message_at:
-            proto.last_message_at.CopyFrom(
-                datetime_to_timestamp(stats.last_message_at)
-            )
+            proto.last_message_at.CopyFrom(datetime_to_timestamp(stats.last_message_at))
         if stats.last_root_message_at:
-            proto.last_root_message_at.CopyFrom(
-                datetime_to_timestamp(stats.last_root_message_at)
-            )
+            proto.last_root_message_at.CopyFrom(datetime_to_timestamp(stats.last_root_message_at))
 
     if current_user_role is not None:
         proto.current_user_role = CHANNEL_ROLE_TO_PROTO.get(
@@ -137,28 +144,45 @@ def channel_to_proto(
 def member_to_proto(
     member: ChatChannelMember,
     user: User | None = None,
+    display_name: str | None = None,
+    avatar_key: str | None = None,
 ) -> ProtoChatChannelMember:
-    """Convert ChatChannelMember to proto."""
+    """Convert ChatChannelMember to proto.
+
+    `subject_type` / `subject_id` populate the polymorphic `subject` field
+    on every row. Legacy `user_id` stays populated for SUBJECT_TYPE_USER
+    rows (empty string for agents) until readers migrate.
+    """
     proto = ProtoChatChannelMember(
         channel_id=str(member.channel_id),
-        user_id=str(member.user_id),
-        role=CHANNEL_ROLE_TO_PROTO.get(
-            member.role, ProtoChannelRole.CHANNEL_ROLE_MEMBER
-        ),
+        user_id=str(member.user_id) if member.user_id is not None else "",
+        role=CHANNEL_ROLE_TO_PROTO.get(member.role, ProtoChannelRole.CHANNEL_ROLE_MEMBER),
         notification_level=NOTIFICATION_LEVEL_TO_PROTO.get(
             member.notification_level,
             ProtoNotificationLevel.CHAT_NOTIFICATION_LEVEL_ALL,
         ),
         is_muted=member.is_muted,
+        follow_all_threads=member.follow_all_threads,
+        subject=ProtoChatSubject(
+            type=_SUBJECT_TYPE_TO_PROTO.get(member.subject_type, ProtoSubjectType.SUBJECT_TYPE_USER),
+            id=str(member.subject_id),
+        ),
     )
     if member.joined_at:
         proto.joined_at.CopyFrom(datetime_to_timestamp(member.joined_at))
+    if member.muted_until:
+        proto.muted_until.CopyFrom(datetime_to_timestamp(member.muted_until))
 
     if user:
         proto.display_name = user.full_name or ""
         proto.email = user.email
         if user.avatar_key:
             proto.avatar_url = user.avatar_key
+    else:
+        if display_name:
+            proto.display_name = display_name
+        if avatar_key:
+            proto.avatar_url = avatar_key
 
     return proto
 

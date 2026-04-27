@@ -136,18 +136,32 @@ class CronTaskUsage(_message.Message):
     def __init__(self, cron_task_id: _Optional[str] = ..., task_name: _Optional[str] = ..., agent_name: _Optional[str] = ..., total_runs: _Optional[int] = ..., successes: _Optional[int] = ..., failures: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone")
+    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FILE_IDS_FIELD_NUMBER: _ClassVar[int]
     USER_TIMEZONE_FIELD_NUMBER: _ClassVar[int]
+    CHAT_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     session_id: str
     content: str
     file_ids: _containers.RepeatedScalarFieldContainer[str]
     user_timezone: str
-    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ...) -> None: ...
+    chat_context: ChatChannelContext
+    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
+
+class ChatChannelContext(_message.Message):
+    __slots__ = ("channel_id", "agent_id", "trigger_message_id", "context_urn")
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TRIGGER_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_URN_FIELD_NUMBER: _ClassVar[int]
+    channel_id: str
+    agent_id: str
+    trigger_message_id: str
+    context_urn: str
+    def __init__(self, channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., trigger_message_id: _Optional[str] = ..., context_urn: _Optional[str] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
     __slots__ = ("user_message", "assistant_message", "model_used")

@@ -47,9 +47,7 @@ def message_to_proto(
         id=str(message.id),
         channel_id=str(message.channel_id),
         sender_id=str(message.sender_id),
-        sender_type=SENDER_TYPE_TO_PROTO.get(
-            message.sender_type, ProtoSenderType.SENDER_TYPE_USER
-        ),
+        sender_type=SENDER_TYPE_TO_PROTO.get(message.sender_type, ProtoSenderType.SENDER_TYPE_USER),
         content=message.content,
         is_deleted=message.is_deleted,
         is_pinned=message.is_pinned,
@@ -60,11 +58,13 @@ def message_to_proto(
     if message.reply_to_id:
         proto.reply_to_id = str(message.reply_to_id)
     if reply_context_id:
-        proto.reply_context.CopyFrom(ProtoReplyContext(
-            id=reply_context_id,
-            sender_name=reply_context_sender_name or "",
-            content_preview=reply_context_content_preview or "",
-        ))
+        proto.reply_context.CopyFrom(
+            ProtoReplyContext(
+                id=reply_context_id,
+                sender_name=reply_context_sender_name or "",
+                content_preview=reply_context_content_preview or "",
+            )
+        )
     if message.edited_at:
         proto.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
     if message.message_metadata:
@@ -80,13 +80,9 @@ def message_to_proto(
             has_unread=thread_has_unread,
         )
         if thread_stats.last_reply_at:
-            thread_info.last_reply_at.CopyFrom(
-                datetime_to_timestamp(thread_stats.last_reply_at)
-            )
+            thread_info.last_reply_at.CopyFrom(datetime_to_timestamp(thread_stats.last_reply_at))
         if thread_participant_ids:
-            thread_info.participant_ids.extend(
-                str(uid) for uid in thread_participant_ids
-            )
+            thread_info.participant_ids.extend(str(uid) for uid in thread_participant_ids)
         proto.thread.CopyFrom(thread_info)
 
     if reactions:

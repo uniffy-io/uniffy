@@ -3,8 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
-import { execSync } from 'child_process'
 import fs from 'fs'
+import { buildSync } from 'esbuild'
 
 /**
  * Plugin to build the media stream service worker for both dev and prod.
@@ -22,11 +22,20 @@ function mediaStreamWorkerPlugin() {
       if (!fs.existsSync(outDir)) {
         fs.mkdirSync(outDir, { recursive: true });
       }
-      const minifyFlag = minify ? '--minify' : '';
-      execSync(
-        `npx esbuild "${workerEntry}" --bundle --outfile="${outFile}" --format=iife --platform=browser --target=es2020 --sourcemap ${minifyFlag} --alias:@=${path.resolve(__dirname, './src')} --alias:@uniffy/proto=${path.resolve(__dirname, '../gen/typescript')}`,
-        { stdio: 'inherit', cwd: __dirname }
-      );
+      buildSync({
+        entryPoints: [workerEntry],
+        outfile: outFile,
+        bundle: true,
+        format: 'iife',
+        platform: 'browser',
+        target: 'es2020',
+        sourcemap: true,
+        minify,
+        alias: {
+          '@': path.resolve(__dirname, './src'),
+          '@uniffy/proto': path.resolve(__dirname, '../gen/typescript'),
+        },
+      });
       console.log('[MediaStreamWorker] Built successfully');
     } catch (error) {
       console.error('[MediaStreamWorker] Build failed:', error);
@@ -123,7 +132,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ["dev.local.uniffy.io", "localhost"],
+    allowedHosts: ["dev.local.uniffy.io", "localhost", "host.docker.internal"],
     proxy: {
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
@@ -151,61 +160,55 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Core React ecosystem
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-redux': ['@reduxjs/toolkit', 'react-redux', 'redux-persist'],
-          // Editor - combined Milkdown + 
-          // CodeMirror to avoid circular deps
-          'vendor-editor': [
-            '@milkdown/kit',
-            '@milkdown/crepe',
-            '@milkdown/core',
-            '@milkdown/ctx',
-            '@milkdown/components',
-            '@milkdown/prose',
-            '@milkdown/react',
-            '@milkdown/theme-nord',
-            '@milkdown/preset-commonmark',
-            '@milkdown/plugin-highlight',
-            '@milkdown/plugin-history',
-            '@milkdown/plugin-listener',
-            'codemirror',
-            '@codemirror/commands',
-            '@codemirror/language',
-            '@codemirror/lang-markdown',
-            '@codemirror/language-data',
-            '@codemirror/state',
-            '@codemirror/view',
-            '@codemirror/theme-one-dark',
-          ],
-          // ConnectRPC and protobuf
-          'vendor-connect': [
-            '@connectrpc/connect',
-            '@connectrpc/connect-web',
-            '@bufbuild/protobuf',
-          ],
-          // UI primitives, layout, and interaction libraries
-          'vendor-ui': [
-            '@headlessui/react',
-            '@phosphor-icons/react',
-            '@radix-ui/react-progress',
-            '@dnd-kit/core',
-            '@dnd-kit/sortable',
-            '@dnd-kit/utilities',
-            'react-resizable-panels',
-            'react-force-graph-2d',
-          ],
-          // Date utilities
-          'vendor-date': ['date-fns', 'date-fns-tz'],
-          // Media viewers (lazy-loaded)
-          'vendor-media': ['video.js', 'wavesurfer.js'],
-          // Utilities
-          'vendor-utils': ['jszip', 'zod', 'idb', 'clsx', 'tailwind-merge'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+
+          // pnpm nests packages under node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>/...
+          // Use the last node_modules segment to get the actual package name.
+          const parts = id.split('node_modules/');
+          const tail = parts[parts.length - 1];
+          const match = tail.match(/^(@[^/]+\/[^/]+|[^/]+)/);
+          const pkg = match ? match[1] : '';
+
+          if (pkg === 'react' || pkg === 'react-dom' || pkg === 'react-router-dom' || pkg === 'scheduler') {
+            return 'vendor-react';
+          }
+          if (pkg === '@reduxjs/toolkit' || pkg === 'react-redux' || pkg === 'redux-persist' || pkg === 'redux' || pkg === 'immer' || pkg === 'reselect') {
+            return 'vendor-redux';
+          }
+          // Milkdown + CodeMirror share transitive edges with vendor-ui
+          // (phosphor icons, prosemirror-view pulls react-like utils),
+          // so splitting them creates a circular chunk graph. Keep merged.
+          if (
+            pkg.startsWith('@milkdown/') ||
+            pkg.startsWith('prosemirror-') ||
+            pkg === 'codemirror' ||
+            pkg.startsWith('@codemirror/') ||
+            pkg.startsWith('@lezer/')
+          ) {
+            return 'vendor-editor';
+          }
+          if (pkg === '@connectrpc/connect' || pkg === '@connectrpc/connect-web' || pkg === '@bufbuild/protobuf') {
+            return 'vendor-connect';
+          }
+          if (pkg === '@headlessui/react' || pkg === '@phosphor-icons/react' || pkg.startsWith('@radix-ui/') || pkg.startsWith('@dnd-kit/') || pkg === 'react-resizable-panels' || pkg === 'react-force-graph-2d') {
+            return 'vendor-ui';
+          }
+          if (pkg === 'date-fns' || pkg === 'date-fns-tz') {
+            return 'vendor-date';
+          }
+          if (pkg === 'video.js' || pkg === 'wavesurfer.js') {
+            return 'vendor-media';
+          }
+          if (pkg === 'jszip' || pkg === 'zod' || pkg === 'idb' || pkg === 'clsx' || pkg === 'tailwind-merge') {
+            return 'vendor-utils';
+          }
+          return undefined;
         },
       },
     },
-    // Increase limit for known large chunks (editor libraries are expected to be large)
-    chunkSizeWarningLimit: 1500,
+    // vendor-editor (Milkdown + CodeMirror + ProseMirror + Lezer) cannot be
+    // split without introducing a circular chunk graph, so it sits around 2.6MB.
+    chunkSizeWarningLimit: 2700,
   },
 })

@@ -87,12 +87,14 @@ class ContentType(str, Enum):
 
 class SubjectType(str, Enum):
     """
-    Types of subjects that can have a role on content.
+    Types of subjects that can have a role on content or be a participant
+    in a chat channel/thread.
     """
 
     USER = "USER"
     GROUP = "GROUP"
     ORGANIZATION = "ORGANIZATION"
+    AGENT = "AGENT"
 
 
 class DomainType(str, Enum):

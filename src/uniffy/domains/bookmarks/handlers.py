@@ -15,7 +15,7 @@ from uniffy_proto.bookmarks.v1.bookmarks_pb2 import (
     ToggleBookmarkResponse,
 )
 
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.bookmarks.converters import bookmark_to_proto
 from uniffy.domains.bookmarks.operations import BookmarksOperations
@@ -58,7 +58,7 @@ class BookmarksHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookmarksOperations(session)
                 is_bookmarked, bookmark = await ops.toggle(
                     user_id=user_id,
@@ -114,7 +114,7 @@ class BookmarksHandlers:
         page_size = min(page_size, 100)  # Cap at 100
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookmarksOperations(session)
                 bookmarks, total_count = await ops.list_bookmarks(
                     user_id=user_id,
@@ -171,7 +171,7 @@ class BookmarksHandlers:
         urns = list(request.urns)[:100]
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookmarksOperations(session)
                 bookmarked_urns = await ops.bulk_check(
                     user_id=user_id,

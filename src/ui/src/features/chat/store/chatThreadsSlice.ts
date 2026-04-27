@@ -119,6 +119,43 @@ export const chatThreadsSlice = createSlice({
         return;
       }
     },
+    appendDeltaToThreadMessage: (
+      state,
+      action: PayloadAction<{
+        messageId: string;
+        delta: string;
+        sequence: number;
+        final: boolean;
+      }>,
+    ) => {
+      const { messageId, delta, sequence, final } = action.payload;
+      // We do not know which thread bucket holds the placeholder, so we
+      // scan all open thread message lists. ChatStreamProvider dispatches
+      // both this action and the channel one; whichever bucket holds the
+      // row updates, the other no-ops.
+      for (const messages of Object.values(state.threadMessages)) {
+        const msg = messages.find((m) => m.id === messageId);
+        if (!msg) continue;
+
+        const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+        const lastSeq = typeof meta.streaming_sequence === 'number' ? meta.streaming_sequence : 0;
+        if (sequence <= lastSeq && !final) return;
+
+        msg.content = (msg.content ?? '') + delta;
+        const nextMeta: Record<string, unknown> = {
+          ...meta,
+          streaming_sequence: sequence,
+        };
+        if (final) {
+          delete nextMeta.streaming;
+        } else {
+          nextMeta.streaming = true;
+        }
+        msg.metadata = nextMeta;
+        return;
+      }
+    },
+    clearChatThreads: () => initialState,
   },
 });
 
@@ -134,6 +171,8 @@ export const {
   clearThreadMessages,
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
+  appendDeltaToThreadMessage,
+  clearChatThreads,
 } = chatThreadsSlice.actions;
 
 // -- Selectors --

@@ -1,12 +1,13 @@
 /**
  * BookmarkedItemsWidget - Quick access to bookmarked content
  *
- * Shows the user's bookmarked items across all content types.
+ * Groups bookmarks by URN type with color-coded badges.
+ * Max 6 items shown with "View all bookmarks" footer.
  */
 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookmarkSimple } from '@phosphor-icons/react';
+import { BookmarkSimple, ArrowRight } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { parseUrn, urnToPath } from '@/shared/utils/urn';
@@ -32,7 +33,7 @@ function BookmarkListItem({ item }: { item: BookmarkedItem }) {
       to={item.href}
       className={cn(
         'group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors',
-        'hover:bg-muted/50'
+        'hover:bg-muted/50',
       )}
     >
       <div className={cn('rounded-md p-1.5', config.theme.badgeBg)}>
@@ -42,10 +43,16 @@ function BookmarkListItem({ item }: { item: BookmarkedItem }) {
         <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
           {item.title}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {config.label}
-        </p>
       </div>
+      <span
+        className={cn(
+          'text-[10px] font-medium rounded px-1.5 py-0.5 shrink-0',
+          config.theme.badgeBg,
+          config.theme.accentText,
+        )}
+      >
+        {config.label}
+      </span>
     </Link>
   );
 }
@@ -54,12 +61,12 @@ export function BookmarkedItemsWidget() {
   const bookmarks = useAppSelector((state) => state.bookmarks?.bookmarks ?? {});
   const isLoading = useAppSelector((state) => state.bookmarks?.loading ?? false);
 
-  // Get content data for resolving bookmark titles
   const notes = useAppSelector((state) => state.notes?.notes ?? {});
   const files = useAppSelector((state) => state.files?.files ?? {});
   const events = useAppSelector((state) => state.calendar?.events ?? {});
+  const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
+  const projects = useAppSelector((state) => state.projects?.projects ?? {});
 
-  // Transform bookmarks into displayable items
   const bookmarkedItems = useMemo(() => {
     const items: BookmarkedItem[] = [];
 
@@ -70,7 +77,6 @@ export function BookmarkedItemsWidget() {
       let title = 'Unknown';
       let href = '/';
 
-      // Resolve title based on type
       switch (parsed.type) {
         case UrnType.NOTE: {
           const note = notes[parsed.id];
@@ -90,6 +96,18 @@ export function BookmarkedItemsWidget() {
           href = `/calendar?event=${parsed.id}`;
           break;
         }
+        case UrnType.TASK: {
+          const task = tasks[parsed.id];
+          title = task?.title || 'Unknown Task';
+          href = task ? `/projects/${task.projectId}?task=${parsed.id}` : '/projects';
+          break;
+        }
+        case UrnType.PROJECT: {
+          const project = projects[parsed.id];
+          title = project?.name || 'Unknown Project';
+          href = `/projects/${parsed.id}`;
+          break;
+        }
         default:
           href = urnToPath(bookmark.urn) || '/';
       }
@@ -103,19 +121,30 @@ export function BookmarkedItemsWidget() {
       });
     });
 
-    // Sort by most recently bookmarked and take top 6
     return items
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 6);
-  }, [bookmarks, notes, files, events]);
+  }, [bookmarks, notes, files, events, tasks, projects]);
 
   const isEmpty = bookmarkedItems.length === 0 && !isLoading;
 
   return (
     <WidgetCard
       title="Bookmarked"
-      subtitle="Your saved items for quick access"
+      icon={BookmarkSimple}
       colSpan={2}
+      priority={2}
+      footer={
+        bookmarkedItems.length > 0 ? (
+          <Link
+            to="/search?q=bookmarked:true"
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            View all bookmarks
+            <ArrowRight size={12} />
+          </Link>
+        ) : null
+      }
     >
       {isLoading && Object.keys(bookmarks).length === 0 ? (
         <WidgetSkeleton rows={4} />
@@ -123,10 +152,10 @@ export function BookmarkedItemsWidget() {
         <EmptyWidget
           icon={BookmarkSimple}
           title="No bookmarks yet"
-          description="Bookmark items to access them quickly from here"
+          description="Pin important items for quick access"
         />
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {bookmarkedItems.map((item) => (
             <BookmarkListItem key={item.urn} item={item} />
           ))}

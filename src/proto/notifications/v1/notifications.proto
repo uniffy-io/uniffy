@@ -34,6 +34,18 @@ service NotificationsService {
 
   // Get the VAPID public key for Web Push subscription
   rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse) {}
+
+  // Search notifications with full-text search and advanced filters
+  rpc SearchNotifications(SearchNotificationsRequest) returns (SearchNotificationsResponse) {}
+
+  // Get aggregated notification statistics for analytics
+  rpc GetNotificationStats(GetNotificationStatsRequest) returns (GetNotificationStatsResponse) {}
+
+  // Mark multiple notifications as read in bulk
+  rpc BulkMarkAsRead(BulkMarkAsReadRequest) returns (BulkMarkAsReadResponse) {}
+
+  // Delete multiple notifications in bulk
+  rpc BulkDeleteNotifications(BulkDeleteNotificationsRequest) returns (BulkDeleteNotificationsResponse) {}
 }
 
 // Notification type enum
@@ -270,4 +282,100 @@ message GetVapidPublicKeyRequest {}
 message GetVapidPublicKeyResponse {
   // Base64url-encoded VAPID public key for pushManager.subscribe()
   string public_key = 1;
+}
+
+// Request to search notifications with full-text and filters
+message SearchNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Free-text search query (matches title and body)
+  string query = 2;
+  // Page number (1-indexed)
+  int32 page = 3;
+  // Page size (default 20)
+  int32 page_size = 4;
+  // Filter by read status (omit for all)
+  optional bool is_read = 5;
+  // Filter by notification types
+  repeated NotificationType notification_types = 6;
+  // Filter by date range start (inclusive)
+  google.protobuf.Timestamp date_from = 7;
+  // Filter by date range end (inclusive)
+  google.protobuf.Timestamp date_to = 8;
+  // Filter by actor user ID
+  string actor_id = 9;
+}
+
+// Response for search notifications
+message SearchNotificationsResponse {
+  // Matching notifications
+  repeated Notification notifications = 1;
+  // Total count matching filters
+  int32 total_count = 2;
+  // Number of unread notifications (regardless of filters)
+  int32 unread_count = 3;
+}
+
+// Request to get notification statistics
+message GetNotificationStatsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Number of days to include in stats (default 30)
+  int32 days = 2;
+}
+
+// Stat entry for a single day
+message DailyNotificationStat {
+  // Date string (YYYY-MM-DD)
+  string date = 1;
+  // Total notifications on this day
+  int32 total = 2;
+  // Unread notifications on this day
+  int32 unread = 3;
+  // Read notifications on this day
+  int32 read = 4;
+}
+
+// Stat entry for a notification type
+message TypeNotificationStat {
+  // Notification type
+  NotificationType notification_type = 1;
+  // Count of notifications of this type
+  int32 count = 2;
+}
+
+// Response with notification statistics
+message GetNotificationStatsResponse {
+  // Daily breakdown
+  repeated DailyNotificationStat daily_stats = 1;
+  // Breakdown by type
+  repeated TypeNotificationStat type_stats = 2;
+  // Overall totals
+  int32 total_count = 3;
+  int32 unread_count = 4;
+  int32 read_count = 5;
+}
+
+// Request to bulk mark notifications as read
+message BulkMarkAsReadRequest {
+  // Notification IDs to mark as read
+  repeated string notification_ids = 1;
+}
+
+// Response for bulk mark as read
+message BulkMarkAsReadResponse {
+  // Number of notifications marked as read
+  int32 updated_count = 1;
+}
+
+// Request to bulk delete notifications
+message BulkDeleteNotificationsRequest {
+  // Notification IDs to delete
+  repeated string notification_ids = 1;
+}
+
+// Response for bulk delete
+message BulkDeleteNotificationsResponse {
+  // Number of notifications deleted
+  int32 deleted_count = 1;
 }

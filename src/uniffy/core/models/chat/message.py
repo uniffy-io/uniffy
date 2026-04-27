@@ -5,9 +5,11 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Text
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -28,13 +30,14 @@ class ChatMessage(SQLModel, table=True):
     Messages are children of channels. root_id = NULL means a root-level message in the
     channel. root_id = <some_message_id> means this is a reply in a thread.
 
+    sender_id is a soft polymorphic reference: when sender_type=USER it points to
+    login_users.id, when sender_type=AGENT it points to agents.id. The hard FK was
+    dropped in migration 047 to support dual-entity senders.
     """
 
     __tablename__ = "chat_messages"
     __table_args__ = (
-        # Main channel timeline query with cursor-based pagination
         Index("ix_chat_messages_channel_timeline", "channel_id", "created_at", "id"),
-        # CRT: load only root messages for channel view
         Index(
             "ix_chat_messages_channel_roots",
             "channel_id",
@@ -42,7 +45,6 @@ class ChatMessage(SQLModel, table=True):
             "id",
             postgresql_where="root_id IS NULL AND is_deleted = false",
         ),
-        # Thread reply loading
         Index(
             "ix_chat_messages_thread_replies",
             "root_id",
@@ -50,11 +52,29 @@ class ChatMessage(SQLModel, table=True):
             "id",
             postgresql_where="root_id IS NOT NULL",
         ),
-        # Pinned messages list (sparse)
         Index(
             "ix_chat_messages_pinned",
             "channel_id",
             postgresql_where="is_pinned = true AND is_deleted = false",
+        ),
+        Index(
+            "ix_chat_messages_channel_agent",
+            "channel_id",
+            "sender_id",
+            "created_at",
+            postgresql_where="sender_type = 'AGENT' AND is_deleted = false",
+        ),
+        Index(
+            "ix_chat_messages_mentioned_agents",
+            "mentioned_agent_ids",
+            postgresql_using="gin",
+            postgresql_where="mentioned_agent_ids IS NOT NULL",
+        ),
+        Index(
+            "ix_chat_messages_mentioned_urns",
+            "mentioned_urns",
+            postgresql_using="gin",
+            postgresql_where="mentioned_urns IS NOT NULL",
         ),
     )
 
@@ -62,7 +82,7 @@ class ChatMessage(SQLModel, table=True):
     channel_id: UUID = Field(
         sa_column=Column(ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False),
     )
-    sender_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
+    sender_id: UUID = Field(nullable=False, index=True)
     sender_type: SenderType = Field(
         default=SenderType.USER,
         sa_column=Column(
@@ -78,6 +98,12 @@ class ChatMessage(SQLModel, table=True):
     is_pinned: bool = Field(default=False, nullable=False)
     message_metadata: dict[str, Any] | None = Field(
         default=None, sa_column=Column("metadata", PG_JSONB)
+    )
+    mentioned_agent_ids: list[UUID] | None = Field(
+        default=None, sa_column=Column(PG_ARRAY(PG_UUID(as_uuid=True)), nullable=True)
+    )
+    mentioned_urns: list[str] | None = Field(
+        default=None, sa_column=Column(PG_ARRAY(Text()), nullable=True)
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

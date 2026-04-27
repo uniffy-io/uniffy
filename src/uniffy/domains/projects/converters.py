@@ -64,9 +64,7 @@ VIEW_TYPE_TO_PROTO: dict[str, ViewType.ValueType] = {
     "roadmap": ViewType.VIEW_TYPE_ROADMAP,
 }
 
-VIEW_TYPE_FROM_PROTO: dict[ViewType.ValueType, str] = {
-    v: k for k, v in VIEW_TYPE_TO_PROTO.items()
-}
+VIEW_TYPE_FROM_PROTO: dict[ViewType.ValueType, str] = {v: k for k, v in VIEW_TYPE_TO_PROTO.items()}
 
 ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "created": ActivityAction.ACTIVITY_ACTION_CREATED,

@@ -44,11 +44,17 @@ from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
+from uniffy.core.llm_providers import (
+    close_provider_invalidation_subscriber,
+    init_provider_invalidation_subscriber,
+)
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.core.valkey import (
+    close_ops_client,
     close_pubsub,
     close_queue,
+    init_ops_client,
     init_pubsub,
     init_queue,
     signal_pubsub_shutdown,
@@ -232,6 +238,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Pub/Sub not available: {e}")
 
+    # Initialize fail-fast ops client used by cache / presence / rate-limit
+    # / mention-state. Non-blocking: a Valkey outage at startup leaves the
+    # cache layer treating every read as a miss; the app still serves.
+    try:
+        await init_ops_client()
+        logger.info("Valkey ops client initialized successfully")
+    except Exception as e:
+        logger.warning(f"Valkey ops client not available: {e}")
+
+    # Provider-key invalidation listener: drops the in-process LRU when
+    # another pod publishes provider_keys:invalidate:{key_id}.
+    try:
+        await init_provider_invalidation_subscriber()
+    except Exception as e:
+        logger.warning(f"Provider invalidation subscriber not available: {e}")
+
     try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
@@ -252,6 +274,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
     signal_pubsub_shutdown()
+    await close_provider_invalidation_subscriber()
+    await close_ops_client()
     await close_pubsub()
     await close_queue()
     await close_s3()
@@ -338,9 +362,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/permissions.v1.MembersService",
-        MembersServiceASGIApplication(
-            MembersServiceImpl(), interceptors=[logging_interceptor]
-        ),
+        MembersServiceASGIApplication(MembersServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/presence.v1.PresenceService",

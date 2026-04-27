@@ -82,13 +82,9 @@ class RoomHandlers:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
 
         group_ids = None
@@ -313,13 +309,9 @@ class BookingHandlers:
                     event_id=event_id,
                 )
 
-                room_name, booker_name = await _load_booking_names(
-                    session, booking.room_id, user_id
-                )
+                room_name, booker_name = await _load_booking_names(session, booking.room_id, user_id)
 
-                return BookingResponse(
-                    booking=booking_to_proto(booking, room_name, booker_name)
-                )
+                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
         except ConnectError:
             raise
         except Exception as exc:
@@ -342,9 +334,7 @@ class BookingHandlers:
                 room_name, booker_name = await _load_booking_names(
                     session, booking.room_id, booking.user_id
                 )
-                return BookingResponse(
-                    booking=booking_to_proto(booking, room_name, booker_name)
-                )
+                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
         except ConnectError:
             raise
         except Exception as exc:
@@ -367,9 +357,7 @@ class BookingHandlers:
                 room_name, booker_name = await _load_booking_names(
                     session, booking.room_id, booking.user_id
                 )
-                return BookingResponse(
-                    booking=booking_to_proto(booking, room_name, booker_name)
-                )
+                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
         except ConnectError:
             raise
         except Exception as exc:
@@ -488,9 +476,7 @@ class BookingHandlers:
 
         min_capacity = request.min_capacity if request.HasField("min_capacity") else None
         room_type = (
-            room_type_from_proto(request.room_type)
-            if request.HasField("room_type")
-            else None
+            room_type_from_proto(request.room_type) if request.HasField("room_type") else None
         )
 
         try:
@@ -504,9 +490,7 @@ class BookingHandlers:
                     amenities=list(request.amenities) if request.amenities else None,
                     room_type=room_type,
                 )
-                return FindAvailableRoomsResponse(
-                    rooms=[room_to_proto(r) for r in rooms]
-                )
+                return FindAvailableRoomsResponse(rooms=[room_to_proto(r) for r in rooms])
         except ConnectError:
             raise
         except Exception as exc:
@@ -519,14 +503,10 @@ async def _load_booking_names(
     booker_id: UUID,
 ) -> tuple[str, str]:
     """Fetch the room name and booker display name for proto responses."""
-    room = (
-        await session.execute(select(Room).where(Room.id == room_id))
-    ).scalar_one_or_none()
+    room = (await session.execute(select(Room).where(Room.id == room_id))).scalar_one_or_none()
     room_name = room.name if room else ""
 
-    user = (
-        await session.execute(select(User).where(User.id == booker_id))
-    ).scalar_one_or_none()
+    user = (await session.execute(select(User).where(User.id == booker_id))).scalar_one_or_none()
     booker_name = (user.full_name or user.username) if user else ""
 
     return room_name, booker_name

@@ -18,7 +18,7 @@ from uniffy_proto.files.v1.files_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.files.filters.converters import (
     criteria_from_proto,
@@ -48,7 +48,7 @@ class SavedFilterHandlersMixin:
             raise ConnectError(Code.INVALID_ARGUMENT, "Filter name is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SavedFilterOperations(session)
 
                 criteria = {}
@@ -93,7 +93,7 @@ class SavedFilterHandlersMixin:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SavedFilterOperations(session)
                 saved_filter = await ops.get_by_id(user_id, organization_id, filter_id)
                 return SavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
@@ -123,7 +123,7 @@ class SavedFilterHandlersMixin:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SavedFilterOperations(session)
 
                 criteria = None
@@ -173,7 +173,7 @@ class SavedFilterHandlersMixin:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SavedFilterOperations(session)
                 await ops.delete(user_id, organization_id, filter_id)
                 return DeleteSavedFilterResponse(
@@ -205,7 +205,7 @@ class SavedFilterHandlersMixin:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SavedFilterOperations(session)
                 filters = await ops.list_filters(
                     user_id=user_id,

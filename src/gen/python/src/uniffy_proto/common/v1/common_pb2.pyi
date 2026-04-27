@@ -33,6 +33,7 @@ class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SUBJECT_TYPE_USER: _ClassVar[SubjectType]
     SUBJECT_TYPE_GROUP: _ClassVar[SubjectType]
     SUBJECT_TYPE_ORGANIZATION: _ClassVar[SubjectType]
+    SUBJECT_TYPE_AGENT: _ClassVar[SubjectType]
 
 class ContentRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -102,6 +103,7 @@ SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType
 SUBJECT_TYPE_ORGANIZATION: SubjectType
+SUBJECT_TYPE_AGENT: SubjectType
 CONTENT_ROLE_UNSPECIFIED: ContentRole
 CONTENT_ROLE_VIEWER: ContentRole
 CONTENT_ROLE_COMMENTER: ContentRole

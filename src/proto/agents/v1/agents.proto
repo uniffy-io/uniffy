@@ -67,6 +67,10 @@ message AgentInfo {
   string prompt_id = 24;
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 25;
+  // Effective role of the requesting user on this agent (if known).
+  // Set by the server so the UI can render edit/share affordances
+  // without re-resolving permissions client-side.
+  optional common.v1.ContentRole user_role = 26;
 }
 
 // --- Requests and Responses ---

@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AgentInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "soul_prompt", "primary_model", "fallback_models", "enabled_tools", "avatar_emoji", "theme_color", "is_default", "created_at", "updated_at", "enabled_skills", "access_mode", "avatar_key", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "baseline_role")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "soul_prompt", "primary_model", "fallback_models", "enabled_tools", "avatar_emoji", "theme_color", "is_default", "created_at", "updated_at", "enabled_skills", "access_mode", "avatar_key", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "baseline_role", "user_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -33,6 +33,7 @@ class AgentInfo(_message.Message):
     IMAGE_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -54,7 +55,8 @@ class AgentInfo(_message.Message):
     image_provider_key_id: str
     prompt_id: str
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., avatar_key: _Optional[str] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    user_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., avatar_key: _Optional[str] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CreateAgentRequest(_message.Message):
     __slots__ = ("organization_id", "name", "soul_prompt", "primary_model", "fallback_models", "avatar_emoji", "theme_color", "is_default", "enabled_skills", "access_mode", "group_ids", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "baseline_role")

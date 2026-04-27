@@ -35,6 +35,9 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
   --color-chat-user: hsl(var(--chat-user));
   --color-chat-user-foreground: hsl(var(--chat-user-foreground));
 }
@@ -134,33 +137,37 @@
 :root {
   --primary: 217 91% 50%;
   --primary-foreground: 210 40% 98%;
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --muted: 220 14.3% 93%;
-  --muted-foreground: 220 8.9% 40%;
-  --card: 220 14% 96%;
-  --card-foreground: 222.2 84% 4.9%;
-  --border: 220 13% 82%;
-  --input: 220 13% 82%;
+  --background: 220 20% 99%;
+  --foreground: 222 47% 11%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 10% 42%;
+  --accent: 220 14% 94%;
+  --accent-foreground: 222 47% 11%;
+  --card: 220 16% 96%;
+  --card-foreground: 222 47% 11%;
+  --border: 220 12% 86%;
+  --input: 220 14% 91%;
   --ring: 217 91% 50%;
-  --chat-user: 220 14% 88%;
-  --chat-user-foreground: 222.2 84% 4.9%;
+  --chat-user: 220 14% 92%;
+  --chat-user-foreground: 222 47% 11%;
 }
 
 .dark {
   --primary: 217 91% 60%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --background: 228 16% 8%;
-  --foreground: 220 14% 95%;
-  --muted: 228 10% 16%;
-  --muted-foreground: 225 10% 64%;
-  --card: 228 12% 12%;
-  --card-foreground: 220 14% 95%;
-  --border: 228 10% 21%;
-  --input: 228 12% 10%;
-  --ring: 217 91% 55%;
-  --chat-user: 225 12% 22%;
-  --chat-user-foreground: 220 14% 95%;
+  --primary-foreground: 210 40% 98%;
+  --background: 215 28% 7%;
+  --foreground: 210 29% 93%;
+  --muted: 215 18% 16%;
+  --muted-foreground: 215 10% 65%;
+  --accent: 215 20% 14%;
+  --accent-foreground: 210 29% 93%;
+  --card: 214 25% 11%;
+  --card-foreground: 210 29% 93%;
+  --border: 212 12% 21%;
+  --input: 215 25% 9%;
+  --ring: 217 91% 58%;
+  --chat-user: 215 20% 13%;
+  --chat-user-foreground: 210 29% 93%;
 }
 
 /* Base styles */

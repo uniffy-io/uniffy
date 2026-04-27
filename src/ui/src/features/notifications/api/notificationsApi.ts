@@ -12,6 +12,10 @@ import type {
     UnregisterPushSubscriptionRequest,
     StreamNotificationsRequest,
     GetVapidPublicKeyRequest,
+    SearchNotificationsRequest,
+    GetNotificationStatsRequest,
+    BulkMarkAsReadRequest,
+    BulkDeleteNotificationsRequest,
 } from '@uniffy/proto/notifications/v1/notifications_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -89,5 +93,33 @@ export const notificationsApi = {
         options?: CallOptions,
     ) => {
         return notificationsClient.streamNotifications(request, options);
+    },
+
+    /**
+     * Search notifications with full-text search and advanced filters.
+     */
+    searchNotifications: async (request: PartialMessage<SearchNotificationsRequest>) => {
+        return notificationsClient.searchNotifications(request);
+    },
+
+    /**
+     * Get aggregated notification statistics for analytics.
+     */
+    getNotificationStats: async (request: PartialMessage<GetNotificationStatsRequest>) => {
+        return notificationsClient.getNotificationStats(request);
+    },
+
+    /**
+     * Mark multiple notifications as read in bulk.
+     */
+    bulkMarkAsRead: async (request: PartialMessage<BulkMarkAsReadRequest>) => {
+        return notificationsClient.bulkMarkAsRead(request);
+    },
+
+    /**
+     * Delete multiple notifications in bulk.
+     */
+    bulkDeleteNotifications: async (request: PartialMessage<BulkDeleteNotificationsRequest>) => {
+        return notificationsClient.bulkDeleteNotifications(request);
     },
 };

@@ -72,11 +72,43 @@ function isCompletedStatus(status: string): boolean {
 }
 
 /**
- * Task status pill - animated color transitions on status change
+ * Task status pill - uses resolved label/color when available,
+ * falls back to heuristic-based styling from status ID string.
  */
-export function TaskStatusIndicator({ status }: { status: string }) {
-  const style = getTaskStatusStyle(status);
+export function TaskStatusIndicator({
+  status,
+  label,
+  color,
+}: {
+  status: string;
+  label?: string;
+  color?: string;
+}) {
+  const fallbackStyle = getTaskStatusStyle(status);
   const isDone = isCompletedStatus(status);
+  const displayLabel = label || fallbackStyle.label;
+
+  // Use resolved color from project field definitions when available
+  if (color) {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center gap-0.5',
+          'rounded-full px-1.5 py-px',
+          'text-[10px] font-semibold leading-tight tracking-wide uppercase',
+          'transition-all duration-300 ease-out',
+        )}
+        style={{
+          backgroundColor: `${color}20`,
+          color,
+        }}
+        aria-label={`Status: ${displayLabel}`}
+      >
+        {isDone && <Check size={9} weight="bold" className="shrink-0" />}
+        <span>{displayLabel}</span>
+      </span>
+    );
+  }
 
   return (
     <span
@@ -85,15 +117,38 @@ export function TaskStatusIndicator({ status }: { status: string }) {
         'rounded-full px-1.5 py-px',
         'text-[10px] font-semibold leading-tight tracking-wide uppercase',
         'transition-all duration-300 ease-out',
-        style.bg,
-        style.text,
+        fallbackStyle.bg,
+        fallbackStyle.text,
       )}
-      aria-label={`Status: ${style.label}`}
+      aria-label={`Status: ${displayLabel}`}
     >
       {isDone && (
         <Check size={9} weight="bold" className="shrink-0" />
       )}
-      <span>{style.label}</span>
+      <span>{displayLabel}</span>
+    </span>
+  );
+}
+
+/**
+ * Task priority indicator - colored dot with label
+ */
+export function TaskPriorityIndicator({
+  label,
+  color,
+}: {
+  label: string;
+  color: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ backgroundColor: color }}
+      />
+      <span className="text-[10px] text-muted-foreground font-medium">
+        {label}
+      </span>
     </span>
   );
 }
@@ -312,7 +367,11 @@ export function LiveIndicator({
       return (
         <span className="inline-flex items-center gap-1.5">
           {liveState.taskStatus && (
-            <TaskStatusIndicator status={liveState.taskStatus} />
+            <TaskStatusIndicator
+              status={liveState.taskStatus}
+              label={liveState.taskStatusLabel}
+              color={liveState.taskStatusColor}
+            />
           )}
           {!compact && liveState.taskDueDate && (
             <TaskDueDateIndicator dueDate={liveState.taskDueDate} />

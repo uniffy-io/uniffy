@@ -92,9 +92,7 @@ class ContentMember(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
-    expires_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
     def __repr__(self) -> str:
         """Return string representation of ContentMember."""

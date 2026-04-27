@@ -7,6 +7,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { adminApi } from '@/features/admin/api/adminApi';
+import { storageApi } from '@/features/admin/api/storageApi';
 import {
     ContentType,
     AccessMode,
@@ -28,6 +29,9 @@ import {
     type SerializedOrgOverview,
     serializeDomainAdminInfo,
     type SerializedDomainAdminInfo,
+    type SerializedOrgStorageQuota,
+    type SerializedUserQuotaOverride,
+    type SerializedStorageUsageInfo,
 } from '@/features/admin/store/adminSlice';
 
 // Permission Defaults
@@ -94,6 +98,57 @@ export const fetchOrganizationOverview = createAsyncThunk<
 
     const response = await adminApi.getOrganizationOverview({ organizationId });
     return serializeOrgOverview(response);
+});
+
+// Organization Settings
+
+export interface SerializedOrgSettings {
+    chat: {
+        agentsEnabled: boolean;
+    };
+}
+
+export const fetchOrganizationSettings = createAsyncThunk<
+    SerializedOrgSettings,
+    void,
+    { state: RootState }
+>('admin/fetchOrganizationSettings', async (_, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await adminApi.getOrganizationSettings({ organizationId });
+    return {
+        chat: {
+            agentsEnabled: response.chat?.agentsEnabled ?? false,
+        },
+    };
+});
+
+export const updateOrganizationSettings = createAsyncThunk<
+    SerializedOrgSettings,
+    { chat?: { agentsEnabled: boolean } },
+    { state: RootState }
+>('admin/updateOrganizationSettings', async (args, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await adminApi.updateOrganizationSettings({
+        organizationId,
+        chat: args.chat,
+    });
+    return {
+        chat: {
+            agentsEnabled: response.chat?.agentsEnabled ?? false,
+        },
+    };
 });
 
 // Members
@@ -381,4 +436,199 @@ export const revokeDomainAdmin = createAsyncThunk<
         userId,
         domain: domain as DomainType,
     });
+});
+
+// Storage Quotas
+
+export const fetchOrgStorageQuota = createAsyncThunk<
+    { quota: SerializedOrgStorageQuota; totalUsedBytes: number; totalFileCount: number },
+    void,
+    { state: RootState }
+>('admin/fetchOrgStorageQuota', async (_, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await storageApi.getOrgStorageQuota({ organizationId });
+    const q = response.quota;
+
+    return {
+        quota: {
+            id: q?.id || '',
+            organizationId: q?.organizationId || '',
+            orgQuotaBytes: q?.orgQuotaBytes != null ? Number(q.orgQuotaBytes) : null,
+            defaultUserQuotaBytes: q?.defaultUserQuotaBytes != null ? Number(q.defaultUserQuotaBytes) : null,
+            warnAtPercent: q?.warnAtPercent || 80,
+            enforce: q?.enforce ?? true,
+        },
+        totalUsedBytes: Number(response.totalUsedBytes),
+        totalFileCount: response.totalFileCount,
+    };
+});
+
+export const setOrgStorageQuota = createAsyncThunk<
+    SerializedOrgStorageQuota,
+    {
+        orgQuotaBytes?: number | null;
+        defaultUserQuotaBytes?: number | null;
+        warnAtPercent?: number;
+        enforce?: boolean;
+    },
+    { state: RootState }
+>('admin/setOrgStorageQuota', async (args, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const request: Record<string, unknown> = { organizationId };
+    if (args.orgQuotaBytes !== undefined) {
+        request.orgQuotaBytes = args.orgQuotaBytes != null ? BigInt(args.orgQuotaBytes) : undefined;
+    }
+    if (args.defaultUserQuotaBytes !== undefined) {
+        request.defaultUserQuotaBytes = args.defaultUserQuotaBytes != null
+            ? BigInt(args.defaultUserQuotaBytes) : undefined;
+    }
+    if (args.warnAtPercent !== undefined) request.warnAtPercent = args.warnAtPercent;
+    if (args.enforce !== undefined) request.enforce = args.enforce;
+
+    const response = await storageApi.setOrgStorageQuota(request);
+    const q = response.quota;
+
+    return {
+        id: q?.id || '',
+        organizationId: q?.organizationId || '',
+        orgQuotaBytes: q?.orgQuotaBytes != null ? Number(q.orgQuotaBytes) : null,
+        defaultUserQuotaBytes: q?.defaultUserQuotaBytes != null ? Number(q.defaultUserQuotaBytes) : null,
+        warnAtPercent: q?.warnAtPercent || 80,
+        enforce: q?.enforce ?? true,
+    };
+});
+
+export const fetchUserStorageQuotaOverrides = createAsyncThunk<
+    SerializedUserQuotaOverride[],
+    void,
+    { state: RootState }
+>('admin/fetchUserStorageQuotaOverrides', async (_, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await storageApi.listUserStorageQuotaOverrides({ organizationId });
+    return response.overrides.map((o) => ({
+        id: o.id,
+        organizationId: o.organizationId,
+        userId: o.userId,
+        quotaBytes: Number(o.quotaBytes),
+        note: o.note || null,
+        createdBy: o.createdBy,
+    }));
+});
+
+export const setUserStorageQuotaOverride = createAsyncThunk<
+    SerializedUserQuotaOverride,
+    { userId: string; quotaBytes: number; note?: string },
+    { state: RootState }
+>('admin/setUserStorageQuotaOverride', async ({ userId, quotaBytes, note }, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await storageApi.setUserStorageQuotaOverride({
+        organizationId,
+        userId,
+        quotaBytes: BigInt(quotaBytes),
+        note,
+    });
+    const o = response.override;
+    return {
+        id: o?.id || '',
+        organizationId: o?.organizationId || '',
+        userId: o?.userId || '',
+        quotaBytes: Number(o?.quotaBytes),
+        note: o?.note || null,
+        createdBy: o?.createdBy || '',
+    };
+});
+
+export const removeUserStorageQuotaOverride = createAsyncThunk<
+    void,
+    { userId: string },
+    { state: RootState }
+>('admin/removeUserStorageQuotaOverride', async ({ userId }, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    await storageApi.removeUserStorageQuotaOverride({ organizationId, userId });
+});
+
+export const fetchOrgStorageUsage = createAsyncThunk<
+    { users: SerializedStorageUsageInfo[]; totalUsedBytes: number; totalFileCount: number },
+    void,
+    { state: RootState }
+>('admin/fetchOrgStorageUsage', async (_, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await storageApi.listOrgStorageUsage({ organizationId });
+    return {
+        users: response.users.map((u) => ({
+            userId: u.userId,
+            organizationId: u.organizationId,
+            usedBytes: Number(u.usedBytes),
+            fileCount: u.fileCount,
+            effectiveQuotaBytes: u.effectiveQuotaBytes != null ? Number(u.effectiveQuotaBytes) : null,
+            usagePercent: u.usagePercent,
+            hasOverride: u.hasOverride,
+        })),
+        totalUsedBytes: Number(response.totalUsedBytes),
+        totalFileCount: response.totalFileCount,
+    };
+});
+
+export const recalculateStorageUsage = createAsyncThunk<
+    SerializedStorageUsageInfo[],
+    { userId?: string },
+    { state: RootState }
+>('admin/recalculateStorageUsage', async (args, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await storageApi.recalculateStorageUsage({
+        organizationId,
+        userId: args.userId,
+    });
+
+    return response.recalculated.map((u) => ({
+        userId: u.userId,
+        organizationId: u.organizationId,
+        usedBytes: Number(u.usedBytes),
+        fileCount: u.fileCount,
+        effectiveQuotaBytes: u.effectiveQuotaBytes != null ? Number(u.effectiveQuotaBytes) : null,
+        usagePercent: u.usagePercent,
+        hasOverride: u.hasOverride,
+    }));
 });

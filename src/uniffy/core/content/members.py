@@ -19,6 +19,12 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.cache import (
+    invalidate_content as invalidate_perm_content,
+)
+from uniffy.core.auth.cache import (
+    invalidate_role_for_user as invalidate_perm_role,
+)
 from uniffy.core.auth.permissions.audit import (
     record_access_mode_changed,
     record_baseline_role_changed,
@@ -111,6 +117,32 @@ class ContentMembersOperations:
         self.permission_checker = PermissionChecker(session)
         self.search_indexer = SearchIndexer(session)
 
+    async def _drop_perm_cache_for_member_change(
+        self,
+        *,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        subject_type: SubjectType,
+        subject_id: UUID,
+        role: ContentRole,
+    ) -> None:
+        """Drop the perm cache entries affected by a member mutation.
+
+        For a USER subject with a non-BLOCKED role we know exactly whose
+        cached role changed (one key). For BLOCKED grants and GROUP
+        subjects the affected user set isn't enumerable cheaply (groups
+        can have thousands of members; BLOCKED affects role resolution
+        for any user matched by the subject), so we wipe the whole
+        ``content:{ct}:{cid}`` tag.
+        """
+        if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
+            await invalidate_perm_role(
+                organization_id, subject_id, content_type, content_id
+            )
+        else:
+            await invalidate_perm_content(content_type, content_id)
+
     async def list_members(
         self,
         actor_user_id: UUID,
@@ -119,9 +151,7 @@ class ContentMembersOperations:
         content_id: UUID,
     ) -> list[ContentMember]:
         """Return all member rows for a content item. Requires VIEW."""
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
 
         # VIEW is the floor for listing members. We resolve effective_role
         # and let BaseContentOperations' predicate handle it.
@@ -168,9 +198,7 @@ class ContentMembersOperations:
         - Adding a member when ``access_mode = OWNER_ONLY``
         - Adding the current owner as a member (owner is implicit)
         """
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
         actor_role, actor_org_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
@@ -184,14 +212,10 @@ class ContentMembersOperations:
         if content.access_mode == AccessMode.OWNER_ONLY:
             raise ValidationError(
                 "access_mode",
-                "Cannot add members while access_mode is OWNER_ONLY; "
-                "change the access mode first",
+                "Cannot add members while access_mode is OWNER_ONLY; change the access mode first",
             )
 
-        if (
-            subject_type == SubjectType.USER
-            and subject_id == content.owner_id
-        ):
+        if subject_type == SubjectType.USER and subject_id == content.owner_id:
             raise ValidationError(
                 "subject",
                 "Owner cannot be added as a member",
@@ -253,6 +277,15 @@ class ContentMembersOperations:
         await self.session.commit()
         await self.session.refresh(member)
 
+        await self._drop_perm_cache_for_member_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            role=role,
+        )
+
         await self._emit_granted_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -262,9 +295,7 @@ class ContentMembersOperations:
             subject_id=subject_id,
             role=role,
         )
-        await self._sync_search_sharing(
-            organization_id, content_type, content_id
-        )
+        await self._sync_search_sharing(organization_id, content_type, content_id)
 
         return member
 
@@ -283,9 +314,7 @@ class ContentMembersOperations:
 
         Rejects the same conditions as :meth:`add_member`.
         """
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
         _actor_role, actor_org_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
@@ -333,6 +362,22 @@ class ContentMembersOperations:
         await self.session.commit()
         await self.session.refresh(existing)
 
+        # The previous role might have been BLOCKED while the new role
+        # isn't (or vice versa). Wipe both representations: drop the
+        # single key for the new role's affected user, and if either
+        # role is BLOCKED also wipe the content tag so previously-cached
+        # group/BLOCKED-derived denials drop too.
+        await self._drop_perm_cache_for_member_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            role=new_role,
+        )
+        if previous_role == ContentRole.BLOCKED and new_role != ContentRole.BLOCKED:
+            await invalidate_perm_content(content_type, content_id)
+
         await self._emit_granted_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -342,9 +387,7 @@ class ContentMembersOperations:
             subject_id=subject_id,
             role=new_role,
         )
-        await self._sync_search_sharing(
-            organization_id, content_type, content_id
-        )
+        await self._sync_search_sharing(organization_id, content_type, content_id)
 
         return existing
 
@@ -359,9 +402,7 @@ class ContentMembersOperations:
         note: str = "",
     ) -> None:
         """Remove a ``ContentMember`` row. Requires MANAGE."""
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
         _actor_role, actor_org_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
@@ -393,6 +434,15 @@ class ContentMembersOperations:
 
         await self.session.commit()
 
+        await self._drop_perm_cache_for_member_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            role=previous_role,
+        )
+
         await self._emit_revoked_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -401,9 +451,7 @@ class ContentMembersOperations:
             subject_type=subject_type,
             subject_id=subject_id,
         )
-        await self._sync_search_sharing(
-            organization_id, content_type, content_id
-        )
+        await self._sync_search_sharing(organization_id, content_type, content_id)
 
     async def set_access_mode(
         self,
@@ -427,9 +475,7 @@ class ContentMembersOperations:
           rows are deleted first and a ``MEMBER_REMOVED`` event is
           written for each.
         """
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
         _actor_role, actor_org_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
@@ -438,14 +484,18 @@ class ContentMembersOperations:
 
         if new_access_mode == AccessMode.OWNER_ONLY:
             member_rows = (
-                await self.session.execute(
-                    select(ContentMember).where(
-                        ContentMember.organization_id == organization_id,
-                        ContentMember.content_type == content_type,
-                        ContentMember.content_id == content_id,
+                (
+                    await self.session.execute(
+                        select(ContentMember).where(
+                            ContentMember.organization_id == organization_id,
+                            ContentMember.content_type == content_type,
+                            ContentMember.content_id == content_id,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if member_rows and not remove_members_on_narrow:
                 raise ValidationError(
                     "access_mode",
@@ -504,6 +554,11 @@ class ContentMembersOperations:
 
         await self.session.commit()
 
+        # Access mode or baseline role flip changes the answer for an
+        # unbounded user set (every org member when OPEN_TO_ORG flips,
+        # every BLOCKED-derived denial when narrowed). Wipe by content tag.
+        await invalidate_perm_content(content_type, content_id)
+
         await self._sync_search_access_policy(
             organization_id=organization_id,
             content_type=content_type,
@@ -512,9 +567,7 @@ class ContentMembersOperations:
             access_mode=content.access_mode,
             baseline_role=content.baseline_role,
         )
-        await self._sync_search_sharing(
-            organization_id, content_type, content_id
-        )
+        await self._sync_search_sharing(organization_id, content_type, content_id)
 
     async def transfer_ownership(
         self,
@@ -533,9 +586,7 @@ class ContentMembersOperations:
         - New owner's existing ``ContentMember`` row, if any, is deleted.
         - Writes OWNERSHIP_TRANSFERRED + MEMBER_ADDED events.
         """
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
         _actor_role, actor_org_role = await self._require_transfer(
             actor_user_id, organization_id, content_type, content_id, content
         )
@@ -546,9 +597,7 @@ class ContentMembersOperations:
                 "New owner is already the current owner",
             )
 
-        if not await self._is_active_org_member(
-            new_owner_user_id, organization_id
-        ):
+        if not await self._is_active_org_member(new_owner_user_id, organization_id):
             raise ValidationError(
                 "new_owner_user_id",
                 "New owner is not an active member of the organization",
@@ -609,6 +658,13 @@ class ContentMembersOperations:
         await self.session.commit()
         await self.session.refresh(content)
 
+        await invalidate_perm_role(
+            organization_id, previous_owner_id, content_type, content_id
+        )
+        await invalidate_perm_role(
+            organization_id, new_owner_user_id, content_type, content_id
+        )
+
         await self._sync_search_access_policy(
             organization_id=organization_id,
             content_type=content_type,
@@ -617,9 +673,7 @@ class ContentMembersOperations:
             access_mode=content.access_mode,
             baseline_role=content.baseline_role,
         )
-        await self._sync_search_sharing(
-            organization_id, content_type, content_id
-        )
+        await self._sync_search_sharing(organization_id, content_type, content_id)
 
         await self._emit_granted_notification(
             organization_id=organization_id,
@@ -645,9 +699,7 @@ class ContentMembersOperations:
         before: datetime | None = None,
     ) -> list[ContentMemberEvent]:
         """List audit events for a content item. Requires VIEW."""
-        content = await self._load_content(
-            organization_id, content_type, content_id
-        )
+        content = await self._load_content(organization_id, content_type, content_id)
 
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
@@ -722,9 +774,7 @@ class ContentMembersOperations:
         )
         if not role_can_manage(role):
             raise PermissionDeniedError("manage", content_type.value)
-        org_role = await self.permission_checker.get_user_org_role(
-            actor_user_id, organization_id
-        )
+        org_role = await self.permission_checker.get_user_org_role(actor_user_id, organization_id)
         return role, org_role or OrganizationRole.MEMBER
 
     async def _require_transfer(
@@ -746,9 +796,7 @@ class ContentMembersOperations:
         )
         if not role_can_transfer(role):
             raise PermissionDeniedError("transfer", content_type.value)
-        org_role = await self.permission_checker.get_user_org_role(
-            actor_user_id, organization_id
-        )
+        org_role = await self.permission_checker.get_user_org_role(actor_user_id, organization_id)
         return role, org_role or OrganizationRole.MEMBER
 
     async def _get_existing_member(
@@ -794,9 +842,7 @@ class ContentMembersOperations:
                 "admin role first if you need to restrict their access.",
             )
 
-        if await self.permission_checker.is_domain_admin(
-            subject_id, organization_id, content_type
-        ):
+        if await self.permission_checker.is_domain_admin(subject_id, organization_id, content_type):
             raise ValidationError(
                 "subject",
                 "Domain admins for this content type cannot be blocked. "

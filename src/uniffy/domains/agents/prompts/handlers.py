@@ -65,13 +65,9 @@ class PromptsHandlers:
         if request.HasField("owner_id") and request.owner_id:
             owner_id = _parse_uuid(request.owner_id, "owner_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
 
         name = request.name if request.HasField("name") and request.name else None

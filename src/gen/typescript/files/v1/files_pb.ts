@@ -2676,6 +2676,129 @@ export class EmptyTrashResponse extends Message<EmptyTrashResponse> {
 }
 
 /**
+ * @generated from message files.v1.ListTrashRequest
+ */
+export class ListTrashRequest extends Message<ListTrashRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<ListTrashRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListTrashRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTrashRequest {
+    return new ListTrashRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTrashRequest {
+    return new ListTrashRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTrashRequest {
+    return new ListTrashRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTrashRequest | PlainMessage<ListTrashRequest> | undefined, b: ListTrashRequest | PlainMessage<ListTrashRequest> | undefined): boolean {
+    return proto3.util.equals(ListTrashRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.ListTrashResponse
+ */
+export class ListTrashResponse extends Message<ListTrashResponse> {
+  /**
+   * @generated from field: repeated files.v1.File files = 1;
+   */
+  files: File[] = [];
+
+  /**
+   * @generated from field: repeated files.v1.Folder folders = 2;
+   */
+  folders: Folder[] = [];
+
+  constructor(data?: PartialMessage<ListTrashResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListTrashResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "files", kind: "message", T: File, repeated: true },
+    { no: 2, name: "folders", kind: "message", T: Folder, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTrashResponse {
+    return new ListTrashResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTrashResponse {
+    return new ListTrashResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTrashResponse {
+    return new ListTrashResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTrashResponse | PlainMessage<ListTrashResponse> | undefined, b: ListTrashResponse | PlainMessage<ListTrashResponse> | undefined): boolean {
+    return proto3.util.equals(ListTrashResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RestoreFolderRequest
+ */
+export class RestoreFolderRequest extends Message<RestoreFolderRequest> {
+  /**
+   * @generated from field: string folder_id = 1;
+   */
+  folderId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<RestoreFolderRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RestoreFolderRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreFolderRequest {
+    return new RestoreFolderRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestoreFolderRequest {
+    return new RestoreFolderRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestoreFolderRequest {
+    return new RestoreFolderRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestoreFolderRequest | PlainMessage<RestoreFolderRequest> | undefined, b: RestoreFolderRequest | PlainMessage<RestoreFolderRequest> | undefined): boolean {
+    return proto3.util.equals(RestoreFolderRequest, a, b);
+  }
+}
+
+/**
  * @generated from message files.v1.FileVersion
  */
 export class FileVersion extends Message<FileVersion> {
@@ -3539,6 +3662,1337 @@ export class ListSavedFiltersResponse extends Message<ListSavedFiltersResponse> 
 
   static equals(a: ListSavedFiltersResponse | PlainMessage<ListSavedFiltersResponse> | undefined, b: ListSavedFiltersResponse | PlainMessage<ListSavedFiltersResponse> | undefined): boolean {
     return proto3.util.equals(ListSavedFiltersResponse, a, b);
+  }
+}
+
+/**
+ * Organization-level quota configuration.
+ *
+ * @generated from message files.v1.OrgStorageQuota
+ */
+export class OrgStorageQuota extends Message<OrgStorageQuota> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional int64 org_quota_bytes = 3;
+   */
+  orgQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: optional int64 default_user_quota_bytes = 4;
+   */
+  defaultUserQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: int32 warn_at_percent = 5;
+   */
+  warnAtPercent = 0;
+
+  /**
+   * @generated from field: bool enforce = 6;
+   */
+  enforce = false;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 7;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 8;
+   */
+  updatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<OrgStorageQuota>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.OrgStorageQuota";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "org_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 4, name: "default_user_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 5, name: "warn_at_percent", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "enforce", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "created_at", kind: "message", T: Timestamp },
+    { no: 8, name: "updated_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgStorageQuota {
+    return new OrgStorageQuota().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrgStorageQuota {
+    return new OrgStorageQuota().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrgStorageQuota {
+    return new OrgStorageQuota().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrgStorageQuota | PlainMessage<OrgStorageQuota> | undefined, b: OrgStorageQuota | PlainMessage<OrgStorageQuota> | undefined): boolean {
+    return proto3.util.equals(OrgStorageQuota, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetOrgStorageQuotaRequest
+ */
+export class GetOrgStorageQuotaRequest extends Message<GetOrgStorageQuotaRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<GetOrgStorageQuotaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetOrgStorageQuotaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrgStorageQuotaRequest {
+    return new GetOrgStorageQuotaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrgStorageQuotaRequest {
+    return new GetOrgStorageQuotaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrgStorageQuotaRequest {
+    return new GetOrgStorageQuotaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrgStorageQuotaRequest | PlainMessage<GetOrgStorageQuotaRequest> | undefined, b: GetOrgStorageQuotaRequest | PlainMessage<GetOrgStorageQuotaRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrgStorageQuotaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetOrgStorageQuotaResponse
+ */
+export class GetOrgStorageQuotaResponse extends Message<GetOrgStorageQuotaResponse> {
+  /**
+   * @generated from field: files.v1.OrgStorageQuota quota = 1;
+   */
+  quota?: OrgStorageQuota;
+
+  /**
+   * @generated from field: int64 total_used_bytes = 2;
+   */
+  totalUsedBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 total_file_count = 3;
+   */
+  totalFileCount = 0;
+
+  constructor(data?: PartialMessage<GetOrgStorageQuotaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetOrgStorageQuotaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "quota", kind: "message", T: OrgStorageQuota },
+    { no: 2, name: "total_used_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "total_file_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrgStorageQuotaResponse {
+    return new GetOrgStorageQuotaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrgStorageQuotaResponse {
+    return new GetOrgStorageQuotaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrgStorageQuotaResponse {
+    return new GetOrgStorageQuotaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrgStorageQuotaResponse | PlainMessage<GetOrgStorageQuotaResponse> | undefined, b: GetOrgStorageQuotaResponse | PlainMessage<GetOrgStorageQuotaResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrgStorageQuotaResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.SetOrgStorageQuotaRequest
+ */
+export class SetOrgStorageQuotaRequest extends Message<SetOrgStorageQuotaRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional int64 org_quota_bytes = 2;
+   */
+  orgQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: optional int64 default_user_quota_bytes = 3;
+   */
+  defaultUserQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: optional int32 warn_at_percent = 4;
+   */
+  warnAtPercent?: number;
+
+  /**
+   * @generated from field: optional bool enforce = 5;
+   */
+  enforce?: boolean;
+
+  constructor(data?: PartialMessage<SetOrgStorageQuotaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.SetOrgStorageQuotaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "org_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 3, name: "default_user_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 4, name: "warn_at_percent", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 5, name: "enforce", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetOrgStorageQuotaRequest {
+    return new SetOrgStorageQuotaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetOrgStorageQuotaRequest {
+    return new SetOrgStorageQuotaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetOrgStorageQuotaRequest {
+    return new SetOrgStorageQuotaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetOrgStorageQuotaRequest | PlainMessage<SetOrgStorageQuotaRequest> | undefined, b: SetOrgStorageQuotaRequest | PlainMessage<SetOrgStorageQuotaRequest> | undefined): boolean {
+    return proto3.util.equals(SetOrgStorageQuotaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.SetOrgStorageQuotaResponse
+ */
+export class SetOrgStorageQuotaResponse extends Message<SetOrgStorageQuotaResponse> {
+  /**
+   * @generated from field: files.v1.OrgStorageQuota quota = 1;
+   */
+  quota?: OrgStorageQuota;
+
+  constructor(data?: PartialMessage<SetOrgStorageQuotaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.SetOrgStorageQuotaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "quota", kind: "message", T: OrgStorageQuota },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetOrgStorageQuotaResponse {
+    return new SetOrgStorageQuotaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetOrgStorageQuotaResponse {
+    return new SetOrgStorageQuotaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetOrgStorageQuotaResponse {
+    return new SetOrgStorageQuotaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetOrgStorageQuotaResponse | PlainMessage<SetOrgStorageQuotaResponse> | undefined, b: SetOrgStorageQuotaResponse | PlainMessage<SetOrgStorageQuotaResponse> | undefined): boolean {
+    return proto3.util.equals(SetOrgStorageQuotaResponse, a, b);
+  }
+}
+
+/**
+ * Per-user quota override.
+ *
+ * @generated from message files.v1.UserStorageQuotaOverrideInfo
+ */
+export class UserStorageQuotaOverrideInfo extends Message<UserStorageQuotaOverrideInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 3;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: int64 quota_bytes = 4;
+   */
+  quotaBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: optional string note = 5;
+   */
+  note?: string;
+
+  /**
+   * @generated from field: string created_by = 6;
+   */
+  createdBy = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 7;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 8;
+   */
+  updatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<UserStorageQuotaOverrideInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.UserStorageQuotaOverrideInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "created_at", kind: "message", T: Timestamp },
+    { no: 8, name: "updated_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserStorageQuotaOverrideInfo {
+    return new UserStorageQuotaOverrideInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UserStorageQuotaOverrideInfo {
+    return new UserStorageQuotaOverrideInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UserStorageQuotaOverrideInfo {
+    return new UserStorageQuotaOverrideInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UserStorageQuotaOverrideInfo | PlainMessage<UserStorageQuotaOverrideInfo> | undefined, b: UserStorageQuotaOverrideInfo | PlainMessage<UserStorageQuotaOverrideInfo> | undefined): boolean {
+    return proto3.util.equals(UserStorageQuotaOverrideInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetUserStorageQuotaRequest
+ */
+export class GetUserStorageQuotaRequest extends Message<GetUserStorageQuotaRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<GetUserStorageQuotaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetUserStorageQuotaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserStorageQuotaRequest {
+    return new GetUserStorageQuotaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserStorageQuotaRequest {
+    return new GetUserStorageQuotaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserStorageQuotaRequest {
+    return new GetUserStorageQuotaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserStorageQuotaRequest | PlainMessage<GetUserStorageQuotaRequest> | undefined, b: GetUserStorageQuotaRequest | PlainMessage<GetUserStorageQuotaRequest> | undefined): boolean {
+    return proto3.util.equals(GetUserStorageQuotaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetUserStorageQuotaResponse
+ */
+export class GetUserStorageQuotaResponse extends Message<GetUserStorageQuotaResponse> {
+  /**
+   * @generated from field: optional int64 effective_quota_bytes = 1;
+   */
+  effectiveQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: int64 used_bytes = 2;
+   */
+  usedBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 file_count = 3;
+   */
+  fileCount = 0;
+
+  /**
+   * @generated from field: float usage_percent = 4;
+   */
+  usagePercent = 0;
+
+  /**
+   * @generated from field: optional files.v1.UserStorageQuotaOverrideInfo override = 5;
+   */
+  override?: UserStorageQuotaOverrideInfo;
+
+  constructor(data?: PartialMessage<GetUserStorageQuotaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetUserStorageQuotaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "effective_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 2, name: "used_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "file_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "usage_percent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 5, name: "override", kind: "message", T: UserStorageQuotaOverrideInfo, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserStorageQuotaResponse {
+    return new GetUserStorageQuotaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserStorageQuotaResponse {
+    return new GetUserStorageQuotaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserStorageQuotaResponse {
+    return new GetUserStorageQuotaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserStorageQuotaResponse | PlainMessage<GetUserStorageQuotaResponse> | undefined, b: GetUserStorageQuotaResponse | PlainMessage<GetUserStorageQuotaResponse> | undefined): boolean {
+    return proto3.util.equals(GetUserStorageQuotaResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.SetUserStorageQuotaOverrideRequest
+ */
+export class SetUserStorageQuotaOverrideRequest extends Message<SetUserStorageQuotaOverrideRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: int64 quota_bytes = 3;
+   */
+  quotaBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: optional string note = 4;
+   */
+  note?: string;
+
+  constructor(data?: PartialMessage<SetUserStorageQuotaOverrideRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.SetUserStorageQuotaOverrideRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetUserStorageQuotaOverrideRequest {
+    return new SetUserStorageQuotaOverrideRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetUserStorageQuotaOverrideRequest {
+    return new SetUserStorageQuotaOverrideRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetUserStorageQuotaOverrideRequest {
+    return new SetUserStorageQuotaOverrideRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetUserStorageQuotaOverrideRequest | PlainMessage<SetUserStorageQuotaOverrideRequest> | undefined, b: SetUserStorageQuotaOverrideRequest | PlainMessage<SetUserStorageQuotaOverrideRequest> | undefined): boolean {
+    return proto3.util.equals(SetUserStorageQuotaOverrideRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.SetUserStorageQuotaOverrideResponse
+ */
+export class SetUserStorageQuotaOverrideResponse extends Message<SetUserStorageQuotaOverrideResponse> {
+  /**
+   * @generated from field: files.v1.UserStorageQuotaOverrideInfo override = 1;
+   */
+  override?: UserStorageQuotaOverrideInfo;
+
+  constructor(data?: PartialMessage<SetUserStorageQuotaOverrideResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.SetUserStorageQuotaOverrideResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "override", kind: "message", T: UserStorageQuotaOverrideInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetUserStorageQuotaOverrideResponse {
+    return new SetUserStorageQuotaOverrideResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetUserStorageQuotaOverrideResponse {
+    return new SetUserStorageQuotaOverrideResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetUserStorageQuotaOverrideResponse {
+    return new SetUserStorageQuotaOverrideResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetUserStorageQuotaOverrideResponse | PlainMessage<SetUserStorageQuotaOverrideResponse> | undefined, b: SetUserStorageQuotaOverrideResponse | PlainMessage<SetUserStorageQuotaOverrideResponse> | undefined): boolean {
+    return proto3.util.equals(SetUserStorageQuotaOverrideResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RemoveUserStorageQuotaOverrideRequest
+ */
+export class RemoveUserStorageQuotaOverrideRequest extends Message<RemoveUserStorageQuotaOverrideRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<RemoveUserStorageQuotaOverrideRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RemoveUserStorageQuotaOverrideRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveUserStorageQuotaOverrideRequest {
+    return new RemoveUserStorageQuotaOverrideRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveUserStorageQuotaOverrideRequest {
+    return new RemoveUserStorageQuotaOverrideRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveUserStorageQuotaOverrideRequest {
+    return new RemoveUserStorageQuotaOverrideRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveUserStorageQuotaOverrideRequest | PlainMessage<RemoveUserStorageQuotaOverrideRequest> | undefined, b: RemoveUserStorageQuotaOverrideRequest | PlainMessage<RemoveUserStorageQuotaOverrideRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveUserStorageQuotaOverrideRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RemoveUserStorageQuotaOverrideResponse
+ */
+export class RemoveUserStorageQuotaOverrideResponse extends Message<RemoveUserStorageQuotaOverrideResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<RemoveUserStorageQuotaOverrideResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RemoveUserStorageQuotaOverrideResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveUserStorageQuotaOverrideResponse {
+    return new RemoveUserStorageQuotaOverrideResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveUserStorageQuotaOverrideResponse {
+    return new RemoveUserStorageQuotaOverrideResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveUserStorageQuotaOverrideResponse {
+    return new RemoveUserStorageQuotaOverrideResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveUserStorageQuotaOverrideResponse | PlainMessage<RemoveUserStorageQuotaOverrideResponse> | undefined, b: RemoveUserStorageQuotaOverrideResponse | PlainMessage<RemoveUserStorageQuotaOverrideResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveUserStorageQuotaOverrideResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.ListUserStorageQuotaOverridesRequest
+ */
+export class ListUserStorageQuotaOverridesRequest extends Message<ListUserStorageQuotaOverridesRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<ListUserStorageQuotaOverridesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListUserStorageQuotaOverridesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListUserStorageQuotaOverridesRequest {
+    return new ListUserStorageQuotaOverridesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListUserStorageQuotaOverridesRequest {
+    return new ListUserStorageQuotaOverridesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListUserStorageQuotaOverridesRequest {
+    return new ListUserStorageQuotaOverridesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListUserStorageQuotaOverridesRequest | PlainMessage<ListUserStorageQuotaOverridesRequest> | undefined, b: ListUserStorageQuotaOverridesRequest | PlainMessage<ListUserStorageQuotaOverridesRequest> | undefined): boolean {
+    return proto3.util.equals(ListUserStorageQuotaOverridesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.ListUserStorageQuotaOverridesResponse
+ */
+export class ListUserStorageQuotaOverridesResponse extends Message<ListUserStorageQuotaOverridesResponse> {
+  /**
+   * @generated from field: repeated files.v1.UserStorageQuotaOverrideInfo overrides = 1;
+   */
+  overrides: UserStorageQuotaOverrideInfo[] = [];
+
+  constructor(data?: PartialMessage<ListUserStorageQuotaOverridesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListUserStorageQuotaOverridesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "overrides", kind: "message", T: UserStorageQuotaOverrideInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListUserStorageQuotaOverridesResponse {
+    return new ListUserStorageQuotaOverridesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListUserStorageQuotaOverridesResponse {
+    return new ListUserStorageQuotaOverridesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListUserStorageQuotaOverridesResponse {
+    return new ListUserStorageQuotaOverridesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListUserStorageQuotaOverridesResponse | PlainMessage<ListUserStorageQuotaOverridesResponse> | undefined, b: ListUserStorageQuotaOverridesResponse | PlainMessage<ListUserStorageQuotaOverridesResponse> | undefined): boolean {
+    return proto3.util.equals(ListUserStorageQuotaOverridesResponse, a, b);
+  }
+}
+
+/**
+ * Storage usage tracking.
+ *
+ * @generated from message files.v1.StorageUsageInfo
+ */
+export class StorageUsageInfo extends Message<StorageUsageInfo> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: int64 used_bytes = 3;
+   */
+  usedBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 file_count = 4;
+   */
+  fileCount = 0;
+
+  /**
+   * @generated from field: optional int64 effective_quota_bytes = 5;
+   */
+  effectiveQuotaBytes?: bigint;
+
+  /**
+   * @generated from field: float usage_percent = 6;
+   */
+  usagePercent = 0;
+
+  /**
+   * @generated from field: bool has_override = 7;
+   */
+  hasOverride = false;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp last_recalculated_at = 8;
+   */
+  lastRecalculatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<StorageUsageInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.StorageUsageInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "used_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "file_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "effective_quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 6, name: "usage_percent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 7, name: "has_override", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "last_recalculated_at", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageUsageInfo {
+    return new StorageUsageInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageUsageInfo {
+    return new StorageUsageInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageUsageInfo {
+    return new StorageUsageInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StorageUsageInfo | PlainMessage<StorageUsageInfo> | undefined, b: StorageUsageInfo | PlainMessage<StorageUsageInfo> | undefined): boolean {
+    return proto3.util.equals(StorageUsageInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetStorageUsageRequest
+ */
+export class GetStorageUsageRequest extends Message<GetStorageUsageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional string user_id = 2;
+   */
+  userId?: string;
+
+  constructor(data?: PartialMessage<GetStorageUsageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetStorageUsageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStorageUsageRequest {
+    return new GetStorageUsageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetStorageUsageRequest {
+    return new GetStorageUsageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetStorageUsageRequest {
+    return new GetStorageUsageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetStorageUsageRequest | PlainMessage<GetStorageUsageRequest> | undefined, b: GetStorageUsageRequest | PlainMessage<GetStorageUsageRequest> | undefined): boolean {
+    return proto3.util.equals(GetStorageUsageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetStorageUsageResponse
+ */
+export class GetStorageUsageResponse extends Message<GetStorageUsageResponse> {
+  /**
+   * @generated from field: files.v1.StorageUsageInfo usage = 1;
+   */
+  usage?: StorageUsageInfo;
+
+  constructor(data?: PartialMessage<GetStorageUsageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetStorageUsageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "usage", kind: "message", T: StorageUsageInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStorageUsageResponse {
+    return new GetStorageUsageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetStorageUsageResponse {
+    return new GetStorageUsageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetStorageUsageResponse {
+    return new GetStorageUsageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetStorageUsageResponse | PlainMessage<GetStorageUsageResponse> | undefined, b: GetStorageUsageResponse | PlainMessage<GetStorageUsageResponse> | undefined): boolean {
+    return proto3.util.equals(GetStorageUsageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.ListOrgStorageUsageRequest
+ */
+export class ListOrgStorageUsageRequest extends Message<ListOrgStorageUsageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<ListOrgStorageUsageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListOrgStorageUsageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListOrgStorageUsageRequest {
+    return new ListOrgStorageUsageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListOrgStorageUsageRequest {
+    return new ListOrgStorageUsageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListOrgStorageUsageRequest {
+    return new ListOrgStorageUsageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListOrgStorageUsageRequest | PlainMessage<ListOrgStorageUsageRequest> | undefined, b: ListOrgStorageUsageRequest | PlainMessage<ListOrgStorageUsageRequest> | undefined): boolean {
+    return proto3.util.equals(ListOrgStorageUsageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.ListOrgStorageUsageResponse
+ */
+export class ListOrgStorageUsageResponse extends Message<ListOrgStorageUsageResponse> {
+  /**
+   * @generated from field: repeated files.v1.StorageUsageInfo users = 1;
+   */
+  users: StorageUsageInfo[] = [];
+
+  /**
+   * @generated from field: int64 total_used_bytes = 2;
+   */
+  totalUsedBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 total_file_count = 3;
+   */
+  totalFileCount = 0;
+
+  constructor(data?: PartialMessage<ListOrgStorageUsageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.ListOrgStorageUsageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "users", kind: "message", T: StorageUsageInfo, repeated: true },
+    { no: 2, name: "total_used_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "total_file_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListOrgStorageUsageResponse {
+    return new ListOrgStorageUsageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListOrgStorageUsageResponse {
+    return new ListOrgStorageUsageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListOrgStorageUsageResponse {
+    return new ListOrgStorageUsageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListOrgStorageUsageResponse | PlainMessage<ListOrgStorageUsageResponse> | undefined, b: ListOrgStorageUsageResponse | PlainMessage<ListOrgStorageUsageResponse> | undefined): boolean {
+    return proto3.util.equals(ListOrgStorageUsageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RecalculateStorageUsageRequest
+ */
+export class RecalculateStorageUsageRequest extends Message<RecalculateStorageUsageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional string user_id = 2;
+   */
+  userId?: string;
+
+  constructor(data?: PartialMessage<RecalculateStorageUsageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RecalculateStorageUsageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecalculateStorageUsageRequest {
+    return new RecalculateStorageUsageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecalculateStorageUsageRequest {
+    return new RecalculateStorageUsageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecalculateStorageUsageRequest {
+    return new RecalculateStorageUsageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecalculateStorageUsageRequest | PlainMessage<RecalculateStorageUsageRequest> | undefined, b: RecalculateStorageUsageRequest | PlainMessage<RecalculateStorageUsageRequest> | undefined): boolean {
+    return proto3.util.equals(RecalculateStorageUsageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RecalculateStorageUsageResponse
+ */
+export class RecalculateStorageUsageResponse extends Message<RecalculateStorageUsageResponse> {
+  /**
+   * @generated from field: repeated files.v1.StorageUsageInfo recalculated = 1;
+   */
+  recalculated: StorageUsageInfo[] = [];
+
+  constructor(data?: PartialMessage<RecalculateStorageUsageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RecalculateStorageUsageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "recalculated", kind: "message", T: StorageUsageInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecalculateStorageUsageResponse {
+    return new RecalculateStorageUsageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecalculateStorageUsageResponse {
+    return new RecalculateStorageUsageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecalculateStorageUsageResponse {
+    return new RecalculateStorageUsageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecalculateStorageUsageResponse | PlainMessage<RecalculateStorageUsageResponse> | undefined, b: RecalculateStorageUsageResponse | PlainMessage<RecalculateStorageUsageResponse> | undefined): boolean {
+    return proto3.util.equals(RecalculateStorageUsageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CheckStorageQuotaRequest
+ */
+export class CheckStorageQuotaRequest extends Message<CheckStorageQuotaRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: int64 additional_bytes = 2;
+   */
+  additionalBytes = protoInt64.zero;
+
+  constructor(data?: PartialMessage<CheckStorageQuotaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CheckStorageQuotaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "additional_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckStorageQuotaRequest {
+    return new CheckStorageQuotaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckStorageQuotaRequest {
+    return new CheckStorageQuotaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckStorageQuotaRequest {
+    return new CheckStorageQuotaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckStorageQuotaRequest | PlainMessage<CheckStorageQuotaRequest> | undefined, b: CheckStorageQuotaRequest | PlainMessage<CheckStorageQuotaRequest> | undefined): boolean {
+    return proto3.util.equals(CheckStorageQuotaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CheckStorageQuotaResponse
+ */
+export class CheckStorageQuotaResponse extends Message<CheckStorageQuotaResponse> {
+  /**
+   * @generated from field: bool allowed = 1;
+   */
+  allowed = false;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason = "";
+
+  /**
+   * @generated from field: int64 current_used_bytes = 3;
+   */
+  currentUsedBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: optional int64 quota_bytes = 4;
+   */
+  quotaBytes?: bigint;
+
+  /**
+   * @generated from field: optional int64 remaining_bytes = 5;
+   */
+  remainingBytes?: bigint;
+
+  /**
+   * @generated from field: float usage_percent = 6;
+   */
+  usagePercent = 0;
+
+  constructor(data?: PartialMessage<CheckStorageQuotaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CheckStorageQuotaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "allowed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "current_used_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "quota_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 5, name: "remaining_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 6, name: "usage_percent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckStorageQuotaResponse {
+    return new CheckStorageQuotaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckStorageQuotaResponse {
+    return new CheckStorageQuotaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckStorageQuotaResponse {
+    return new CheckStorageQuotaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckStorageQuotaResponse | PlainMessage<CheckStorageQuotaResponse> | undefined, b: CheckStorageQuotaResponse | PlainMessage<CheckStorageQuotaResponse> | undefined): boolean {
+    return proto3.util.equals(CheckStorageQuotaResponse, a, b);
+  }
+}
+
+/**
+ * Batch folder creation for recursive folder upload.
+ *
+ * @generated from message files.v1.FolderTreeNode
+ */
+export class FolderTreeNode extends Message<FolderTreeNode> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated files.v1.FolderTreeNode children = 2;
+   */
+  children: FolderTreeNode[] = [];
+
+  constructor(data?: PartialMessage<FolderTreeNode>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.FolderTreeNode";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "children", kind: "message", T: FolderTreeNode, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FolderTreeNode {
+    return new FolderTreeNode().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FolderTreeNode {
+    return new FolderTreeNode().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FolderTreeNode {
+    return new FolderTreeNode().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FolderTreeNode | PlainMessage<FolderTreeNode> | undefined, b: FolderTreeNode | PlainMessage<FolderTreeNode> | undefined): boolean {
+    return proto3.util.equals(FolderTreeNode, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CreatedFolderInfo
+ */
+export class CreatedFolderInfo extends Message<CreatedFolderInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string path = 3;
+   */
+  path = "";
+
+  /**
+   * @generated from field: optional string parent_id = 4;
+   */
+  parentId?: string;
+
+  constructor(data?: PartialMessage<CreatedFolderInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CreatedFolderInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatedFolderInfo {
+    return new CreatedFolderInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreatedFolderInfo {
+    return new CreatedFolderInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreatedFolderInfo {
+    return new CreatedFolderInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreatedFolderInfo | PlainMessage<CreatedFolderInfo> | undefined, b: CreatedFolderInfo | PlainMessage<CreatedFolderInfo> | undefined): boolean {
+    return proto3.util.equals(CreatedFolderInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CreateFolderTreeRequest
+ */
+export class CreateFolderTreeRequest extends Message<CreateFolderTreeRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional string parent_folder_id = 2;
+   */
+  parentFolderId?: string;
+
+  /**
+   * @generated from field: repeated files.v1.FolderTreeNode tree = 3;
+   */
+  tree: FolderTreeNode[] = [];
+
+  /**
+   * @generated from field: common.v1.AccessMode access_mode = 4;
+   */
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 5;
+   */
+  baselineRole?: ContentRole;
+
+  constructor(data?: PartialMessage<CreateFolderTreeRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CreateFolderTreeRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "parent_folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "tree", kind: "message", T: FolderTreeNode, repeated: true },
+    { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 5, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFolderTreeRequest {
+    return new CreateFolderTreeRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFolderTreeRequest {
+    return new CreateFolderTreeRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFolderTreeRequest {
+    return new CreateFolderTreeRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateFolderTreeRequest | PlainMessage<CreateFolderTreeRequest> | undefined, b: CreateFolderTreeRequest | PlainMessage<CreateFolderTreeRequest> | undefined): boolean {
+    return proto3.util.equals(CreateFolderTreeRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CreateFolderTreeResponse
+ */
+export class CreateFolderTreeResponse extends Message<CreateFolderTreeResponse> {
+  /**
+   * @generated from field: repeated files.v1.CreatedFolderInfo folders = 1;
+   */
+  folders: CreatedFolderInfo[] = [];
+
+  constructor(data?: PartialMessage<CreateFolderTreeResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CreateFolderTreeResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "folders", kind: "message", T: CreatedFolderInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFolderTreeResponse {
+    return new CreateFolderTreeResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFolderTreeResponse {
+    return new CreateFolderTreeResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFolderTreeResponse {
+    return new CreateFolderTreeResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateFolderTreeResponse | PlainMessage<CreateFolderTreeResponse> | undefined, b: CreateFolderTreeResponse | PlainMessage<CreateFolderTreeResponse> | undefined): boolean {
+    return proto3.util.equals(CreateFolderTreeResponse, a, b);
   }
 }
 
