@@ -751,7 +751,7 @@ class AttachmentOperations:
             return
 
         try:
-            queue = get_queue()
+            queue = get_queue("core")
             for job_name in jobs:
                 await queue.enqueue_job(
                     job_name,

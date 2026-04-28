@@ -9,7 +9,7 @@ Each pending approval has two layers:
   TTL so the decision survives pod restarts and so audit readers can see
   the outcome after the runtime has torn down the stream.
 
-Scope id is the session id for legacy session invocations and the chat
+Scope id is the session id for direct-agent runs and the chat
 channel id for chat-triggered invocations. Request id is the tool call
 id from the LLM (stable per invocation) which keeps the approval row
 addressable by the RespondToAgentConfirmation RPC.

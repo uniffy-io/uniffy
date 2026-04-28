@@ -176,6 +176,14 @@ export default defineConfig({
           if (pkg === '@reduxjs/toolkit' || pkg === 'react-redux' || pkg === 'redux-persist' || pkg === 'redux' || pkg === 'immer' || pkg === 'reselect') {
             return 'vendor-redux';
           }
+          // lodash-es is shared by @milkdown/* (vendor-editor) and force-graph
+          // (vendor-ui via react-force-graph-2d). Without an explicit chunk,
+          // Rollup parks it inside vendor-editor and vendor-ui ends up calling
+          // into a not-yet-initialized binding ("vS is not a function").
+          // Hoist to its own chunk so both consumers init after it.
+          if (pkg === 'lodash-es' || pkg === 'lodash') {
+            return 'vendor-lodash';
+          }
           // Milkdown + CodeMirror share transitive edges with vendor-ui
           // (phosphor icons, prosemirror-view pulls react-like utils),
           // so splitting them creates a circular chunk graph. Keep merged.

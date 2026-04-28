@@ -36,6 +36,13 @@ const SHORTCUT_CATEGORIES = [
         ],
     },
     {
+        id: 'chat',
+        label: 'Chat',
+        shortcuts: [
+            { action: 'chat.editLast', label: 'Edit Last Message' },
+        ],
+    },
+    {
         id: 'viewer',
         label: 'File Viewer',
         shortcuts: [

@@ -13,7 +13,8 @@ import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chatThunks';
 import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
-import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage } from '@/features/chat/store/chatUiSlice';
+import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
+import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { attachmentsApi } from '@/features/attachments';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
@@ -40,6 +41,10 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   );
   const replyToMessage = useAppSelector(selectReplyToMessage);
   const editingMessage = useAppSelector(selectEditingMessage);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const channelMessages = useAppSelector((state) =>
+    effectiveChannelId ? selectMessagesForChannel(state, effectiveChannelId) : null,
+  );
 
   const handleSend = useCallback(
     async (content: string, fileIds: string[]) => {
@@ -105,6 +110,21 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     dispatch(clearEditingMessage());
   }, [dispatch]);
 
+  const handleEditLast = useCallback(() => {
+    if (!effectiveChannelId || !currentUserId || !channelMessages) return;
+    for (let i = channelMessages.length - 1; i >= 0; i--) {
+      const msg = channelMessages[i];
+      if (msg.senderId === currentUserId && !msg.isDeleted) {
+        dispatch(setEditingMessage({
+          id: msg.id,
+          channelId: effectiveChannelId,
+          content: msg.content,
+        }));
+        return;
+      }
+    }
+  }, [effectiveChannelId, currentUserId, channelMessages, dispatch]);
+
   const handleTyping = useCallback(() => {
     if (!effectiveChannelId) return;
     const now = Date.now();
@@ -149,6 +169,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         editingMessage={editingMessage}
         onSaveEdit={handleEdit}
         onCancelEdit={handleCancelEdit}
+        onEditLast={handleEditLast}
       />
     </div>
   );

@@ -816,6 +816,49 @@ export class ConfirmationResponse extends Message<ConfirmationResponse> {
 }
 
 /**
+ * @generated from message agents.v1.SubscribeToRunRequest
+ */
+export class SubscribeToRunRequest extends Message<SubscribeToRunRequest> {
+  /**
+   * @generated from field: string run_id = 1;
+   */
+  runId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<SubscribeToRunRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.SubscribeToRunRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscribeToRunRequest {
+    return new SubscribeToRunRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscribeToRunRequest {
+    return new SubscribeToRunRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscribeToRunRequest {
+    return new SubscribeToRunRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscribeToRunRequest | PlainMessage<SubscribeToRunRequest> | undefined, b: SubscribeToRunRequest | PlainMessage<SubscribeToRunRequest> | undefined): boolean {
+    return proto3.util.equals(SubscribeToRunRequest, a, b);
+  }
+}
+
+/**
  * @generated from message agents.v1.ConfirmationResponseAck
  */
 export class ConfirmationResponseAck extends Message<ConfirmationResponseAck> {
@@ -903,6 +946,17 @@ export class StreamSendMessageEvent extends Message<StreamSendMessageEvent> {
     case: "confirmationRequired";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
+  /**
+   * The egress run id this event belongs to. Populated on every event
+   * so a tab reload mid-stream can call SubscribeToRun(run_id) to
+   * resume from the start of the stream. Set by the handler from the
+   * run state hash; the worker does not embed it inside the oneof
+   * payload itself.
+   *
+   * @generated from field: string run_id = 8;
+   */
+  runId = "";
+
   constructor(data?: PartialMessage<StreamSendMessageEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -918,6 +972,7 @@ export class StreamSendMessageEvent extends Message<StreamSendMessageEvent> {
     { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
     { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
     { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
+    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageEvent {

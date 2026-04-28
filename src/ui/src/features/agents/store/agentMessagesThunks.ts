@@ -6,6 +6,7 @@ import type { MessageInfo } from '@uniffy/proto/agents/v1/sessions_pb';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import {
     streamStarted,
+    runIdReceived,
     addOptimisticUserMessage,
     appendStreamingToken,
     addStreamingToolCall,
@@ -136,6 +137,9 @@ export const streamSendMessage = createAsyncThunk<
         };
 
         for await (const event of stream) {
+            if (event.runId) {
+                dispatch(runIdReceived(event.runId));
+            }
             if (event.event.case === 'token') {
                 bufferToken(event.event.value.text);
             } else if (event.event.case === 'toolCall') {

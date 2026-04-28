@@ -45,6 +45,7 @@ message UserProfile {
   bool                      is_system_admin = 9;
   google.protobuf.Timestamp created_at      = 10;
   google.protobuf.Timestamp updated_at      = 11;
+  bool                      has_avatar      = 12;
 }
 
 message GetMyProfileRequest {}

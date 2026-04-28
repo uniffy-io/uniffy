@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class UserProfile(_message.Message):
-    __slots__ = ("id", "email", "full_name", "username", "avatar_url", "accent_color", "font_family", "is_active", "is_system_admin", "created_at", "updated_at")
+    __slots__ = ("id", "email", "full_name", "username", "avatar_url", "accent_color", "font_family", "is_active", "is_system_admin", "created_at", "updated_at", "has_avatar")
     ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -23,6 +23,7 @@ class UserProfile(_message.Message):
     IS_SYSTEM_ADMIN_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    HAS_AVATAR_FIELD_NUMBER: _ClassVar[int]
     id: str
     email: str
     full_name: str
@@ -34,7 +35,8 @@ class UserProfile(_message.Message):
     is_system_admin: bool
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., avatar_url: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    has_avatar: bool
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., avatar_url: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., has_avatar: _Optional[bool] = ...) -> None: ...
 
 class GetMyProfileRequest(_message.Message):
     __slots__ = ()

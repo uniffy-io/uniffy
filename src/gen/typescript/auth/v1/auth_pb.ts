@@ -500,6 +500,11 @@ export class CurrentUserResponse extends Message<CurrentUserResponse> {
    */
   avatarUrl?: string;
 
+  /**
+   * @generated from field: bool has_avatar = 11;
+   */
+  hasAvatar = false;
+
   constructor(data?: PartialMessage<CurrentUserResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -518,6 +523,7 @@ export class CurrentUserResponse extends Message<CurrentUserResponse> {
     { no: 8, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "font_family", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "has_avatar", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CurrentUserResponse {

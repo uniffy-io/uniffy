@@ -164,7 +164,9 @@ class FileContext:
     storage_key : str
         S3 storage key for downloading.
     extracted_text : str | None
-        Pre-extracted text content (from worker pipeline).
+        Pre-extracted text content (from worker pipeline). Readers gate on
+        truthiness so ``None`` and ``""`` are interchangeable; the handler
+        normalises empty/missing extraction output to ``None`` at load time.
     extraction_status : str
         Current extraction status.
 
@@ -1026,8 +1028,7 @@ class RuntimeOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        session_id: UUID | None = None,
-        destination: RuntimeDestination | None = None,
+        destination: RuntimeDestination,
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
@@ -1038,21 +1039,15 @@ class RuntimeOperations:
         tools, prompt, context, resolve model) but yields streaming events
         as the LLM generates tokens and executes tools.
 
-        Either `session_id` (legacy session-backed path) or `destination`
-        (explicit `SessionDestination` / `ChatDestination`) must be supplied.
-        When both are omitted a ValidationError is raised.
-
         Parameters
         ----------
         user_id : UUID
             The user sending the message.
         organization_id : UUID
             Organization context.
-        session_id : UUID | None
-            Legacy session id. Wrapped in `SessionDestination` when no
-            explicit `destination` is provided.
-        destination : RuntimeDestination | None
-            Explicit destination. Used by chat-triggered invocations.
+        destination : RuntimeDestination
+            Explicit `SessionDestination` (direct-agent runs) or
+            `ChatDestination` (chat-triggered runs).
         content : str
             The user's message content.
 
@@ -1072,15 +1067,8 @@ class RuntimeOperations:
             If no model can be resolved or tool loop exceeds max iterations.
 
         """
-        if destination is None:
-            if session_id is None:
-                raise ValidationError(
-                    "destination",
-                    "Either session_id or destination must be provided",
-                )
-            destination = SessionDestination(session_id=session_id)
-
         writer: MessageWriter
+        session_id: UUID | None = None
         agent_session = None
         model_override: str | None = None
 
@@ -1378,7 +1366,7 @@ class RuntimeOperations:
         # 14. Store final assistant message (no tool use). When the chat
         # writer reserved a placeholder during streaming we finalize it
         # in place so the row id stays stable; otherwise fall back to a
-        # fresh insert (legacy session path / empty stream).
+        # fresh insert (session path / empty stream).
         if stream_result.placeholder_id is not None:
             assistant_message = await writer.finalize_assistant_placeholder(
                 message_id=stream_result.placeholder_id,
@@ -1949,7 +1937,7 @@ class RuntimeOperations:
     ) -> None:
         """Create an AgentRunLog entry for observability.
 
-        Either `session_id` (legacy session-backed runs) or `channel_id`
+        Either `session_id` (session-backed runs) or `channel_id`
         (chat-triggered runs) is set; both populate the same usage
         analytics aggregation. The chat path leaves `session_id` NULL.
         """

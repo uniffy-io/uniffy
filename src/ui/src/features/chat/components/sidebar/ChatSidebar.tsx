@@ -58,6 +58,45 @@ import { ChannelListItem } from '@/features/chat/components/sidebar/ChannelListI
 import { DirectMessageListItem } from '@/features/chat/components/sidebar/DirectMessageListItem';
 import { CategorySection } from '@/features/chat/components/sidebar/CategorySection';
 import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
+import { cn } from '@/shared/utils/cn';
+import type { Icon } from '@phosphor-icons/react';
+
+/**
+ * Hover-expand pill button matching the notes sidebar header style.
+ * Icon shows by default; label slides in on hover.
+ */
+function CompactActionButton({
+  icon: IconComponent,
+  label,
+  onClick,
+  testId,
+}: {
+  icon: Icon;
+  label: string;
+  onClick: () => void;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      data-testid={testId}
+      className={cn(
+        'group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg',
+        'overflow-hidden transition-all duration-300 ease-out hover:px-2.5',
+      )}
+    >
+      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+      <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
+        <IconComponent size={18} weight="duotone" />
+      </span>
+      <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export function ChatSidebar() {
   const dispatch = useAppDispatch();
@@ -210,22 +249,18 @@ export function ChatSidebar() {
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         {canManageChat && (
           <>
-            <button
+            <CompactActionButton
+              icon={PencilSimple}
+              label="Channel"
               onClick={() => dispatch(openCreateChannelModal(null))}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="New channel"
-              data-testid="chat-sidebar-create-channel-button"
-            >
-              <PencilSimple size={16} />
-            </button>
-            <button
+              testId="chat-sidebar-create-channel-button"
+            />
+            <CompactActionButton
+              icon={Plus}
+              label="Category"
               onClick={() => dispatch(openCreateCategoryModal())}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="New category"
-              data-testid="chat-sidebar-create-category-button"
-            >
-              <Plus size={16} />
-            </button>
+              testId="chat-sidebar-create-category-button"
+            />
           </>
         )}
         <div className="flex-1" />

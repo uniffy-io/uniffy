@@ -1,23 +1,30 @@
-"""
-ARQ Worker Settings.
+"""ARQ worker settings for the core and egress fleets.
 
-Configures the background worker with all registered tasks,
-startup/shutdown hooks, and Valkey connection settings.
+Two worker classes, two queues, one Valkey instance:
 
-Run with: arq uniffy.workers.settings.WorkerSettings
+- ``CoreWorkerSettings`` runs on ``uniffy:queue:core`` with default
+  ARQ tuning (``max_jobs=10``). Owns thumbnail / extraction /
+  notification / reminder / storage / chat-mute work plus the cron
+  jobs whose downstream effects land on the core queue.
+- ``EgressWorkerSettings`` runs on ``uniffy:queue:egress`` with a
+  larger pool (``max_jobs=50`` default) and tighter ``poll_delay``
+  (50ms) so agent-runtime time-to-first-token stays low. Owns
+  agent runtime / compaction / cron tasks.
+
+Run with one of:
+    arq uniffy.workers.settings.CoreWorkerSettings
+    arq uniffy.workers.settings.EgressWorkerSettings
 """
 
 import os
 
 from dotenv import load_dotenv
 
-# Load .env before any imports that read environment variables
 load_dotenv()
 
 from uniffy.core.valkey import ValkeyConfig
 from uniffy.observability import ObservabilityConfig, setup_observability
 
-# Setup observability for worker process
 _environment = os.getenv("ENVIRONMENT", "development")
 _log_level = os.getenv("LOG_LEVEL", "info").upper()
 
@@ -32,112 +39,71 @@ setup_observability(
 from arq.cron import cron
 
 from uniffy.workers.tasks import (
+    CORE_TASKS,
+    EGRESS_TASKS,
     auto_unmute_channels,
     check_calendar_reminders,
     check_task_due_dates,
-    compact_session,
-    deliver_email_notification,
-    deliver_push_notification,
+    core_on_shutdown,
+    core_on_startup,
+    egress_on_shutdown,
+    egress_on_startup,
     execute_agent_cron_tasks,
-    execute_single_agent_cron_task,
-    extract_audio_metadata,
-    extract_document_content,
-    extract_image_metadata,
     flush_chat_read_cursors,
-    generate_image_thumbnail,
-    generate_pdf_thumbnail,
-    generate_video_thumbnail,
     on_job_end,
     on_job_start,
-    on_shutdown,
-    on_startup,
-    process_notification_event,
     recalculate_all_storage_usage,
-    respond_to_chat_message,
-    send_email_digest,
 )
 
+_redis_settings = ValkeyConfig.from_env().to_arq_redis_settings()
+_core_job_timeout = int(os.getenv("WORKER_JOB_TIMEOUT", "300"))
+_egress_job_timeout = int(os.getenv("EGRESS_WORKER_JOB_TIMEOUT", "900"))
+_keep_result = int(os.getenv("WORKER_KEEP_RESULT", "3600"))
+_max_tries = int(os.getenv("WORKER_MAX_TRIES", "3"))
+_health_check_interval = int(os.getenv("WORKER_HEALTH_CHECK_INTERVAL", "30"))
 
-class WorkerSettings:
-    """
-    ARQ Worker configuration.
 
-    This class defines all settings for the ARQ background worker
-    including task functions, lifecycle hooks, and queue configuration.
+class CoreWorkerSettings:
+    """ARQ settings for the ``core`` worker fleet."""
 
-    Attributes
-    ----------
-    functions : list
-        List of task functions available to the worker.
-    on_startup : callable
-        Called when worker starts (init DB, S3, etc.).
-    on_shutdown : callable
-        Called when worker stops (cleanup connections).
-    on_job_start : callable
-        Called before each job starts.
-    on_job_end : callable
-        Called after each job completes.
-    redis_settings : RedisSettings
-        Valkey/Redis connection settings.
-    max_jobs : int
-        Maximum concurrent jobs per worker.
-    job_timeout : int
-        Timeout in seconds for each job.
-    keep_result : int
-        How long to keep job results (seconds).
-    max_tries : int
-        Maximum retry attempts for failed jobs.
-
-    """
-
-    # All registered task functions
-    functions = [
-        # Thumbnail generation
-        generate_image_thumbnail,
-        generate_pdf_thumbnail,
-        generate_video_thumbnail,
-        # Metadata extraction
-        extract_image_metadata,
-        extract_audio_metadata,
-        # Document content extraction
-        extract_document_content,
-        # Agent cron (on-demand trigger)
-        execute_single_agent_cron_task,
-        # Agent chat responses
-        respond_to_chat_message,
-        compact_session,
-        process_notification_event,
-        deliver_push_notification,
-        deliver_email_notification,
-        send_email_digest,
-    ]
-
-    # Cron jobs
+    queue_name = "uniffy:queue:core"
+    functions = list(CORE_TASKS)
     cron_jobs = [
-        cron(check_calendar_reminders, minute=None),  # Every minute
-        cron(execute_agent_cron_tasks, minute=None),  # Every minute
-        cron(check_task_due_dates, minute=None),  # Every minute
-        cron(flush_chat_read_cursors, second={0, 30}),  # Every 30 seconds
-        cron(auto_unmute_channels, minute=None, second={0}),  # Every minute at :00
-        cron(recalculate_all_storage_usage, hour=3, minute=0),  # Daily at 3:00 AM
+        cron(check_calendar_reminders, minute=None),
+        cron(check_task_due_dates, minute=None),
+        cron(flush_chat_read_cursors, second={0, 30}),
+        cron(auto_unmute_channels, minute=None, second={0}),
+        cron(recalculate_all_storage_usage, hour=3, minute=0),
     ]
-
-    # Lifecycle hooks
-    on_startup = on_startup
-    on_shutdown = on_shutdown
+    on_startup = core_on_startup
+    on_shutdown = core_on_shutdown
     on_job_start = on_job_start
     on_job_end = on_job_end
+    redis_settings = _redis_settings
+    max_jobs = int(os.getenv("CORE_WORKER_MAX_JOBS", "10"))
+    job_timeout = _core_job_timeout
+    keep_result = _keep_result
+    poll_delay = float(os.getenv("CORE_WORKER_POLL_DELAY", "0.5"))
+    max_tries = _max_tries
+    health_check_interval = _health_check_interval
 
-    # Valkey/Redis connection (loaded from environment at module import)
-    redis_settings = ValkeyConfig.from_env().to_arq_redis_settings()
 
-    # Queue configuration (uses default ARQ queue name)
-    # All values configurable via environment variables
-    max_jobs = int(os.getenv("WORKER_MAX_JOBS", "10"))
-    job_timeout = int(os.getenv("WORKER_JOB_TIMEOUT", "300"))
-    keep_result = int(os.getenv("WORKER_KEEP_RESULT", "3600"))
-    poll_delay = float(os.getenv("WORKER_POLL_DELAY", "0.5"))
-    max_tries = int(os.getenv("WORKER_MAX_TRIES", "3"))
+class EgressWorkerSettings:
+    """ARQ settings for the ``egress`` worker fleet."""
 
-    # Health check
-    health_check_interval = int(os.getenv("WORKER_HEALTH_CHECK_INTERVAL", "30"))
+    queue_name = "uniffy:queue:egress"
+    functions = list(EGRESS_TASKS)
+    cron_jobs = [
+        cron(execute_agent_cron_tasks, minute=None),
+    ]
+    on_startup = egress_on_startup
+    on_shutdown = egress_on_shutdown
+    on_job_start = on_job_start
+    on_job_end = on_job_end
+    redis_settings = _redis_settings
+    max_jobs = int(os.getenv("EGRESS_WORKER_MAX_JOBS", "50"))
+    job_timeout = _egress_job_timeout
+    keep_result = _keep_result
+    poll_delay = float(os.getenv("EGRESS_WORKER_POLL_DELAY", "0.05"))
+    max_tries = _max_tries
+    health_check_interval = _health_check_interval

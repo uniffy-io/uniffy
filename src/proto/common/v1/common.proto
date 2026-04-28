@@ -109,6 +109,7 @@ message UserInfo {
   optional string username = 4;
   optional string avatar_url = 5;
   google.protobuf.Timestamp created_at = 6;
+  bool has_avatar = 7;
 }
 
 // OrganizationInfo represents basic organization information.
@@ -144,6 +145,7 @@ message MemberInfo {
   OrganizationRole role = 5;
   google.protobuf.Timestamp joined_at = 6;
   bool is_active = 7;
+  bool has_avatar = 8;
 }
 
 // GroupMemberInfo represents a user's membership in a group.

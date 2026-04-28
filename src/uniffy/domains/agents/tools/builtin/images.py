@@ -160,7 +160,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         try:
             from uniffy.core.valkey import get_queue
 
-            queue = get_queue()
+            queue = get_queue("core")
             for job_name in jobs:
                 await queue.enqueue_job(
                     job_name,

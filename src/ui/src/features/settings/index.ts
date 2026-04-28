@@ -61,4 +61,5 @@ export {
     useShortcutHandlers,
     useGlobalShortcuts,
     formatShortcut,
+    matchesShortcut,
 } from '@/features/settings/hooks/useKeyboardShortcuts';

@@ -25,7 +25,7 @@ function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: Reac
   if (failed) return <>{fallback}</>;
   return (
     <img
-      src={avatarSrc}
+      src={avatarSrc ?? undefined}
       alt=""
       className="w-8 h-8 rounded-full shrink-0 object-cover"
       onError={() => setFailed(true)}

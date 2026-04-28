@@ -325,6 +325,7 @@ def user_info_to_proto(user: User) -> ProtoUserInfo:
         username=user.username,
         avatar_url=get_avatar_url(user.id, user.avatar_key),
         created_at=datetime_to_timestamp(user.created_at),
+        has_avatar=user.avatar_key is not None,
     )
 
 
@@ -412,6 +413,7 @@ def member_info_to_proto(
         role=org_role_to_proto(membership.role),
         joined_at=datetime_to_timestamp(membership.joined_at),
         is_active=membership.is_active,
+        has_avatar=user.avatar_key is not None,
     )
 
 

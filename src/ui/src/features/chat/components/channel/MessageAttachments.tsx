@@ -93,22 +93,58 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
 
   return (
     <div className="mt-1.5 space-y-1.5">
-      {images.length > 0 && (
-        <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-lg">
-          {images.map((img) => (
-            <button
-              key={img.id}
-              type="button"
-              onClick={() => handleOpen(img.fileId)}
-              className="block rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors cursor-pointer text-left"
-            >
-              <ChatImage
-                src={buildThumbnailUrl(organizationId, img.fileId)}
-                alt={img.filename}
-                className="w-full h-auto max-h-60 object-cover bg-muted"
-              />
-            </button>
-          ))}
+      {images.length === 1 && (
+        <button
+          type="button"
+          onClick={() => handleOpen(images[0].fileId)}
+          className={cn(
+            'block rounded-lg overflow-hidden border border-border',
+            'hover:border-primary/50 transition-colors cursor-pointer text-left',
+            'bg-muted max-w-[480px]',
+          )}
+        >
+          <ChatImage
+            src={buildThumbnailUrl(organizationId, images[0].fileId)}
+            alt={images[0].filename}
+            className="block w-auto h-auto max-w-full max-h-[420px] object-contain"
+          />
+        </button>
+      )}
+
+      {images.length >= 2 && (
+        <div
+          className={cn(
+            'grid gap-1 max-w-[480px]',
+            images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-2',
+          )}
+        >
+          {images.slice(0, 4).map((img, idx) => {
+            const isLastVisible = idx === 3 && images.length > 4;
+            const remaining = images.length - 4;
+            return (
+              <button
+                key={img.id}
+                type="button"
+                onClick={() => handleOpen(img.fileId)}
+                className={cn(
+                  'relative block rounded-lg overflow-hidden border border-border',
+                  'hover:border-primary/50 transition-colors cursor-pointer text-left',
+                  'aspect-square bg-muted',
+                )}
+              >
+                <ChatImage
+                  src={buildThumbnailUrl(organizationId, img.fileId)}
+                  alt={img.filename}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {isLastVisible && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-foreground text-lg font-semibold">
+                    +{remaining}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 

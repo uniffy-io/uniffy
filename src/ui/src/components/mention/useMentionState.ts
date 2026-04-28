@@ -44,12 +44,16 @@ export function useMentionState(urn: string): MentionLiveState | null {
     () => getMentionState(urn),
   );
 
-  // Register/unregister with provider
+  // Register/unregister with provider. Depend on the stable callbacks, not
+  // the whole context object - the context's `states` field changes on
+  // every batch resolve, which would otherwise re-fire this effect and
+  // cause register/unregister to thrash, retriggering resolution forever.
+  const { register, unregister } = context;
   useEffect(() => {
     if (!urn) return;
-    context.register(urn);
-    return () => context.unregister(urn);
-  }, [urn, context]);
+    register(urn);
+    return () => unregister(urn);
+  }, [urn, register, unregister]);
 
   // For outside-context usage: listen to emitter directly
   useEffect(() => {

@@ -5,10 +5,6 @@ loads the trigger / channel / agent, invokes the runtime, and translates
 stream events. The tests here exercise the guard paths (missing trigger,
 non-user trigger) without requiring a full DB fixture. Runtime-backed
 integration lives in `test_chat_runtime_destination.py` / Phase 2i.
-
-`handle_confirmation_decision` is still a stub until Phase 2e.
-`build_runtime_context_from_chat` and `publish_runtime_event_to_chat` are
-unused entry points kept for plan-parity.
 """
 
 import asyncio
@@ -62,18 +58,3 @@ class TestAgentChatBridgeStub:
                 )
             )
 
-    def test_build_runtime_context_raises_not_implemented(self) -> None:
-        bridge = AgentChatBridge(MagicMock())
-        with pytest.raises(NotImplementedError):
-            _run(bridge.build_runtime_context_from_chat(channel_id=uuid7(), agent_id=uuid7()))
-
-    def test_publish_runtime_event_raises_not_implemented(self) -> None:
-        bridge = AgentChatBridge(MagicMock())
-        with pytest.raises(NotImplementedError):
-            _run(
-                bridge.publish_runtime_event_to_chat(
-                    event=object(),
-                    channel_id=uuid7(),
-                    agent_id=uuid7(),
-                )
-            )

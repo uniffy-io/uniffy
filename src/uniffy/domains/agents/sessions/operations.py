@@ -993,7 +993,7 @@ class SessionOperations:
         if active_tokens <= token_budget:
             return False
 
-        queue = await get_queue_safe()
+        queue = await get_queue_safe("egress")
         if queue is None:
             logger.warning(
                 "Compaction queue unavailable; session over budget but no enqueue",

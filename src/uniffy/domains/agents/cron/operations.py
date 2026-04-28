@@ -431,7 +431,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         await self.session.refresh(run_log)
 
         try:
-            queue = get_queue()
+            queue = get_queue("egress")
             await queue.enqueue_job(
                 "execute_single_agent_cron_task",
                 str(task.id),

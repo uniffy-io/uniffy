@@ -1,16 +1,26 @@
-"""
-Valkey (Redis-compatible) client for background job queue.
+"""Two-pool ARQ queue accessor.
 
-Uses ARQ for async job processing with Valkey as the broker.
-Valkey is a Redis-compatible, high-performance key-value store.
+Background work splits across two queues:
 
-The queue pool will automatically reconnect on transient network
-failures via ARQ's built-in retry settings. If the pool becomes
-completely unusable, ``get_queue()`` attempts a single lazy
-re-initialization before raising.
+- ``core`` (``uniffy:queue:core``) -- thumbnails, extraction, content
+  extraction, notifications, reminders, storage recalculation, task
+  reminders, chat mute. Default ARQ tuning, tight SLA.
+- ``egress`` (``uniffy:queue:egress``) -- agent runtime, agent
+  compaction, agent cron, future external-API integrations. I/O bound,
+  retry-heavy, slow.
+
+Each pool is its own ``ArqRedis`` connection with a distinct
+``default_queue_name`` so ``enqueue_job`` reaches the right worker
+fleet without callers passing ``_queue_name`` by hand. The two pools
+share the same Valkey instance.
+
+Lazy reconnect on pool loss is preserved: ``get_queue_safe`` rebuilds
+a dropped pool exactly once before returning ``None``. ``get_queue``
+raises immediately so critical paths surface failures.
 """
 
 import asyncio
+from typing import Literal
 
 from arq import create_pool
 from arq.connections import ArqRedis
@@ -18,116 +28,95 @@ from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig
 
-# Global queue pool instance (initialized on app startup)
-_queue_pool: ArqRedis | None = None
+QueueName = Literal["core", "egress"]
 
-# Guard against concurrent re-init attempts
-_reinit_lock = asyncio.Lock()
+_QUEUE_NAMES: dict[QueueName, str] = {
+    "core": "uniffy:queue:core",
+    "egress": "uniffy:queue:egress",
+}
+
+_pools: dict[QueueName, ArqRedis | None] = {"core": None, "egress": None}
+_reinit_locks: dict[QueueName, asyncio.Lock] = {
+    "core": asyncio.Lock(),
+    "egress": asyncio.Lock(),
+}
 
 
-async def init_queue() -> ArqRedis:
-    """
-    Initialize the global queue pool.
+async def init_queue(name: QueueName) -> ArqRedis:
+    """Initialise a named queue pool.
 
-    Should be called during application startup. Creates an ARQ
-    connection pool to Valkey for enqueuing background jobs.
+    Parameters
+    ----------
+    name : QueueName
+        Either ``"core"`` or ``"egress"``.
 
     Returns
     -------
     ArqRedis
-        Initialized ARQ Redis connection pool.
+        Connected pool with ``default_queue_name`` bound to the named
+        queue so plain ``enqueue_job`` calls land on the right fleet.
 
     """
-    global _queue_pool
-
     config = ValkeyConfig.from_env()
-    _queue_pool = await create_pool(config.to_arq_redis_settings())
-
-    logger.info(f"Queue pool initialized: {config.host}:{config.port}")
-    return _queue_pool
-
-
-async def close_queue() -> None:
-    """
-    Close the global queue pool.
-
-    Should be called during application shutdown. Gracefully
-    closes all connections in the pool.
-
-    """
-    global _queue_pool
-
-    if _queue_pool:
-        await _queue_pool.close(close_connection_pool=True)
-        _queue_pool = None
-        logger.info("Queue pool closed")
+    pool = await create_pool(
+        config.to_arq_redis_settings(),
+        default_queue_name=_QUEUE_NAMES[name],
+    )
+    _pools[name] = pool
+    logger.info(
+        f"Queue pool initialized: name={name} queue={_QUEUE_NAMES[name]} "
+        f"host={config.host}:{config.port}"
+    )
+    return pool
 
 
-async def _try_reinit_queue() -> ArqRedis | None:
-    """Attempt to re-initialize the queue pool after a failure.
+async def close_queue(name: QueueName) -> None:
+    """Close a named queue pool. Idempotent if already closed."""
+    pool = _pools[name]
+    if pool is None:
+        return
+    await pool.close(close_connection_pool=True)
+    _pools[name] = None
+    logger.info(f"Queue pool closed: name={name}")
 
-    Uses a lock to prevent concurrent re-init storms. Returns the new
-    pool on success, or None if re-init fails.
-    """
-    global _queue_pool
 
-    async with _reinit_lock:
-        # Another coroutine may have already re-initialized while we waited
-        if _queue_pool is not None:
+async def _try_reinit_queue(name: QueueName) -> ArqRedis | None:
+    """Attempt to re-initialise a dropped pool under a per-name lock."""
+    async with _reinit_locks[name]:
+        pool = _pools[name]
+        if pool is not None:
             try:
-                await _queue_pool.ping()
-                return _queue_pool
+                await pool.ping()
+                return pool
             except Exception:
                 pass
 
         try:
-            logger.warning("Queue pool lost, attempting re-initialization...")
-            config = ValkeyConfig.from_env()
-            _queue_pool = await create_pool(config.to_arq_redis_settings())
-            logger.info("Queue pool re-initialized successfully")
-            return _queue_pool
-        except Exception as e:
-            logger.error(f"Queue pool re-initialization failed: {e}")
-            _queue_pool = None
+            logger.warning(f"Queue pool lost (name={name}), attempting re-init...")
+            return await init_queue(name)
+        except Exception as exc:
+            logger.error(f"Queue pool re-init failed (name={name}): {exc}")
+            _pools[name] = None
             return None
 
 
-def get_queue() -> ArqRedis:
+def get_queue(name: QueueName) -> ArqRedis:
+    """Return the named pool. Raises ``RuntimeError`` if not initialised."""
+    pool = _pools[name]
+    if pool is None:
+        raise RuntimeError(
+            f"Queue pool not initialized: name={name}. Call init_queue({name!r}) first."
+        )
+    return pool
+
+
+async def get_queue_safe(name: QueueName) -> ArqRedis | None:
+    """Return the named pool, attempting one reconnect on miss.
+
+    Suitable for non-critical paths where a missing pool is logged and
+    skipped rather than raised.
     """
-    Get the global queue pool.
-
-    Returns
-    -------
-    ArqRedis
-        The initialized queue pool for enqueuing jobs.
-
-    Raises
-    ------
-    RuntimeError
-        If pool not initialized. Call init_queue() first.
-
-    """
-    if _queue_pool is None:
-        raise RuntimeError("Queue pool not initialized. Call init_queue() first.")
-    return _queue_pool
-
-
-async def get_queue_safe() -> ArqRedis | None:
-    """
-    Get the global queue pool with automatic reconnect.
-
-    Unlike ``get_queue()``, this function attempts to re-initialize the
-    pool if it is None or unresponsive. Returns None instead of raising
-    when the pool cannot be recovered - suitable for non-critical paths
-    (e.g. enqueuing optional background jobs).
-
-    Returns
-    -------
-    ArqRedis | None
-        The queue pool, or None if unavailable.
-
-    """
-    pool = _queue_pool
+    pool = _pools[name]
     if pool is not None:
         return pool
-    return await _try_reinit_queue()
+    return await _try_reinit_queue(name)

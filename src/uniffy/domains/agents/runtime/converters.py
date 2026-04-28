@@ -1,6 +1,8 @@
 """Proto converters for runtime responses."""
 
 import json
+from typing import Any
+from uuid import UUID
 
 from uniffy_proto.agents.v1.runtime_pb2 import (
     AgentUsageInfo,
@@ -141,6 +143,155 @@ def runtime_stream_event_to_proto(
         )
 
     raise ValueError(f"Unknown runtime stream event type: {type(event)}")
+
+
+_EVENT_TYPE_TOKEN = "token"
+_EVENT_TYPE_TOOL_CALL = "tool_call"
+_EVENT_TYPE_TOOL_RESULT = "tool_result"
+_EVENT_TYPE_MESSAGE_STORED = "message_stored"
+_EVENT_TYPE_DONE = "done"
+_EVENT_TYPE_CONFIRMATION_REQUIRED = "confirmation_required"
+_EVENT_TYPE_ERROR = "error"
+
+
+def _message_to_jsonable(message: AgentMessage) -> dict[str, Any]:
+    """Serialise an ``AgentMessage`` row into a JSON-safe dict."""
+    return message.model_dump(mode="json")
+
+
+def _message_from_jsonable(data: dict[str, Any]) -> AgentMessage:
+    """Reconstruct an ``AgentMessage`` from its JSON-safe dict."""
+    return AgentMessage.model_validate(data)
+
+
+def runtime_stream_event_to_json(event: RuntimeStreamEvent) -> dict[str, Any]:
+    """Serialise a runtime stream event into a JSON-safe envelope.
+
+    The ``type`` field discriminates variants so the round-trip is
+    self-describing without consulting Python class names. UUIDs and
+    datetimes inside ``AgentMessage`` are serialised through pydantic's
+    ``mode="json"``.
+    """
+    if isinstance(event, RuntimeTokenEvent):
+        return {
+            "type": _EVENT_TYPE_TOKEN,
+            "text": event.text,
+            "message_id": str(event.message_id) if event.message_id else None,
+            "sequence": event.sequence,
+        }
+
+    if isinstance(event, RuntimeToolCallEvent):
+        return {
+            "type": _EVENT_TYPE_TOOL_CALL,
+            "tool_call_id": event.tool_call_id,
+            "tool_name": event.tool_name,
+            "tool_args": event.tool_args,
+            "message_id": str(event.message_id) if event.message_id else None,
+        }
+
+    if isinstance(event, RuntimeToolResultEvent):
+        return {
+            "type": _EVENT_TYPE_TOOL_RESULT,
+            "tool_call_id": event.tool_call_id,
+            "tool_name": event.tool_name,
+            "success": event.success,
+            "result": event.result,
+            "message_id": str(event.message_id) if event.message_id else None,
+        }
+
+    if isinstance(event, RuntimeMessageStoredEvent):
+        return {
+            "type": _EVENT_TYPE_MESSAGE_STORED,
+            "message": _message_to_jsonable(event.message),
+        }
+
+    if isinstance(event, RuntimeDoneEvent):
+        return {
+            "type": _EVENT_TYPE_DONE,
+            "assistant_message": _message_to_jsonable(event.assistant_message),
+            "model_used": event.model_used,
+        }
+
+    if isinstance(event, RuntimeConfirmationRequiredEvent):
+        return {
+            "type": _EVENT_TYPE_CONFIRMATION_REQUIRED,
+            "tool_call_id": event.tool_call_id,
+            "tool_name": event.tool_name,
+            "tool_args": event.tool_args,
+            "description": event.description,
+            "request_id": str(event.request_id) if event.request_id else None,
+            "message_id": str(event.message_id) if event.message_id else None,
+        }
+
+    if isinstance(event, RuntimeErrorEvent):
+        return {"type": _EVENT_TYPE_ERROR, "error": event.error}
+
+    raise ValueError(f"Unknown runtime stream event type: {type(event)}")
+
+
+def runtime_stream_event_from_json(payload: dict[str, Any]) -> RuntimeStreamEvent:
+    """Reverse of :func:`runtime_stream_event_to_json`.
+
+    Raises ``ValueError`` on unknown / malformed envelopes; callers
+    should treat that as a fatal stream-protocol bug, not a transient
+    glitch.
+    """
+    event_type = payload.get("type")
+
+    if event_type == _EVENT_TYPE_TOKEN:
+        message_id = payload.get("message_id")
+        return RuntimeTokenEvent(
+            text=payload["text"],
+            message_id=UUID(message_id) if message_id else None,
+            sequence=int(payload.get("sequence", 0)),
+        )
+
+    if event_type == _EVENT_TYPE_TOOL_CALL:
+        message_id = payload.get("message_id")
+        return RuntimeToolCallEvent(
+            tool_call_id=payload["tool_call_id"],
+            tool_name=payload["tool_name"],
+            tool_args=payload.get("tool_args") or {},
+            message_id=UUID(message_id) if message_id else None,
+        )
+
+    if event_type == _EVENT_TYPE_TOOL_RESULT:
+        message_id = payload.get("message_id")
+        return RuntimeToolResultEvent(
+            tool_call_id=payload["tool_call_id"],
+            tool_name=payload["tool_name"],
+            success=bool(payload["success"]),
+            result=payload.get("result", ""),
+            message_id=UUID(message_id) if message_id else None,
+        )
+
+    if event_type == _EVENT_TYPE_MESSAGE_STORED:
+        return RuntimeMessageStoredEvent(
+            message=_message_from_jsonable(payload["message"]),
+        )
+
+    if event_type == _EVENT_TYPE_DONE:
+        return RuntimeDoneEvent(
+            assistant_message=_message_from_jsonable(payload["assistant_message"]),
+            model_used=payload["model_used"],
+        )
+
+    if event_type == _EVENT_TYPE_CONFIRMATION_REQUIRED:
+        request_id = payload.get("request_id")
+        message_id = payload.get("message_id")
+        return RuntimeConfirmationRequiredEvent(
+            tool_call_id=payload["tool_call_id"],
+            tool_name=payload["tool_name"],
+            tool_args=payload.get("tool_args") or {},
+            description=payload.get("description", ""),
+            request_id=UUID(request_id) if request_id else None,
+            message_id=UUID(message_id) if message_id else None,
+        )
+
+    if event_type == _EVENT_TYPE_ERROR:
+        return RuntimeErrorEvent(error=payload.get("error", ""))
+
+    raise ValueError(f"Unknown runtime stream event type: {event_type!r}")
 
 
 def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:

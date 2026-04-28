@@ -100,7 +100,7 @@ class MessageWriter(Protocol):
         Returns the envelope wrapping the new row (so the runtime can
         announce it to subscribers via `RuntimeMessageStoredEvent`), or
         `None` if the writer does not support per-token streaming -- in
-        that case the runtime keeps the legacy "buffer-then-write" path.
+        that case the runtime keeps the buffer-then-write path.
         """
 
     async def finalize_assistant_placeholder(
@@ -140,7 +140,7 @@ class MessageWriter(Protocol):
 
 
 class SessionMessageWriter:
-    """Legacy writer that persists into `agents_messages`.
+    """Session writer that persists into `agents_messages`.
 
     Delegates to `SessionOperations` unchanged; the runtime treats every
     call as it did before Phase 2. Approval scope is the session id.
@@ -213,7 +213,7 @@ class SessionMessageWriter:
         )
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
-        """Legacy session writer does not stream deltas; placeholder unused."""
+        """Session writer does not stream deltas; placeholder unused."""
         return None
 
     async def finalize_assistant_placeholder(

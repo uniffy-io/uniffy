@@ -522,6 +522,7 @@ type UserInfo struct {
 	Username      *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
 	AvatarUrl     *string                `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	HasAvatar     bool                   `protobuf:"varint,7,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -596,6 +597,13 @@ func (x *UserInfo) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *UserInfo) GetHasAvatar() bool {
+	if x != nil {
+		return x.HasAvatar
+	}
+	return false
 }
 
 // OrganizationInfo represents basic organization information.
@@ -810,6 +818,7 @@ type MemberInfo struct {
 	Role          OrganizationRole       `protobuf:"varint,5,opt,name=role,proto3,enum=common.v1.OrganizationRole" json:"role,omitempty"`
 	JoinedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
 	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	HasAvatar     bool                   `protobuf:"varint,8,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -889,6 +898,13 @@ func (x *MemberInfo) GetJoinedAt() *timestamppb.Timestamp {
 func (x *MemberInfo) GetIsActive() bool {
 	if x != nil {
 		return x.IsActive
+	}
+	return false
+}
+
+func (x *MemberInfo) GetHasAvatar() bool {
+	if x != nil {
+		return x.HasAvatar
 	}
 	return false
 }
@@ -1205,7 +1221,7 @@ var File_common_v1_common_proto protoreflect.FileDescriptor
 
 const file_common_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x16common/v1/common.proto\x12\tcommon.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfc\x01\n" +
+	"\x16common/v1/common.proto\x12\tcommon.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9b\x02\n" +
 	"\bUserInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12 \n" +
@@ -1214,7 +1230,9 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"avatar_url\x18\x05 \x01(\tH\x02R\tavatarUrl\x88\x01\x01\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\f\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"has_avatar\x18\a \x01(\bR\thasAvatarB\f\n" +
 	"\n" +
 	"_full_nameB\v\n" +
 	"\t_usernameB\r\n" +
@@ -1245,7 +1263,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
-	"\f_description\"\x98\x02\n" +
+	"\f_description\"\xb7\x02\n" +
 	"\n" +
 	"MemberInfo\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
@@ -1255,7 +1273,9 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12/\n" +
 	"\x04role\x18\x05 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x127\n" +
 	"\tjoined_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt\x12\x1b\n" +
-	"\tis_active\x18\a \x01(\bR\bisActiveB\r\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\x12\x1d\n" +
+	"\n" +
+	"has_avatar\x18\b \x01(\bR\thasAvatarB\r\n" +
 	"\v_avatar_url\"\xf9\x01\n" +
 	"\x0fGroupMemberInfo\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +

@@ -19,10 +19,13 @@ import {
   Pencil,
   X,
 } from '@phosphor-icons/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { cn } from '@/shared/utils/cn';
 import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
-import { getUrnTypeTheme } from '@/config/theme/urnColors';
-import { parseUrn } from '@/shared/utils/urn';
+import { parseUrn, UrnType } from '@/shared/utils/urn';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
+import { getInitials } from '@/components/subject/utils';
+import { useKeybinding, matchesShortcut } from '@/features/settings';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
 import { filesApi } from '@/features/files/api/filesApi';
@@ -58,6 +61,8 @@ interface MessageComposeProps {
   } | null;
   onSaveEdit?: (content: string) => void;
   onCancelEdit?: () => void;
+  /** Fired when the bound `chat.editLast` key is pressed in an empty compose. */
+  onEditLast?: () => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -120,47 +125,75 @@ function serializeToMarkdown(container: HTMLDivElement): string {
 }
 
 /**
- * Create a mention chip DOM element to insert into contentEditable.
+ * Static chip used inside the compose contentEditable. Mirrors the visual
+ * language of `MentionChipBasic` but never renders an `<img>` for user
+ * avatars — under `renderToStaticMarkup` the onError fallback in
+ * `MentionChipBasic` cannot run, leaving broken-image glyphs when the
+ * subject has no avatar. Initials/type icons are deterministic from props.
  */
-function createMentionElement(label: string, urn: string): HTMLSpanElement {
+function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }) {
   const parsed = parseUrn(urn);
-  const theme = getUrnTypeTheme(parsed.type);
+  const config = getContentTypeConfig(parsed.type);
+  const TypeIcon = config.icon;
+  const theme = config.theme;
+  const isUser = parsed.type === UrnType.USER && !!parsed.id;
 
-  const chip = document.createElement('span');
-  chip.setAttribute(MENTION_ATTR, urn);
-  chip.setAttribute(MENTION_LABEL_ATTR, label);
-  chip.contentEditable = 'false';
-  chip.className = [
-    'inline-flex items-center align-middle gap-1.5',
-    'px-2 py-1 mx-0.5 my-0.5',
-    'rounded-lg border cursor-default select-none',
-    'text-sm font-medium text-foreground',
-    theme.border,
-    theme.badgeBg,
-  ].join(' ');
-
-  // Icon
-  const iconWrapper = document.createElement('span');
-  iconWrapper.className = `flex items-center justify-center shrink-0 w-5 h-5 rounded-md ${theme.iconBg}`;
-  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  iconSvg.setAttribute('width', '12');
-  iconSvg.setAttribute('height', '12');
-  iconSvg.setAttribute('viewBox', '0 0 256 256');
-  iconSvg.setAttribute('fill', 'white');
-  iconSvg.setAttribute('class', 'text-white');
-  iconWrapper.appendChild(iconSvg);
-  chip.appendChild(iconWrapper);
-
-  // Label text
-  const labelSpan = document.createElement('span');
-  labelSpan.className = 'truncate max-w-[180px]';
-  labelSpan.textContent = label;
-  chip.appendChild(labelSpan);
-
-  return chip;
+  return (
+    <span
+      className={cn(
+        'mention-chip inline-flex items-center align-middle',
+        'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
+        'rounded-md border',
+        'bg-gradient-to-r', theme.gradient,
+        theme.border,
+        'cursor-default select-none',
+      )}
+    >
+      {isUser ? (
+        <span
+          className={cn(
+            'flex items-center justify-center shrink-0 w-5 h-5 rounded-full',
+            'text-[8px] font-semibold text-white',
+            theme.iconBg,
+          )}
+        >
+          {getInitials(label)}
+        </span>
+      ) : (
+        <span
+          className={cn(
+            'flex items-center justify-center shrink-0 w-5 h-5 rounded shadow-sm',
+            theme.iconBg,
+          )}
+        >
+          <TypeIcon size={11} weight="duotone" className="text-white" />
+        </span>
+      )}
+      <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">
+        {label}
+      </span>
+    </span>
+  );
 }
 
-export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit }: MessageComposeProps) {
+/**
+ * Create a mention chip DOM element to insert into contentEditable.
+ * Outer wrapper carries the data attributes used by `serializeToMarkdown`
+ * to recover `[[[label|urn]]]`; inner content is static HTML.
+ */
+function createMentionElement(label: string, urn: string): HTMLSpanElement {
+  const wrapper = document.createElement('span');
+  wrapper.setAttribute(MENTION_ATTR, urn);
+  wrapper.setAttribute(MENTION_LABEL_ATTR, label);
+  wrapper.contentEditable = 'false';
+  wrapper.className = 'inline-block align-middle';
+  wrapper.innerHTML = renderToStaticMarkup(
+    <ComposeMentionChipStatic urn={urn} label={label} />,
+  );
+  return wrapper;
+}
+
+export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast }: MessageComposeProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
@@ -172,6 +205,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const editLastBinding = useKeybinding('chat.editLast');
 
   const uploadFile = useCallback(async (file: File, pendingId: string) => {
     if (!organizationId) return;
@@ -253,6 +287,35 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
+
+  // Clipboard paste: route file items (images, etc.) through the attachments
+  // upload pipeline. Plain text/HTML continues through the default paste path.
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+
+    if (files.length === 0) return;
+
+    e.preventDefault();
+    const dt = new DataTransfer();
+    for (const f of files) {
+      // Pasted screenshots arrive as "image.png"; stamp a unique name so
+      // multiple pastes in one message don't collide on the server.
+      const named = f.name && f.name !== 'image.png'
+        ? f
+        : new File([f], `pasted-${Date.now()}.${(f.type.split('/')[1] ?? 'png')}`, { type: f.type });
+      dt.items.add(named);
+    }
+    handleFilesSelected(dt.files);
+  }, [handleFilesSelected]);
 
   // Auto-focus editor when replying to a message
   useEffect(() => {
@@ -422,6 +485,60 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
 
   // Handle keydown
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Backspace deletes a mention chip when the caret sits immediately
+    // after one. Browsers leave contentEditable=false elements partially
+    // selectable, so we delete them programmatically.
+    if (e.key === 'Backspace' && !e.shiftKey) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const node = range.startContainer;
+        const offset = range.startOffset;
+
+        const findChipBefore = (): HTMLElement | null => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (offset !== 0) return null;
+            const prev = node.previousSibling;
+            return prev && prev.nodeType === Node.ELEMENT_NODE && (prev as HTMLElement).hasAttribute(MENTION_ATTR)
+              ? (prev as HTMLElement) : null;
+          }
+          if (node.nodeType === Node.ELEMENT_NODE && offset > 0) {
+            const prev = (node as HTMLElement).childNodes[offset - 1];
+            return prev && prev.nodeType === Node.ELEMENT_NODE && (prev as HTMLElement).hasAttribute(MENTION_ATTR)
+              ? (prev as HTMLElement) : null;
+          }
+          return null;
+        };
+
+        const chip = findChipBefore();
+        if (chip) {
+          e.preventDefault();
+          chip.remove();
+          updateState();
+          return;
+        }
+      }
+    }
+
+    // Edit last own message (Slack-style). Only when compose is empty,
+    // not already editing, no reply preview, no mention popup, and no
+    // pending uploads — otherwise the keystroke belongs to the editor
+    // (e.g. caret navigation).
+    if (
+      onEditLast
+      && editLastBinding
+      && isEmpty
+      && !editingMessage
+      && !replyTo
+      && !mentionActive
+      && pendingFiles.length === 0
+      && matchesShortcut(e.nativeEvent, editLastBinding)
+    ) {
+      e.preventDefault();
+      onEditLast();
+      return;
+    }
+
     // Block Enter while mention popup is open
     if (mentionActive && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -476,7 +593,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         updateState();
       }
     }
-  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply, editingMessage, onCancelEdit]);
+  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
 
   // Trigger mention from toolbar @ button
   const handleAtButtonClick = useCallback(() => {
@@ -696,6 +813,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
             aria-multiline="true"
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             className="w-full px-4 pt-3 pb-2 text-sm min-h-[40px] outline-none text-foreground break-words whitespace-pre-wrap"
             suppressContentEditableWarning
             data-testid="chat-compose-input"

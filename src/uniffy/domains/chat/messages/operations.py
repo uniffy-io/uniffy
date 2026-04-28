@@ -260,7 +260,7 @@ class ChatMessageOperations:
             try:
                 from uniffy.core.valkey.queue import get_queue
 
-                queue = get_queue()
+                queue = get_queue("egress")
                 for m in matches:
                     await queue.enqueue_job(
                         "respond_to_chat_message",

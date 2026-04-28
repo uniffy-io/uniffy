@@ -22,6 +22,9 @@ class RuntimeService(Protocol):
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.SendMessageRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def respond_to_confirmation(self, request: agents_dot_v1_dot_runtime__pb2.ConfirmationResponse, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.ConfirmationResponseAck:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -53,6 +56,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stream_send_message,
+                ),
+                "/agents.v1.RuntimeService/SubscribeToRun": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="SubscribeToRun",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.subscribe_to_run,
                 ),
                 "/agents.v1.RuntimeService/RespondToConfirmation": Endpoint.unary(
                     method=MethodInfo(
@@ -126,6 +139,26 @@ class RuntimeServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    def subscribe_to_run(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="SubscribeToRun",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
+                output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def respond_to_confirmation(
         self,
         request: agents_dot_v1_dot_runtime__pb2.ConfirmationResponse,
@@ -172,6 +205,8 @@ class RuntimeServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.SendMessageRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def respond_to_confirmation(self, request: agents_dot_v1_dot_runtime__pb2.ConfirmationResponse, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.ConfirmationResponseAck:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_usage_stats(self, request: agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse:
@@ -201,6 +236,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stream_send_message,
+                ),
+                "/agents.v1.RuntimeService/SubscribeToRun": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="SubscribeToRun",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.subscribe_to_run,
                 ),
                 "/agents.v1.RuntimeService/RespondToConfirmation": EndpointSync.unary(
                     method=MethodInfo(
@@ -267,6 +312,26 @@ class RuntimeServiceClientSync(ConnectClientSync):
                 name="StreamSendMessage",
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.SendMessageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def subscribe_to_run(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="SubscribeToRun",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
                 output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageEvent,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),

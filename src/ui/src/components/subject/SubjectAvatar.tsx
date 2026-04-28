@@ -53,7 +53,7 @@ export function SubjectAvatar({
         subject.type === SUBJECT_TYPE.USER ? subject.id : '',
         size === 'lg' ? 'md' : 'sm',
     );
-    const avatarSrc = subject.avatarUrl || resolvedAvatarUrl;
+    const avatarSrc = subject.avatarUrl || resolvedAvatarUrl || null;
     const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
     const handleImgError = useCallback(() => {
         if (avatarSrc) _failedAvatars.add(avatarSrc);

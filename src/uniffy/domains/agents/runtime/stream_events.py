@@ -22,7 +22,7 @@ class RuntimeTokenEvent(RuntimeStreamEvent):
     message_id : UUID | None
         Id of the placeholder chat row this token patches. Set on the
         chat-destination path so the translator can emit AGENT_TOKEN_DELTA
-        keyed to the in-flight assistant message. `None` for legacy
+        keyed to the in-flight assistant message. `None` for
         session-backed streams that have no placeholder row.
     sequence : int
         Monotonic per-message counter starting at 1. Lets clients drop

@@ -36,6 +36,7 @@ def user_to_profile(user: User) -> UserProfile:
         is_system_admin=user.is_system_admin,
         created_at=datetime_to_timestamp(user.created_at),
         updated_at=datetime_to_timestamp(user.updated_at),
+        has_avatar=user.avatar_key is not None,
     )
 
 
