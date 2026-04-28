@@ -138,20 +138,22 @@ DOMAIN_TYPE_PROJECTS: DomainType
 DOMAIN_TYPE_AGENTS: DomainType
 
 class UserInfo(_message.Message):
-    __slots__ = ("id", "email", "full_name", "username", "avatar_url", "created_at")
+    __slots__ = ("id", "email", "full_name", "username", "avatar_url", "created_at", "has_avatar")
     ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    HAS_AVATAR_FIELD_NUMBER: _ClassVar[int]
     id: str
     email: str
     full_name: str
     username: str
     avatar_url: str
     created_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., avatar_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    has_avatar: bool
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., avatar_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., has_avatar: _Optional[bool] = ...) -> None: ...
 
 class OrganizationInfo(_message.Message):
     __slots__ = ("id", "name", "slug", "logo_url", "created_at", "updated_at")
@@ -194,7 +196,7 @@ class GroupInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ..., member_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class MemberInfo(_message.Message):
-    __slots__ = ("user_id", "display_name", "email", "avatar_url", "role", "joined_at", "is_active")
+    __slots__ = ("user_id", "display_name", "email", "avatar_url", "role", "joined_at", "is_active", "has_avatar")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
@@ -202,6 +204,7 @@ class MemberInfo(_message.Message):
     ROLE_FIELD_NUMBER: _ClassVar[int]
     JOINED_AT_FIELD_NUMBER: _ClassVar[int]
     IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    HAS_AVATAR_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     display_name: str
     email: str
@@ -209,7 +212,8 @@ class MemberInfo(_message.Message):
     role: OrganizationRole
     joined_at: _timestamp_pb2.Timestamp
     is_active: bool
-    def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ..., role: _Optional[_Union[OrganizationRole, str]] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_active: _Optional[bool] = ...) -> None: ...
+    has_avatar: bool
+    def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ..., role: _Optional[_Union[OrganizationRole, str]] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_active: _Optional[bool] = ..., has_avatar: _Optional[bool] = ...) -> None: ...
 
 class GroupMemberInfo(_message.Message):
     __slots__ = ("user_id", "display_name", "email", "avatar_url", "role", "joined_at")

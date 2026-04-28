@@ -2,8 +2,9 @@
  * Appearance settings section for theme, accent color, and font.
  */
 
-import { Sun, Moon, Desktop, Check, CardsThree, Minus } from '@phosphor-icons/react';
+import { Sun, Moon, Desktop, Check, CheckSquare, CalendarBlank, ArrowSquareOut } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/shared/utils/cn';
 import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
 // Predefined accent colors (quick picks)
@@ -127,7 +128,7 @@ export function AppearanceSection() {
             <div>
                 <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Appearance</h1>
                 <p className="text-sm text-muted-foreground">
-                    Customize the look and feel of your workspace.
+                    Customize the look and feel of your Uniffy.
                 </p>
             </div>
 
@@ -159,6 +160,55 @@ export function AppearanceSection() {
                         >
                             <Icon size={32} weight="duotone" className="text-foreground" />
                             <span className="text-sm font-medium text-foreground">{label}</span>
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            {/* Mention Display */}
+            <section className="space-y-4">
+                <div>
+                    <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Choose how mentions appear in chat, notes, and other content.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
+                    {[
+                        { id: 'expanded', label: 'Expanded', description: 'Rich card with live metadata' },
+                        { id: 'compact', label: 'Compact', description: 'Inline chip with label only' },
+                    ].map(({ id, label, description }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            disabled={saving}
+                            className={cn(
+                                'flex flex-col items-stretch gap-3 p-4 rounded-lg border-2 transition-colors text-left',
+                                appearance.mentionDisplay === id
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50 bg-card',
+                            )}
+                            onClick={() => handleMentionDisplayChange(id)}
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <div>
+                                    <div className="text-sm font-medium text-foreground">{label}</div>
+                                    <div className="text-xs text-muted-foreground">{description}</div>
+                                </div>
+                                {appearance.mentionDisplay === id && (
+                                    <Check size={18} weight="bold" className="text-primary shrink-0" />
+                                )}
+                            </div>
+
+                            {/* Live preview */}
+                            <div className="rounded-md border border-border/50 bg-muted/40 p-3">
+                                {id === 'expanded' ? (
+                                    <MentionPreviewExpanded />
+                                ) : (
+                                    <MentionPreviewCompact />
+                                )}
+                            </div>
                         </button>
                     ))}
                 </div>
@@ -296,39 +346,48 @@ export function AppearanceSection() {
                 </div>
             </section>
 
-            {/* Mention Display */}
-            <section className="space-y-4">
-                <div>
-                    <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Choose how mentions appear in chat, notes, and other content.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 md:gap-4">
-                    {[
-                        { id: 'expanded', label: 'Expanded', icon: CardsThree, description: 'Rich card with metadata' },
-                        { id: 'compact', label: 'Compact', icon: Minus, description: 'Inline chip with label' },
-                    ].map(({ id, label, icon: Icon, description }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            disabled={saving}
-                            className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-colors ${
-                                appearance.mentionDisplay === id
-                                    ? 'border-primary bg-primary/5'
-                                    : 'border-border hover:border-primary/50 bg-card'
-                            }`}
-                            onClick={() => handleMentionDisplayChange(id)}
-                        >
-                            <Icon size={32} weight="duotone" className="text-foreground" />
-                            <span className="text-sm font-medium text-foreground">{label}</span>
-                            <span className="text-xs text-muted-foreground text-center">{description}</span>
-                        </button>
-                    ))}
-                </div>
-            </section>
         </div>
     );
 }
 
+/**
+ * Static preview of an "expanded" mention chip - mirrors MentionExpandedCard
+ * but uses fixed sample data so it renders without Redux/live state.
+ */
+function MentionPreviewExpanded() {
+    return (
+        <div className="inline-flex flex-col gap-1.5 max-w-full rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-3 py-2">
+            <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-md bg-rose-500 text-white shrink-0">
+                    <CalendarBlank size={14} weight="duotone" />
+                </span>
+                <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">Q2 Planning Sync</div>
+                    <div className="text-[11px] text-muted-foreground">Calendar event . Tomorrow, 10:00 AM</div>
+                </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <CheckSquare size={12} weight="duotone" className="text-emerald-500" />
+                <span>3 of 5 tasks ready</span>
+                <span className="text-muted-foreground/40">.</span>
+                <ArrowSquareOut size={11} className="text-muted-foreground/70" />
+                <span className="text-muted-foreground/70">Open</span>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Static preview of a "compact" mention chip - mirrors MentionChipCompact
+ * styling so users see the actual inline footprint.
+ */
+function MentionPreviewCompact() {
+    return (
+        <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-1.5 py-0.5">
+            <span className="flex items-center justify-center w-3.5 h-3.5 rounded-sm bg-rose-500 shrink-0">
+                <CalendarBlank size={9} weight="duotone" className="text-white" />
+            </span>
+            <span className="text-xs font-medium text-foreground">Q2 Planning Sync</span>
+        </span>
+    );
+}

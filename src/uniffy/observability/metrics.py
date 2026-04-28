@@ -153,25 +153,25 @@ SEARCH_OPERATION_ERRORS_TOTAL = Counter(
 WORKER_JOBS_STARTED_TOTAL = Counter(
     "uniffy_worker_jobs_started_total",
     "Total worker jobs started",
-    ["job_name"],
+    ["queue", "job_name"],
 )
 
 WORKER_JOBS_COMPLETED_TOTAL = Counter(
     "uniffy_worker_jobs_completed_total",
     "Total worker jobs completed",
-    ["job_name", "status"],
+    ["queue", "job_name", "status"],
 )
 
 WORKER_JOB_DURATION = Histogram(
     "uniffy_worker_job_duration_seconds",
     "Worker job duration in seconds",
-    ["job_name"],
+    ["queue", "job_name"],
 )
 
 WORKER_JOBS_IN_PROGRESS = Gauge(
     "uniffy_worker_jobs_in_progress",
     "Number of worker jobs currently in progress",
-    ["job_name"],
+    ["queue", "job_name"],
     multiprocess_mode="livesum",
 )
 
@@ -251,6 +251,38 @@ CACHE_OP_TIMEOUT_TOTAL = Counter(
     ["namespace", "op"],
 )
 
+AGENT_RUN_QUEUE_LAG = Histogram(
+    "uniffy_agent_run_queue_lag_seconds",
+    "Time from agent run enqueue (queued_at) to worker pickup (started_at)",
+)
+
+AGENT_RUN_DURATION = Histogram(
+    "uniffy_agent_run_duration_seconds",
+    "Agent run total duration from worker pickup to done/error",
+)
+
+AGENT_RUN_ACTIVE = Gauge(
+    "uniffy_agent_run_active",
+    "Agent runs currently executing in the egress worker fleet",
+    multiprocess_mode="livesum",
+)
+
+AGENT_RUN_ENQUEUE_FAILURES_TOTAL = Counter(
+    "uniffy_agent_run_enqueue_failures_total",
+    "Agent run enqueue failures (Valkey down at the handler boundary)",
+)
+
+AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL = Counter(
+    "uniffy_agent_run_subscribe_timeout_total",
+    "Handler XREAD subscribe loops that hit the 120s wall budget",
+)
+
+AGENT_RUN_RECONNECT_TOTAL = Counter(
+    "uniffy_agent_run_reconnect_total",
+    "SubscribeToRun calls that resumed an in-flight run",
+)
+
+
 LLM_PROVIDER_LRU_HIT_TOTAL = Counter(
     "uniffy_llm_provider_lru_hit_total",
     "In-process LLM-provider-client LRU hits (decrypt + construct skipped)",
@@ -283,7 +315,7 @@ def get_metrics() -> bytes:
     return generate_latest()
 
 
-def start_worker_metrics_server() -> None:
+def start_worker_metrics_server(port: int | None = None) -> None:
     """Start a lightweight HTTP server exposing /metrics for the worker process.
 
     Uses prometheus_client.start_http_server which spawns a daemon thread.
@@ -294,10 +326,19 @@ def start_worker_metrics_server() -> None:
     MultiProcessCollector against the worker's own multiproc directory, so
     a scrape returns the aggregate across whatever processes share that
     directory (today: just the ARQ worker; the backend has its own dir).
+
+    Parameters
+    ----------
+    port : int | None
+        Listen port. ``None`` falls back to ``WORKER_METRICS_PORT`` then
+        ``9091``. The core / egress entry points pass their fleet's
+        port explicitly so the two workers don't collide on one socket.
+
     """
     from prometheus_client import start_http_server
 
-    port = int(os.getenv("WORKER_METRICS_PORT", "9091"))
+    if port is None:
+        port = int(os.getenv("WORKER_METRICS_PORT", "9091"))
     kwargs: dict[str, Any] = {}
     if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
         kwargs["registry"] = _build_multiproc_registry()

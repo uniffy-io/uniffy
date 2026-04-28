@@ -62,6 +62,7 @@ export interface SerializedMemberInfo {
     displayName: string;
     email: string;
     avatarUrl: string;
+    hasAvatar: boolean;
     role: number;
     joinedAt: { seconds: number; nanos: number } | null;
     isActive: boolean;
@@ -123,6 +124,7 @@ export function serializeMemberInfo(m: MemberInfo): SerializedMemberInfo {
         displayName: m.displayName,
         email: m.email,
         avatarUrl: m.avatarUrl || '',
+        hasAvatar: m.hasAvatar,
         role: m.role,
         joinedAt: m.joinedAt ? { seconds: Number(m.joinedAt.seconds), nanos: m.joinedAt.nanos } : null,
         isActive: m.isActive,

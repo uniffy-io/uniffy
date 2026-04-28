@@ -35,6 +35,7 @@ def user_to_current_user_response(user: User) -> CurrentUserResponse:
         accent_color=user.accent_color or "",
         font_family=user.font_family or "",
         avatar_url=get_avatar_url(user.id, user.avatar_key),
+        has_avatar=user.avatar_key is not None,
     )
 
 

@@ -19,7 +19,7 @@ import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject
 import { createPortal } from 'react-dom';
 import { CaretDown, Robot } from '@phosphor-icons/react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
-import { buildFileUrl, buildMediaStreamUrl, buildAvatarUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
+import { buildFileUrl, buildMediaStreamUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/mention/MentionPreview';
 import { MentionExpandedCard } from '@/components/mention/MentionExpandedCard';
 import { buildLiveStateFromMetadata } from '@/components/mention/buildLiveState';
@@ -55,19 +55,20 @@ function useTimeoutCleanup(...refs: RefObject<ReturnType<typeof setTimeout> | nu
 }
 
 /**
- * Avatar image with fallback to type icon
+ * Avatar image with fallback to type icon. When `src` is null we know the
+ * subject has no avatar and skip the `<img>` entirely (no 404 request).
  */
 function ChipAvatar({
   src,
   size,
   fallback,
 }: {
-  src: string;
+  src: string | null;
   size: number;
   fallback: React.ReactNode;
 }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <>{fallback}</>;
+  if (!src || failed) return <>{fallback}</>;
   return (
     <img
       src={src}
@@ -323,7 +324,7 @@ function MentionChipInner({
           <span className="relative flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-visible">
             <span className="flex items-center justify-center w-5 h-5 rounded-full overflow-hidden">
               <ChipAvatar
-                src={buildAgentAvatarUrl(parsed.id!, 'sm')}
+                src={agent?.avatarKey ? buildAgentAvatarUrl(parsed.id!, 'sm') : null}
                 size={20}
                 fallback={
                   <span className={cn(
@@ -561,7 +562,7 @@ function MentionChipCompactInner({
           <span className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-full overflow-visible">
             <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full overflow-hidden">
               <ChipAvatar
-                src={buildAgentAvatarUrl(parsed.id!, 'sm')}
+                src={agent?.avatarKey ? buildAgentAvatarUrl(parsed.id!, 'sm') : null}
                 size={14}
                 fallback={
                   <span className={cn(
@@ -654,28 +655,12 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
       title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
     >
       {isUser && parsed.id ? (
-        <span className="flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-hidden">
-          <ChipAvatar
-            src={buildAvatarUrl(parsed.id, 'sm')}
-            size={20}
-            fallback={
-              <span className={cn('flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-semibold text-white', style.iconBg)}>
-                {getInitials(label)}
-              </span>
-            }
-          />
+        <span className={cn('flex items-center justify-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold text-white', style.iconBg)}>
+          {getInitials(label)}
         </span>
       ) : isAgent && parsed.id ? (
-        <span className="flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-hidden">
-          <ChipAvatar
-            src={buildAgentAvatarUrl(parsed.id, 'sm')}
-            size={20}
-            fallback={
-              <span className={cn('flex items-center justify-center w-5 h-5 rounded-full text-[10px] text-white', style.iconBg)}>
-                <TypeIcon size={11} weight="duotone" className="text-white" />
-              </span>
-            }
-          />
+        <span className={cn('flex items-center justify-center shrink-0 w-5 h-5 rounded-full', style.iconBg)}>
+          <TypeIcon size={11} weight="duotone" className="text-white" />
         </span>
       ) : (
         <span className={cn(

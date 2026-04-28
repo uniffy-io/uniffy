@@ -4,8 +4,9 @@ Phase 2 decouples the streaming runtime from `AgentSession`. A destination
 describes the persistent backing store the runtime will write into and read
 context from. Two shapes exist today:
 
-- `SessionDestination` - the legacy path, writing to `agents_messages` via
-  `SessionOperations`. Powers the `/agents` builder Test tab.
+- `SessionDestination` - the direct-agent-run path, driven by the egress worker.
+  Writes to `agents_messages` via `SessionOperations`. Powers the `/agents`
+  builder Test tab.
 - `ChatDestination` - chat-native path, writing to `chat_messages` with
   `sender_type=AGENT`. Powers the Phase 2 chat-triggered agents.
 

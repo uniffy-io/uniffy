@@ -84,7 +84,7 @@ class AuthResponse(_message.Message):
     def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
 
 class CurrentUserResponse(_message.Message):
-    __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family", "avatar_url")
+    __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family", "avatar_url", "has_avatar")
     ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
@@ -95,6 +95,7 @@ class CurrentUserResponse(_message.Message):
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    HAS_AVATAR_FIELD_NUMBER: _ClassVar[int]
     id: str
     email: str
     username: str
@@ -105,7 +106,8 @@ class CurrentUserResponse(_message.Message):
     accent_color: str
     font_family: str
     avatar_url: str
-    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., avatar_url: _Optional[str] = ...) -> None: ...
+    has_avatar: bool
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., avatar_url: _Optional[str] = ..., has_avatar: _Optional[bool] = ...) -> None: ...
 
 class LogoutResponse(_message.Message):
     __slots__ = ("success",)

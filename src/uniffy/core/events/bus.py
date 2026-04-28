@@ -112,7 +112,7 @@ async def emit_notification(event: NotificationEvent) -> None:
 
     """
     try:
-        queue = get_queue()
+        queue = get_queue("core")
         event_json = _event_to_json(event)
         await queue.enqueue_job("process_notification_event", event_json)
     except RuntimeError:

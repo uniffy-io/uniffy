@@ -264,8 +264,17 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     }
   }, [organizationId, scheduleBatch]);
 
+  // Stable context value - identity only changes when one of the tracked
+  // values changes. Without this every provider render creates a fresh
+  // object, which would re-fire every consumer's `useEffect([context])`
+  // and trigger an infinite register/unregister/resolve loop.
+  const value = useMemo<MentionStateContextValue>(
+    () => ({ states, register, unregister, mentionDisplay }),
+    [states, register, unregister, mentionDisplay],
+  );
+
   return (
-    <MentionStateContext.Provider value={{ states, register, unregister, mentionDisplay }}>
+    <MentionStateContext.Provider value={value}>
       {children}
     </MentionStateContext.Provider>
   );

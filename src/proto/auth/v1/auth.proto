@@ -113,6 +113,7 @@ message CurrentUserResponse {
   optional string accent_color = 8;
   optional string font_family = 9;
   optional string avatar_url = 10;
+  bool has_avatar = 11;
 }
 
 // Logout response

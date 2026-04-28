@@ -441,6 +441,11 @@ export class UserInfo extends Message<UserInfo> {
    */
   createdAt?: Timestamp;
 
+  /**
+   * @generated from field: bool has_avatar = 7;
+   */
+  hasAvatar = false;
+
   constructor(data?: PartialMessage<UserInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -455,6 +460,7 @@ export class UserInfo extends Message<UserInfo> {
     { no: 4, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "created_at", kind: "message", T: Timestamp },
+    { no: 7, name: "has_avatar", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserInfo {
@@ -677,6 +683,11 @@ export class MemberInfo extends Message<MemberInfo> {
    */
   isActive = false;
 
+  /**
+   * @generated from field: bool has_avatar = 8;
+   */
+  hasAvatar = false;
+
   constructor(data?: PartialMessage<MemberInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -692,6 +703,7 @@ export class MemberInfo extends Message<MemberInfo> {
     { no: 5, name: "role", kind: "enum", T: proto3.getEnumType(OrganizationRole) },
     { no: 6, name: "joined_at", kind: "message", T: Timestamp },
     { no: 7, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "has_avatar", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberInfo {

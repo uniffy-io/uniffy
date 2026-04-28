@@ -14,7 +14,6 @@ import {
   MagnifyingGlass,
   PushPin,
   GearSix,
-  CaretDoubleRight,
   CaretDown,
   CaretUp,
   SquareSplitHorizontal,
@@ -28,9 +27,7 @@ import {
 } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleChannelHeaderExpanded,
-  expandSidebar,
   selectChannelHeaderExpanded,
-  selectSidebarOpen,
   selectSplitActive,
   deactivateSplit,
 } from '@/features/chat/store/chatUiSlice';
@@ -52,8 +49,22 @@ import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMe
 import { selectPinnedCountForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
 
-const headerButtonClass =
-  'p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors';
+const headerButtonClass = cn(
+  'group/btn relative flex items-center justify-center h-7 w-7 rounded-md',
+  'border border-foreground/15 bg-transparent text-muted-foreground',
+  'transition-all duration-300 ease-out',
+  'hover:border-foreground/30 hover:bg-muted hover:text-primary',
+);
+
+const headerButtonActiveClass =
+  'text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10';
+
+const headerChipClass = cn(
+  'group/btn flex items-center gap-1 h-7 px-1.5 rounded-md',
+  'border border-foreground/15 bg-transparent text-xs text-muted-foreground',
+  'transition-all duration-300 ease-out',
+  'hover:border-foreground/30 hover:bg-muted hover:text-primary',
+);
 
 interface ChannelHeaderProps {
   channelId?: string;
@@ -70,7 +81,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const activeChannel = channelFromId ?? defaultActiveChannel;
 
   const isExpanded = useAppSelector(selectChannelHeaderExpanded);
-  const sidebarOpen = useAppSelector(selectSidebarOpen);
   const splitActive = useAppSelector(selectSplitActive);
   const { isMobileOrTablet } = useBreakpoint();
 
@@ -194,11 +204,12 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           <button
             type="button"
             onClick={() => dispatch(openChannelSettingsModal('members'))}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className={headerChipClass}
             data-testid="chat-channel-members-button"
+            title={`${activeChannel.memberCount} members`}
           >
-            <Users size={14} />
-            <span>{activeChannel.memberCount} members</span>
+            <Users size={14} weight="regular" />
+            <span className="font-medium tabular-nums">{activeChannel.memberCount}</span>
           </button>
         )}
 
@@ -206,12 +217,12 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
         <div className="flex-1" />
 
         {/* Right action buttons */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1.5">
           {isAgentDm && agent && (
             <button
               type="button"
               onClick={() => setShowContextBar((prev) => !prev)}
-              className={cn(headerButtonClass, showContextBar && 'text-primary bg-primary/10')}
+              className={cn(headerButtonClass, showContextBar && headerButtonActiveClass)}
               aria-label={showContextBar ? 'Hide agent context' : 'Show agent context'}
               title="Agent context"
               data-testid="chat-channel-agent-context-toggle"
@@ -225,7 +236,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               ref={contextBtnRef}
               type="button"
               onClick={() => setShowAgentsPopover((prev) => !prev)}
-              className={cn(headerButtonClass, showAgentsPopover && 'text-primary bg-primary/10')}
+              className={cn(headerButtonClass, showAgentsPopover && headerButtonActiveClass)}
               aria-label={showAgentsPopover ? 'Hide agent context' : 'Show agent context'}
               title="Agent context"
               data-testid="chat-channel-agents-toggle"
@@ -246,7 +257,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             ref={searchBtnRef}
             type="button"
             onClick={() => setShowSearch(prev => !prev)}
-            className={cn(headerButtonClass, showSearch && 'text-primary bg-primary/10')}
+            className={cn(headerButtonClass, showSearch && headerButtonActiveClass)}
             aria-label="Search messages"
             data-testid="chat-channel-search-button"
             data-state={showSearch ? 'open' : 'closed'}
@@ -266,7 +277,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             ref={pinnedBtnRef}
             type="button"
             onClick={() => setShowPinned(prev => !prev)}
-            className={cn(headerButtonClass, 'relative', showPinned && 'text-primary bg-primary/10')}
+            className={cn(headerButtonClass, showPinned && headerButtonActiveClass)}
             aria-label="Pinned messages"
             data-testid="chat-channel-pinned-button"
             data-state={showPinned ? 'open' : 'closed'}
@@ -293,7 +304,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           <button
             type="button"
             onClick={() => dispatch(openResourcePanel())}
-            className={cn(headerButtonClass, resourcePanelOpen && 'text-primary bg-primary/10')}
+            className={cn(headerButtonClass, resourcePanelOpen && headerButtonActiveClass)}
             aria-label="Channel resources"
             data-testid="chat-channel-resources-button"
             data-state={resourcePanelOpen ? 'open' : 'closed'}
@@ -308,10 +319,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
                 ref={splitBtnRef}
                 type="button"
                 onClick={handleSplitClick}
-                className={cn(
-                  headerButtonClass,
-                  splitActive && 'text-primary bg-primary/10',
-                )}
+                className={cn(headerButtonClass, splitActive && headerButtonActiveClass)}
                 aria-label={splitActive ? 'Close split view' : 'Open split view'}
                 data-testid="chat-channel-split-button"
                 data-state={splitActive ? 'active' : 'inactive'}
@@ -354,17 +362,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             </button>
           )}
 
-          {/* Show sidebar expand button when sidebar is collapsed */}
-          {!sidebarOpen && (
-            <button
-              type="button"
-              onClick={() => dispatch(expandSidebar())}
-              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-              aria-label="Expand sidebar"
-            >
-              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            </button>
-          )}
         </div>
       </div>
 

@@ -528,6 +528,7 @@ type CurrentUserResponse struct {
 	AccentColor   *string                `protobuf:"bytes,8,opt,name=accent_color,json=accentColor,proto3,oneof" json:"accent_color,omitempty"`
 	FontFamily    *string                `protobuf:"bytes,9,opt,name=font_family,json=fontFamily,proto3,oneof" json:"font_family,omitempty"`
 	AvatarUrl     *string                `protobuf:"bytes,10,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	HasAvatar     bool                   `protobuf:"varint,11,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -630,6 +631,13 @@ func (x *CurrentUserResponse) GetAvatarUrl() string {
 		return *x.AvatarUrl
 	}
 	return ""
+}
+
+func (x *CurrentUserResponse) GetHasAvatar() bool {
+	if x != nil {
+		return x.HasAvatar
+	}
+	return false
 }
 
 // Logout response
@@ -1116,7 +1124,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
-	"\v_session_id\"\x95\x03\n" +
+	"\v_session_id\"\xb4\x03\n" +
 	"\x13CurrentUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -1130,7 +1138,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"fontFamily\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"avatar_url\x18\n" +
-	" \x01(\tH\x03R\tavatarUrl\x88\x01\x01B\f\n" +
+	" \x01(\tH\x03R\tavatarUrl\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"has_avatar\x18\v \x01(\bR\thasAvatarB\f\n" +
 	"\n" +
 	"_full_nameB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +

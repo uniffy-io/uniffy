@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	RuntimeService_SendMessage_FullMethodName           = "/agents.v1.RuntimeService/SendMessage"
 	RuntimeService_StreamSendMessage_FullMethodName     = "/agents.v1.RuntimeService/StreamSendMessage"
+	RuntimeService_SubscribeToRun_FullMethodName        = "/agents.v1.RuntimeService/SubscribeToRun"
 	RuntimeService_RespondToConfirmation_FullMethodName = "/agents.v1.RuntimeService/RespondToConfirmation"
 	RuntimeService_GetUsageStats_FullMethodName         = "/agents.v1.RuntimeService/GetUsageStats"
 )
@@ -35,6 +36,11 @@ type RuntimeServiceClient interface {
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	// Send a user message and stream tokens, tool events, and the final response
 	StreamSendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error)
+	// Resume an in-flight run by run_id. Replays the full event stream from
+	// the start, then tails live until Done/Error or the 120s wall budget.
+	// Used by the frontend after a tab reload to reconnect without
+	// re-driving the LLM.
+	SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(ctx context.Context, in *ConfirmationResponse, opts ...grpc.CallOption) (*ConfirmationResponseAck, error)
 	// Get usage statistics for an organization
@@ -78,6 +84,25 @@ func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, in *SendMe
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RuntimeService_StreamSendMessageClient = grpc.ServerStreamingClient[StreamSendMessageEvent]
 
+func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &RuntimeService_ServiceDesc.Streams[1], RuntimeService_SubscribeToRun_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeToRunRequest, StreamSendMessageEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type RuntimeService_SubscribeToRunClient = grpc.ServerStreamingClient[StreamSendMessageEvent]
+
 func (c *runtimeServiceClient) RespondToConfirmation(ctx context.Context, in *ConfirmationResponse, opts ...grpc.CallOption) (*ConfirmationResponseAck, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConfirmationResponseAck)
@@ -108,6 +133,11 @@ type RuntimeServiceServer interface {
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	// Send a user message and stream tokens, tool events, and the final response
 	StreamSendMessage(*SendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error
+	// Resume an in-flight run by run_id. Replays the full event stream from
+	// the start, then tails live until Done/Error or the 120s wall budget.
+	// Used by the frontend after a tab reload to reconnect without
+	// re-driving the LLM.
+	SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *ConfirmationResponse) (*ConfirmationResponseAck, error)
 	// Get usage statistics for an organization
@@ -127,6 +157,9 @@ func (UnimplementedRuntimeServiceServer) SendMessage(context.Context, *SendMessa
 }
 func (UnimplementedRuntimeServiceServer) StreamSendMessage(*SendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error {
 	return status.Error(codes.Unimplemented, "method StreamSendMessage not implemented")
+}
+func (UnimplementedRuntimeServiceServer) SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeToRun not implemented")
 }
 func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, *ConfirmationResponse) (*ConfirmationResponseAck, error) {
 	return nil, status.Error(codes.Unimplemented, "method RespondToConfirmation not implemented")
@@ -183,6 +216,17 @@ func _RuntimeService_StreamSendMessage_Handler(srv interface{}, stream grpc.Serv
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RuntimeService_StreamSendMessageServer = grpc.ServerStreamingServer[StreamSendMessageEvent]
+
+func _RuntimeService_SubscribeToRun_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeToRunRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RuntimeServiceServer).SubscribeToRun(m, &grpc.GenericServerStream[SubscribeToRunRequest, StreamSendMessageEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type RuntimeService_SubscribeToRunServer = grpc.ServerStreamingServer[StreamSendMessageEvent]
 
 func _RuntimeService_RespondToConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConfirmationResponse)
@@ -244,6 +288,11 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "StreamSendMessage",
 			Handler:       _RuntimeService_StreamSendMessage_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SubscribeToRun",
+			Handler:       _RuntimeService_SubscribeToRun_Handler,
 			ServerStreams: true,
 		},
 	},

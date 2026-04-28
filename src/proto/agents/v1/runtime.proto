@@ -12,6 +12,11 @@ service RuntimeService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   // Send a user message and stream tokens, tool events, and the final response
   rpc StreamSendMessage(SendMessageRequest) returns (stream StreamSendMessageEvent) {}
+  // Resume an in-flight run by run_id. Replays the full event stream from
+  // the start, then tails live until Done/Error or the 120s wall budget.
+  // Used by the frontend after a tab reload to reconnect without
+  // re-driving the LLM.
+  rpc SubscribeToRun(SubscribeToRunRequest) returns (stream StreamSendMessageEvent) {}
   // Approve or reject a destructive tool call that requires confirmation
   rpc RespondToConfirmation(ConfirmationResponse) returns (ConfirmationResponseAck) {}
   // Get usage statistics for an organization
@@ -156,6 +161,11 @@ message ConfirmationResponse {
   bool approved = 4;
 }
 
+message SubscribeToRunRequest {
+  string run_id = 1;
+  string organization_id = 2;
+}
+
 message ConfirmationResponseAck {
   bool accepted = 1;
 }
@@ -172,6 +182,12 @@ message StreamSendMessageEvent {
     StreamErrorEvent error = 6;
     StreamConfirmationRequiredEvent confirmation_required = 7;
   }
+  // The egress run id this event belongs to. Populated on every event
+  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
+  // resume from the start of the stream. Set by the handler from the
+  // run state hash; the worker does not embed it inside the oneof
+  // payload itself.
+  string run_id = 8;
 }
 
 message StreamTokenEvent {

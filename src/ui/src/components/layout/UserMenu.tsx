@@ -23,6 +23,7 @@ import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
 import { clearComments } from '@/features/comments';
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
+import { clearAgentMessages } from '@/features/agents/store/agentMessagesSlice';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -96,6 +97,7 @@ export function UserMenu() {
         dispatch(clearChatMessages());
         dispatch(clearChatThreads());
         dispatch(clearChatUi());
+        dispatch(clearAgentMessages());
         // Clear IndexedDB cache (async, fire and forget)
         clearNotesCache().catch(console.error);
         // Clear file blob cache

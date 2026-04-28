@@ -185,6 +185,14 @@ class ConfirmationResponse(_message.Message):
     approved: bool
     def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., approved: _Optional[bool] = ...) -> None: ...
 
+class SubscribeToRunRequest(_message.Message):
+    __slots__ = ("run_id", "organization_id")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    organization_id: str
+    def __init__(self, run_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
 class ConfirmationResponseAck(_message.Message):
     __slots__ = ("accepted",)
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
@@ -192,7 +200,7 @@ class ConfirmationResponseAck(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
 class StreamSendMessageEvent(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required")
+    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
     TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
@@ -200,6 +208,7 @@ class StreamSendMessageEvent(_message.Message):
     DONE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
     token: StreamTokenEvent
     tool_call: StreamToolCallEvent
     tool_result: StreamToolResultEvent
@@ -207,7 +216,8 @@ class StreamSendMessageEvent(_message.Message):
     done: StreamDoneEvent
     error: StreamErrorEvent
     confirmation_required: StreamConfirmationRequiredEvent
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ...) -> None: ...
+    run_id: str
+    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class StreamTokenEvent(_message.Message):
     __slots__ = ("text",)

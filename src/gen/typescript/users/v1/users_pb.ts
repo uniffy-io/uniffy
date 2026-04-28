@@ -66,6 +66,11 @@ export class UserProfile extends Message<UserProfile> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * @generated from field: bool has_avatar = 12;
+   */
+  hasAvatar = false;
+
   constructor(data?: PartialMessage<UserProfile>) {
     super();
     proto3.util.initPartial(data, this);
@@ -85,6 +90,7 @@ export class UserProfile extends Message<UserProfile> {
     { no: 9, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "created_at", kind: "message", T: Timestamp },
     { no: 11, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 12, name: "has_avatar", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserProfile {

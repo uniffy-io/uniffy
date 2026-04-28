@@ -221,3 +221,5 @@ node_modules/
 # Go
 src/unictl/unictl
 src/unictl/dist/
+# Local-only Claude Code workspace (presentations, sales notes, scratch)
+.claude/local/

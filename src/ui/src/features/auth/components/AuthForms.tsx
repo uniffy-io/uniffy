@@ -646,6 +646,7 @@ export function AuthForms() {
         accentColor: userResponse.accentColor,
         fontFamily: userResponse.fontFamily,
         avatarUrl: userResponse.avatarUrl,
+        hasAvatar: userResponse.hasAvatar,
       };
 
       // Sync theme preferences from user profile

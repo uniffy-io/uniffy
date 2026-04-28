@@ -1,6 +1,6 @@
 """Shared Valkey connection configuration.
 
-Three connection tiers, each tuned for its access pattern:
+Four connection tiers, each tuned for its access pattern:
 
 - **ARQ queue** -- ``to_arq_redis_settings()``. Long-lived job dequeue
   pool. 10s socket timeout, 5 retries. ARQ owns its own pool.
@@ -13,6 +13,11 @@ Three connection tiers, each tuned for its access pattern:
   zero retries, no health checks. Sub-millisecond on a healthy node;
   hard-fails fast when Valkey is slow / down so callers fall through
   to PG inside the per-call deadline guard (see ``valkey.ops``).
+- **Streams client** -- ``to_streams_kwargs()``. Blocking XREAD on
+  ``agent:run:{run_id}`` streams. The socket timeout must exceed the
+  longest block the caller passes; 30s gives ample headroom over the
+  5s block currently used by the runtime subscribe loop. No retries
+  -- caller treats an empty round as "no events this tick" and loops.
 
 The host/port/password/database fields are the only env-driven values.
 Per-tier timeouts are constants here -- a single dial, set centrally.
@@ -39,6 +44,11 @@ _PUBSUB_RETRY_ERRORS = (
 _OPS_SOCKET_CONNECT_TIMEOUT = 0.2
 _OPS_SOCKET_TIMEOUT = 0.1
 _OPS_MAX_CONNECTIONS = 10
+
+_STREAMS_SOCKET_CONNECT_TIMEOUT = 2.0
+_STREAMS_SOCKET_TIMEOUT = 30.0
+_STREAMS_HEALTH_CHECK_INTERVAL = 30
+_STREAMS_MAX_CONNECTIONS = 20
 
 _ARQ_CONN_TIMEOUT = 10
 _ARQ_CONN_RETRIES = 5
@@ -135,4 +145,26 @@ class ValkeyConfig:
             "retry_on_timeout": False,
             "health_check_interval": 0,
             "max_connections": _OPS_MAX_CONNECTIONS,
+        }
+
+    def to_streams_kwargs(self) -> dict[str, Any]:
+        """Kwargs for ``aioredis.from_url`` on the streams client.
+
+        XREAD with ``block`` waits inside Valkey for new entries. The
+        socket timeout must exceed the longest block the caller passes
+        (today the subscribe loop caps at 5s); 30s gives 6x headroom and
+        leaves room to raise the block budget without re-tuning here.
+        Health checks keep long-lived connections from being killed by
+        idle middleboxes during quiet runs. No retries -- the caller
+        treats an empty XREAD result as "no events this round" and
+        loops on its own wall budget.
+        """
+        return {
+            "decode_responses": True,
+            "socket_connect_timeout": _STREAMS_SOCKET_CONNECT_TIMEOUT,
+            "socket_timeout": _STREAMS_SOCKET_TIMEOUT,
+            "retry_on_error": [],
+            "retry_on_timeout": False,
+            "health_check_interval": _STREAMS_HEALTH_CHECK_INTERVAL,
+            "max_connections": _STREAMS_MAX_CONNECTIONS,
         }

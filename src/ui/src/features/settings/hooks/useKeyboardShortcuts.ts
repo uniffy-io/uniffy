@@ -55,6 +55,8 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'projects.undo': 'Ctrl+Z',
     'projects.redo': 'Ctrl+Shift+Z',
 
+    // Chat actions
+    'chat.editLast': 'ArrowUp',
     // Canvas actions
     'canvas.addText': 'T',
     'canvas.addShape': 'S',
@@ -110,8 +112,12 @@ export function formatShortcut(shortcut: string): string {
 
 /**
  * Check if a keyboard event matches a shortcut.
+ *
+ * Exported so callers that own their own keydown listener (e.g. components
+ * with focused contentEditable surfaces, where the global handler is bypassed
+ * by design) can still honour the user's bound key.
  */
-function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
+export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
     const parsed = parseShortcut(shortcut);
 
     // On Mac, Ctrl key in shortcut means Meta (Cmd)

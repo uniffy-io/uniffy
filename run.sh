@@ -28,8 +28,10 @@ help() {
   echo -e "  ${CYAN}ui [cmd]${NC}        Run pnpm command in ui workspace (default: dev)"
   echo -e "  ${CYAN}mobile [cmd]${NC}    Run pnpm command in mobile workspace (default: start)"
   echo -e "  ${CYAN}mobile-dev${NC}      Run backend + mobile app in web view"
-  echo -e "  ${CYAN}worker${NC}          Run background worker"
-  echo -e "  ${CYAN}worker-dev${NC}      Run worker with hot reload"
+  echo -e "  ${CYAN}worker-core${NC}     Run the core background worker (thumbnails, notifications, ...)"
+  echo -e "  ${CYAN}worker-core-dev${NC} Run the core worker with hot reload"
+  echo -e "  ${CYAN}worker-egress${NC}   Run the egress background worker (agent runtime, compaction, cron)"
+  echo -e "  ${CYAN}worker-egress-dev${NC} Run the egress worker with hot reload"
   echo ""
   echo -e "  ${CYAN}Quality${NC}"
   echo -e "  ${CYAN}lint${NC}            Run all linters (backend + frontend)"
@@ -135,10 +137,11 @@ dev() {
   echo "Starting development servers..."
   echo "Backend: http://0.0.0.0:8000"
   echo "Frontend: http://0.0.0.0:5173"
-  echo "Worker: background tasks"
+  echo "Workers: core + egress"
   trap 'kill 0' EXIT
   uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/ &
-  uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/ &
   pnpm --filter uniffy-ui dev
 }
 
@@ -234,14 +237,24 @@ mcp_logs() {
   docker compose --profile mcp logs -f mcp-playwright
 }
 
-worker() {
-  echo "Starting background worker..."
-  uv run python -m uniffy.worker
+worker_core() {
+  echo "Starting core background worker..."
+  uv run python -m uniffy.worker_core
 }
 
-worker_dev() {
-  echo "Starting background worker with hot reload..."
-  uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/ src/gen/python/
+worker_core_dev() {
+  echo "Starting core background worker with hot reload..."
+  uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/
+}
+
+worker_egress() {
+  echo "Starting egress background worker..."
+  uv run python -m uniffy.worker_egress
+}
+
+worker_egress_dev() {
+  echo "Starting egress background worker with hot reload..."
+  uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/
 }
 
 licenses() {
@@ -311,8 +324,10 @@ test-frontend) run_test_frontend ;;
 bench) run_bench ;;
 db-shell) db_shell ;;
 db-migrate) db_migrate ;;
-worker) worker ;;
-worker-dev) worker_dev ;;
+worker-core) worker_core ;;
+worker-core-dev) worker_core_dev ;;
+worker-egress) worker_egress ;;
+worker-egress-dev) worker_egress_dev ;;
 licenses) licenses ;;
 cli-build) cli_build ;;
 cli-install) cli_install ;;

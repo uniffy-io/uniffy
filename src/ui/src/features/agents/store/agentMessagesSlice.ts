@@ -31,8 +31,37 @@ interface AgentMessagesState {
     streamingToolCalls: StreamingToolCall[];
     pendingConfirmation: PendingConfirmation | null;
     isStreaming: boolean;
+    activeRunId: string | null;
     loading: boolean;
     error: string | null;
+}
+
+const ACTIVE_RUN_ID_STORAGE_KEY = 'uniffy.agentRuntime.activeRunId';
+
+function readPersistedRunId(): string | null {
+    if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+        return null;
+    }
+    try {
+        return window.sessionStorage.getItem(ACTIVE_RUN_ID_STORAGE_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function writePersistedRunId(runId: string | null): void {
+    if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+        return;
+    }
+    try {
+        if (runId) {
+            window.sessionStorage.setItem(ACTIVE_RUN_ID_STORAGE_KEY, runId);
+        } else {
+            window.sessionStorage.removeItem(ACTIVE_RUN_ID_STORAGE_KEY);
+        }
+    } catch {
+        // sessionStorage may throw under quota or privacy modes; in-memory state is still authoritative.
+    }
 }
 
 const initialState: AgentMessagesState = {
@@ -42,6 +71,7 @@ const initialState: AgentMessagesState = {
     streamingToolCalls: [],
     pendingConfirmation: null,
     isStreaming: false,
+    activeRunId: readPersistedRunId(),
     loading: false,
     error: null,
 };
@@ -55,7 +85,17 @@ export const agentMessagesSlice = createSlice({
             state.streamingContent = '';
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
+            state.activeRunId = null;
+            writePersistedRunId(null);
             state.error = null;
+        },
+        runIdReceived: (state, action: PayloadAction<string>) => {
+            state.activeRunId = action.payload;
+            writePersistedRunId(action.payload);
+        },
+        clearActiveRunId: (state) => {
+            state.activeRunId = null;
+            writePersistedRunId(null);
         },
         addOptimisticUserMessage: (state, action: PayloadAction<{ sessionId: string; content: string; fileIds?: string[] }>) => {
             const { sessionId, content, fileIds } = action.payload;
@@ -131,6 +171,8 @@ export const agentMessagesSlice = createSlice({
             }
             state.streamingContent = '';
             state.streamingToolCalls = [];
+            state.activeRunId = null;
+            writePersistedRunId(null);
         },
         setConfirmationRequired: (state, action: PayloadAction<PendingConfirmation>) => {
             state.pendingConfirmation = action.payload;
@@ -144,6 +186,12 @@ export const agentMessagesSlice = createSlice({
             state.streamingContent = '';
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
+            state.activeRunId = null;
+            writePersistedRunId(null);
+        },
+        clearAgentMessages: () => {
+            writePersistedRunId(null);
+            return { ...initialState, activeRunId: null };
         },
     },
     extraReducers: (builder) => {
@@ -165,6 +213,8 @@ export const agentMessagesSlice = createSlice({
 
 export const {
     streamStarted,
+    runIdReceived,
+    clearActiveRunId,
     addOptimisticUserMessage,
     cacheFileMetadata,
     appendStreamingToken,
@@ -174,6 +224,7 @@ export const {
     clearConfirmation,
     streamCompleted,
     streamError,
+    clearAgentMessages,
 } = agentMessagesSlice.actions;
 
 export const selectMessagesForSession = (sessionId: string | null) => (state: RootState) =>
@@ -181,6 +232,7 @@ export const selectMessagesForSession = (sessionId: string | null) => (state: Ro
 export const selectStreamingContent = (state: RootState) => state.agentMessages.streamingContent;
 export const selectStreamingToolCalls = (state: RootState) => state.agentMessages.streamingToolCalls;
 export const selectIsStreaming = (state: RootState) => state.agentMessages.isStreaming;
+export const selectActiveRunId = (state: RootState) => state.agentMessages.activeRunId;
 export const selectPendingConfirmation = (state: RootState) => state.agentMessages.pendingConfirmation;
 export const selectMessagesLoading = (state: RootState) => state.agentMessages.loading;
 export const selectFileMetadataCache = (state: RootState) => state.agentMessages.fileMetadataCache;

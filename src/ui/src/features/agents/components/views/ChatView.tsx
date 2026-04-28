@@ -44,9 +44,11 @@ import {
     selectStreamingContent,
     selectStreamingToolCalls,
     selectIsStreaming,
+    selectActiveRunId,
     selectPendingConfirmation,
     cacheFileMetadata,
 } from "@/features/agents/store/agentMessagesSlice";
+import { useAgentRunStream } from "@/features/agents/hooks/useAgentRunStream";
 import type { FileMetadata } from "@/features/agents/store/agentMessagesSlice";
 import { fetchMessages, streamSendMessage, respondToConfirmation, MessageRole } from "@/features/agents/store/agentMessagesThunks";
 import type { SerializedMessage } from "@/features/agents/store/agentMessagesThunks";
@@ -655,11 +657,20 @@ function ChatPanel() {
     const streamingContent = useAppSelector(selectStreamingContent);
     const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
     const isStreaming = useAppSelector(selectIsStreaming);
+    const activeRunId = useAppSelector(selectActiveRunId);
     const pendingConfirmation = useAppSelector(selectPendingConfirmation);
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+    // If the slice already carries a run_id at mount - either from a
+    // navigate-away-and-back or from a tab reload that rehydrated
+    // sessionStorage - reconnect via SubscribeToRun instead of starting
+    // a fresh stream. Captured once on first render so a later
+    // runIdReceived from streamSendMessage does not retrigger the hook.
+    const [reconnectRunId] = useState<string | null>(() => activeRunId);
+    useAgentRunStream(reconnectRunId, organizationId ?? "", activeSessionId);
     const availableModels = useAppSelector(selectAvailableModels);
     const isProviderAvailable = availableModels.length > 0;
     const contextStats = useAppSelector(selectContextStats(activeSessionId));
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     const [showStats, setShowStats] = useState(false);
     const [isCompacting, setIsCompacting] = useState(false);

@@ -36,6 +36,7 @@ type UserProfile struct {
 	IsSystemAdmin bool                   `protobuf:"varint,9,opt,name=is_system_admin,json=isSystemAdmin,proto3" json:"is_system_admin,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	HasAvatar     bool                   `protobuf:"varint,12,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +146,13 @@ func (x *UserProfile) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *UserProfile) GetHasAvatar() bool {
+	if x != nil {
+		return x.HasAvatar
+	}
+	return false
 }
 
 type GetMyProfileRequest struct {
@@ -1075,7 +1083,7 @@ var File_users_v1_users_proto protoreflect.FileDescriptor
 
 const file_users_v1_users_proto_rawDesc = "" +
 	"\n" +
-	"\x14users/v1/users.proto\x12\busers.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xee\x03\n" +
+	"\x14users/v1/users.proto\x12\busers.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8d\x04\n" +
 	"\vUserProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12 \n" +
@@ -1092,7 +1100,9 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\f\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"has_avatar\x18\f \x01(\bR\thasAvatarB\f\n" +
 	"\n" +
 	"_full_nameB\v\n" +
 	"\t_usernameB\r\n" +

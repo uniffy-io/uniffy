@@ -323,10 +323,11 @@ export async function rehydrateAuth(): Promise<boolean> {
         accentColor?: string;
         fontFamily?: string;
         avatarUrl?: string;
+        hasAvatar?: boolean;
       };
 
       store.dispatch(createRehydrateCompleteAction({
-        user: persistedUser,
+        user: { ...persistedUser, hasAvatar: persistedUser.hasAvatar ?? Boolean(persistedUser.avatarUrl) },
         accessToken: newToken,
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,

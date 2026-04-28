@@ -54,9 +54,11 @@ from uniffy.core.valkey import (
     close_ops_client,
     close_pubsub,
     close_queue,
+    close_streams_client,
     init_ops_client,
     init_pubsub,
     init_queue,
+    init_streams_client,
     signal_pubsub_shutdown,
 )
 from uniffy.db import close_db, init_db, seed_initial_data
@@ -224,12 +226,18 @@ async def lifespan(app: FastAPI):
         logger.exception(f"Failed to initialize S3 storage: {e}")
         raise
 
-    # Initialize job queue (non-blocking - app can run without it)
+    # Initialize core + egress queue pools (non-blocking - app can run without them)
     try:
-        await init_queue()
-        logger.info("Job queue initialized successfully")
+        await init_queue("core")
+        logger.info("Core job queue initialized successfully")
     except Exception as e:
-        logger.warning(f"Job queue not available: {e}")
+        logger.warning(f"Core job queue not available: {e}")
+
+    try:
+        await init_queue("egress")
+        logger.info("Egress job queue initialized successfully")
+    except Exception as e:
+        logger.warning(f"Egress job queue not available: {e}")
 
     # Initialize Pub/Sub (non-blocking - app can run without it)
     try:
@@ -246,6 +254,17 @@ async def lifespan(app: FastAPI):
         logger.info("Valkey ops client initialized successfully")
     except Exception as e:
         logger.warning(f"Valkey ops client not available: {e}")
+
+    # Streams client carries blocking XREAD on agent:run:{run_id} streams.
+    # Distinct from the ops client because XREAD's block timeout exceeds
+    # the ops client's 100ms socket timeout. Non-blocking init: a Valkey
+    # outage leaves agent runtime stream subscribers seeing empty rounds
+    # until the client is reachable again.
+    try:
+        await init_streams_client()
+        logger.info("Valkey streams client initialized successfully")
+    except Exception as e:
+        logger.warning(f"Valkey streams client not available: {e}")
 
     # Provider-key invalidation listener: drops the in-process LRU when
     # another pod publishes provider_keys:invalidate:{key_id}.
@@ -275,9 +294,11 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down UNIFFY application...")
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
+    await close_streams_client()
     await close_ops_client()
     await close_pubsub()
-    await close_queue()
+    await close_queue("core")
+    await close_queue("egress")
     await close_s3()
     await close_meilisearch()
     await close_db()

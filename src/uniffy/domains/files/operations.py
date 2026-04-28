@@ -477,7 +477,7 @@ class FileOperations(BaseContentOperations[File]):
         try:
             from uniffy.core.valkey import get_queue
 
-            queue = get_queue()
+            queue = get_queue("core")
             jobs = get_jobs_for_mime_type(file.mime_type)
 
             for job_name in jobs:

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ConfirmationResponse, ConfirmationResponseAck, GetUsageStatsRequest, GetUsageStatsResponse, SendMessageRequest, SendMessageResponse, StreamSendMessageEvent } from "./runtime_pb.js";
+import { ConfirmationResponse, ConfirmationResponseAck, GetUsageStatsRequest, GetUsageStatsResponse, SendMessageRequest, SendMessageResponse, StreamSendMessageEvent, SubscribeToRunRequest } from "./runtime_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -33,6 +33,20 @@ export const RuntimeService = {
     streamSendMessage: {
       name: "StreamSendMessage",
       I: SendMessageRequest,
+      O: StreamSendMessageEvent,
+      kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * Resume an in-flight run by run_id. Replays the full event stream from
+     * the start, then tails live until Done/Error or the 120s wall budget.
+     * Used by the frontend after a tab reload to reconnect without
+     * re-driving the LLM.
+     *
+     * @generated from rpc agents.v1.RuntimeService.SubscribeToRun
+     */
+    subscribeToRun: {
+      name: "SubscribeToRun",
+      I: SubscribeToRunRequest,
       O: StreamSendMessageEvent,
       kind: MethodKind.ServerStreaming,
     },

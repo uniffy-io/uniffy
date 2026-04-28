@@ -39,6 +39,9 @@ const (
 	// RuntimeServiceStreamSendMessageProcedure is the fully-qualified name of the RuntimeService's
 	// StreamSendMessage RPC.
 	RuntimeServiceStreamSendMessageProcedure = "/agents.v1.RuntimeService/StreamSendMessage"
+	// RuntimeServiceSubscribeToRunProcedure is the fully-qualified name of the RuntimeService's
+	// SubscribeToRun RPC.
+	RuntimeServiceSubscribeToRunProcedure = "/agents.v1.RuntimeService/SubscribeToRun"
 	// RuntimeServiceRespondToConfirmationProcedure is the fully-qualified name of the RuntimeService's
 	// RespondToConfirmation RPC.
 	RuntimeServiceRespondToConfirmationProcedure = "/agents.v1.RuntimeService/RespondToConfirmation"
@@ -53,6 +56,11 @@ type RuntimeServiceClient interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	// Send a user message and stream tokens, tool events, and the final response
 	StreamSendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageEvent], error)
+	// Resume an in-flight run by run_id. Replays the full event stream from
+	// the start, then tails live until Done/Error or the 120s wall budget.
+	// Used by the frontend after a tab reload to reconnect without
+	// re-driving the LLM.
+	SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageEvent], error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *connect.Request[v1.ConfirmationResponse]) (*connect.Response[v1.ConfirmationResponseAck], error)
 	// Get usage statistics for an organization
@@ -82,6 +90,12 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(runtimeServiceMethods.ByName("StreamSendMessage")),
 			connect.WithClientOptions(opts...),
 		),
+		subscribeToRun: connect.NewClient[v1.SubscribeToRunRequest, v1.StreamSendMessageEvent](
+			httpClient,
+			baseURL+RuntimeServiceSubscribeToRunProcedure,
+			connect.WithSchema(runtimeServiceMethods.ByName("SubscribeToRun")),
+			connect.WithClientOptions(opts...),
+		),
 		respondToConfirmation: connect.NewClient[v1.ConfirmationResponse, v1.ConfirmationResponseAck](
 			httpClient,
 			baseURL+RuntimeServiceRespondToConfirmationProcedure,
@@ -101,6 +115,7 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type runtimeServiceClient struct {
 	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	streamSendMessage     *connect.Client[v1.SendMessageRequest, v1.StreamSendMessageEvent]
+	subscribeToRun        *connect.Client[v1.SubscribeToRunRequest, v1.StreamSendMessageEvent]
 	respondToConfirmation *connect.Client[v1.ConfirmationResponse, v1.ConfirmationResponseAck]
 	getUsageStats         *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
 }
@@ -113,6 +128,11 @@ func (c *runtimeServiceClient) SendMessage(ctx context.Context, req *connect.Req
 // StreamSendMessage calls agents.v1.RuntimeService.StreamSendMessage.
 func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, req *connect.Request[v1.SendMessageRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageEvent], error) {
 	return c.streamSendMessage.CallServerStream(ctx, req)
+}
+
+// SubscribeToRun calls agents.v1.RuntimeService.SubscribeToRun.
+func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, req *connect.Request[v1.SubscribeToRunRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageEvent], error) {
+	return c.subscribeToRun.CallServerStream(ctx, req)
 }
 
 // RespondToConfirmation calls agents.v1.RuntimeService.RespondToConfirmation.
@@ -131,6 +151,11 @@ type RuntimeServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	// Send a user message and stream tokens, tool events, and the final response
 	StreamSendMessage(context.Context, *connect.Request[v1.SendMessageRequest], *connect.ServerStream[v1.StreamSendMessageEvent]) error
+	// Resume an in-flight run by run_id. Replays the full event stream from
+	// the start, then tails live until Done/Error or the 120s wall budget.
+	// Used by the frontend after a tab reload to reconnect without
+	// re-driving the LLM.
+	SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest], *connect.ServerStream[v1.StreamSendMessageEvent]) error
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *connect.Request[v1.ConfirmationResponse]) (*connect.Response[v1.ConfirmationResponseAck], error)
 	// Get usage statistics for an organization
@@ -156,6 +181,12 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 		connect.WithSchema(runtimeServiceMethods.ByName("StreamSendMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	runtimeServiceSubscribeToRunHandler := connect.NewServerStreamHandler(
+		RuntimeServiceSubscribeToRunProcedure,
+		svc.SubscribeToRun,
+		connect.WithSchema(runtimeServiceMethods.ByName("SubscribeToRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	runtimeServiceRespondToConfirmationHandler := connect.NewUnaryHandler(
 		RuntimeServiceRespondToConfirmationProcedure,
 		svc.RespondToConfirmation,
@@ -174,6 +205,8 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 			runtimeServiceSendMessageHandler.ServeHTTP(w, r)
 		case RuntimeServiceStreamSendMessageProcedure:
 			runtimeServiceStreamSendMessageHandler.ServeHTTP(w, r)
+		case RuntimeServiceSubscribeToRunProcedure:
+			runtimeServiceSubscribeToRunHandler.ServeHTTP(w, r)
 		case RuntimeServiceRespondToConfirmationProcedure:
 			runtimeServiceRespondToConfirmationHandler.ServeHTTP(w, r)
 		case RuntimeServiceGetUsageStatsProcedure:
@@ -193,6 +226,10 @@ func (UnimplementedRuntimeServiceHandler) SendMessage(context.Context, *connect.
 
 func (UnimplementedRuntimeServiceHandler) StreamSendMessage(context.Context, *connect.Request[v1.SendMessageRequest], *connect.ServerStream[v1.StreamSendMessageEvent]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.StreamSendMessage is not implemented"))
+}
+
+func (UnimplementedRuntimeServiceHandler) SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest], *connect.ServerStream[v1.StreamSendMessageEvent]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.SubscribeToRun is not implemented"))
 }
 
 func (UnimplementedRuntimeServiceHandler) RespondToConfirmation(context.Context, *connect.Request[v1.ConfirmationResponse]) (*connect.Response[v1.ConfirmationResponseAck], error) {
