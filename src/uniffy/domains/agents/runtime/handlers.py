@@ -23,6 +23,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.runtime_pb2 import (
+    CancelStreamRequest,
+    CancelStreamResponse,
     GetUsageStatsRequest,
     GetUsageStatsResponse,
     RespondToConfirmationRequest,
@@ -48,6 +50,7 @@ from uniffy.core.valkey.queue import get_queue
 from uniffy.core.valkey.rate_limit import check_agent_rate_limits
 from uniffy.core.valkey.streams import (
     get_run_state,
+    request_run_cancel,
     run_stream_key,
     set_run_state,
     stream_xread,
@@ -472,6 +475,36 @@ class RuntimeHandlers:
                 exc_info=True,
             )
             yield _build_subscribe_synthetic_error_event(run_id, "Internal server error")
+
+    async def cancel_stream(
+        self,
+        request: CancelStreamRequest,
+        ctx: RequestContext,
+    ) -> CancelStreamResponse:
+        """Flip the cancel flag on an in-flight run.
+
+        Auth: caller must match the ``user_id`` + ``organization_id``
+        recorded in the run-state hash. Idempotent -- cancelling an
+        already-finished or expired run reports ``cancelled=false``
+        without raising.
+        """
+        user_id = get_user_id_from_context(ctx)
+        try:
+            run_id = UUID(request.run_id)
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        state = await get_run_state(run_id)
+        if state is None:
+            return CancelStreamResponse(cancelled=False)
+        if state.get("user_id") != str(user_id):
+            raise ConnectError(Code.PERMISSION_DENIED, "not your run")
+        if state.get("organization_id") != str(org_id):
+            raise ConnectError(Code.PERMISSION_DENIED, "not your run")
+
+        flagged = await request_run_cancel(run_id)
+        return CancelStreamResponse(cancelled=flagged)
 
     async def _preflight_and_enqueue(
         self,

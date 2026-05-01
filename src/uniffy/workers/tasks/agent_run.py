@@ -24,8 +24,11 @@ from loguru import logger
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.core.valkey.streams import (
     get_run_state,
+    is_cancel_requested,
     run_state_key,
     run_stream_key,
+    session_active_run_add,
+    session_active_run_remove,
     set_run_state,
     stream_delete,
 )
@@ -196,6 +199,7 @@ async def run_agent_session(
     redis = ctx.get("redis")
     run_started = time.monotonic()
     AGENT_RUN_ACTIVE.inc()
+    await session_active_run_add(sid, rid)
 
     try:
         async with open_session() as session:
@@ -209,6 +213,7 @@ async def run_agent_session(
             runtime_ops = RuntimeOperations(session)
             destination = SessionDestination(session_id=sid)
             done_seen = False
+            cancelled = False
             async for event in runtime_ops.stream_send_message(
                 destination=destination,
                 user_id=uid,
@@ -220,8 +225,28 @@ async def run_agent_session(
                 await publisher.publish(event)
                 if isinstance(event, RuntimeDoneEvent):
                     done_seen = True
+                    break
+                # Polling between yielded events keeps the cancel
+                # window tight: the next emitted event triggers the
+                # check, so worst case we deliver one more token /
+                # tool_result before stopping. Cheap (single HGET) so
+                # we run it on every event.
+                if await is_cancel_requested(rid):
+                    cancelled = True
+                    await publisher.publish(
+                        RuntimeErrorEvent(error="cancelled")
+                    )
+                    await set_run_state(
+                        run_id=rid,
+                        user_id=uid,
+                        organization_id=oid,
+                        session_id=sid,
+                        status="cancelled",
+                        last_seq=publisher.last_seq,
+                    )
+                    break
 
-        if done_seen and redis is not None:
+        if (done_seen or cancelled) and redis is not None:
             try:
                 await redis.enqueue_job(
                     "delete_run_stream",
@@ -234,6 +259,8 @@ async def run_agent_session(
                     f"for run={run_id}"
                 )
 
+        if cancelled:
+            return {"status": "cancelled", "run_id": run_id}
         return {"status": "success", "run_id": run_id}
 
     except Exception as exc:
@@ -268,6 +295,7 @@ async def run_agent_session(
             AGENT_RUN_ACTIVE.dec()
             await publisher.close()
         finally:
+            await session_active_run_remove(sid, rid)
             await _release_lock(rid)
 
 

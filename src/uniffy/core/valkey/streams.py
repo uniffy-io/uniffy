@@ -336,3 +336,129 @@ async def set_run_state(
 async def get_run_state(run_id: UUID) -> dict[str, Any] | None:
     """Read the run state hash for ``run_id``. ``None`` if expired."""
     return await stream_get_state(run_state_key(run_id))
+
+
+def session_active_runs_key(session_id: UUID | str) -> str:
+    """Return the Valkey set key tracking active runs for a session.
+
+    The set holds ``run_id`` values for runs in ``queued`` / ``running``
+    state. SessionOperations consults it to refuse mutations
+    (edit/delete/retry) while a run is in flight. Cancel + the run
+    lifecycle in ``run_agent_session`` keep it in sync; the set TTL is
+    the same 300s window as the run-state hash so a crashed worker
+    cannot pin the session forever.
+    """
+    return f"agent:session:{session_id}:active_runs"
+
+
+async def session_active_run_add(session_id: UUID, run_id: UUID) -> None:
+    """Mark ``run_id`` as active for ``session_id``.
+
+    Best-effort: a Valkey hiccup means the inflight guard sees an empty
+    set, the request goes through, and any concurrent edit races a
+    short window. The egress task lock + run-state hash still keep the
+    actual run safe.
+    """
+    client = _get_ops_client()
+    if client is None:
+        return
+    key = session_active_runs_key(session_id)
+    try:
+        async with ops_call(STREAMS_NAMESPACE, "session_run_add"):
+            pipe = client.pipeline(transaction=False)
+            pipe.sadd(key, str(run_id))
+            pipe.expire(key, RUN_STATE_TTL_SECONDS)
+            await pipe.execute()
+    except TimeoutError:
+        return
+    except Exception:
+        logger.warning(
+            f"session_active_run_add failed for {session_id}",
+            component=LOGGER_COMPONENT,
+        )
+
+
+async def session_active_run_remove(session_id: UUID, run_id: UUID) -> None:
+    """Remove ``run_id`` from the session's active set."""
+    client = _get_ops_client()
+    if client is None:
+        return
+    try:
+        async with ops_call(STREAMS_NAMESPACE, "session_run_remove"):
+            await client.srem(session_active_runs_key(session_id), str(run_id))
+    except TimeoutError:
+        return
+    except Exception:
+        logger.warning(
+            f"session_active_run_remove failed for {session_id}",
+            component=LOGGER_COMPONENT,
+        )
+
+
+async def session_has_active_run(session_id: UUID) -> bool:
+    """Return True if any run is currently active for ``session_id``.
+
+    A False return on a Valkey error is intentional: edit/delete are
+    permission-checked + audit-logged anyway, and the worst case of a
+    stale "no active run" verdict is a downstream-invalidation event
+    racing a streaming response, which the client tolerates.
+    """
+    client = _get_ops_client()
+    if client is None:
+        return False
+    try:
+        async with ops_call(STREAMS_NAMESPACE, "session_run_check"):
+            count = await client.scard(session_active_runs_key(session_id))
+        return int(count or 0) > 0
+    except TimeoutError:
+        return False
+    except Exception:
+        logger.warning(
+            f"session_has_active_run failed for {session_id}",
+            component=LOGGER_COMPONENT,
+        )
+        return False
+
+
+async def request_run_cancel(run_id: UUID) -> bool:
+    """Set the ``cancel_requested`` flag on a run-state hash.
+
+    The egress task observes the flag between tool iterations and
+    exits with a synthetic Error event. Returns True if the flag was
+    written (run was active), False if the run no longer exists or
+    Valkey was unavailable.
+    """
+    state = await get_run_state(run_id)
+    if state is None:
+        return False
+    status = state.get("status")
+    if status not in {"queued", "running"}:
+        return False
+
+    client = _get_ops_client()
+    if client is None:
+        return False
+    try:
+        async with ops_call(STREAMS_NAMESPACE, "request_cancel"):
+            await client.hset(
+                run_state_key(run_id),
+                "cancel_requested",
+                json.dumps(True),
+            )
+        return True
+    except TimeoutError:
+        return False
+    except Exception:
+        logger.warning(
+            f"request_run_cancel failed for {run_id}",
+            component=LOGGER_COMPONENT,
+        )
+        return False
+
+
+async def is_cancel_requested(run_id: UUID) -> bool:
+    """Return True if a cancel has been requested on ``run_id``."""
+    state = await get_run_state(run_id)
+    if state is None:
+        return False
+    return bool(state.get("cancel_requested"))
