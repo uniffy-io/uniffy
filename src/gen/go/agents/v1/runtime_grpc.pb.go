@@ -22,6 +22,7 @@ const (
 	RuntimeService_SendMessage_FullMethodName           = "/agents.v1.RuntimeService/SendMessage"
 	RuntimeService_StreamSendMessage_FullMethodName     = "/agents.v1.RuntimeService/StreamSendMessage"
 	RuntimeService_SubscribeToRun_FullMethodName        = "/agents.v1.RuntimeService/SubscribeToRun"
+	RuntimeService_CancelStream_FullMethodName          = "/agents.v1.RuntimeService/CancelStream"
 	RuntimeService_RespondToConfirmation_FullMethodName = "/agents.v1.RuntimeService/RespondToConfirmation"
 	RuntimeService_GetUsageStats_FullMethodName         = "/agents.v1.RuntimeService/GetUsageStats"
 )
@@ -41,6 +42,11 @@ type RuntimeServiceClient interface {
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
 	SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeToRunResponse], error)
+	// Cancel an in-flight run. Flips the run-state hash to "cancelled";
+	// the egress worker observes the flag between tool iterations and
+	// exits with a synthetic Error event. Idempotent: cancelling an
+	// already-finished run is a no-op.
+	CancelStream(ctx context.Context, in *CancelStreamRequest, opts ...grpc.CallOption) (*CancelStreamResponse, error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
@@ -103,6 +109,16 @@ func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, in *Subscribe
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RuntimeService_SubscribeToRunClient = grpc.ServerStreamingClient[SubscribeToRunResponse]
 
+func (c *runtimeServiceClient) CancelStream(ctx context.Context, in *CancelStreamRequest, opts ...grpc.CallOption) (*CancelStreamResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelStreamResponse)
+	err := c.cc.Invoke(ctx, RuntimeService_CancelStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *runtimeServiceClient) RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RespondToConfirmationResponse)
@@ -138,6 +154,11 @@ type RuntimeServiceServer interface {
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
 	SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[SubscribeToRunResponse]) error
+	// Cancel an in-flight run. Flips the run-state hash to "cancelled";
+	// the egress worker observes the flag between tool iterations and
+	// exits with a synthetic Error event. Idempotent: cancelling an
+	// already-finished run is a no-op.
+	CancelStream(context.Context, *CancelStreamRequest) (*CancelStreamResponse, error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
@@ -160,6 +181,9 @@ func (UnimplementedRuntimeServiceServer) StreamSendMessage(*StreamSendMessageReq
 }
 func (UnimplementedRuntimeServiceServer) SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[SubscribeToRunResponse]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeToRun not implemented")
+}
+func (UnimplementedRuntimeServiceServer) CancelStream(context.Context, *CancelStreamRequest) (*CancelStreamResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelStream not implemented")
 }
 func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RespondToConfirmation not implemented")
@@ -228,6 +252,24 @@ func _RuntimeService_SubscribeToRun_Handler(srv interface{}, stream grpc.ServerS
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RuntimeService_SubscribeToRunServer = grpc.ServerStreamingServer[SubscribeToRunResponse]
 
+func _RuntimeService_CancelStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeServiceServer).CancelStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeService_CancelStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeServiceServer).CancelStream(ctx, req.(*CancelStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _RuntimeService_RespondToConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RespondToConfirmationRequest)
 	if err := dec(in); err != nil {
@@ -274,6 +316,10 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendMessage",
 			Handler:    _RuntimeService_SendMessage_Handler,
+		},
+		{
+			MethodName: "CancelStream",
+			Handler:    _RuntimeService_CancelStream_Handler,
 		},
 		{
 			MethodName: "RespondToConfirmation",

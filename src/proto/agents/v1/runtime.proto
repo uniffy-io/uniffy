@@ -17,6 +17,11 @@ service RuntimeService {
   // Used by the frontend after a tab reload to reconnect without
   // re-driving the LLM.
   rpc SubscribeToRun(SubscribeToRunRequest) returns (stream SubscribeToRunResponse) {}
+  // Cancel an in-flight run. Flips the run-state hash to "cancelled";
+  // the egress worker observes the flag between tool iterations and
+  // exits with a synthetic Error event. Idempotent: cancelling an
+  // already-finished run is a no-op.
+  rpc CancelStream(CancelStreamRequest) returns (CancelStreamResponse) {}
   // Approve or reject a destructive tool call that requires confirmation
   rpc RespondToConfirmation(RespondToConfirmationRequest) returns (RespondToConfirmationResponse) {}
   // Get usage statistics for an organization
@@ -189,6 +194,17 @@ message SubscribeToRunRequest {
   string organization_id = 2;
 }
 
+message CancelStreamRequest {
+  string run_id = 1;
+  string organization_id = 2;
+}
+
+message CancelStreamResponse {
+  // True if the run was active and a cancel flag was set; false if the
+  // run had already finished or no longer exists.
+  bool cancelled = 1;
+}
+
 message RespondToConfirmationResponse {
   bool accepted = 1;
 }
@@ -222,6 +238,7 @@ message SubscribeToRunResponse {
     StreamDoneEvent done = 5;
     StreamErrorEvent error = 6;
     StreamConfirmationRequiredEvent confirmation_required = 7;
+    StreamFailoverEvent failover = 9;
   }
   // The egress run id this event belongs to. Populated on every event
   // so a tab reload mid-stream can call SubscribeToRun(run_id) to
@@ -266,4 +283,21 @@ message StreamConfirmationRequiredEvent {
   string tool_name = 2;
   string tool_args_json = 3;
   string description = 4;
+}
+
+// Emitted once when the runtime swaps to a different provider key or
+// model after a retryable failure on the previous candidate. Purely
+// informational; clients use it to surface "switched to X" notices.
+message StreamFailoverEvent {
+  // Provider key id we just moved off (the one that failed).
+  string from_provider_key_id = 1;
+  // Provider key id we moved onto.
+  string to_provider_key_id = 2;
+  // Model now in use (may be the same model on a different key, or a
+  // different fallback model entirely).
+  string to_model = 3;
+  // Short reason classifier: "timeout", "5xx", "connection", "other".
+  string reason = 4;
+  // 1-based attempt counter for the swap (first failover = 1).
+  int32 attempt = 5;
 }

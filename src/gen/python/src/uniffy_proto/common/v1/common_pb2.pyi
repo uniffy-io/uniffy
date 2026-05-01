@@ -86,6 +86,15 @@ class DomainType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DOMAIN_TYPE_CALENDAR: _ClassVar[DomainType]
     DOMAIN_TYPE_PROJECTS: _ClassVar[DomainType]
     DOMAIN_TYPE_AGENTS: _ClassVar[DomainType]
+
+class RateLimitKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    RATE_LIMIT_KIND_UNSPECIFIED: _ClassVar[RateLimitKind]
+    RATE_LIMIT_KIND_AGENT_MSG_USER: _ClassVar[RateLimitKind]
+    RATE_LIMIT_KIND_AGENT_MSG_ORG: _ClassVar[RateLimitKind]
+    RATE_LIMIT_KIND_AGENT_MSG_AGENT: _ClassVar[RateLimitKind]
+    RATE_LIMIT_KIND_IMAGE_GEN_USER: _ClassVar[RateLimitKind]
+    RATE_LIMIT_KIND_IMAGE_GEN_ORG: _ClassVar[RateLimitKind]
 CONTENT_TYPE_UNSPECIFIED: ContentType
 CONTENT_TYPE_NOTE: ContentType
 CONTENT_TYPE_FILE: ContentType
@@ -140,6 +149,12 @@ DOMAIN_TYPE_NOTES: DomainType
 DOMAIN_TYPE_CALENDAR: DomainType
 DOMAIN_TYPE_PROJECTS: DomainType
 DOMAIN_TYPE_AGENTS: DomainType
+RATE_LIMIT_KIND_UNSPECIFIED: RateLimitKind
+RATE_LIMIT_KIND_AGENT_MSG_USER: RateLimitKind
+RATE_LIMIT_KIND_AGENT_MSG_ORG: RateLimitKind
+RATE_LIMIT_KIND_AGENT_MSG_AGENT: RateLimitKind
+RATE_LIMIT_KIND_IMAGE_GEN_USER: RateLimitKind
+RATE_LIMIT_KIND_IMAGE_GEN_ORG: RateLimitKind
 
 class UserInfo(_message.Message):
     __slots__ = ("id", "email", "full_name", "username", "avatar_url", "created_at", "has_avatar")

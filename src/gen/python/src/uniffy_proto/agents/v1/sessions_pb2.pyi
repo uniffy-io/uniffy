@@ -70,7 +70,7 @@ class SessionInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., user_id: _Optional[str] = ..., kind: _Optional[_Union[SessionKind, str]] = ..., display_name: _Optional[str] = ..., model_override: _Optional[str] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., message_count: _Optional[int] = ..., last_model_used: _Optional[str] = ..., is_archived: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class MessageInfo(_message.Message):
-    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids")
+    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids", "is_invalidated", "edited_at", "previous_content")
     ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -86,6 +86,9 @@ class MessageInfo(_message.Message):
     IS_COMPACTED_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     FILE_IDS_FIELD_NUMBER: _ClassVar[int]
+    IS_INVALIDATED_FIELD_NUMBER: _ClassVar[int]
+    EDITED_AT_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_CONTENT_FIELD_NUMBER: _ClassVar[int]
     id: str
     session_id: str
     role: MessageRole
@@ -101,7 +104,10 @@ class MessageInfo(_message.Message):
     is_compacted: bool
     created_at: _timestamp_pb2.Timestamp
     file_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    is_invalidated: bool
+    edited_at: _timestamp_pb2.Timestamp
+    previous_content: str
+    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ..., is_invalidated: _Optional[bool] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., previous_content: _Optional[str] = ...) -> None: ...
 
 class CreateSessionRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "kind", "display_name", "model_override")
@@ -320,3 +326,51 @@ class CompactSessionResponse(_message.Message):
     tokens_saved: int
     summary_tokens: int
     def __init__(self, compacted: _Optional[bool] = ..., stats: _Optional[_Union[GetSessionContextStatsResponse, _Mapping]] = ..., messages_compacted: _Optional[int] = ..., tokens_before: _Optional[int] = ..., tokens_after: _Optional[int] = ..., tokens_saved: _Optional[int] = ..., summary_tokens: _Optional[int] = ...) -> None: ...
+
+class EditMessageRequest(_message.Message):
+    __slots__ = ("organization_id", "message_id", "new_content")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    NEW_CONTENT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    message_id: str
+    new_content: str
+    def __init__(self, organization_id: _Optional[str] = ..., message_id: _Optional[str] = ..., new_content: _Optional[str] = ...) -> None: ...
+
+class EditMessageResponse(_message.Message):
+    __slots__ = ("message", "downstream_invalidated")
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    DOWNSTREAM_INVALIDATED_FIELD_NUMBER: _ClassVar[int]
+    message: MessageInfo
+    downstream_invalidated: int
+    def __init__(self, message: _Optional[_Union[MessageInfo, _Mapping]] = ..., downstream_invalidated: _Optional[int] = ...) -> None: ...
+
+class DeleteMessageRequest(_message.Message):
+    __slots__ = ("organization_id", "message_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    message_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class DeleteMessageResponse(_message.Message):
+    __slots__ = ("invalidated_count",)
+    INVALIDATED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    invalidated_count: int
+    def __init__(self, invalidated_count: _Optional[int] = ...) -> None: ...
+
+class RetryMessageRequest(_message.Message):
+    __slots__ = ("organization_id", "message_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    message_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class RetryMessageResponse(_message.Message):
+    __slots__ = ("content", "file_ids")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    FILE_IDS_FIELD_NUMBER: _ClassVar[int]
+    content: str
+    file_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ...) -> None: ...

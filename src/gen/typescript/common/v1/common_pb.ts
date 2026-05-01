@@ -757,7 +757,58 @@ export enum DomainType {
 }
 
 /**
- * Describes the enum common.v1.DomainType.
+ * RateLimitKind identifies which bucket a rate-limit override applies
+ * to in the agents domain. Text messages are tracked independently of
+ * image generations. The per-agent bucket prevents a runaway loop on a
+ * single agent starving other agents the same user owns.
+ *
+ * @generated from enum common.v1.RateLimitKind
+ */
+export enum RateLimitKind {
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_AGENT_MSG_USER = 1;
+   */
+  AGENT_MSG_USER = 1,
+
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_AGENT_MSG_ORG = 2;
+   */
+  AGENT_MSG_ORG = 2,
+
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_AGENT_MSG_AGENT = 3;
+   */
+  AGENT_MSG_AGENT = 3,
+
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_IMAGE_GEN_USER = 4;
+   */
+  IMAGE_GEN_USER = 4,
+
+  /**
+   * @generated from enum value: RATE_LIMIT_KIND_IMAGE_GEN_ORG = 5;
+   */
+  IMAGE_GEN_ORG = 5,
+}
+// Retrieve enum metadata with: proto3.getEnumType(RateLimitKind)
+proto3.util.setEnumType(RateLimitKind, "common.v1.RateLimitKind", [
+  { no: 0, name: "RATE_LIMIT_KIND_UNSPECIFIED" },
+  { no: 1, name: "RATE_LIMIT_KIND_AGENT_MSG_USER" },
+  { no: 2, name: "RATE_LIMIT_KIND_AGENT_MSG_ORG" },
+  { no: 3, name: "RATE_LIMIT_KIND_AGENT_MSG_AGENT" },
+  { no: 4, name: "RATE_LIMIT_KIND_IMAGE_GEN_USER" },
+  { no: 5, name: "RATE_LIMIT_KIND_IMAGE_GEN_ORG" },
+]);
+
+/**
+ * UserInfo represents basic user information.
+ *
+ * @generated from message common.v1.UserInfo
  */
 export const DomainTypeSchema: GenEnum<DomainType> = /*@__PURE__*/
   enumDesc(file_common_v1_common, 7);

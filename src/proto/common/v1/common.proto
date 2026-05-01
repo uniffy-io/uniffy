@@ -101,6 +101,19 @@ enum DomainType {
   DOMAIN_TYPE_AGENTS = 6;
 }
 
+// RateLimitKind identifies which bucket a rate-limit override applies
+// to in the agents domain. Text messages are tracked independently of
+// image generations. The per-agent bucket prevents a runaway loop on a
+// single agent starving other agents the same user owns.
+enum RateLimitKind {
+  RATE_LIMIT_KIND_UNSPECIFIED = 0;
+  RATE_LIMIT_KIND_AGENT_MSG_USER = 1;
+  RATE_LIMIT_KIND_AGENT_MSG_ORG = 2;
+  RATE_LIMIT_KIND_AGENT_MSG_AGENT = 3;
+  RATE_LIMIT_KIND_IMAGE_GEN_USER = 4;
+  RATE_LIMIT_KIND_IMAGE_GEN_ORG = 5;
+}
+
 // MESSAGES - Common data structures
 
 // UserInfo represents basic user information.

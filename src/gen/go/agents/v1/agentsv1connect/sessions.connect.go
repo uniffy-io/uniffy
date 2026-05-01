@@ -63,6 +63,15 @@ const (
 	// SessionsServiceCompactSessionProcedure is the fully-qualified name of the SessionsService's
 	// CompactSession RPC.
 	SessionsServiceCompactSessionProcedure = "/agents.v1.SessionsService/CompactSession"
+	// SessionsServiceEditMessageProcedure is the fully-qualified name of the SessionsService's
+	// EditMessage RPC.
+	SessionsServiceEditMessageProcedure = "/agents.v1.SessionsService/EditMessage"
+	// SessionsServiceDeleteMessageProcedure is the fully-qualified name of the SessionsService's
+	// DeleteMessage RPC.
+	SessionsServiceDeleteMessageProcedure = "/agents.v1.SessionsService/DeleteMessage"
+	// SessionsServiceRetryMessageProcedure is the fully-qualified name of the SessionsService's
+	// RetryMessage RPC.
+	SessionsServiceRetryMessageProcedure = "/agents.v1.SessionsService/RetryMessage"
 )
 
 // SessionsServiceClient is a client for the agents.v1.SessionsService service.
@@ -87,6 +96,21 @@ type SessionsServiceClient interface {
 	GetSessionContextStats(context.Context, *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error)
 	// Manually trigger session compaction
 	CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error)
+	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+	// and `edited_at`, then soft-invalidates every later message in the
+	// session so the client can re-run the conversation from the edit
+	// point. Refused if a run is currently in flight on this session.
+	EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error)
+	// Soft-delete a user message. The message itself and every later
+	// message in the session are marked `is_invalidated=true` so the
+	// context loader skips them. Refused if a run is currently in flight.
+	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
+	// Retry from a message. For a user message, returns its content +
+	// file_ids and invalidates every later message so the caller can
+	// re-send. For an assistant message, walks back to the most recent
+	// preceding user message and returns that. Refused if a run is
+	// currently in flight on this session.
+	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
 }
 
 // NewSessionsServiceClient constructs a client for the agents.v1.SessionsService service. By
@@ -160,6 +184,24 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(sessionsServiceMethods.ByName("CompactSession")),
 			connect.WithClientOptions(opts...),
 		),
+		editMessage: connect.NewClient[v1.EditMessageRequest, v1.EditMessageResponse](
+			httpClient,
+			baseURL+SessionsServiceEditMessageProcedure,
+			connect.WithSchema(sessionsServiceMethods.ByName("EditMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteMessage: connect.NewClient[v1.DeleteMessageRequest, v1.DeleteMessageResponse](
+			httpClient,
+			baseURL+SessionsServiceDeleteMessageProcedure,
+			connect.WithSchema(sessionsServiceMethods.ByName("DeleteMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		retryMessage: connect.NewClient[v1.RetryMessageRequest, v1.RetryMessageResponse](
+			httpClient,
+			baseURL+SessionsServiceRetryMessageProcedure,
+			connect.WithSchema(sessionsServiceMethods.ByName("RetryMessage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -175,6 +217,9 @@ type sessionsServiceClient struct {
 	getSessionContext      *connect.Client[v1.GetSessionContextRequest, v1.GetSessionContextResponse]
 	getSessionContextStats *connect.Client[v1.GetSessionContextStatsRequest, v1.GetSessionContextStatsResponse]
 	compactSession         *connect.Client[v1.CompactSessionRequest, v1.CompactSessionResponse]
+	editMessage            *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
+	deleteMessage          *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
+	retryMessage           *connect.Client[v1.RetryMessageRequest, v1.RetryMessageResponse]
 }
 
 // CreateSession calls agents.v1.SessionsService.CreateSession.
@@ -227,6 +272,21 @@ func (c *sessionsServiceClient) CompactSession(ctx context.Context, req *connect
 	return c.compactSession.CallUnary(ctx, req)
 }
 
+// EditMessage calls agents.v1.SessionsService.EditMessage.
+func (c *sessionsServiceClient) EditMessage(ctx context.Context, req *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error) {
+	return c.editMessage.CallUnary(ctx, req)
+}
+
+// DeleteMessage calls agents.v1.SessionsService.DeleteMessage.
+func (c *sessionsServiceClient) DeleteMessage(ctx context.Context, req *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error) {
+	return c.deleteMessage.CallUnary(ctx, req)
+}
+
+// RetryMessage calls agents.v1.SessionsService.RetryMessage.
+func (c *sessionsServiceClient) RetryMessage(ctx context.Context, req *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error) {
+	return c.retryMessage.CallUnary(ctx, req)
+}
+
 // SessionsServiceHandler is an implementation of the agents.v1.SessionsService service.
 type SessionsServiceHandler interface {
 	// Create a new session (find-or-create for DIRECT kind)
@@ -249,6 +309,21 @@ type SessionsServiceHandler interface {
 	GetSessionContextStats(context.Context, *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error)
 	// Manually trigger session compaction
 	CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error)
+	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+	// and `edited_at`, then soft-invalidates every later message in the
+	// session so the client can re-run the conversation from the edit
+	// point. Refused if a run is currently in flight on this session.
+	EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error)
+	// Soft-delete a user message. The message itself and every later
+	// message in the session are marked `is_invalidated=true` so the
+	// context loader skips them. Refused if a run is currently in flight.
+	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
+	// Retry from a message. For a user message, returns its content +
+	// file_ids and invalidates every later message so the caller can
+	// re-send. For an assistant message, walks back to the most recent
+	// preceding user message and returns that. Refused if a run is
+	// currently in flight on this session.
+	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
 }
 
 // NewSessionsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -318,6 +393,24 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(sessionsServiceMethods.ByName("CompactSession")),
 		connect.WithHandlerOptions(opts...),
 	)
+	sessionsServiceEditMessageHandler := connect.NewUnaryHandler(
+		SessionsServiceEditMessageProcedure,
+		svc.EditMessage,
+		connect.WithSchema(sessionsServiceMethods.ByName("EditMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sessionsServiceDeleteMessageHandler := connect.NewUnaryHandler(
+		SessionsServiceDeleteMessageProcedure,
+		svc.DeleteMessage,
+		connect.WithSchema(sessionsServiceMethods.ByName("DeleteMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sessionsServiceRetryMessageHandler := connect.NewUnaryHandler(
+		SessionsServiceRetryMessageProcedure,
+		svc.RetryMessage,
+		connect.WithSchema(sessionsServiceMethods.ByName("RetryMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.SessionsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SessionsServiceCreateSessionProcedure:
@@ -340,6 +433,12 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 			sessionsServiceGetSessionContextStatsHandler.ServeHTTP(w, r)
 		case SessionsServiceCompactSessionProcedure:
 			sessionsServiceCompactSessionHandler.ServeHTTP(w, r)
+		case SessionsServiceEditMessageProcedure:
+			sessionsServiceEditMessageHandler.ServeHTTP(w, r)
+		case SessionsServiceDeleteMessageProcedure:
+			sessionsServiceDeleteMessageHandler.ServeHTTP(w, r)
+		case SessionsServiceRetryMessageProcedure:
+			sessionsServiceRetryMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -387,4 +486,16 @@ func (UnimplementedSessionsServiceHandler) GetSessionContextStats(context.Contex
 
 func (UnimplementedSessionsServiceHandler) CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.CompactSession is not implemented"))
+}
+
+func (UnimplementedSessionsServiceHandler) EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.EditMessage is not implemented"))
+}
+
+func (UnimplementedSessionsServiceHandler) DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.DeleteMessage is not implemented"))
+}
+
+func (UnimplementedSessionsServiceHandler) RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.RetryMessage is not implemented"))
 }

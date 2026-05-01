@@ -903,11 +903,80 @@ export const SessionsService: GenService<{
    *
    * @generated from rpc agents.v1.SessionsService.CreateSession
    */
-  createSession: {
-    methodKind: "unary";
-    input: typeof CreateSessionRequestSchema;
-    output: typeof CreateSessionResponseSchema;
-  },
+  fileIds: string[] = [];
+
+  /**
+   * True if the message has been soft-invalidated by an edit, delete,
+   * or retry on this or an earlier message. The context loader skips
+   * these; the UI may still show them as struck-through history.
+   *
+   * @generated from field: bool is_invalidated = 16;
+   */
+  isInvalidated = false;
+
+  /**
+   * Set when a user message has been edited. Null otherwise.
+   *
+   * @generated from field: optional google.protobuf.Timestamp edited_at = 17;
+   */
+  editedAt?: Timestamp;
+
+  /**
+   * Pre-edit content. Populated only for messages with edited_at set.
+   *
+   * @generated from field: optional string previous_content = 18;
+   */
+  previousContent?: string;
+
+  constructor(data?: PartialMessage<MessageInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.MessageInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "role", kind: "enum", T: proto3.getEnumType(MessageRole) },
+    { no: 4, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "input_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "output_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "tool_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "tool_call_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "tool_args_json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "tool_result", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "is_thinking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "is_compacted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "created_at", kind: "message", T: Timestamp },
+    { no: 15, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 16, name: "is_invalidated", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 17, name: "edited_at", kind: "message", T: Timestamp, opt: true },
+    { no: 18, name: "previous_content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MessageInfo {
+    return new MessageInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MessageInfo {
+    return new MessageInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MessageInfo {
+    return new MessageInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MessageInfo | PlainMessage<MessageInfo> | undefined, b: MessageInfo | PlainMessage<MessageInfo> | undefined): boolean {
+    return proto3.util.equals(MessageInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.CreateSessionRequest
+ */
+export class CreateSessionRequest extends Message<CreateSessionRequest> {
   /**
    * Get a session by ID
    *
@@ -1000,4 +1069,271 @@ export const SessionsService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_sessions, 0);
+
+/**
+ * @generated from message agents.v1.EditMessageRequest
+ */
+export class EditMessageRequest extends Message<EditMessageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: string new_content = 3;
+   */
+  newContent = "";
+
+  constructor(data?: PartialMessage<EditMessageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.EditMessageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "new_content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EditMessageRequest {
+    return new EditMessageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EditMessageRequest {
+    return new EditMessageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EditMessageRequest {
+    return new EditMessageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EditMessageRequest | PlainMessage<EditMessageRequest> | undefined, b: EditMessageRequest | PlainMessage<EditMessageRequest> | undefined): boolean {
+    return proto3.util.equals(EditMessageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.EditMessageResponse
+ */
+export class EditMessageResponse extends Message<EditMessageResponse> {
+  /**
+   * @generated from field: agents.v1.MessageInfo message = 1;
+   */
+  message?: MessageInfo;
+
+  /**
+   * Number of later messages marked invalidated as a result.
+   *
+   * @generated from field: int32 downstream_invalidated = 2;
+   */
+  downstreamInvalidated = 0;
+
+  constructor(data?: PartialMessage<EditMessageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.EditMessageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "message", T: MessageInfo },
+    { no: 2, name: "downstream_invalidated", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EditMessageResponse {
+    return new EditMessageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EditMessageResponse {
+    return new EditMessageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EditMessageResponse {
+    return new EditMessageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EditMessageResponse | PlainMessage<EditMessageResponse> | undefined, b: EditMessageResponse | PlainMessage<EditMessageResponse> | undefined): boolean {
+    return proto3.util.equals(EditMessageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.DeleteMessageRequest
+ */
+export class DeleteMessageRequest extends Message<DeleteMessageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId = "";
+
+  constructor(data?: PartialMessage<DeleteMessageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DeleteMessageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteMessageRequest {
+    return new DeleteMessageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteMessageRequest {
+    return new DeleteMessageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteMessageRequest {
+    return new DeleteMessageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteMessageRequest | PlainMessage<DeleteMessageRequest> | undefined, b: DeleteMessageRequest | PlainMessage<DeleteMessageRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteMessageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.DeleteMessageResponse
+ */
+export class DeleteMessageResponse extends Message<DeleteMessageResponse> {
+  /**
+   * Total rows marked invalidated (the deleted message + every later
+   * message in the session).
+   *
+   * @generated from field: int32 invalidated_count = 1;
+   */
+  invalidatedCount = 0;
+
+  constructor(data?: PartialMessage<DeleteMessageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DeleteMessageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "invalidated_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteMessageResponse {
+    return new DeleteMessageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteMessageResponse {
+    return new DeleteMessageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteMessageResponse {
+    return new DeleteMessageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteMessageResponse | PlainMessage<DeleteMessageResponse> | undefined, b: DeleteMessageResponse | PlainMessage<DeleteMessageResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteMessageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.RetryMessageRequest
+ */
+export class RetryMessageRequest extends Message<RetryMessageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId = "";
+
+  constructor(data?: PartialMessage<RetryMessageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.RetryMessageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetryMessageRequest {
+    return new RetryMessageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetryMessageRequest {
+    return new RetryMessageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetryMessageRequest {
+    return new RetryMessageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RetryMessageRequest | PlainMessage<RetryMessageRequest> | undefined, b: RetryMessageRequest | PlainMessage<RetryMessageRequest> | undefined): boolean {
+    return proto3.util.equals(RetryMessageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.RetryMessageResponse
+ */
+export class RetryMessageResponse extends Message<RetryMessageResponse> {
+  /**
+   * Content of the user message the caller should re-send.
+   *
+   * @generated from field: string content = 1;
+   */
+  content = "";
+
+  /**
+   * File ids that were attached to the original user message.
+   *
+   * @generated from field: repeated string file_ids = 2;
+   */
+  fileIds: string[] = [];
+
+  constructor(data?: PartialMessage<RetryMessageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.RetryMessageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetryMessageResponse {
+    return new RetryMessageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetryMessageResponse {
+    return new RetryMessageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetryMessageResponse {
+    return new RetryMessageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RetryMessageResponse | PlainMessage<RetryMessageResponse> | undefined, b: RetryMessageResponse | PlainMessage<RetryMessageResponse> | undefined): boolean {
+    return proto3.util.equals(RetryMessageResponse, a, b);
+  }
+}
 

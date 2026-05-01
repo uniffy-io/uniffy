@@ -213,6 +213,20 @@ class SubscribeToRunRequest(_message.Message):
     organization_id: str
     def __init__(self, run_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
+class CancelStreamRequest(_message.Message):
+    __slots__ = ("run_id", "organization_id")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    organization_id: str
+    def __init__(self, run_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
+class CancelStreamResponse(_message.Message):
+    __slots__ = ("cancelled",)
+    CANCELLED_FIELD_NUMBER: _ClassVar[int]
+    cancelled: bool
+    def __init__(self, cancelled: _Optional[bool] = ...) -> None: ...
+
 class RespondToConfirmationResponse(_message.Message):
     __slots__ = ("accepted",)
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
@@ -240,7 +254,7 @@ class StreamSendMessageResponse(_message.Message):
     def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class SubscribeToRunResponse(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "run_id")
+    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
     TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
@@ -248,6 +262,7 @@ class SubscribeToRunResponse(_message.Message):
     DONE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    FAILOVER_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     token: StreamTokenEvent
     tool_call: StreamToolCallEvent
@@ -256,8 +271,9 @@ class SubscribeToRunResponse(_message.Message):
     done: StreamDoneEvent
     error: StreamErrorEvent
     confirmation_required: StreamConfirmationRequiredEvent
+    failover: StreamFailoverEvent
     run_id: str
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class StreamTokenEvent(_message.Message):
     __slots__ = ("text",)
@@ -318,3 +334,17 @@ class StreamConfirmationRequiredEvent(_message.Message):
     tool_args_json: str
     description: str
     def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+
+class StreamFailoverEvent(_message.Message):
+    __slots__ = ("from_provider_key_id", "to_provider_key_id", "to_model", "reason", "attempt")
+    FROM_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    TO_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    TO_MODEL_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    from_provider_key_id: str
+    to_provider_key_id: str
+    to_model: str
+    reason: str
+    attempt: int
+    def __init__(self, from_provider_key_id: _Optional[str] = ..., to_provider_key_id: _Optional[str] = ..., to_model: _Optional[str] = ..., reason: _Optional[str] = ..., attempt: _Optional[int] = ...) -> None: ...

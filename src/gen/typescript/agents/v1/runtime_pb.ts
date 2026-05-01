@@ -622,6 +622,89 @@ export const SubscribeToRunRequestSchema: GenMessage<SubscribeToRunRequest> = /*
   messageDesc(file_agents_v1_runtime, 13);
 
 /**
+ * @generated from message agents.v1.CancelStreamRequest
+ */
+export class CancelStreamRequest extends Message<CancelStreamRequest> {
+  /**
+   * @generated from field: string run_id = 1;
+   */
+  runId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<CancelStreamRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.CancelStreamRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CancelStreamRequest {
+    return new CancelStreamRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CancelStreamRequest {
+    return new CancelStreamRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CancelStreamRequest {
+    return new CancelStreamRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CancelStreamRequest | PlainMessage<CancelStreamRequest> | undefined, b: CancelStreamRequest | PlainMessage<CancelStreamRequest> | undefined): boolean {
+    return proto3.util.equals(CancelStreamRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.CancelStreamResponse
+ */
+export class CancelStreamResponse extends Message<CancelStreamResponse> {
+  /**
+   * True if the run was active and a cancel flag was set; false if the
+   * run had already finished or no longer exists.
+   *
+   * @generated from field: bool cancelled = 1;
+   */
+  cancelled = false;
+
+  constructor(data?: PartialMessage<CancelStreamResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.CancelStreamResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "cancelled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CancelStreamResponse {
+    return new CancelStreamResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CancelStreamResponse {
+    return new CancelStreamResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CancelStreamResponse {
+    return new CancelStreamResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CancelStreamResponse | PlainMessage<CancelStreamResponse> | undefined, b: CancelStreamResponse | PlainMessage<CancelStreamResponse> | undefined): boolean {
+    return proto3.util.equals(CancelStreamResponse, a, b);
+  }
+}
+
+/**
  * @generated from message agents.v1.RespondToConfirmationResponse
  */
 export type RespondToConfirmationResponse = Message<"agents.v1.RespondToConfirmationResponse"> & {
@@ -757,7 +840,13 @@ export type SubscribeToRunResponse = Message<"agents.v1.SubscribeToRunResponse">
      */
     value: StreamConfirmationRequiredEvent;
     case: "confirmationRequired";
-  } | { case: undefined; value?: undefined };
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
+     */
+    value: StreamFailoverEvent;
+    case: "failover";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   /**
    * The egress run id this event belongs to. Populated on every event
@@ -771,12 +860,41 @@ export type SubscribeToRunResponse = Message<"agents.v1.SubscribeToRunResponse">
   runId: string;
 };
 
-/**
- * Describes the message agents.v1.SubscribeToRunResponse.
- * Use `create(SubscribeToRunResponseSchema)` to create a new message.
- */
-export const SubscribeToRunResponseSchema: GenMessage<SubscribeToRunResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 16);
+  constructor(data?: PartialMessage<SubscribeToRunResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.SubscribeToRunResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
+    { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
+    { no: 3, name: "tool_result", kind: "message", T: StreamToolResultEvent, oneof: "event" },
+    { no: 4, name: "message_stored", kind: "message", T: StreamMessageStoredEvent, oneof: "event" },
+    { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
+    { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
+    { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
+    { no: 9, name: "failover", kind: "message", T: StreamFailoverEvent, oneof: "event" },
+    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined, b: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined): boolean {
+    return proto3.util.equals(SubscribeToRunResponse, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.StreamTokenEvent
@@ -1003,4 +1121,80 @@ export const RuntimeService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_runtime, 0);
+
+/**
+ * Emitted once when the runtime swaps to a different provider key or
+ * model after a retryable failure on the previous candidate. Purely
+ * informational; clients use it to surface "switched to X" notices.
+ *
+ * @generated from message agents.v1.StreamFailoverEvent
+ */
+export class StreamFailoverEvent extends Message<StreamFailoverEvent> {
+  /**
+   * Provider key id we just moved off (the one that failed).
+   *
+   * @generated from field: string from_provider_key_id = 1;
+   */
+  fromProviderKeyId = "";
+
+  /**
+   * Provider key id we moved onto.
+   *
+   * @generated from field: string to_provider_key_id = 2;
+   */
+  toProviderKeyId = "";
+
+  /**
+   * Model now in use (may be the same model on a different key, or a
+   * different fallback model entirely).
+   *
+   * @generated from field: string to_model = 3;
+   */
+  toModel = "";
+
+  /**
+   * Short reason classifier: "timeout", "5xx", "connection", "other".
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason = "";
+
+  /**
+   * 1-based attempt counter for the swap (first failover = 1).
+   *
+   * @generated from field: int32 attempt = 5;
+   */
+  attempt = 0;
+
+  constructor(data?: PartialMessage<StreamFailoverEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.StreamFailoverEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "from_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "to_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "to_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "attempt", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamFailoverEvent {
+    return new StreamFailoverEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamFailoverEvent {
+    return new StreamFailoverEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamFailoverEvent {
+    return new StreamFailoverEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamFailoverEvent | PlainMessage<StreamFailoverEvent> | undefined, b: StreamFailoverEvent | PlainMessage<StreamFailoverEvent> | undefined): boolean {
+    return proto3.util.equals(StreamFailoverEvent, a, b);
+  }
+}
 

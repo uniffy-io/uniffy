@@ -42,6 +42,9 @@ const (
 	// RuntimeServiceSubscribeToRunProcedure is the fully-qualified name of the RuntimeService's
 	// SubscribeToRun RPC.
 	RuntimeServiceSubscribeToRunProcedure = "/agents.v1.RuntimeService/SubscribeToRun"
+	// RuntimeServiceCancelStreamProcedure is the fully-qualified name of the RuntimeService's
+	// CancelStream RPC.
+	RuntimeServiceCancelStreamProcedure = "/agents.v1.RuntimeService/CancelStream"
 	// RuntimeServiceRespondToConfirmationProcedure is the fully-qualified name of the RuntimeService's
 	// RespondToConfirmation RPC.
 	RuntimeServiceRespondToConfirmationProcedure = "/agents.v1.RuntimeService/RespondToConfirmation"
@@ -61,6 +64,11 @@ type RuntimeServiceClient interface {
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
 	SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest]) (*connect.ServerStreamForClient[v1.SubscribeToRunResponse], error)
+	// Cancel an in-flight run. Flips the run-state hash to "cancelled";
+	// the egress worker observes the flag between tool iterations and
+	// exits with a synthetic Error event. Idempotent: cancelling an
+	// already-finished run is a no-op.
+	CancelStream(context.Context, *connect.Request[v1.CancelStreamRequest]) (*connect.Response[v1.CancelStreamResponse], error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
@@ -96,6 +104,12 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(runtimeServiceMethods.ByName("SubscribeToRun")),
 			connect.WithClientOptions(opts...),
 		),
+		cancelStream: connect.NewClient[v1.CancelStreamRequest, v1.CancelStreamResponse](
+			httpClient,
+			baseURL+RuntimeServiceCancelStreamProcedure,
+			connect.WithSchema(runtimeServiceMethods.ByName("CancelStream")),
+			connect.WithClientOptions(opts...),
+		),
 		respondToConfirmation: connect.NewClient[v1.RespondToConfirmationRequest, v1.RespondToConfirmationResponse](
 			httpClient,
 			baseURL+RuntimeServiceRespondToConfirmationProcedure,
@@ -116,6 +130,7 @@ type runtimeServiceClient struct {
 	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	streamSendMessage     *connect.Client[v1.StreamSendMessageRequest, v1.StreamSendMessageResponse]
 	subscribeToRun        *connect.Client[v1.SubscribeToRunRequest, v1.SubscribeToRunResponse]
+	cancelStream          *connect.Client[v1.CancelStreamRequest, v1.CancelStreamResponse]
 	respondToConfirmation *connect.Client[v1.RespondToConfirmationRequest, v1.RespondToConfirmationResponse]
 	getUsageStats         *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
 }
@@ -133,6 +148,11 @@ func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, req *conne
 // SubscribeToRun calls agents.v1.RuntimeService.SubscribeToRun.
 func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, req *connect.Request[v1.SubscribeToRunRequest]) (*connect.ServerStreamForClient[v1.SubscribeToRunResponse], error) {
 	return c.subscribeToRun.CallServerStream(ctx, req)
+}
+
+// CancelStream calls agents.v1.RuntimeService.CancelStream.
+func (c *runtimeServiceClient) CancelStream(ctx context.Context, req *connect.Request[v1.CancelStreamRequest]) (*connect.Response[v1.CancelStreamResponse], error) {
+	return c.cancelStream.CallUnary(ctx, req)
 }
 
 // RespondToConfirmation calls agents.v1.RuntimeService.RespondToConfirmation.
@@ -156,6 +176,11 @@ type RuntimeServiceHandler interface {
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
 	SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest], *connect.ServerStream[v1.SubscribeToRunResponse]) error
+	// Cancel an in-flight run. Flips the run-state hash to "cancelled";
+	// the egress worker observes the flag between tool iterations and
+	// exits with a synthetic Error event. Idempotent: cancelling an
+	// already-finished run is a no-op.
+	CancelStream(context.Context, *connect.Request[v1.CancelStreamRequest]) (*connect.Response[v1.CancelStreamResponse], error)
 	// Approve or reject a destructive tool call that requires confirmation
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
@@ -187,6 +212,12 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 		connect.WithSchema(runtimeServiceMethods.ByName("SubscribeToRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	runtimeServiceCancelStreamHandler := connect.NewUnaryHandler(
+		RuntimeServiceCancelStreamProcedure,
+		svc.CancelStream,
+		connect.WithSchema(runtimeServiceMethods.ByName("CancelStream")),
+		connect.WithHandlerOptions(opts...),
+	)
 	runtimeServiceRespondToConfirmationHandler := connect.NewUnaryHandler(
 		RuntimeServiceRespondToConfirmationProcedure,
 		svc.RespondToConfirmation,
@@ -207,6 +238,8 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 			runtimeServiceStreamSendMessageHandler.ServeHTTP(w, r)
 		case RuntimeServiceSubscribeToRunProcedure:
 			runtimeServiceSubscribeToRunHandler.ServeHTTP(w, r)
+		case RuntimeServiceCancelStreamProcedure:
+			runtimeServiceCancelStreamHandler.ServeHTTP(w, r)
 		case RuntimeServiceRespondToConfirmationProcedure:
 			runtimeServiceRespondToConfirmationHandler.ServeHTTP(w, r)
 		case RuntimeServiceGetUsageStatsProcedure:
@@ -230,6 +263,10 @@ func (UnimplementedRuntimeServiceHandler) StreamSendMessage(context.Context, *co
 
 func (UnimplementedRuntimeServiceHandler) SubscribeToRun(context.Context, *connect.Request[v1.SubscribeToRunRequest], *connect.ServerStream[v1.SubscribeToRunResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.SubscribeToRun is not implemented"))
+}
+
+func (UnimplementedRuntimeServiceHandler) CancelStream(context.Context, *connect.Request[v1.CancelStreamRequest]) (*connect.Response[v1.CancelStreamResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.CancelStream is not implemented"))
 }
 
 func (UnimplementedRuntimeServiceHandler) RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error) {
