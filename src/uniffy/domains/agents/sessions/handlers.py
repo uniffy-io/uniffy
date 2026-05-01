@@ -16,6 +16,10 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     CompactSessionResponse,
     CreateSessionRequest,
     CreateSessionResponse,
+    DeleteMessageRequest,
+    DeleteMessageResponse,
+    EditMessageRequest,
+    EditMessageResponse,
     GetSessionContextRequest,
     GetSessionContextResponse,
     GetSessionContextStatsRequest,
@@ -26,6 +30,8 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     ListMessagesResponse,
     ListSessionsRequest,
     ListSessionsResponse,
+    RetryMessageRequest,
+    RetryMessageResponse,
     UpdateSessionRequest,
     UpdateSessionResponse,
 )
@@ -758,3 +764,109 @@ class SessionsHandlers:
                 Code.INTERNAL,
                 "Compaction failed. The LLM provider rejected the request.",
             )
+
+    async def edit_message(
+        self,
+        request: EditMessageRequest,
+        ctx: RequestContext,
+    ) -> EditMessageResponse:
+        """Handle edit_message RPC call."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                ops = SessionOperations(session)
+                updated = await ops.edit_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                    new_content=request.new_content,
+                )
+                return EditMessageResponse(message=message_to_proto(updated))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Message not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error editing message: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def delete_message(
+        self,
+        request: DeleteMessageRequest,
+        ctx: RequestContext,
+    ) -> DeleteMessageResponse:
+        """Handle delete_message RPC call."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                ops = SessionOperations(session)
+                count = await ops.delete_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                )
+                return DeleteMessageResponse(invalidated_count=count)
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Message not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting message: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def retry_message(
+        self,
+        request: RetryMessageRequest,
+        ctx: RequestContext,
+    ) -> RetryMessageResponse:
+        """Handle retry_message RPC call."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                ops = SessionOperations(session)
+                content, file_ids = await ops.retry_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                )
+                return RetryMessageResponse(content=content, file_ids=file_ids)
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Message not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error retrying message: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")

@@ -12,11 +12,20 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.valkey.queue import get_queue_safe
+from uniffy.core.valkey.streams import session_has_active_run
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 VALID_SESSION_KINDS = {"direct", "group", "global", "cron"}
 VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
+
+# Maximum age (in seconds) at which a user message remains editable.
+# After the window expires, the user must use "retry" or send a new
+# message rather than editing in-place. The window is kept tight so
+# that audit logs and downstream invalidation cascades stay relevant
+# to the current conversation, not to history a model has long since
+# moved past.
+EDIT_WINDOW_SECONDS = 600
 
 
 # Hard cap on rows handed to the LLM when the async compaction worker
@@ -849,6 +858,7 @@ class SessionOperations:
             .where(
                 AgentMessage.session_id == session_id,
                 AgentMessage.is_compacted == False,  # noqa: E712
+                AgentMessage.is_invalidated == False,  # noqa: E712
             )
         )
         total = count_result.scalar() or 0
@@ -859,6 +869,7 @@ class SessionOperations:
                 AgentMessage.session_id == session_id,
                 AgentMessage.role == "summary",
                 AgentMessage.is_compacted == False,  # noqa: E712
+                AgentMessage.is_invalidated == False,  # noqa: E712
             )
             .order_by(AgentMessage.created_at.desc())
             .limit(MAX_CONTEXT_SUMMARIES)
@@ -870,6 +881,7 @@ class SessionOperations:
             .where(
                 AgentMessage.session_id == session_id,
                 AgentMessage.is_compacted == False,  # noqa: E712
+                AgentMessage.is_invalidated == False,  # noqa: E712
                 AgentMessage.role != "summary",
             )
             .order_by(AgentMessage.created_at.desc())
@@ -929,6 +941,236 @@ class SessionOperations:
         """
         if agent_session.user_id != user_id:
             raise PermissionDeniedError("modify", "AgentSession")
+
+    async def edit_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+        new_content: str,
+    ) -> AgentMessage:
+        """Edit a user message in-place and invalidate every later message.
+
+        Within ``EDIT_WINDOW_SECONDS`` of the original creation. The
+        message is preserved (not invalidated) so the timeline anchor
+        survives; everything chronologically after it is soft-deleted
+        so the runtime context loader skips them. The previous content
+        is snapshotted onto ``previous_content`` for audit / undo UX.
+
+        Refused if a run is currently in flight on the session: editing
+        the message under a live LLM call would invalidate the very
+        rows the runtime is about to write.
+        """
+        await self._org_ops.require_org_member(user_id, organization_id)
+
+        new_content_clean = (new_content or "").strip()
+        if not new_content_clean:
+            raise ValidationError("new_content", "must not be empty")
+
+        msg, agent_session = await self._load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if agent_session.user_id != user_id:
+            raise PermissionDeniedError("edit", "AgentMessage")
+        if msg.role != "user":
+            raise ValidationError("role", "edit is only supported on user messages")
+        if msg.is_invalidated:
+            raise ValidationError("message", "cannot edit an invalidated message")
+
+        age = (datetime.now(UTC) - msg.created_at).total_seconds()
+        if age > EDIT_WINDOW_SECONDS:
+            raise ValidationError(
+                "message",
+                f"edit window expired ({EDIT_WINDOW_SECONDS}s)",
+            )
+
+        await self._ensure_no_inflight_run(agent_session.id)
+
+        msg.previous_content = msg.content
+        msg.content = new_content_clean
+        msg.edited_at = datetime.now(UTC)
+
+        await self._invalidate_downstream(
+            session_id=agent_session.id,
+            anchor_created_at=msg.created_at,
+            user_id=user_id,
+            include_anchor=False,
+        )
+        agent_session.updated_at = datetime.now(UTC)
+        await self._session.commit()
+        await self._session.refresh(msg)
+        return msg
+
+    async def delete_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+    ) -> int:
+        """Soft-delete a user message and every later message in the session.
+
+        Returns the number of rows marked invalidated (the anchor row
+        plus everything after it). Refused if a run is currently in
+        flight.
+        """
+        await self._org_ops.require_org_member(user_id, organization_id)
+
+        msg, agent_session = await self._load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if agent_session.user_id != user_id:
+            raise PermissionDeniedError("delete", "AgentMessage")
+        if msg.role != "user":
+            raise ValidationError("role", "delete is only supported on user messages")
+        if msg.is_invalidated:
+            return 0
+
+        await self._ensure_no_inflight_run(agent_session.id)
+
+        count = await self._invalidate_downstream(
+            session_id=agent_session.id,
+            anchor_created_at=msg.created_at,
+            user_id=user_id,
+            include_anchor=True,
+        )
+        agent_session.updated_at = datetime.now(UTC)
+        await self._session.commit()
+        return count
+
+    async def retry_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+    ) -> tuple[str, list[str]]:
+        """Walk back to the user message anchor and prepare it for re-send.
+
+        For a user message: returns its content and ``file_ids``,
+        invalidates everything after it. The anchor message itself is
+        preserved so the next ``add_message`` call appends to a clean
+        timeline. For an assistant message: walks back to the most
+        recent preceding user message and returns that.
+
+        Refused if a run is currently in flight.
+        """
+        await self._org_ops.require_org_member(user_id, organization_id)
+
+        msg, agent_session = await self._load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if agent_session.user_id != user_id:
+            raise PermissionDeniedError("retry", "AgentMessage")
+
+        anchor: AgentMessage = msg
+        if msg.role == "assistant":
+            preceding_stmt = (
+                select(AgentMessage)
+                .where(
+                    AgentMessage.session_id == agent_session.id,
+                    AgentMessage.role == "user",
+                    AgentMessage.is_invalidated == False,  # noqa: E712
+                    AgentMessage.created_at < msg.created_at,
+                )
+                .order_by(AgentMessage.created_at.desc())
+                .limit(1)
+            )
+            preceding_result = await self._session.execute(preceding_stmt)
+            anchor_row = preceding_result.scalar_one_or_none()
+            if anchor_row is None:
+                raise ValidationError(
+                    "message",
+                    "no preceding user message to retry from",
+                )
+            anchor = anchor_row
+        elif msg.role != "user":
+            raise ValidationError(
+                "role",
+                "retry is only supported on user or assistant messages",
+            )
+
+        if anchor.is_invalidated:
+            raise ValidationError("message", "cannot retry from an invalidated anchor")
+
+        await self._ensure_no_inflight_run(agent_session.id)
+
+        await self._invalidate_downstream(
+            session_id=agent_session.id,
+            anchor_created_at=anchor.created_at,
+            user_id=user_id,
+            include_anchor=False,
+        )
+        agent_session.updated_at = datetime.now(UTC)
+        await self._session.commit()
+
+        return anchor.content or "", list(anchor.file_ids or [])
+
+    async def _load_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+    ) -> tuple[AgentMessage, AgentSession]:
+        """Fetch a message + its session, gated on org and session ownership."""
+        result = await self._session.execute(
+            select(AgentMessage, AgentSession)
+            .join(AgentSession, AgentMessage.session_id == AgentSession.id)
+            .where(
+                AgentMessage.id == message_id,
+                AgentSession.organization_id == organization_id,
+            )
+        )
+        row = result.one_or_none()
+        if row is None:
+            raise NotFoundError("AgentMessage", str(message_id))
+        msg, agent_session = row
+        self._verify_session_access(agent_session, user_id)
+        return msg, agent_session
+
+    async def _invalidate_downstream(
+        self,
+        *,
+        session_id: UUID,
+        anchor_created_at: datetime,
+        user_id: UUID,
+        include_anchor: bool,
+    ) -> int:
+        """Mark every later message (and optionally the anchor itself) invalidated."""
+        if include_anchor:
+            ts_filter = AgentMessage.created_at >= anchor_created_at
+        else:
+            ts_filter = AgentMessage.created_at > anchor_created_at
+
+        stmt = select(AgentMessage).where(
+            AgentMessage.session_id == session_id,
+            AgentMessage.is_invalidated == False,  # noqa: E712
+            ts_filter,
+        )
+        result = await self._session.execute(stmt)
+        rows = list(result.scalars().all())
+        now = datetime.now(UTC)
+        for row in rows:
+            row.is_invalidated = True
+            row.invalidated_at = now
+            row.invalidated_by = user_id
+        return len(rows)
+
+    async def _ensure_no_inflight_run(self, session_id: UUID) -> None:
+        """Refuse a mutation when an LLM run is currently driving the session."""
+        if await session_has_active_run(session_id):
+            raise ValidationError(
+                "session",
+                "cannot mutate messages while a run is streaming",
+            )
 
     async def enqueue_compaction_if_needed(
         self,
