@@ -490,6 +490,90 @@ class ProviderOperations:
 
         return provider, key
 
+    async def list_enabled_keys_for_provider(
+        self,
+        *,
+        organization_id: UUID,
+        provider: str,
+    ) -> list[ProviderKey]:
+        """Return every enabled, valid key for a single provider, oldest first.
+
+        Used by the failover candidate iterator so it can swap to a
+        sibling credential without re-walking the heterogeneous key
+        list.
+        """
+        result = await self._session.execute(
+            select(ProviderKey)
+            .where(
+                ProviderKey.organization_id == organization_id,
+                ProviderKey.provider == provider,
+                ProviderKey.is_valid == True,  # noqa: E712
+                ProviderKey.is_enabled == True,  # noqa: E712
+            )
+            .order_by(ProviderKey.created_at)
+        )
+        return list(result.scalars().all())
+
+    async def get_key_and_provider_for_model(
+        self,
+        *,
+        organization_id: UUID,
+        model_id: str,
+    ) -> tuple[LLMProvider, ProviderKey] | None:
+        """Resolve ``model_id`` to its (provider client, key row).
+
+        Mirrors ``get_provider_for_model`` but also returns the
+        ``ProviderKey`` so callers (failover loop, run-log writer) can
+        track which credential is now active. Returns ``None`` when no
+        configured key advertises the model.
+        """
+        result = await self._session.execute(
+            select(ProviderKey)
+            .where(
+                ProviderKey.organization_id == organization_id,
+                ProviderKey.is_valid == True,  # noqa: E712
+                ProviderKey.is_enabled == True,  # noqa: E712
+            )
+            .order_by(ProviderKey.created_at)
+        )
+        keys = list(result.scalars().all())
+
+        seen_providers: set[str] = set()
+        registry = get_provider_registry()
+        lru = get_provider_lru()
+
+        for key in keys:
+            if key.provider in seen_providers:
+                continue
+            seen_providers.add(key.provider)
+
+            metadata = await get_cached_provider_metadata(key.id)
+            if metadata is not None:
+                cached_models = metadata.get("model_ids") or []
+                if model_id not in cached_models:
+                    continue
+                llm = await self._resolve_or_build_provider(lru, key, registry)
+                key.last_used_at = datetime.now(UTC)
+                await self._session.commit()
+                return llm, key
+
+            llm = await self._resolve_or_build_provider(lru, key, registry)
+            models = await llm.get_available_models()
+            await set_cached_provider_metadata(
+                key.id,
+                provider=key.provider,
+                credential_type=key.credential_type,
+                is_valid=key.is_valid,
+                is_enabled=key.is_enabled,
+                model_ids=[m.id for m in models],
+            )
+            if any(m.id == model_id for m in models):
+                key.last_used_at = datetime.now(UTC)
+                await self._session.commit()
+                return llm, key
+
+        return None
+
     async def list_models_for_key(
         self,
         *,

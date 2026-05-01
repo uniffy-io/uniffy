@@ -170,6 +170,40 @@ class RuntimeConfirmationResponseEvent(RuntimeStreamEvent):
 
 
 @dataclass
+class RuntimeFailoverEvent(RuntimeStreamEvent):
+    """The runtime swapped to a different provider key or model.
+
+    Emitted at most ``MAX_FAILOVER_ATTEMPTS`` times per run, only
+    after a retryable error on the previous candidate but before any
+    token has been forwarded to the client. Purely informational --
+    clients use it to surface "switched to X" notices.
+
+    Attributes
+    ----------
+    from_provider_key_id : str
+        Provider key id we just moved off (the one that failed). May
+        be empty if the original run was driven by a non-key resolver.
+    to_provider_key_id : str
+        Provider key id we moved onto.
+    to_model : str
+        Model now in use (may be the same model on a different key,
+        or a different fallback model entirely).
+    reason : str
+        Short reason classifier: "timeout" / "5xx" / "connection" /
+        "other".
+    attempt : int
+        1-based attempt counter for the swap (first failover = 1).
+
+    """
+
+    from_provider_key_id: str
+    to_provider_key_id: str
+    to_model: str
+    reason: str
+    attempt: int
+
+
+@dataclass
 class RuntimeErrorEvent(RuntimeStreamEvent):
     """An error occurred during streaming.
 

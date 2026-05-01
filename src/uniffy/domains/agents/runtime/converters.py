@@ -15,6 +15,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamConfirmationRequiredEvent,
     StreamDoneEvent,
     StreamErrorEvent,
+    StreamFailoverEvent,
     StreamMessageStoredEvent,
     StreamSendMessageResponse,
     StreamTokenEvent,
@@ -28,6 +29,7 @@ from uniffy.domains.agents.runtime.stream_events import (
     RuntimeConfirmationRequiredEvent,
     RuntimeDoneEvent,
     RuntimeErrorEvent,
+    RuntimeFailoverEvent,
     RuntimeMessageStoredEvent,
     RuntimeStreamEvent,
     RuntimeTokenEvent,
@@ -137,6 +139,17 @@ def runtime_stream_event_to_proto(
             ),
         )
 
+    if isinstance(event, RuntimeFailoverEvent):
+        return StreamSendMessageEvent(
+            failover=StreamFailoverEvent(
+                from_provider_key_id=event.from_provider_key_id,
+                to_provider_key_id=event.to_provider_key_id,
+                to_model=event.to_model,
+                reason=event.reason,
+                attempt=event.attempt,
+            ),
+        )
+
     if isinstance(event, RuntimeErrorEvent):
         return StreamSendMessageResponse(
             error=StreamErrorEvent(message=event.error),
@@ -151,6 +164,7 @@ _EVENT_TYPE_TOOL_RESULT = "tool_result"
 _EVENT_TYPE_MESSAGE_STORED = "message_stored"
 _EVENT_TYPE_DONE = "done"
 _EVENT_TYPE_CONFIRMATION_REQUIRED = "confirmation_required"
+_EVENT_TYPE_FAILOVER = "failover"
 _EVENT_TYPE_ERROR = "error"
 
 
@@ -223,6 +237,16 @@ def runtime_stream_event_to_json(event: RuntimeStreamEvent) -> dict[str, Any]:
             "message_id": str(event.message_id) if event.message_id else None,
         }
 
+    if isinstance(event, RuntimeFailoverEvent):
+        return {
+            "type": _EVENT_TYPE_FAILOVER,
+            "from_provider_key_id": event.from_provider_key_id,
+            "to_provider_key_id": event.to_provider_key_id,
+            "to_model": event.to_model,
+            "reason": event.reason,
+            "attempt": event.attempt,
+        }
+
     if isinstance(event, RuntimeErrorEvent):
         return {"type": _EVENT_TYPE_ERROR, "error": event.error}
 
@@ -286,6 +310,15 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> RuntimeStreamEven
             description=payload.get("description", ""),
             request_id=UUID(request_id) if request_id else None,
             message_id=UUID(message_id) if message_id else None,
+        )
+
+    if event_type == _EVENT_TYPE_FAILOVER:
+        return RuntimeFailoverEvent(
+            from_provider_key_id=payload.get("from_provider_key_id", ""),
+            to_provider_key_id=payload.get("to_provider_key_id", ""),
+            to_model=payload.get("to_model", ""),
+            reason=payload.get("reason", "other"),
+            attempt=int(payload.get("attempt", 1)),
         )
 
     if event_type == _EVENT_TYPE_ERROR:
