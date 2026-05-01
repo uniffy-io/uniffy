@@ -14,6 +14,7 @@ const STATUS_CODE_MESSAGES: Record<string, string> = {
     already_exists: 'This item already exists.',
     invalid_argument: 'Some of the information provided is invalid.',
     failed_precondition: 'This action cannot be performed right now.',
+    aborted: 'This change conflicts with another update. Please refresh and try again.',
     out_of_range: 'The value provided is out of the allowed range.',
     resource_exhausted: 'Too many requests. Please wait a moment and try again.',
 
@@ -61,7 +62,12 @@ export function friendlyErrorMessage(raw: string): string | null {
     const lower = raw.toLowerCase().trim();
 
     // 1. Suppress noisy non-errors
-    if (lower === 'rejected' || lower === 'aborted' || lower === 'aborterror') {
+    if (lower === 'rejected' || lower === 'aborterror') {
+        return null;
+    }
+    // Domain handlers (e.g. notes autosave) own their own conflict UX
+    // and signal it with this sentinel; suppress the generic toast.
+    if (raw === 'versionConflict') {
         return null;
     }
 

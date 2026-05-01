@@ -1,0 +1,78 @@
+---
+const columns = [
+  {
+    title: "Product",
+    links: [
+      { href: "#product", label: "Overview" },
+      { href: "#ai", label: "AI" },
+      { href: "#sovereign", label: "Self-host" },
+      { href: "#pricing", label: "Pricing" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/transparency", label: "Transparency" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { href: "https://docs.uniffy.io", label: "Docs" },
+      { href: "https://feedback.uniffy.io", label: "Feedback" },
+      { href: "https://status.uniffy.io", label: "Status" },
+    ],
+  },
+];
+---
+
+<footer class="border-t border-night-hairline bg-night-soft">
+  <div class="mx-auto max-w-7xl px-6 py-16 md:px-10">
+    <div class="grid gap-12 md:grid-cols-[2fr_1fr_1fr_1fr]">
+      <div>
+        <a href="/" class="flex items-center gap-2.5 font-sans text-lg font-semibold tracking-tight">
+          <img
+            src="/web-app-manifest-192x192.png"
+            alt="Uniffy"
+            width="28"
+            height="28"
+            class="h-7 w-7"
+          />
+          <span class="text-night-text">uniffy</span>
+        </a>
+        <p class="mt-4 max-w-sm text-sm text-night-muted">
+          Work infrastructure, finally unified. Notes, chat, files, projects, calendar, AI — one workspace.
+        </p>
+      </div>
+      {
+        columns.map((col) => (
+          <div>
+            <h4 class="text-xs font-medium uppercase tracking-wider text-night-faint">
+              {col.title}
+            </h4>
+            <ul class="mt-4 space-y-3">
+              {col.links.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    class="text-sm text-night-soft-text transition-colors hover:text-night-text"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+    <div class="mt-16 flex flex-col gap-4 border-t border-night-hairline pt-8 md:flex-row md:items-center md:justify-between">
+      <p class="font-mono text-xs text-night-faint">
+        &copy; 2026 uniffy-io, Inc. Source-available under BSL 1.1.
+      </p>
+      <p class="font-mono text-xs text-night-faint">EU data residency · Self-hostable · No AI surcharge</p>
+    </div>
+  </div>
+</footer>

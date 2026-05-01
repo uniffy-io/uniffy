@@ -1245,6 +1245,9 @@ type AutosaveNoteRequest struct {
 	Title *string `protobuf:"bytes,4,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	// Client timestamp for conflict resolution
 	ClientTimestamp int64 `protobuf:"varint,5,opt,name=client_timestamp,json=clientTimestamp,proto3" json:"client_timestamp,omitempty"`
+	// Version the client based this draft on. When set, server rejects with
+	// ABORTED if the stored note has advanced past it (concurrent edit).
+	ExpectedVersion *int64 `protobuf:"varint,6,opt,name=expected_version,json=expectedVersion,proto3,oneof" json:"expected_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1310,6 +1313,13 @@ func (x *AutosaveNoteRequest) GetTitle() string {
 func (x *AutosaveNoteRequest) GetClientTimestamp() int64 {
 	if x != nil {
 		return x.ClientTimestamp
+	}
+	return 0
+}
+
+func (x *AutosaveNoteRequest) GetExpectedVersion() int64 {
+	if x != nil && x.ExpectedVersion != nil {
+		return *x.ExpectedVersion
 	}
 	return 0
 }
@@ -2963,14 +2973,16 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x12EmptyTrashResponse\x12#\n" +
 	"\rdeleted_count\x18\x01 \x01(\x05R\fdeletedCount\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"\xc1\x01\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"\x86\x02\n" +
 	"\x13AutosaveNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x19\n" +
 	"\x05title\x18\x04 \x01(\tH\x00R\x05title\x88\x01\x01\x12)\n" +
-	"\x10client_timestamp\x18\x05 \x01(\x03R\x0fclientTimestampB\b\n" +
-	"\x06_title\"\x81\x01\n" +
+	"\x10client_timestamp\x18\x05 \x01(\x03R\x0fclientTimestamp\x12.\n" +
+	"\x10expected_version\x18\x06 \x01(\x03H\x01R\x0fexpectedVersion\x88\x01\x01B\b\n" +
+	"\x06_titleB\x13\n" +
+	"\x11_expected_version\"\x81\x01\n" +
 	"\x14AutosaveNoteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x125\n" +
 	"\bsaved_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\asavedAt\x12\x18\n" +

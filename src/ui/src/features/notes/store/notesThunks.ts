@@ -324,7 +324,14 @@ export const updateNoteIcon = createAsyncThunk<
 
 /**
  * Autosave note content (debounced calls should happen at component level).
+ *
+ * Sends the version the client based the draft on. If another user has
+ * advanced the note past that version, the server replies with
+ * `[aborted]` and we surface a `versionConflict` rejection so callers
+ * can refresh and preserve the user's draft.
  */
+export const VERSION_CONFLICT_REJECTION = 'versionConflict';
+
 export const autosaveNote = createAsyncThunk<
     { noteId: string; version: number; savedAt: string },
     {
@@ -335,13 +342,16 @@ export const autosaveNote = createAsyncThunk<
     { state: RootState; rejectValue: string }
 >('notes/autosaveNote', async (params, { getState, rejectWithValue }) => {
     try {
-        const organizationId = getOrganizationId(getState());
+        const state = getState();
+        const organizationId = getOrganizationId(state);
+        const baseVersion = state.notes.notes[params.noteId]?.version;
         const response = await notesApi.autosaveNote({
             noteId: params.noteId,
             organizationId,
             content: params.content,
             title: params.title,
             clientTimestamp: BigInt(Date.now()),
+            expectedVersion: baseVersion != null ? BigInt(baseVersion) : undefined,
         });
         if (!response.success) {
             return rejectWithValue('Autosave failed');
@@ -354,7 +364,11 @@ export const autosaveNote = createAsyncThunk<
             savedAt: (response.savedAt?.toDate() ?? new Date()).toISOString(),
         };
     } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Autosave failed');
+        const message = error instanceof Error ? error.message : 'Autosave failed';
+        if (/\[aborted\]/i.test(message)) {
+            return rejectWithValue(VERSION_CONFLICT_REJECTION);
+        }
+        return rejectWithValue(message);
     }
 });
 

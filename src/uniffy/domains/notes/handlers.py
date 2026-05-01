@@ -31,7 +31,12 @@ from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.types import NodeType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -76,6 +81,8 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    if isinstance(exc, ConflictError):
+        return ConnectError(Code.ABORTED, str(exc))
     logger.error(f"Error in {operation}: {exc}", exc_info=True)
     return ConnectError(Code.INTERNAL, "Internal server error")
 
@@ -354,6 +361,11 @@ class NotesHandlers:
                     content=request.content,
                     canvas_content=canvas_content,
                     title=request.title if request.HasField("title") else None,
+                    expected_version=(
+                        request.expected_version
+                        if request.HasField("expected_version")
+                        else None
+                    ),
                 )
                 return AutosaveNoteResponse(
                     success=True,

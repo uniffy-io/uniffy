@@ -5,14 +5,17 @@
  */
 
 import { useCallback, useRef, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     autosaveNote,
     fetchNote,
 } from '@/features/notes/store/notesSlice';
+import { VERSION_CONFLICT_REJECTION } from '@/features/notes/store/notesThunks';
 import { invalidateNotePreviewCache } from '@/components/editor/plugins/mention/useUrnPreview';
 import {
     setDraftContent,
+    clearDraftContent,
     setAutosaveSaving,
     setAutosaveLastSaved,
     setAutosaveError,
@@ -84,12 +87,19 @@ export function useAutosave(noteId: string | null) {
                 // Invalidate preview cache so hover previews show fresh content
                 invalidateNotePreviewCache(noteId);
             } catch (err) {
-                dispatch(
-                    setAutosaveError({
-                        noteId,
-                        error: err instanceof Error ? err.message : 'Autosave failed',
-                    })
-                );
+                const raw = err instanceof Error ? err.message : String(err ?? '');
+                if (raw === VERSION_CONFLICT_REJECTION) {
+                    // Another user advanced the note past our base version.
+                    // Drop the stale draft, pull the latest content, and let
+                    // the editor remount with the fresh version.
+                    dispatch(clearDraftContent(noteId));
+                    dispatch(fetchNote(noteId));
+                    toast.warning(
+                        'This note was updated by someone else. Loaded the latest version.'
+                    );
+                } else {
+                    dispatch(setAutosaveError({ noteId, error: raw || 'Autosave failed' }));
+                }
             } finally {
                 dispatch(setAutosaveSaving({ noteId, isSaving: false }));
             }

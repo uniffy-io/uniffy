@@ -1,0 +1,46 @@
+---
+const stats = [
+  {
+    figure: "1,200",
+    unit: "tab toggles",
+    body: "The number of times the average knowledge worker switches between apps every day.",
+    source: "Harvard Business Review",
+  },
+  {
+    figure: "5 weeks",
+    unit: "lost per year",
+    body: "Time burned to context-switching between fragmented tools, per worker, per year.",
+    source: "Gartner",
+  },
+  {
+    figure: "96%",
+    unit: "are dissatisfied",
+    body: "Of employees report frustration with their current workplace tools and tool sprawl.",
+    source: "Zoho Workplace Survey",
+  },
+];
+---
+
+<section class="border-b border-night-hairline bg-night px-6 py-24 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">The cost of fragmentation</p>
+    <h2 class="max-w-4xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
+      Six tools. Six tabs. <span class="text-night-muted">Six places nothing connects.</span>
+    </h2>
+
+    <div class="mt-16 grid gap-px overflow-hidden rounded-2xl border border-night-hairline bg-night-hairline md:grid-cols-3">
+      {
+        stats.map((s) => (
+          <div class="bg-night-soft p-8 md:p-10">
+            <div class="font-sans text-6xl font-semibold tracking-[-0.04em] text-night-text md:text-7xl">
+              {s.figure}
+            </div>
+            <div class="mt-2 font-mono text-sm text-night-muted">{s.unit}</div>
+            <p class="mt-6 text-base leading-relaxed text-night-soft-text">{s.body}</p>
+            <p class="mt-4 font-mono text-xs text-night-faint">{s.source}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

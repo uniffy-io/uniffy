@@ -1,0 +1,97 @@
+---
+const competitors = ["Notion", "ClickUp", "Slack", "Linear", "Uniffy"];
+
+const rows = [
+  {
+    feature: "Native chat + docs + projects + AI + calendar in one",
+    values: ["partial", "partial", "no", "no", "yes"],
+  },
+  {
+    feature: "AI honors per-user permissions on every tool call",
+    values: ["partial", "no", "no", "no", "yes"],
+  },
+  {
+    feature: "Universal cross-domain @-mentions (URN)",
+    values: ["no", "no", "no", "no", "yes"],
+  },
+  {
+    feature: "Self-hostable",
+    values: ["no", "no", "no", "no", "yes"],
+  },
+  {
+    feature: "Source-available",
+    values: ["no", "no", "no", "no", "yes"],
+  },
+  {
+    feature: "EU data residency on any paid plan",
+    values: ["enterprise", "enterprise", "business+", "no", "yes"],
+  },
+  {
+    feature: "No per-feature AI surcharge",
+    values: ["no", "no", "no", "no", "yes"],
+  },
+];
+
+const symbol = (v: string) => {
+  if (v === "yes") return { glyph: "✓", className: "font-bold text-night-text" };
+  if (v === "no") return { glyph: "—", className: "text-night-faint" };
+  return { glyph: v, className: "font-mono text-xs text-night-muted" };
+};
+---
+
+<section class="border-b border-night-hairline bg-night px-6 py-24 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
+      The honest comparison
+    </p>
+    <h2 class="max-w-5xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
+      What no one else ships. <span class="text-night-muted">All in one place.</span>
+    </h2>
+
+    <div class="mt-16 overflow-x-auto rounded-2xl border border-night-hairline">
+      <table class="w-full min-w-[800px] border-collapse">
+        <thead>
+          <tr class="border-b border-night-hairline bg-night-soft">
+            <th class="px-6 py-5 text-left font-mono text-xs font-medium uppercase tracking-wider text-night-faint">
+              Feature
+            </th>
+            {
+              competitors.map((name) => (
+                <th
+                  class={`px-4 py-5 text-center font-mono text-xs font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}
+                >
+                  {name}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody>
+          {
+            rows.map((row) => (
+              <tr class="border-b border-night-hairline last:border-0">
+                <td class="px-6 py-5 text-sm leading-relaxed text-night-soft-text">
+                  {row.feature}
+                </td>
+                {row.values.map((v, idx) => {
+                  const { glyph, className } = symbol(v);
+                  const isUniffy = idx === competitors.length - 1;
+                  return (
+                    <td
+                      class={`px-4 py-5 text-center text-base ${className} ${isUniffy ? "bg-accent/10" : ""}`}
+                    >
+                      {glyph}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-6 font-mono text-xs text-night-faint">
+      Sources: vendor docs, pricing pages, changelogs (2025–2026). See full comparison in our docs.
+    </p>
+  </div>
+</section>

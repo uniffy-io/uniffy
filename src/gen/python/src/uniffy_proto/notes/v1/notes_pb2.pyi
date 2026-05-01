@@ -231,18 +231,20 @@ class EmptyTrashResponse(_message.Message):
     def __init__(self, deleted_count: _Optional[int] = ..., success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
 class AutosaveNoteRequest(_message.Message):
-    __slots__ = ("note_id", "organization_id", "content", "title", "client_timestamp")
+    __slots__ = ("note_id", "organization_id", "content", "title", "client_timestamp", "expected_version")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CLIENT_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_VERSION_FIELD_NUMBER: _ClassVar[int]
     note_id: str
     organization_id: str
     content: str
     title: str
     client_timestamp: int
-    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., content: _Optional[str] = ..., title: _Optional[str] = ..., client_timestamp: _Optional[int] = ...) -> None: ...
+    expected_version: int
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., content: _Optional[str] = ..., title: _Optional[str] = ..., client_timestamp: _Optional[int] = ..., expected_version: _Optional[int] = ...) -> None: ...
 
 class AutosaveNoteResponse(_message.Message):
     __slots__ = ("success", "saved_at", "version")

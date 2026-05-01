@@ -1,0 +1,96 @@
+---
+type ChipType = "note" | "file" | "chat" | "user" | "event" | "project" | "agent";
+
+interface Props {
+  type?: ChipType;
+  label: string;
+  size?: "sm" | "md";
+  badge?: string;
+}
+
+const { type = "note", label, size = "md", badge } = Astro.props;
+
+const styles: Record<ChipType, { wash: string; iconBg: string; border: string; ring: string }> = {
+  note: {
+    wash: "bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-violet-500 to-violet-600",
+    border: "border-violet-500/25",
+    ring: "shadow-violet-500/20",
+  },
+  file: {
+    wash: "bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
+    border: "border-blue-500/25",
+    ring: "shadow-blue-500/20",
+  },
+  chat: {
+    wash: "bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-violet-500 to-violet-600",
+    border: "border-violet-500/25",
+    ring: "shadow-violet-500/20",
+  },
+  user: {
+    wash: "bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+    border: "border-emerald-500/25",
+    ring: "shadow-emerald-500/20",
+  },
+  event: {
+    wash: "bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-rose-500 to-rose-600",
+    border: "border-rose-500/25",
+    ring: "shadow-rose-500/20",
+  },
+  project: {
+    wash: "bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-orange-500 to-orange-600",
+    border: "border-orange-500/25",
+    ring: "shadow-orange-500/20",
+  },
+  agent: {
+    wash: "bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent",
+    iconBg: "bg-gradient-to-br from-cyan-500 to-cyan-600",
+    border: "border-cyan-500/25",
+    ring: "shadow-cyan-500/20",
+  },
+};
+
+const s = styles[type];
+const dims = size === "sm"
+  ? { chip: "gap-1 px-1.5 py-0.5 text-xs", icon: "h-3.5 w-3.5 rounded-[3px]", svg: 8 }
+  : { chip: "gap-1.5 px-2 py-1 text-sm", icon: "h-5 w-5 rounded", svg: 11 };
+---
+
+<span
+  class={`mention-chip group inline-flex items-center align-middle rounded-md border bg-paper backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-md ${s.wash} ${s.border} ${s.ring} ${dims.chip}`}
+>
+  <span class={`flex shrink-0 items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-110 ${s.iconBg} ${dims.icon}`}>
+    {type === "note" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M227.32 73.37 182.63 28.69a16 16 0 0 0-22.63 0L36.69 152a15.86 15.86 0 0 0-4.69 11.31V208a16 16 0 0 0 16 16h44.69a15.86 15.86 0 0 0 11.31-4.69L227.32 96a16 16 0 0 0 0-22.63ZM92.69 208H48v-44.69l88-88L180.69 120ZM192 108.69 147.32 64l24-24L216 84.69Z"/></svg>
+    )}
+    {type === "file" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M216 72h-86.06l-21.66-21.66A15.86 15.86 0 0 0 96.97 48H40a16 16 0 0 0-16 16v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V88a16 16 0 0 0-16-16ZM40 64h56.97l16 16H40Zm176 144H40V96h176Z"/></svg>
+    )}
+    {type === "chat" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M216 48H40a16 16 0 0 0-16 16v160a15.85 15.85 0 0 0 9.24 14.5 16.13 16.13 0 0 0 6.78 1.5 15.89 15.89 0 0 0 9.93-3.49l43.51-34.51H216a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16Zm0 138H92.5a8 8 0 0 0-5 1.74L40 224V64h176Z"/></svg>
+    )}
+    {type === "user" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M230.93 220a8 8 0 0 1-6.93 4H32a8 8 0 0 1-6.92-12c15.23-26.33 38.7-45.21 66.09-54.16a72 72 0 1 1 73.66 0c27.39 8.95 50.86 27.83 66.09 54.16a8 8 0 0 1 .01 8Z"/></svg>
+    )}
+    {type === "event" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M208 32h-24v-8a8 8 0 0 0-16 0v8H88v-8a8 8 0 0 0-16 0v8H48a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16Zm-15 47-69 64a8 8 0 0 1-10.91 0L75 113a8 8 0 0 1 10.91-11.71L119 132.18l63.09-58.51A8 8 0 0 1 193 79Z"/></svg>
+    )}
+    {type === "project" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M216 40H40a16 16 0 0 0-16 16v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16ZM96 200H40v-72h56Zm0-88H40V56h56Zm64 88h-48v-128h48Zm56 0h-40V56h40Z"/></svg>
+    )}
+    {type === "agent" && (
+      <svg width={dims.svg} height={dims.svg} viewBox="0 0 256 256" fill="currentColor"><path d="M248 124a56.11 56.11 0 0 0-32-50.61V72a48 48 0 0 0-88-26.49A48 48 0 0 0 40 72v1.39a56 56 0 0 0 0 101.2V176a48 48 0 0 0 88 26.49A48 48 0 0 0 216 176v-1.41a56.09 56.09 0 0 0 32-50.59Z"/></svg>
+    )}
+  </span>
+  {badge && (
+    <span class="rounded bg-ink/8 px-1 py-px font-mono text-[9px] font-semibold uppercase text-ink-soft">
+      {badge}
+    </span>
+  )}
+  <span class="font-medium text-ink leading-tight">{label}</span>
+</span>

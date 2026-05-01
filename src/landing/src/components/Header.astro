@@ -1,0 +1,113 @@
+---
+const links = [
+  { href: "#product", label: "Product" },
+  { href: "#ai", label: "AI" },
+  { href: "#sovereign", label: "Sovereign" },
+  { href: "#pricing", label: "Pricing" },
+  { href: "https://docs.uniffy.io", label: "Docs" },
+];
+---
+
+<header class="site-header sticky top-0 z-50 border-b border-night-hairline bg-night/75 backdrop-blur-xl">
+  <div class="site-header__beam pointer-events-none absolute inset-x-0 -bottom-px h-px"></div>
+
+  <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-10">
+    <a href="/" class="brand group relative flex items-center gap-2.5 font-sans text-2xl font-bold tracking-tight">
+      <span class="brand__mark relative grid h-8 w-8 place-items-center">
+        <span class="brand__halo pointer-events-none absolute inset-0 rounded-full"></span>
+        <img
+          src="/web-app-manifest-192x192.png"
+          alt="Uniffy"
+          width="32"
+          height="32"
+          class="brand__logo h-8 w-8"
+        />
+      </span>
+      <span class="brand__word relative text-night-text">
+        uniffy
+        <span class="brand__word-underline pointer-events-none absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-accent"></span>
+      </span>
+    </a>
+
+    <nav class="hidden items-center gap-1 md:flex">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            class="nav-link group relative px-3 py-2 text-sm font-bold text-night-muted transition-colors duration-200 hover:text-night-text"
+          >
+            <span class="relative z-10">{link.label}</span>
+            <span class="nav-link__dot pointer-events-none absolute left-1.5 top-1/2 h-1 w-1 -translate-y-1/2 scale-0 rounded-full bg-accent shadow-[0_0_8px_rgba(197,255,63,0.8)] transition-transform duration-200 ease-out group-hover:scale-100"></span>
+            <span class="nav-link__underline pointer-events-none absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 bg-gradient-to-r from-accent via-accent to-transparent transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a
+        href="https://cloud.uniffy.io/login"
+        class="signin group relative hidden px-3 py-2 text-sm font-bold text-night-muted transition-colors duration-200 hover:text-night-text md:inline-flex"
+      >
+        <span class="relative z-10">Sign in</span>
+        <span class="pointer-events-none absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+      </a>
+      <a
+        href="https://cloud.uniffy.io/signup"
+        class="cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition-all duration-300 hover:bg-accent hover:shadow-[0_0_0_1px_rgba(197,255,63,0.6),0_8px_24px_-6px_rgba(197,255,63,0.55)]"
+      >
+        <span class="cta__shimmer pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent"></span>
+        <span class="relative z-10">Start free</span>
+        <span class="cta__arrow relative z-10 inline-block transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden>&rarr;</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header__beam {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(197, 255, 63, 0) 15%,
+      rgba(197, 255, 63, 0.55) 50%,
+      rgba(197, 255, 63, 0) 85%,
+      transparent 100%
+    );
+    opacity: 0.35;
+  }
+
+  .brand__logo {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  .brand__halo {
+    display: none;
+  }
+
+  .brand__word-underline {
+    transition: transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .brand:hover .brand__word-underline {
+    transform: scaleX(1);
+  }
+
+  .nav-link__dot {
+    transform-origin: center;
+  }
+
+  .cta__shimmer {
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cta:hover .cta__shimmer {
+    transform: translateX(100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta__shimmer,
+    .nav-link__underline,
+    .nav-link__dot {
+      transition: none;
+    }
+  }
+</style>

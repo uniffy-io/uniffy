@@ -1,0 +1,52 @@
+---
+---
+
+<section id="ai" class="border-b border-hairline bg-ink px-6 py-24 text-paper md:px-10 md:py-40">
+  <div class="mx-auto max-w-7xl">
+    <p class="mb-6 font-mono text-xs uppercase tracking-wider text-accent">
+      Permission-aware AI
+    </p>
+    <h2 class="max-w-5xl font-sans text-4xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-6xl lg:text-7xl">
+      The only AI <span class="text-paper/50">that asks who&rsquo;s asking.</span>
+    </h2>
+    <p class="mt-8 max-w-2xl text-lg leading-relaxed text-paper/70 md:text-xl">
+      Every tool call the agent makes is gated through the same permission system as the
+      asking user. It cannot read what they cannot read. It cannot leak across teams.
+    </p>
+
+    <div class="mt-16 grid gap-px overflow-hidden rounded-2xl border border-paper/15 bg-paper/15 md:grid-cols-3">
+      <div class="bg-ink p-8 md:p-10">
+        <p class="font-mono text-xs uppercase tracking-wider text-accent">Per-user</p>
+        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Honors your access mode</h3>
+        <p class="mt-3 leading-relaxed text-paper/70">
+          Every read goes through the same checker as the UI &mdash;
+          <span class="font-mono text-paper">OWNER_ONLY</span>,
+          <span class="font-mono text-paper">EXPLICIT_MEMBERS</span>,
+          <span class="font-mono text-paper">OPEN_TO_ORG</span>.
+        </p>
+      </div>
+      <div class="bg-ink p-8 md:p-10">
+        <p class="font-mono text-xs uppercase tracking-wider text-accent">Sandboxed</p>
+        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Egress workers, not cloud LLMs</h3>
+        <p class="mt-3 leading-relaxed text-paper/70">
+          Outbound calls run in isolated workers. No silent shipping of your workspace
+          to a third-party model behind your back.
+        </p>
+      </div>
+      <div class="bg-ink p-8 md:p-10">
+        <p class="font-mono text-xs uppercase tracking-wider text-accent">Cited</p>
+        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Answers cite your work</h3>
+        <p class="mt-3 leading-relaxed text-paper/70">
+          Every response links back to the notes, files, and messages it pulled from.
+          Auditable, not magical.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-12 rounded-2xl border border-paper/15 bg-paper/[0.04] p-6 font-mono text-sm leading-relaxed text-paper/80 md:p-8">
+      <span class="text-paper/40">// Notion Custom Agents bypass asker permissions.</span><br />
+      <span class="text-paper/40">// ClickUp Brain, Monday agents, Airtable Omni — same.</span><br />
+      <span class="text-paper">Uniffy is the only workspace where the agent is bound by your role.</span>
+    </div>
+  </div>
+</section>

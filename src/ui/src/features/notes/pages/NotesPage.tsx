@@ -90,16 +90,21 @@ export function NotesPage() {
     dispatch(initializeNotesData());
   }, [dispatch, organizationId, notesCount]);
 
-  // Select note from URL parameter and fetch full content (or clear if viewing dashboard)
+  // Select note from URL parameter and fetch full content (or clear if viewing dashboard).
+  // Always refetch when the route's noteId changes OR the page remounts, even when
+  // currentNoteId in Redux already matches - returning from another domain (e.g. /chat)
+  // would otherwise serve stale cached content and let autosave clobber concurrent edits.
   useEffect(() => {
-    if (noteId && noteId !== currentNoteId) {
+    if (noteId) {
       dispatch(setCurrentNote(noteId));
       dispatch(fetchNote(noteId));
-    } else if (!noteId && currentNoteId && !isGraphRoute) {
-      // Only clear current note if not on graph route
+    } else if (currentNoteId && !isGraphRoute) {
       dispatch(setCurrentNote(null));
     }
-  }, [noteId, currentNoteId, isGraphRoute, dispatch]);
+    // currentNoteId intentionally excluded - we want this effect to run on
+    // mount + noteId change, not when Redux updates currentNoteId itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId, isGraphRoute, dispatch]);
 
   // Determine if we should show the dashboard (graph route or no note selected)
   const showDashboard = isGraphRoute || !noteId;

@@ -1,0 +1,74 @@
+---
+import ExpandedMentionCard from "@/components/ExpandedMentionCard.astro";
+import type { CardData } from "@/components/cardTypes";
+
+const cards: CardData[] = [
+  {
+    type: "note",
+    title: "Architecture decisions log",
+    description: "Why we chose ConnectRPC over GraphQL, and the trade-offs we accepted on schema federation.",
+    tags: ["adr", "backend"],
+    updatedAt: "5h ago",
+    updatedBy: "Lena",
+  },
+  {
+    type: "file",
+    title: "Brand guidelines.pdf",
+    mime: "application/pdf",
+    size: "3.2 MB",
+    updatedAt: "3d ago",
+  },
+  {
+    type: "user",
+    title: "Sara Chen",
+    email: "sara@uniffy.io",
+    presence: "online",
+    customStatus: { emoji: "✏️", text: "Writing the Q3 plan" },
+  },
+  {
+    type: "event",
+    title: "Weekly engineering review",
+    timeRange: "Thu, May 7, 10:00 - 11:00 AM",
+    location: "Conference Room A",
+    description: "Agent runtime metrics review and incident retro from last week.",
+    updatedAt: "yesterday",
+    temporal: "Thursday",
+  },
+  {
+    type: "project",
+    title: "Agent runtime hardening",
+    slug: "AGT-12",
+    completedTasks: 14,
+    totalTasks: 22,
+    updatedAt: "1h ago",
+  },
+  {
+    type: "chat",
+    title: "#engineering",
+    lastMessage: "Pushed the egress worker fix, deploying to staging now",
+    lastSender: "Marko",
+    updatedAt: "8m ago",
+    memberCount: 24,
+  },
+];
+---
+
+<section id="product" class="border-b border-night-hairline bg-night-soft px-6 py-24 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
+      Mentions are alive
+    </p>
+    <h2 class="max-w-4xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
+      Type <span class="font-mono text-accent">@</span>, get the whole thing. <span class="text-night-muted">Not just a link.</span>
+    </h2>
+    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text">
+      Every mention is a live preview of the real content. Title, status,
+      participants, due time, processing state &mdash; all updated as the source updates.
+      No copy-paste. No stale screenshots.
+    </p>
+
+    <div class="mt-16 grid grid-cols-1 justify-items-center gap-8 md:grid-cols-2 lg:grid-cols-3">
+      {cards.map((card) => <ExpandedMentionCard card={card} />)}
+    </div>
+  </div>
+</section>

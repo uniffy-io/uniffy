@@ -20,7 +20,7 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import ConflictError, NotFoundError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
@@ -359,18 +359,31 @@ class NoteOperations(BaseContentOperations[Note]):
         content: str = "",
         canvas_content: dict[str, Any] | None = None,
         title: str | None = None,
+        expected_version: int | None = None,
     ) -> Note:
         """Fast-path content save used by the editor.
 
         Skips the heavier ``update()`` machinery (no rename propagation,
         no shared-note edit notifications); only the new mentions are
         diffed and notified.
+
+        When ``expected_version`` is provided, the save is rejected with
+        :class:`ConflictError` if the stored note has advanced past it.
+        This is the optimistic-concurrency check that prevents a stale
+        client draft from clobbering edits made by another user while
+        the editor was in the background.
         """
         note = await self._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)
 
         await self._require_edit(user_id, organization_id, note)
+
+        if expected_version is not None and note.version != expected_version:
+            raise ConflictError(
+                "Note",
+                f"version mismatch (client={expected_version}, server={note.version})",
+            )
 
         old_refs = note.outgoing_references
 

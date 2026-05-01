@@ -1,0 +1,121 @@
+---
+const tiers = [
+  {
+    name: "Community",
+    price: "Free",
+    cadence: "forever",
+    blurb: "Up to 10 users. Self-host or cloud. The full product, no feature gating.",
+    features: [
+      "Notes, Files, Chat, Calendar, Projects",
+      "Basic Spaces (no AI)",
+      "Search across everything",
+      "Unlimited history (self-hosted)",
+      "Community support",
+    ],
+    cta: { label: "Start free", href: "https://cloud.uniffy.io/signup" },
+    featured: false,
+  },
+  {
+    name: "Team",
+    price: "€7",
+    cadence: "user / month",
+    blurb: "AI-powered Spaces, guests, unlimited cloud history. For teams up to 50.",
+    features: [
+      "Everything in Community",
+      "AI-powered Spaces",
+      "Guest access",
+      "Unlimited cloud history & audit logs",
+      "Email support",
+    ],
+    cta: { label: "Start trial", href: "https://cloud.uniffy.io/signup" },
+    featured: true,
+  },
+  {
+    name: "Business",
+    price: "€15",
+    cadence: "user / month",
+    blurb: "SSO, custom branding, 99.2% SLA. For organizations up to 500.",
+    features: [
+      "Everything in Team",
+      "SSO (SAML / OIDC)",
+      "Custom branding",
+      "99.2% uptime SLA",
+      "Priority support",
+    ],
+    cta: { label: "Contact sales", href: "/contact" },
+    featured: false,
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    cadence: "annual",
+    blurb: "SCIM, data residency, legal hold, 99.98% SLA. Unlimited everything.",
+    features: [
+      "Everything in Business",
+      "SCIM provisioning",
+      "Data residency controls",
+      "Legal hold",
+      "Dedicated support + 99.98% SLA",
+    ],
+    cta: { label: "Talk to us", href: "/contact" },
+    featured: false,
+  },
+];
+---
+
+<section id="pricing" class="border-b border-night-hairline bg-night-soft px-6 py-24 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
+      Pricing
+    </p>
+    <h2 class="max-w-4xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
+      Honest pricing. <span class="text-night-muted">No AI surcharge. Ever.</span>
+    </h2>
+    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text">
+      Free for teams up to 10. Self-host always. AI is included in every paid plan,
+      not bolted on as a per-user add-on.
+    </p>
+
+    <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {
+        tiers.map((t) => (
+          <article
+            class={`flex flex-col rounded-2xl border p-8 ${t.featured ? "border-accent bg-night-band text-night-text" : "border-night-hairline bg-night text-night-text"}`}
+          >
+            <h3 class="font-sans text-xl font-semibold tracking-tight">{t.name}</h3>
+            <div class="mt-6 flex items-baseline gap-2">
+              <span class="font-sans text-5xl font-semibold tracking-[-0.03em]">
+                {t.price}
+              </span>
+              <span class={`font-mono text-xs ${t.featured ? "text-night-muted" : "text-night-faint"}`}>
+                {t.cadence}
+              </span>
+            </div>
+            <p class={`mt-4 text-sm leading-relaxed ${t.featured ? "text-night-soft-text" : "text-night-soft-text"}`}>
+              {t.blurb}
+            </p>
+            <ul class="mt-6 flex-1 space-y-2.5 text-sm">
+              {t.features.map((f) => (
+                <li class="flex items-start gap-2">
+                  <span class={`mt-1.5 h-1 w-2.5 flex-shrink-0 ${t.featured ? "bg-accent" : "bg-night-text"}`} />
+                  <span class={t.featured ? "text-night-text" : "text-night-soft-text"}>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href={t.cta.href}
+              class={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-opacity ${
+                t.featured
+                  ? "bg-accent text-ink hover:opacity-90"
+                  : "border border-night-hairline-strong bg-night-soft text-night-text hover:border-night-text"
+              }`}
+            >
+              {t.cta.label}
+              <span aria-hidden>&rarr;</span>
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

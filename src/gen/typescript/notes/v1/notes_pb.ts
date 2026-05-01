@@ -1119,6 +1119,14 @@ export class AutosaveNoteRequest extends Message<AutosaveNoteRequest> {
    */
   clientTimestamp = protoInt64.zero;
 
+  /**
+   * Version the client based this draft on. When set, server rejects with
+   * ABORTED if the stored note has advanced past it (concurrent edit).
+   *
+   * @generated from field: optional int64 expected_version = 6;
+   */
+  expectedVersion?: bigint;
+
   constructor(data?: PartialMessage<AutosaveNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1132,6 +1140,7 @@ export class AutosaveNoteRequest extends Message<AutosaveNoteRequest> {
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "client_timestamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 6, name: "expected_version", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AutosaveNoteRequest {

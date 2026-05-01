@@ -1,5 +1,6 @@
 packages:
   - src/ui
   - src/mobile
+  - src/landing
   - src/gen/typescript
   - src/e2e
