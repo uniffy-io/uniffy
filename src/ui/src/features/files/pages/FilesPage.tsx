@@ -19,6 +19,7 @@ import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { useFolderUpload } from '@/features/files/hooks/useFolderUpload';
 import { scanInputFiles, isFolderUploadSupported } from '@/features/files/utils/folderScanner';
+import { resolveUploadAccessMode } from '@/features/files/utils/resolveUploadAccessMode';
 import { initializeFilesData, setFolderId, setDetailsPanelOpen, toggleSidebar } from '@/features/files/store/filesSlice';
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
@@ -27,7 +28,6 @@ import { addToQueue } from '@/features/files/store/uploadSlice';
 import { storeFile } from '@/features/files/utils/fileStore';
 import { filesApi } from '@/features/files/api/filesApi';
 import { downloadAsArchive, type FileDownloadItem } from '@/features/files/utils/archiveDownload';
-import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export function FilesPage() {
     useDocumentTitle('Files');
@@ -235,26 +235,9 @@ export function FilesPage() {
             const selectedFiles = e.target.files;
             if (selectedFiles && selectedFiles.length > 0) {
                 const fileArray = Array.from(selectedFiles);
+                const parentFolder = currentFolderId ? folders[currentFolderId] : undefined;
+                const accessMode = resolveUploadAccessMode(viewScope, parentFolder);
 
-                // Determine access mode - inherit from parent folder if inside one
-                let accessMode = AccessMode.OWNER_ONLY;
-                if (currentFolderId && folders[currentFolderId]) {
-                    // Get parent folder's access mode directly from folders map
-                    accessMode = folders[currentFolderId].accessMode;
-                } else {
-                    // No parent folder - use access mode based on current view scope
-                    // (same logic as handleCreateFolder)
-                    if (viewScope === 'organization') {
-                        accessMode = AccessMode.OPEN_TO_ORG;
-                    } else if (viewScope === 'shared') {
-                        // Should not happen since upload is disabled in shared view
-                        accessMode = AccessMode.OWNER_ONLY;
-                    } else {
-                        accessMode = AccessMode.OWNER_ONLY;
-                    }
-                }
-
-                // Create upload items and store File objects
                 const uploadItems = fileArray.map((file) => {
                     const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     storeFile(id, file);
@@ -264,7 +247,7 @@ export function FilesPage() {
                         mimeType: file.type || 'application/octet-stream',
                         totalSize: file.size,
                         folderId: currentFolderId ?? undefined,
-                        visibility: accessMode,
+                        accessMode,
                         totalChunks: 0,
                         chunkSize: 0,
                     };

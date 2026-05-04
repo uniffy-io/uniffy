@@ -14,6 +14,7 @@ import { filesApi } from '@/features/files/api/filesApi';
 import { addToQueue } from '@/features/files/store/uploadSlice';
 import { storeFile } from '@/features/files/utils/fileStore';
 import { fetchFilesTree } from '@/features/files/store/filesTreeSlice';
+import { resolveUploadAccessMode } from '@/features/files/utils/resolveUploadAccessMode';
 import type { ScanResult, FolderTreeStructure } from '@/features/files/utils/folderScanner';
 
 interface FolderMapping {
@@ -69,6 +70,8 @@ function getParentPath(filePath: string): string {
 export function useFolderUpload() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+    const viewScope = useAppSelector((state) => state.files.filters.viewScope);
+    const folders = useAppSelector((state) => state.filesTree.folders);
 
     const [scanResult, setScanResult] = useState<ScanResult | null>(null);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -92,6 +95,9 @@ export function useFolderUpload() {
         setShowConfirm(false);
         setUploading(true);
 
+        const parentFolder = targetFolderId ? folders[targetFolderId] : undefined;
+        const accessMode = resolveUploadAccessMode(viewScope, parentFolder);
+
         try {
             // Filter out excluded files
             const includedFiles = excludedPaths.size > 0
@@ -112,6 +118,7 @@ export function useFolderUpload() {
                         organizationId,
                         parentFolderId: targetFolderId,
                         tree: treeToProto(includedTree),
+                        accessMode,
                     });
 
                     folderMapping = buildFolderMapping(
@@ -143,6 +150,7 @@ export function useFolderUpload() {
                     mimeType: scannedFile.file.type || 'application/octet-stream',
                     totalSize: scannedFile.file.size,
                     folderId,
+                    accessMode,
                 };
             });
 
@@ -153,7 +161,7 @@ export function useFolderUpload() {
             setUploading(false);
             setScanResult(null);
         }
-    }, [scanResult, organizationId, targetFolderId, dispatch]);
+    }, [scanResult, organizationId, targetFolderId, viewScope, folders, dispatch]);
 
     return {
         scanResult,

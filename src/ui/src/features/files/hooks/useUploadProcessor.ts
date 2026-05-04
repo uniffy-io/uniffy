@@ -45,6 +45,7 @@ async function processUpload(
             mimeType: item.mimeType,
             totalSize: BigInt(item.totalSize),
             folderId: item.folderId,
+            accessMode: item.accessMode,
         });
         console.log('[Upload] Initiated:', initResponse);
     } catch (error) {

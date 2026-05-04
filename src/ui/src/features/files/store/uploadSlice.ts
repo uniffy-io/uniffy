@@ -7,6 +7,7 @@
 import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
+import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export interface UploadItem {
     // Unique ID for this upload
@@ -30,6 +31,7 @@ export interface UploadItem {
 
     // Target location
     folderId?: string;
+    accessMode?: AccessMode;
 
     // Error info
     error?: string;

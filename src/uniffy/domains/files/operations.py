@@ -12,7 +12,6 @@ from sqlalchemy.orm import selectinload
 from uniffy.core.auth.permissions import (
     PermissionChecker,
     resolve_access_policy,
-    resolve_content_defaults,
 )
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -1487,26 +1486,13 @@ class FolderOperations:
             Flat list of created folders with id, name, path, parent_id.
 
         """
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, ContentType.FOLDER
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-        else:
-            baseline_role = None
+        access_mode, baseline_role = await resolve_access_policy(
+            self.session,
+            organization_id,
+            ContentType.FOLDER,
+            access_mode,
+            baseline_role,
+        )
 
         created: list[dict] = []
 

@@ -59,6 +59,7 @@ from uniffy_proto.files.v1.files_pb2 import (
     UploadChunksResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.members import ContentMembersOperations
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
@@ -580,6 +581,13 @@ class FilesHandlers:
                     new_baseline_role = None
                     if request.baseline_role:
                         new_baseline_role = content_role_from_proto(request.baseline_role)
+                    new_access_mode, new_baseline_role = await resolve_access_policy(
+                        session,
+                        organization_id,
+                        ContentType.FILE,
+                        new_access_mode,
+                        new_baseline_role,
+                    )
                     members_ops = ContentMembersOperations(session)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
@@ -859,6 +867,13 @@ class FilesHandlers:
                     new_baseline_role = None
                     if request.baseline_role:
                         new_baseline_role = content_role_from_proto(request.baseline_role)
+                    new_access_mode, new_baseline_role = await resolve_access_policy(
+                        session,
+                        organization_id,
+                        ContentType.FOLDER,
+                        new_access_mode,
+                        new_baseline_role,
+                    )
                     members_ops = ContentMembersOperations(session)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
@@ -1308,18 +1323,26 @@ class FilesHandlers:
                     if not file:
                         continue
 
-                    if target_access_mode is not None and (
-                        target_access_mode != file.access_mode
-                        or target_baseline_role != file.baseline_role
-                    ):
-                        await members_ops.set_access_mode(
-                            actor_user_id=user_id,
-                            organization_id=organization_id,
-                            content_type=ContentType.FILE,
-                            content_id=file_id,
-                            new_access_mode=target_access_mode,
-                            new_baseline_role=target_baseline_role,
+                    if target_access_mode is not None:
+                        resolved_mode, resolved_baseline = await resolve_access_policy(
+                            session,
+                            organization_id,
+                            ContentType.FILE,
+                            target_access_mode,
+                            target_baseline_role,
                         )
+                        if (
+                            resolved_mode != file.access_mode
+                            or resolved_baseline != file.baseline_role
+                        ):
+                            await members_ops.set_access_mode(
+                                actor_user_id=user_id,
+                                organization_id=organization_id,
+                                content_type=ContentType.FILE,
+                                content_id=file_id,
+                                new_access_mode=resolved_mode,
+                                new_baseline_role=resolved_baseline,
+                            )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
                         file = await file_ops._fetch_by_id(file_id, organization_id)
@@ -1335,18 +1358,26 @@ class FilesHandlers:
                     if not folder:
                         continue
 
-                    if target_access_mode is not None and (
-                        target_access_mode != folder.access_mode
-                        or target_baseline_role != folder.baseline_role
-                    ):
-                        await members_ops.set_access_mode(
-                            actor_user_id=user_id,
-                            organization_id=organization_id,
-                            content_type=ContentType.FOLDER,
-                            content_id=folder_id,
-                            new_access_mode=target_access_mode,
-                            new_baseline_role=target_baseline_role,
+                    if target_access_mode is not None:
+                        resolved_mode, resolved_baseline = await resolve_access_policy(
+                            session,
+                            organization_id,
+                            ContentType.FOLDER,
+                            target_access_mode,
+                            target_baseline_role,
                         )
+                        if (
+                            resolved_mode != folder.access_mode
+                            or resolved_baseline != folder.baseline_role
+                        ):
+                            await members_ops.set_access_mode(
+                                actor_user_id=user_id,
+                                organization_id=organization_id,
+                                content_type=ContentType.FOLDER,
+                                content_id=folder_id,
+                                new_access_mode=resolved_mode,
+                                new_baseline_role=resolved_baseline,
+                            )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
                         folder = await folder_ops.get_by_id(folder_id, organization_id)
