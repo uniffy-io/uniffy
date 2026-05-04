@@ -45,10 +45,10 @@ function getNoteTypeLabel(nodeType?: string): string {
 
 function NoteTypeIcon({ nodeType }: { nodeType?: string }) {
   switch (nodeType) {
-    case 'FOLDER': return <Folder size={16} weight="duotone" className="text-white" />;
-    case 'TEMPLATE': return <File size={16} weight="duotone" className="text-white" />;
-    case 'CANVAS': return <Layout size={16} weight="duotone" className="text-white" />;
-    default: return <Note size={16} weight="duotone" className="text-white" />;
+    case 'FOLDER': return <Folder size={16} weight="duotone" />;
+    case 'TEMPLATE': return <File size={16} weight="duotone" />;
+    case 'CANVAS': return <Layout size={16} weight="duotone" />;
+    default: return <Note size={16} weight="duotone" />;
   }
 }
 
@@ -77,7 +77,7 @@ export function NoteMentionPreview({
       {/* Header row */}
       <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
         <span className="flex items-center gap-2.5">
-          <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-md bg-gradient-to-br from-primary to-primary/80">
+          <span className="grid place-items-center shrink-0 w-7 h-7 rounded-md border border-primary/55 bg-primary/10 text-primary">
             <NoteTypeIcon nodeType={liveState.noteNodeType} />
           </span>
           <span className="block flex-1 min-w-0">

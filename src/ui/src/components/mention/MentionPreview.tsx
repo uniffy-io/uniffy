@@ -64,6 +64,7 @@ interface TypeTheme {
   icon: Icon;
   gradient: string;
   iconBg: string;
+  iconBoxAccent: string;
   accentText: string;
   border: string;
 }
@@ -75,6 +76,7 @@ function getTypeTheme(type: UrnType): TypeTheme {
     icon: config.icon,
     gradient: theme.gradient,
     iconBg: theme.iconBg,
+    iconBoxAccent: theme.iconBoxAccent,
     accentText: theme.accentText,
     border: theme.border,
   };
@@ -276,13 +278,13 @@ export function MentionPreview({
         {/* Generic fallback for unknown types or missing live state */}
         {preview && !isLoading && !error && !(effectiveLiveState && parsed && KNOWN_PREVIEW_TYPES.has(parsed.type)) && (
           <>
-            <div className={cn('absolute left-0 top-0 bottom-0 w-[3px]', theme.iconBg)} />
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
             <div className={cn('absolute inset-x-0 top-0 h-16 bg-gradient-to-b pointer-events-none opacity-60', theme.gradient)} />
 
             <div className="relative px-4 pt-3.5 pb-2 pl-5">
               <div className="flex items-start gap-3">
-                <div className={cn('flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md', theme.iconBg)}>
-                  <TypeIcon size={18} weight="duotone" className="text-white" />
+                <div className={cn('grid place-items-center shrink-0 w-10 h-10 rounded-lg', theme.iconBoxAccent)}>
+                  <TypeIcon size={18} weight="duotone" />
                 </div>
                 <div className="flex-1 min-w-0 pt-0.5">
                   <h4 className="font-semibold text-sm truncate">{preview.title}</h4>

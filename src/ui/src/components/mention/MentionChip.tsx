@@ -87,6 +87,7 @@ interface TypeStyle {
   icon: Icon;
   gradient: string;
   iconBg: string;
+  iconBoxAccent: string;
   border: string;
   shadow: string;
   badgeBg: string;
@@ -100,6 +101,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
     icon: config.icon,
     gradient: theme.gradient,
     iconBg: theme.iconBg,
+    iconBoxAccent: theme.iconBoxAccent,
     border: theme.border,
     shadow: theme.shadow,
     badgeBg: theme.badgeBg,
@@ -313,7 +315,7 @@ function MentionChipInner({
               src={avatarSrc}
               size={20}
               fallback={
-                <span className={cn('flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-semibold text-white', style.iconBg)}>
+                <span className={cn('grid place-items-center w-5 h-5 rounded-full text-[8px] font-semibold', style.iconBoxAccent)}>
                   {getInitials(label)}
                 </span>
               }
@@ -328,33 +330,28 @@ function MentionChipInner({
                 size={20}
                 fallback={
                   <span className={cn(
-                    'flex items-center justify-center w-5 h-5 rounded-full text-[10px]',
-                    agent?.avatarEmoji ? 'bg-muted' : cn('text-white', style.iconBg),
+                    'grid place-items-center w-5 h-5 rounded-full text-[10px]',
+                    agent?.avatarEmoji ? 'bg-muted' : style.iconBoxAccent,
                   )}>
-                    {agent?.avatarEmoji ?? <TypeIcon size={11} weight="duotone" className="text-white" />}
+                    {agent?.avatarEmoji ?? <TypeIcon size={11} weight="duotone" />}
                   </span>
                 }
               />
             </span>
             <span
-              className={cn(
-                'absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2.5 h-2.5 rounded-full ring-2 ring-background shrink-0',
-                style.iconBg,
-              )}
+              className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2.5 h-2.5 rounded-full ring-2 ring-background shrink-0 bg-primary text-primary-foreground"
               aria-label="Agent"
               title="Agent"
             >
-              <Robot size={7} weight="fill" className="text-white" />
+              <Robot size={7} weight="fill" />
             </span>
           </span>
         ) : (
           <span className={cn(
-            'flex items-center justify-center shrink-0 w-5 h-5 rounded',
-            style.iconBg,
-            'shadow-sm',
-            'transition-transform duration-200 group-hover/chip:scale-110',
+            'grid place-items-center shrink-0 w-5 h-5 rounded',
+            style.iconBoxAccent,
           )}>
-            <TypeIcon size={11} weight="duotone" className="text-white" />
+            <TypeIcon size={11} weight="duotone" />
           </span>
         )}
 
@@ -551,8 +548,8 @@ function MentionChipCompactInner({
               src={avatarSrc}
               size={14}
               fallback={
-                <span className={cn('flex items-center justify-center w-3.5 h-3.5 rounded-sm', style.iconBg)}>
-                  <TypeIcon size={8} weight="duotone" className="text-white" />
+                <span className={cn('grid place-items-center w-3.5 h-3.5 rounded-sm', style.iconBoxAccent)}>
+                  <TypeIcon size={8} weight="duotone" />
                 </span>
               }
             />
@@ -566,28 +563,25 @@ function MentionChipCompactInner({
                 size={14}
                 fallback={
                   <span className={cn(
-                    'flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px]',
-                    agent?.avatarEmoji ? 'bg-muted' : cn('text-white', style.iconBg),
+                    'grid place-items-center w-3.5 h-3.5 rounded-full text-[8px]',
+                    agent?.avatarEmoji ? 'bg-muted' : style.iconBoxAccent,
                   )}>
-                    {agent?.avatarEmoji ?? <TypeIcon size={8} weight="duotone" className="text-white" />}
+                    {agent?.avatarEmoji ?? <TypeIcon size={8} weight="duotone" />}
                   </span>
                 }
               />
             </span>
             <span
-              className={cn(
-                'absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2 h-2 rounded-full ring-1 ring-background shrink-0',
-                style.iconBg,
-              )}
+              className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2 h-2 rounded-full ring-1 ring-background shrink-0 bg-primary text-primary-foreground"
               aria-label="Agent"
               title="Agent"
             >
-              <Robot size={6} weight="fill" className="text-white" />
+              <Robot size={6} weight="fill" />
             </span>
           </span>
         ) : (
-          <span className={cn('flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-sm', style.iconBg)}>
-            <TypeIcon size={8} weight="duotone" className="text-white" />
+          <span className={cn('grid place-items-center shrink-0 w-3.5 h-3.5 rounded-sm', style.iconBoxAccent)}>
+            <TypeIcon size={8} weight="duotone" />
           </span>
         )}
 
@@ -655,20 +649,19 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
       title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
     >
       {isUser && parsed.id ? (
-        <span className={cn('flex items-center justify-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold text-white', style.iconBg)}>
+        <span className={cn('grid place-items-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold', style.iconBoxAccent)}>
           {getInitials(label)}
         </span>
       ) : isAgent && parsed.id ? (
-        <span className={cn('flex items-center justify-center shrink-0 w-5 h-5 rounded-full', style.iconBg)}>
-          <TypeIcon size={11} weight="duotone" className="text-white" />
+        <span className={cn('grid place-items-center shrink-0 w-5 h-5 rounded-full', style.iconBoxAccent)}>
+          <TypeIcon size={11} weight="duotone" />
         </span>
       ) : (
         <span className={cn(
-          'flex items-center justify-center shrink-0 w-5 h-5 rounded',
-          style.iconBg, 'shadow-sm',
-          'transition-transform duration-200 group-hover/chip:scale-110',
+          'grid place-items-center shrink-0 w-5 h-5 rounded',
+          style.iconBoxAccent,
         )}>
-          <TypeIcon size={11} weight="duotone" className="text-white" />
+          <TypeIcon size={11} weight="duotone" />
         </span>
       )}
 

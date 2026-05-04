@@ -262,10 +262,7 @@ export function SearchResultsList({
                   >
                     {/* Selection indicator */}
                     {isSelected && (
-                      <div className={cn(
-                        'absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full',
-                        theme.iconBg
-                      )} />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full bg-primary" />
                     )}
 
                     {/* Icon badge / thumbnail / avatar */}
@@ -275,13 +272,10 @@ export function SearchResultsList({
                         isSelected={isSelected}
                         fallback={
                           <div className={cn(
-                            'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
-                            'transition-all duration-200',
-                            isSelected ? theme.iconBg : 'bg-muted'
+                            'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
+                            isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
                           )}>
-                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
-                              isSelected ? 'text-white' : 'text-muted-foreground'
-                            )} />
+                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
                           </div>
                         }
                       />
@@ -290,25 +284,19 @@ export function SearchResultsList({
                         userId={parseUrn(result.urn).id || ''}
                         fallback={
                           <div className={cn(
-                            'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
-                            'transition-all duration-200',
-                            isSelected ? theme.iconBg : 'bg-muted'
+                            'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
+                            isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
                           )}>
-                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
-                              isSelected ? 'text-white' : 'text-muted-foreground'
-                            )} />
+                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
                           </div>
                         }
                       />
                     ) : (
                       <div className={cn(
-                        'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
-                        'transition-all duration-200',
-                        isSelected ? theme.iconBg : 'bg-muted'
+                        'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
+                        isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
                       )}>
-                        <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
-                          isSelected ? 'text-white' : 'text-muted-foreground'
-                        )} />
+                        <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
                       </div>
                     )}
 

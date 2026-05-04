@@ -79,8 +79,8 @@ export function CalendarMentionPreview({
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-1.5 pl-5">
         <span className="flex items-start gap-3">
-          <span className="flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-rose-500 to-rose-500/80">
-            <CalendarDots size={18} weight="duotone" className="text-white" />
+          <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary">
+            <CalendarDots size={18} weight="duotone" />
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>

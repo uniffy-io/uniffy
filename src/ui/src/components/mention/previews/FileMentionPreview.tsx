@@ -37,10 +37,10 @@ interface FileMentionPreviewProps {
 }
 
 function FileIconBadge({ mime }: { mime?: string }) {
-  if (mime?.startsWith('image/')) return <Image size={18} weight="duotone" className="text-white" />;
-  if (mime?.startsWith('video/')) return <VideoCamera size={18} weight="duotone" className="text-white" />;
-  if (mime?.startsWith('audio/')) return <MusicNote size={18} weight="duotone" className="text-white" />;
-  return <FileText size={18} weight="duotone" className="text-white" />;
+  if (mime?.startsWith('image/')) return <Image size={18} weight="duotone" />;
+  if (mime?.startsWith('video/')) return <VideoCamera size={18} weight="duotone" />;
+  if (mime?.startsWith('audio/')) return <MusicNote size={18} weight="duotone" />;
+  return <FileText size={18} weight="duotone" />;
 }
 
 function getMediaLabel(mime?: string): string | null {
@@ -107,7 +107,7 @@ export function FileMentionPreview({
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3 pb-2 pl-5">
         <span className="flex items-start gap-3">
-          <span className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg shadow-md bg-gradient-to-br from-blue-500 to-blue-500/80">
+          <span className="grid place-items-center shrink-0 w-8 h-8 rounded-lg border border-primary/55 bg-primary/10 text-primary">
             <FileIconBadge mime={mime} />
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">

@@ -32,10 +32,10 @@ interface ChatMentionPreviewProps {
 
 function ChannelIconBadge({ channelType }: { channelType?: string }) {
   switch (channelType) {
-    case 'PRIVATE': return <Lock size={18} weight="duotone" className="text-white" />;
-    case 'DIRECT': return <ChatCircle size={18} weight="duotone" className="text-white" />;
-    case 'GROUP_DM': return <UsersThree size={18} weight="duotone" className="text-white" />;
-    default: return <Hash size={18} weight="duotone" className="text-white" />;
+    case 'PRIVATE': return <Lock size={18} weight="duotone" />;
+    case 'DIRECT': return <ChatCircle size={18} weight="duotone" />;
+    case 'GROUP_DM': return <UsersThree size={18} weight="duotone" />;
+    default: return <Hash size={18} weight="duotone" />;
   }
 }
 
@@ -74,7 +74,7 @@ export function ChatMentionPreview({
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
         <span className="flex items-start gap-3">
-          <span className="flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-violet-500 to-violet-500/80">
+          <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary">
             <ChannelIconBadge channelType={liveState.channelType} />
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">

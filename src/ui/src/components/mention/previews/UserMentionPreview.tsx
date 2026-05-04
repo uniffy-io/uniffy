@@ -82,7 +82,7 @@ export function UserMentionPreview({
                 onError={() => setAvatarFailed(true)}
               />
             ) : (
-              <span className="flex items-center justify-center w-12 h-12 rounded-xl shadow-lg bg-emerald-500 text-white text-sm font-semibold ring-2 ring-background">
+              <span className="grid place-items-center w-12 h-12 rounded-xl border border-primary/55 bg-primary/10 text-primary text-sm font-semibold ring-2 ring-background">
                 {getInitials(title)}
               </span>
             )}

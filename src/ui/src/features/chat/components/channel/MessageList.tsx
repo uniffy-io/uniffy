@@ -175,6 +175,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const isLoadingMore = useAppSelector((state) =>
     effectiveChannelId ? selectIsChannelLoading(state, effectiveChannelId) : false,
   );
+  const hasLoaded = useAppSelector((state) =>
+    effectiveChannelId ? state.chatMessages.idsByChannel[effectiveChannelId] !== undefined : false,
+  );
   const loadingMoreRef = useRef(false);
 
   useEffect(() => {
@@ -325,6 +328,17 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const isPrivate = activeChannel.channelType === 'PRIVATE';
 
   if (rootMessages.length === 0) {
+    if (!hasLoaded || isLoadingMore) {
+      return (
+        <div
+          className="flex-1 flex items-center justify-center"
+          data-testid="chat-message-list"
+          data-loading="true"
+        >
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      );
+    }
     return (
       <div className="flex-1 flex flex-col" data-testid="chat-message-list" data-empty="true">
         <div className="flex-1">

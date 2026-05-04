@@ -152,9 +152,8 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
       {isUser ? (
         <span
           className={cn(
-            'flex items-center justify-center shrink-0 w-5 h-5 rounded-full',
-            'text-[8px] font-semibold text-white',
-            theme.iconBg,
+            'grid place-items-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold',
+            theme.iconBoxAccent,
           )}
         >
           {getInitials(label)}
@@ -162,11 +161,11 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
       ) : (
         <span
           className={cn(
-            'flex items-center justify-center shrink-0 w-5 h-5 rounded shadow-sm',
-            theme.iconBg,
+            'grid place-items-center shrink-0 w-5 h-5 rounded',
+            theme.iconBoxAccent,
           )}
         >
-          <TypeIcon size={11} weight="duotone" className="text-white" />
+          <TypeIcon size={11} weight="duotone" />
         </span>
       )}
       <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">

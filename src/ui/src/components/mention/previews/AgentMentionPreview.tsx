@@ -43,8 +43,6 @@ export function AgentMentionPreview({
     setTimeout(() => setCopied(false), 2000);
   }, [urn, onCopyLink]);
 
-  const themeColor = liveState.agentThemeColor || '#06b6d4';
-
   return (
     <>
       <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-cyan-500/10 via-cyan-500/5 to-transparent pointer-events-none" />
@@ -52,11 +50,8 @@ export function AgentMentionPreview({
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
         <span className="flex items-start gap-3">
-          <span
-            className="flex items-center justify-center shrink-0 w-10 h-10 rounded-lg shadow-md text-lg"
-            style={{ backgroundColor: `${themeColor}20` }}
-          >
-            {liveState.agentEmoji || <Robot size={18} weight="duotone" style={{ color: themeColor }} />}
+          <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary text-lg">
+            {liveState.agentEmoji || <Robot size={18} weight="duotone" />}
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
