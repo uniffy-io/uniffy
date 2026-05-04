@@ -1,52 +1,401 @@
 ---
+const providers = [
+  { name: "Anthropic", note: "Claude" },
+  { name: "OpenAI", note: "GPT" },
+  { name: "Google", note: "Gemini" },
+  { name: "Self-hosted", note: "Ollama / vLLM / OpenAI-compatible" },
+  { name: "Uniffy AI Cloud", note: "open-source · EU", featured: true },
+];
+
+const pillars = [
+  {
+    kicker: "Multi-provider",
+    title: "Any model, per agent",
+    body: "Each agent picks its own provider and specific model. Run Claude Opus for planning, GPT-5 for code review, Gemini Flash for triage, a self-hosted Llama for sensitive work. Side by side, in the same workspace, on the same data.",
+  },
+  {
+    kicker: "Bound by permissions",
+    title: "Agents inherit your access",
+    body: "Every tool call runs as the asking user through the same permission checker as the UI. An agent cannot read what you cannot read. Destructive actions (delete, move) wait for explicit approval before running.",
+  },
+  {
+    kicker: "Uniffy AI Cloud",
+    title: "Open LLMs, hosted by us",
+    body: "Don't trust the labs at all? We run the top open-source models in our EU data centres and expose them as a single endpoint. The catalogue includes Llama 3.3, Mistral, Qwen, and DeepSeek. No third-party lab touches your prompts. No retention. No training on your data.",
+  },
+];
+
+const customisation = [
+  {
+    kicker: "Soul prompt",
+    title: "Personality you write",
+    body: "A free-form instructions block on every agent. Sets the tone, the constraints, and the behaviour the agent carries into every conversation.",
+  },
+  {
+    kicker: "Skills",
+    title: "Composable instructions",
+    body: "Bundled, org-wide, or personal markdown skills you flip on per agent. Compose specialised behaviours without rewriting the prompt.",
+  },
+  {
+    kicker: "Memory",
+    title: "Facts that persist",
+    body: "Each agent remembers across sessions. Top entries auto-load into every prompt, weighted by importance and recency.",
+  },
+];
+
+type ToolCallStatus = "ok" | "denied" | "pending";
+type ToolCallLine = { name: string; status: ToolCallStatus; detail?: string };
+
+type DemoLine =
+  | { kind: "user"; sender: string; initials: string; avatarColor: string; time: string; text: string }
+  | { kind: "agent"; sender: string; time: string; text: string; toolCalls?: ToolCallLine[]; cite?: string }
+  | { kind: "approval"; sender: string; time: string; text: string; action: string };
+
+const demo: DemoLine[] = [
+  {
+    kind: "user",
+    sender: "Teddy Ivanova",
+    initials: "TI",
+    avatarColor: "bg-emerald-500",
+    time: "11:02",
+    text: "What's left in the agent runtime work? Pull the latest plan and the open tasks.",
+  },
+  {
+    kind: "agent",
+    sender: "EngineeringAgent",
+    time: "11:02",
+    toolCalls: [
+      { name: "notes.read_note", status: "ok", detail: "Roadmap Q3 2026" },
+      { name: "tasks.list", status: "ok", detail: "project: AGT-12 · 3 open" },
+      { name: "files.read", status: "denied", detail: "Budget 2026.xlsx · OWNER_ONLY" },
+    ],
+    text: "Egress retries are done and deploying. Two tasks remain. DLQ wiring and the metrics dashboard are still open. I tried to attach the budget breakdown but it is owner-only, so you'll need to share it with me first.",
+    cite: "Roadmap Q3 2026",
+  },
+  {
+    kind: "user",
+    sender: "Teddy Ivanova",
+    initials: "TI",
+    avatarColor: "bg-emerald-500",
+    time: "11:03",
+    text: "Mark the retries task as done.",
+  },
+  {
+    kind: "approval",
+    sender: "EngineeringAgent",
+    time: "11:03",
+    text: "About to mark Wire up egress worker retries as Done. This change is destructive. Approve to proceed?",
+    action: "tasks.update_status",
+  },
+];
 ---
 
-<section id="ai" class="border-b border-hairline bg-ink px-6 py-24 text-paper md:px-10 md:py-40">
+<section id="ai" class="section-separator-bottom bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
   <div class="mx-auto max-w-7xl">
-    <p class="mb-6 font-mono text-xs uppercase tracking-wider text-accent">
-      Permission-aware AI
-    </p>
-    <h2 class="max-w-5xl font-sans text-4xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-6xl lg:text-7xl">
-      The only AI <span class="text-paper/50">that asks who&rsquo;s asking.</span>
+    <h2 class="section-heading">
+      AI on your terms
     </h2>
-    <p class="mt-8 max-w-2xl text-lg leading-relaxed text-paper/70 md:text-xl">
-      Every tool call the agent makes is gated through the same permission system as the
-      asking user. It cannot read what they cannot read. It cannot leak across teams.
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      Choose the model that fits the task. Bring your own provider credentials,
+      connect a self-hosted endpoint, or route through <span class="text-accent">Uniffy AI Cloud</span> where we
+      operate the leading open-source models on our own infrastructure. Whatever
+      you pick, every tool call the agent makes is checked against the same
+      permission system that protects the rest of your workspace. An agent only
+      ever sees what the user asking it is allowed to see.
     </p>
 
-    <div class="mt-16 grid gap-px overflow-hidden rounded-2xl border border-paper/15 bg-paper/15 md:grid-cols-3">
-      <div class="bg-ink p-8 md:p-10">
-        <p class="font-mono text-xs uppercase tracking-wider text-accent">Per-user</p>
-        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Honors your access mode</h3>
-        <p class="mt-3 leading-relaxed text-paper/70">
-          Every read goes through the same checker as the UI &mdash;
-          <span class="font-mono text-paper">OWNER_ONLY</span>,
-          <span class="font-mono text-paper">EXPLICIT_MEMBERS</span>,
-          <span class="font-mono text-paper">OPEN_TO_ORG</span>.
-        </p>
-      </div>
-      <div class="bg-ink p-8 md:p-10">
-        <p class="font-mono text-xs uppercase tracking-wider text-accent">Sandboxed</p>
-        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Egress workers, not cloud LLMs</h3>
-        <p class="mt-3 leading-relaxed text-paper/70">
-          Outbound calls run in isolated workers. No silent shipping of your workspace
-          to a third-party model behind your back.
-        </p>
-      </div>
-      <div class="bg-ink p-8 md:p-10">
-        <p class="font-mono text-xs uppercase tracking-wider text-accent">Cited</p>
-        <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight">Answers cite your work</h3>
-        <p class="mt-3 leading-relaxed text-paper/70">
-          Every response links back to the notes, files, and messages it pulled from.
-          Auditable, not magical.
-        </p>
+    <div class="mt-10 flex flex-col gap-3 font-mono text-xs md:flex-row md:flex-wrap md:items-center md:gap-2">
+      <span class="text-night-faint">Supported providers:</span>
+      <div class="flex flex-wrap gap-2 md:contents">
+      {providers.map((p) => (
+        <span class={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 ${p.featured ? "border-accent/40 bg-accent/10 text-accent" : "border-night-hairline bg-night-soft text-night-soft-text"}`}>
+          <span>{p.name}</span>
+          <span class={p.featured ? "text-accent/60" : "text-night-faint"}>&middot; {p.note}</span>
+        </span>
+      ))}
       </div>
     </div>
 
-    <div class="mt-12 rounded-2xl border border-paper/15 bg-paper/[0.04] p-6 font-mono text-sm leading-relaxed text-paper/80 md:p-8">
-      <span class="text-paper/40">// Notion Custom Agents bypass asker permissions.</span><br />
-      <span class="text-paper/40">// ClickUp Brain, Monday agents, Airtable Omni — same.</span><br />
-      <span class="text-paper">Uniffy is the only workspace where the agent is bound by your role.</span>
+    <div class="mt-12 grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-stretch md:mt-16">
+    <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-night-hairline bg-night-soft shadow-2xl shadow-black/40">
+      <div class="flex items-center justify-between border-b border-night-hairline bg-night-band px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M200 48h-64V16a8 8 0 0 0-16 0v32H56a32 32 0 0 0-32 32v112a32 32 0 0 0 32 32h144a32 32 0 0 0 32-32V80a32 32 0 0 0-32-32Zm-96 88a16 16 0 1 1 16-16 16 16 0 0 1-16 16Zm84 32H68a4 4 0 0 1 0-8h120a4 4 0 0 1 0 8Zm-4-32a16 16 0 1 1 16-16 16 16 0 0 1-16 16Z"/></svg>
+          </span>
+          <div class="leading-tight">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-semibold text-night-text">EngineeringAgent</p>
+              <span class="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                Agent
+              </span>
+            </div>
+            <p class="font-mono text-[11px] text-night-faint">claude-opus-4.7 &middot; Anthropic &middot; 9 tools enabled</p>
+          </div>
+        </div>
+        <div class="hidden items-center gap-3 font-mono text-[11px] text-night-faint sm:flex">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            running
+          </span>
+          <span>access: viewer</span>
+        </div>
+      </div>
+
+      <div class="divide-y divide-night-hairline/60">
+        {demo.map((line) => {
+          if (line.kind === "user") {
+            return (
+              <div class="flex gap-3 px-5 py-4 md:px-6">
+                <span class={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-white shadow-sm ${line.avatarColor}`}>
+                  {line.initials}
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-semibold text-night-text">{line.sender}</span>
+                    <span class="font-mono text-[11px] text-night-faint">{line.time}</span>
+                  </div>
+                  <p class="mt-1 text-sm leading-relaxed text-night-soft-text">{line.text}</p>
+                </div>
+              </div>
+            );
+          }
+          if (line.kind === "agent") {
+            return (
+              <div class="flex gap-3 px-5 py-4 md:px-6">
+                <span class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+                  <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M200 48h-64V16a8 8 0 0 0-16 0v32H56a32 32 0 0 0-32 32v112a32 32 0 0 0 32 32h144a32 32 0 0 0 32-32V80a32 32 0 0 0-32-32Zm-96 88a16 16 0 1 1 16-16 16 16 0 0 1-16 16Zm84 32H68a4 4 0 0 1 0-8h120a4 4 0 0 1 0 8Zm-4-32a16 16 0 1 1 16-16 16 16 0 0 1-16 16Z"/></svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-night-text">{line.sender}</span>
+                    <span class="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                      via Agent
+                    </span>
+                    <span class="font-mono text-[11px] text-night-faint">{line.time}</span>
+                  </div>
+                  {line.toolCalls && line.toolCalls.length > 0 && (
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      {line.toolCalls.map((tc) => (
+                        <span class={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[11px] ${
+                          tc.status === "ok"
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                            : tc.status === "denied"
+                              ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                              : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                        }`}>
+                          {tc.status === "ok" && (
+                            <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66 77.66 105.66 201.66a8 8 0 0 1-11.32 0l-56-56a8 8 0 0 1 11.32-11.32L100 184.69 218.34 66.34a8 8 0 0 1 11.32 11.32Z"/></svg>
+                          )}
+                          {tc.status === "denied" && (
+                            <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M208.49 191.51a12 12 0 0 1-17 17L128 145l-63.51 63.49a12 12 0 0 1-17-17L111 128 47.51 64.49a12 12 0 0 1 17-17L128 111l63.51-63.51a12 12 0 0 1 17 17L145 128Z"/></svg>
+                          )}
+                          <span>{tc.name}</span>
+                          {tc.detail && (
+                            <>
+                              <span class="opacity-50">&middot;</span>
+                              <span class="opacity-80">{tc.detail}</span>
+                            </>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p class="mt-2 text-sm leading-relaxed text-night-soft-text">{line.text}</p>
+                  {line.cite && (
+                    <div class="mt-2 inline-flex items-center gap-1.5 rounded-md border border-night-hairline bg-night px-2 py-1 font-mono text-[11px] text-night-soft-text">
+                      <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor" class="text-violet-400"><path d="M227.32 73.37 182.63 28.69a16 16 0 0 0-22.63 0L36.69 152a15.86 15.86 0 0 0-4.69 11.31V208a16 16 0 0 0 16 16h44.69a15.86 15.86 0 0 0 11.31-4.69L227.32 96a16 16 0 0 0 0-22.63ZM92.69 208H48v-44.69l88-88L180.69 120ZM192 108.69 147.32 64l24-24L216 84.69Z"/></svg>
+                      <span>cited: {line.cite}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div class="flex gap-3 px-5 py-4 md:px-6">
+              <span class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+                <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M200 48h-64V16a8 8 0 0 0-16 0v32H56a32 32 0 0 0-32 32v112a32 32 0 0 0 32 32h144a32 32 0 0 0 32-32V80a32 32 0 0 0-32-32Zm-96 88a16 16 0 1 1 16-16 16 16 0 0 1-16 16Zm84 32H68a4 4 0 0 1 0-8h120a4 4 0 0 1 0 8Zm-4-32a16 16 0 1 1 16-16 16 16 0 0 1-16 16Z"/></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-night-text">{line.sender}</span>
+                  <span class="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                    approval needed
+                  </span>
+                  <span class="font-mono text-[11px] text-night-faint">{line.time}</span>
+                </div>
+                <p class="mt-2 text-sm leading-relaxed text-night-soft-text">{line.text}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-400">
+                    <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M240.26 186.1 152.81 34.23a28.74 28.74 0 0 0-49.62 0L15.74 186.1a27.45 27.45 0 0 0 0 27.71A28.31 28.31 0 0 0 40.55 228h174.9a28.31 28.31 0 0 0 24.79-14.19a27.45 27.45 0 0 0 .02-27.71Z"/></svg>
+                    {line.action}
+                  </span>
+                  <button class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 font-mono text-[11px] font-semibold text-ink hover:opacity-90">
+                    Approve
+                  </button>
+                  <button class="inline-flex items-center gap-1.5 rounded-md border border-night-hairline-strong bg-night px-3 py-1 font-mono text-[11px] text-night-soft-text hover:border-night-text">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-night-hairline bg-night-band px-5 py-3 font-mono text-[11px] text-night-faint">
+        <span>tool calls gated by your role &middot; destructive actions require approval</span>
+        <span class="hidden sm:inline">9 tools enabled &middot; 4 skills active &middot; 12 memories</span>
+      </div>
+    </div>
+
+    <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-night-hairline bg-night-soft shadow-2xl shadow-black/40">
+      <div class="flex items-center justify-between border-b border-night-hairline bg-night-band px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-night text-night-soft-text">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M128 80a48 48 0 1 0 48 48a48.05 48.05 0 0 0-48-48Zm0 80a32 32 0 1 1 32-32a32 32 0 0 1-32 32Zm88-29.84q.06-2.16 0-4.32l14.92-18.64a8 8 0 0 0 1.48-7.06a107.6 107.6 0 0 0-10.88-26.25a8 8 0 0 0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186 40.54a8 8 0 0 0-3.94-6a107.29 107.29 0 0 0-26.25-10.86a8 8 0 0 0-7.06 1.48l-18.64 14.92q-2.16-.06-4.32 0L107.16 25.2a8 8 0 0 0-7.06-1.48A107.6 107.6 0 0 0 73.85 34.6a8 8 0 0 0-3.93 6l-2.64 23.72q-1.56 1.49-3 3L40.54 70a8 8 0 0 0-6 3.94a107.71 107.71 0 0 0-10.87 26.25a8 8 0 0 0 1.49 7.06l14.92 18.64q-.06 2.16 0 4.32L25.2 148.84a8 8 0 0 0-1.48 7.06a107.6 107.6 0 0 0 10.88 26.25a8 8 0 0 0 6 3.93l23.72 2.64q1.49 1.56 3 3L70 215.46a8 8 0 0 0 3.94 6a107.71 107.71 0 0 0 26.25 10.87a8 8 0 0 0 7.06-1.49l18.64-14.92q2.16.06 4.32 0l18.64 14.92a8 8 0 0 0 7.06 1.48a107.21 107.21 0 0 0 26.25-10.88a8 8 0 0 0 3.93-6l2.64-23.72q1.56-1.48 3-3l23.72-2.64a8 8 0 0 0 6-3.94a107.71 107.71 0 0 0 10.87-26.25a8 8 0 0 0-1.49-7.06Z"/></svg>
+          </span>
+          <div class="leading-tight">
+            <p class="text-sm font-semibold text-night-text">Configure agent</p>
+            <p class="font-mono text-[11px] text-night-faint">EngineeringAgent &middot; saved 2m ago</p>
+          </div>
+        </div>
+        <span class="hidden font-mono text-[11px] text-accent sm:inline">Edit</span>
+      </div>
+
+      <div class="flex-1 divide-y divide-night-hairline/60">
+        <div class="px-5 py-4 md:px-6">
+          <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Model</p>
+          <div class="mt-2 flex items-center justify-between rounded-md border border-night-hairline bg-night px-3 py-2">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-cyan-500/15 font-mono text-[10px] font-bold text-cyan-400">A</span>
+              <span class="font-mono text-xs text-night-text">claude-opus-4.7</span>
+            </div>
+            <div class="flex items-center gap-2 font-mono text-[11px] text-night-faint">
+              <span>Anthropic</span>
+              <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="m213.66 101.66-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32Z"/></svg>
+            </div>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-1.5 font-mono text-[10px] text-night-faint">
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">fallback: claude-sonnet-4.6</span>
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">200k ctx</span>
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">tools, vision</span>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 md:px-6">
+          <div class="flex items-center justify-between">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Tools <span class="text-night-soft-text">(9 enabled)</span></p>
+            <span class="font-mono text-[10px] text-accent">browse all</span>
+          </div>
+          <ul class="mt-2 space-y-1.5">
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-soft-text">notes.read_note</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                enabled
+              </span>
+            </li>
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-soft-text">tasks.list</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                enabled
+              </span>
+            </li>
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-soft-text">tasks.update_status</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-amber-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                approval required
+              </span>
+            </li>
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-soft-text">notes.delete</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-amber-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                approval required
+              </span>
+            </li>
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-faint">files.read</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-night-faint">
+                <span class="h-1.5 w-1.5 rounded-full bg-night-faint"></span>
+                off
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="px-5 py-4 md:px-6">
+          <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Permissions</p>
+          <div class="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+            <div class="rounded-md border border-night-hairline bg-night px-3 py-2">
+              <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Access mode</p>
+              <p class="mt-1 font-mono text-night-text">OPEN_TO_ORG</p>
+              <p class="mt-1 font-mono text-[10px] text-night-faint">baseline: viewer</p>
+            </div>
+            <div class="rounded-md border border-night-hairline bg-night px-3 py-2">
+              <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Explicit grants</p>
+              <p class="mt-1 font-mono text-night-text">2 users &middot; 1 group</p>
+              <p class="mt-1 font-mono text-[10px] text-night-faint">Teddy (admin), Georgi (editor), @engineering</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 md:px-6">
+          <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Skills <span class="text-night-soft-text">(4 active)</span></p>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <span class="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-400">engineering-on-call</span>
+            <span class="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-400">code-review</span>
+            <span class="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-400">incident-triage</span>
+            <span class="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-400">runbook-author</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-night-hairline bg-night-band px-5 py-3 font-mono text-[11px] text-night-faint">
+        <span>config validated &middot; ready to run</span>
+        <span class="hidden sm:inline">12 memories pinned</span>
+      </div>
+    </div>
+    </div>
+
+    <div class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-night-hairline bg-night-hairline sm:grid-cols-2 lg:grid-cols-3 md:mt-16">
+      {pillars.map((p) => (
+        <div class="bg-night-soft p-6 sm:p-8 md:p-10">
+          <p class="font-mono text-xs uppercase tracking-wider text-accent">{p.kicker}</p>
+          <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight text-night-text">{p.title}</h3>
+          <p class="mt-3 leading-relaxed text-night-soft-text">{p.body}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="mt-12 md:mt-16">
+      <h3 class="text-center font-sans text-2xl font-semibold tracking-tight text-night-text md:text-left md:text-3xl">
+        Each agent is yours to shape.
+      </h3>
+      <p class="section-intro mt-3 max-w-3xl leading-relaxed text-night-soft-text">
+        Personality, skills, memory, and the exact slice of your workspace it can touch -
+        all configured per agent, never global, never one-size-fits-all.
+      </p>
+
+      <div class="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        {customisation.map((c) => (
+          <div class="rounded-2xl border border-night-hairline bg-night-soft p-6">
+            <p class="font-mono text-xs uppercase tracking-wider text-accent">{c.kicker}</p>
+            <h4 class="mt-3 font-sans text-lg font-semibold tracking-tight text-night-text">{c.title}</h4>
+            <p class="mt-2 text-sm leading-relaxed text-night-soft-text">{c.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-10 rounded-2xl border border-night-hairline bg-night-soft p-5 font-mono text-[13px] leading-relaxed sm:p-6 sm:text-sm md:mt-12 md:p-8">
+      <span class="text-night-faint">// Most workspace agents bypass asker permissions.</span><br />
+      <span class="text-night-faint">// They run with the workspace owner's reach, not yours.</span><br />
+      <span class="text-night-text">Uniffy is the only workspace where the agent is bound by your role, <em class="text-accent">and</em> your choice of model, <em class="text-accent">and</em> only the content you've explicitly allowed it to touch.</span>
     </div>
   </div>
 </section>

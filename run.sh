@@ -63,6 +63,12 @@ help() {
   echo -e "  ${CYAN}licenses${NC}        Generate third-party license files"
   echo -e "  ${CYAN}docker-staging${NC}  Build and push Docker images for staging"
   echo -e "  ${CYAN}drop-staging-db${NC} Drop and recreate the staging db"
+  echo ""
+  echo -e "  ${CYAN}Landing${NC}"
+  echo -e "  ${CYAN}landing-dev${NC}     Run the marketing landing page locally (Astro dev)"
+  echo -e "  ${CYAN}landing-build${NC}   Build the marketing landing page (static + Pages Functions)"
+  echo -e "  ${CYAN}landing-preview${NC} Preview production build via Wrangler Pages (BG geo-block active)"
+  echo -e "  ${CYAN}landing-deploy${NC}  Build and deploy to Cloudflare Pages (project: uniffy-landing)"
 }
 
 install() {
@@ -304,6 +310,33 @@ cli_test() {
   (cd src/unictl && go test ./...)
 }
 
+landing_dev() {
+  echo "Starting landing page dev server..."
+  pnpm --filter uniffy-landing dev
+}
+
+landing_build() {
+  echo "Building landing page..."
+  pnpm --filter uniffy-landing build
+}
+
+landing_preview() {
+  landing_build
+  echo "Previewing via Wrangler Pages (geo-block active when CF_PAGES env present)..."
+  (cd src/landing && pnpm exec wrangler pages dev dist)
+}
+
+landing_deploy() {
+  if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && [ ! -f "$HOME/.wrangler/config/default.toml" ]; then
+    echo "Warning: CLOUDFLARE_API_TOKEN not set and no Wrangler login detected."
+    echo "Run 'pnpm --filter uniffy-landing exec wrangler login' first, or export CLOUDFLARE_API_TOKEN."
+  fi
+  landing_build
+  echo "Deploying to Cloudflare Pages (project: uniffy-landing)..."
+  (cd src/landing && pnpm exec wrangler pages deploy dist --project-name uniffy-landing)
+  echo "Deploy complete. Geo-block active: only requests with cf-ipcountry=BG are served."
+}
+
 # Main dispatch
 case "${1:-help}" in
 install) install ;;
@@ -336,6 +369,10 @@ cli-lint) cli_lint ;;
 cli-test) cli_test ;;
 docker-staging) docker_build_staging ;;
 drop-staging-db) db_drop_staging ;;
+landing-dev) landing_dev ;;
+landing-build) landing_build ;;
+landing-preview) landing_preview ;;
+landing-deploy) landing_deploy ;;
 mcp-up) mcp_up ;;
 mcp-down) mcp_down ;;
 mcp-logs) mcp_logs ;;

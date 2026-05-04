@@ -1,97 +1,158 @@
 ---
-const competitors = ["Notion", "ClickUp", "Slack", "Linear", "Uniffy"];
-
-const rows = [
-  {
-    feature: "Native chat + docs + projects + AI + calendar in one",
-    values: ["partial", "partial", "no", "no", "yes"],
-  },
-  {
-    feature: "AI honors per-user permissions on every tool call",
-    values: ["partial", "no", "no", "no", "yes"],
-  },
-  {
-    feature: "Universal cross-domain @-mentions (URN)",
-    values: ["no", "no", "no", "no", "yes"],
-  },
-  {
-    feature: "Self-hostable",
-    values: ["no", "no", "no", "no", "yes"],
-  },
-  {
-    feature: "Source-available",
-    values: ["no", "no", "no", "no", "yes"],
-  },
-  {
-    feature: "EU data residency on any paid plan",
-    values: ["enterprise", "enterprise", "business+", "no", "yes"],
-  },
-  {
-    feature: "No per-feature AI surcharge",
-    values: ["no", "no", "no", "no", "yes"],
-  },
+const competitors = [
+  "Notion",
+  "ClickUp",
+  "Monday.com",
+  "Airtable",
+  "Coda",
+  "Linear / Jira",
+  "Slack / Teams",
+  "Anytype / AppFlowy",
+  "Fibery",
+  "Uniffy",
 ];
 
-const symbol = (v: string) => {
-  if (v === "yes") return { glyph: "✓", className: "font-bold text-night-text" };
-  if (v === "no") return { glyph: "—", className: "text-night-faint" };
-  return { glyph: v, className: "font-mono text-xs text-night-muted" };
-};
+type Row = { feature: string; values: ("y" | "n")[] };
+
+const featureRows: Row[] = [
+  { feature: "Native chat",                          values: ["n", "y", "n", "n", "n", "y", "y", "y", "n", "y"] },
+  { feature: "Docs / wiki",                          values: ["y", "y", "n", "n", "y", "n", "n", "y", "y", "y"] },
+  { feature: "Project / task management",            values: ["y", "y", "y", "y", "y", "y", "n", "n", "y", "y"] },
+  { feature: "Native AI agent",                      values: ["y", "y", "y", "y", "n", "y", "n", "n", "n", "y"] },
+  { feature: "Native calendar in workspace",         values: ["n", "y", "y", "y", "n", "n", "n", "n", "n", "y"] },
+  { feature: "File attachments",                     values: ["y", "y", "y", "y", "y", "y", "y", "y", "y", "y"] },
+  { feature: "File manager & viewer",                values: ["n", "n", "n", "n", "n", "n", "n", "n", "n", "y"] },
+  { feature: "Bi-directional references",            values: ["y", "n", "n", "n", "n", "n", "n", "y", "y", "y"] },
+  { feature: "Universal cross-domain @-mentions",    values: ["n", "n", "n", "n", "n", "n", "n", "n", "y", "y"] },
+  { feature: "Free tier",                            values: ["y", "y", "n", "y", "y", "y", "y", "y", "y", "y"] },
+  { feature: "No per-feature AI surcharge",          values: ["n", "n", "n", "n", "n", "n", "n", "y", "y", "y"] },
+  { feature: "Native mobile apps (iOS / Android)",   values: ["y", "y", "y", "y", "y", "y", "y", "y", "n", "y"] },
+  { feature: "Public sharing / publishable sites",   values: ["y", "n", "n", "n", "y", "n", "n", "y", "n", "y"] },
+  { feature: "Formulas + no-code automations",       values: ["y", "y", "y", "y", "y", "n", "n", "n", "y", "y"] },
+  { feature: "Native integrations marketplace",      values: ["y", "y", "y", "y", "y", "y", "y", "n", "y", "y"] },
+  { feature: "Forms",                                values: ["n", "y", "y", "y", "y", "n", "n", "n", "y", "y"] },
+  { feature: "Time tracking + Gantt / timeline",     values: ["n", "y", "y", "n", "n", "n", "n", "n", "y", "y"] },
+  { feature: "Custom agent gallery / marketplace",   values: ["y", "y", "y", "n", "n", "y", "y", "n", "n", "y"] },
+  { feature: "Public agent API for 3rd-party agents",values: ["n", "n", "y", "n", "n", "y", "y", "n", "n", "y"] },
+  { feature: "Voice / video huddles in chat",        values: ["n", "y", "n", "n", "n", "n", "y", "n", "n", "y"] },
+];
+
+const privacyRows: Row[] = [
+  { feature: "EU-hosted by default",                            values: ["n", "n", "n", "n", "n", "n", "n", "y", "n", "y"] },
+  { feature: "No US Cloud Act exposure",                        values: ["n", "n", "n", "n", "n", "n", "n", "y", "n", "y"] },
+  { feature: "Source-available",                                values: ["n", "n", "n", "n", "n", "n", "n", "y", "n", "y"] },
+  { feature: "Self-hostable",                                   values: ["n", "n", "n", "n", "n", "n", "n", "y", "n", "y"] },
+  { feature: "AI bound by per-user permissions on every tool call", values: ["n", "n", "n", "n", "n", "n", "n", "n", "n", "y"] },
+  { feature: "Sandboxed agent egress workers",                  values: ["n", "n", "n", "n", "n", "n", "n", "n", "n", "y"] },
+  { feature: "Open-source LLMs hosted as a managed AI cloud",   values: ["n", "n", "n", "n", "n", "n", "n", "n", "n", "y"] },
+  { feature: "No data used to train AI models",                 values: ["n", "n", "n", "n", "n", "n", "n", "y", "n", "y"] },
+];
 ---
 
-<section class="border-b border-night-hairline bg-night px-6 py-24 md:px-10 md:py-32">
+<section id="compare" class="section-separator-bottom bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
   <div class="mx-auto max-w-7xl">
-    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
+    <h2 class="section-heading">
       The honest comparison
-    </p>
-    <h2 class="max-w-5xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
-      What no one else ships. <span class="text-night-muted">All in one place.</span>
     </h2>
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      What no one else ships, all in one place. We don&rsquo;t claim parity, we list
+      what each tool ships today and let you draw your own conclusions.
+    </p>
 
-    <div class="mt-16 overflow-x-auto rounded-2xl border border-night-hairline">
-      <table class="w-full min-w-[800px] border-collapse">
+    <div class="mt-16">
+      <h3 class="text-center font-sans text-2xl font-semibold tracking-tight text-night-text md:text-left md:text-3xl">
+        Workspace features
+      </h3>
+      <p class="section-intro mt-3 max-w-3xl leading-relaxed text-night-soft-text">
+        Chat, docs, projects, AI, calendar, files, mentions. Every surface a
+        knowledge worker actually opens in a day.
+      </p>
+    </div>
+
+    <div class="mt-8 -mx-5 overflow-x-auto rounded-2xl border-y border-night-hairline sm:mx-0 sm:rounded-2xl sm:border">
+      <table class="w-full min-w-[900px] border-collapse">
         <thead>
           <tr class="border-b border-night-hairline bg-night-soft">
-            <th class="px-6 py-5 text-left font-mono text-xs font-medium uppercase tracking-wider text-night-faint">
+            <th class="sticky left-0 z-10 bg-night-soft px-5 py-4 text-left font-mono text-[11px] font-medium uppercase tracking-wider text-night-faint border-r border-night-hairline">
               Feature
             </th>
-            {
-              competitors.map((name) => (
-                <th
-                  class={`px-4 py-5 text-center font-mono text-xs font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}
-                >
-                  {name}
-                </th>
-              ))
-            }
+            {competitors.map((name) => (
+              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}>
+                {name}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {
-            rows.map((row) => (
-              <tr class="border-b border-night-hairline last:border-0">
-                <td class="px-6 py-5 text-sm leading-relaxed text-night-soft-text">
-                  {row.feature}
-                </td>
-                {row.values.map((v, idx) => {
-                  const { glyph, className } = symbol(v);
-                  const isUniffy = idx === competitors.length - 1;
-                  return (
-                    <td
-                      class={`px-4 py-5 text-center text-base ${className} ${isUniffy ? "bg-accent/10" : ""}`}
-                    >
-                      {glyph}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))
-          }
+          {featureRows.map((row) => (
+            <tr class="border-b border-night-hairline last:border-0">
+              <td class="sticky left-0 z-10 bg-night px-5 py-3.5 text-sm font-semibold leading-relaxed text-night-text border-r border-night-hairline">
+                {row.feature}
+              </td>
+              {row.values.map((v, idx) => {
+                const isUniffy = idx === competitors.length - 1;
+                const tone = v === "y" ? "font-bold text-accent" : "text-night-faint";
+                const glyph = v === "y" ? "\u2713" : "\u2014";
+                return (
+                  <td class={`px-3 py-3.5 text-center text-base ${tone} ${isUniffy ? "bg-accent/10" : ""}`}>
+                    {glyph}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
+
+    <div class="mt-20">
+      <h3 class="text-center font-sans text-2xl font-semibold tracking-tight text-night-text md:text-left md:text-3xl">
+        Privacy &amp; sovereignty
+      </h3>
+      <p class="section-intro mt-3 max-w-3xl leading-relaxed text-night-soft-text">
+        Where the data lives, who can read it, and what an AI agent is allowed
+        to touch on your behalf. The things you only get from Uniffy.
+      </p>
+    </div>
+
+    <div class="mt-8 -mx-5 overflow-x-auto rounded-2xl border-y border-night-hairline sm:mx-0 sm:rounded-2xl sm:border">
+      <table class="w-full min-w-[900px] border-collapse">
+        <thead>
+          <tr class="border-b border-night-hairline bg-night-soft">
+            <th class="sticky left-0 z-10 bg-night-soft px-5 py-4 text-left font-mono text-[11px] font-medium uppercase tracking-wider text-night-faint border-r border-night-hairline">
+              Guarantee
+            </th>
+            {competitors.map((name) => (
+              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}>
+                {name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {privacyRows.map((row) => (
+            <tr class="border-b border-night-hairline last:border-0">
+              <td class="sticky left-0 z-10 bg-night px-5 py-3.5 text-sm font-semibold leading-relaxed text-night-text border-r border-night-hairline">
+                {row.feature}
+              </td>
+              {row.values.map((v, idx) => {
+                const isUniffy = idx === competitors.length - 1;
+                const tone = v === "y" ? "font-bold text-accent" : "text-night-faint";
+                const glyph = v === "y" ? "\u2713" : "\u2014";
+                return (
+                  <td class={`px-3 py-3.5 text-center text-base ${tone} ${isUniffy ? "bg-accent/10" : ""}`}>
+                    {glyph}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
     <p class="mt-6 font-mono text-xs text-night-faint">
-      Sources: vendor docs, pricing pages, changelogs (2025–2026). See full comparison in our docs.
+      Sources: vendor docs, pricing pages, changelogs (2025-2026). See full comparison in our docs.
     </p>
   </div>
 </section>

@@ -1,15 +1,32 @@
 ---
-const tiers = [
+type Tier = {
+  name: string;
+  price: string;
+  cadence: string;
+  blurb: string;
+  blurbHighlight?: string;
+  ai: string;
+  features: string[];
+  cta: { label: string; href: string };
+  featured: boolean;
+};
+
+const tiers: Tier[] = [
   {
     name: "Community",
     price: "Free",
     cadence: "forever",
-    blurb: "Up to 10 users. Self-host or cloud. The full product, no feature gating.",
+    blurb: "Up to 10 users. Self-host or cloud. ",
+    blurbHighlight: "The full product, no feature gating.",
+    ai: "bring your own provider key",
     features: [
-      "Notes, Files, Chat, Calendar, Projects",
-      "Basic Spaces (no AI)",
-      "Search across everything",
-      "Unlimited history (self-hosted)",
+      "Self-host or cloud",
+      "Uniffy AI Cloud · 1M tokens / month free",
+      "Notes, Chat, Files, Calendar, Projects, Tasks, Diagrams, Rooms",
+      "Universal @ mentions across everything",
+      "Configurable agents with permission-bound tool calling",
+      "Search across the workspace",
+      "Unlimited history when self-hosted",
       "Community support",
     ],
     cta: { label: "Start free", href: "https://cloud.uniffy.io/signup" },
@@ -19,12 +36,15 @@ const tiers = [
     name: "Team",
     price: "€7",
     cadence: "user / month",
-    blurb: "AI-powered Spaces, guests, unlimited cloud history. For teams up to 50.",
+    blurb: "Uniffy Gateway, Guests, unlimited cloud history. For teams up to 50.",
+    ai: "Uniffy AI Cloud included",
     features: [
+      "Self-host or cloud",
+      "Uniffy AI Cloud · 10M tokens / user / month",
       "Everything in Community",
-      "AI-powered Spaces",
-      "Guest access",
-      "Unlimited cloud history & audit logs",
+      "Multi-provider routing per agent",
+      "Guests with scoped access",
+      "Unlimited cloud history + audit log",
       "Email support",
     ],
     cta: { label: "Start trial", href: "https://cloud.uniffy.io/signup" },
@@ -34,11 +54,15 @@ const tiers = [
     name: "Business",
     price: "€15",
     cadence: "user / month",
-    blurb: "SSO, custom branding, 99.2% SLA. For organizations up to 500.",
+    blurb: "SSO, custom branding, 99.2% SLA. For organisations up to 500.",
+    ai: "Uniffy AI Cloud included",
     features: [
+      "Self-host or cloud",
+      "Uniffy AI Cloud · 30M tokens / user / month",
       "Everything in Team",
       "SSO (SAML / OIDC)",
       "Custom branding",
+      "Domain admins per surface",
       "99.2% uptime SLA",
       "Priority support",
     ],
@@ -50,12 +74,16 @@ const tiers = [
     price: "Custom",
     cadence: "annual",
     blurb: "SCIM, data residency, legal hold, 99.98% SLA. Unlimited everything.",
+    ai: "self-hosted models + dedicated routing",
     features: [
+      "Self-host or cloud",
+      "Uniffy AI Cloud · pooled, custom token limits",
       "Everything in Business",
       "SCIM provisioning",
       "Data residency controls",
-      "Legal hold",
+      "Legal hold + retention policies",
       "Dedicated support + 99.98% SLA",
+      "Custom contracts",
     ],
     cta: { label: "Talk to us", href: "/contact" },
     featured: false,
@@ -63,59 +91,63 @@ const tiers = [
 ];
 ---
 
-<section id="pricing" class="border-b border-night-hairline bg-night-soft px-6 py-24 md:px-10 md:py-32">
+<section id="pricing" class="bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
   <div class="mx-auto max-w-7xl">
-    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
-      Pricing
-    </p>
-    <h2 class="max-w-4xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
-      Honest pricing. <span class="text-night-muted">No AI surcharge. Ever.</span>
+    <h2 class="section-heading">
+      Honest pricing
     </h2>
-    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text">
-      Free for teams up to 10. Self-host always. AI is included in every paid plan,
-      not bolted on as a per-user add-on.
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      No AI surcharge, ever. Free for teams up to 10 users, forever. Self-host always.
+      Native AI with controlled access is included in every plan. Use your own keys,
+      Uniffy AI Cloud, or a self-hosted model on request.
     </p>
 
-    <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-      {
-        tiers.map((t) => (
-          <article
-            class={`flex flex-col rounded-2xl border p-8 ${t.featured ? "border-accent bg-night-band text-night-text" : "border-night-hairline bg-night text-night-text"}`}
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 md:mt-16">
+      {tiers.map((t) => (
+        <article
+          class={`flex flex-col rounded-2xl border p-6 sm:p-7 lg:p-8 ${t.featured ? "border-accent bg-night-band text-night-text" : "border-night-hairline bg-night-soft text-night-text"}`}
+        >
+          <h3 class="font-sans text-xl font-semibold tracking-tight">{t.name}</h3>
+          <div class="mt-5 flex items-baseline gap-2 md:mt-6">
+            <span class="font-sans text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
+              {t.price}
+            </span>
+            <span class={`font-mono text-xs ${t.featured ? "text-night-muted" : "text-night-faint"}`}>
+              {t.cadence}
+            </span>
+          </div>
+          <p class="mt-4 min-h-[3.5rem] text-sm leading-relaxed text-night-soft-text">
+            {t.blurb}
+            {t.blurbHighlight && (
+              <span class="font-semibold text-accent">{t.blurbHighlight}</span>
+            )}
+          </p>
+
+          <ul class="mt-6 flex-1 space-y-2.5 text-sm">
+            <li class="flex items-start gap-2">
+              <span class="mt-1.5 h-1 w-2.5 flex-shrink-0 bg-accent" />
+              <span class="font-semibold text-accent">Native AI with controlled access</span>
+            </li>
+            {t.features.map((f) => (
+              <li class="flex items-start gap-2">
+                <span class="mt-1.5 h-1 w-2.5 flex-shrink-0 bg-accent" />
+                <span class="font-medium text-night-soft-text">{f}</span>
+              </li>
+            ))}
+          </ul>
+          <a
+            href={t.cta.href}
+            class={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-opacity ${
+              t.featured
+                ? "bg-accent text-ink hover:opacity-90"
+                : "border border-night-hairline-strong bg-night-soft text-night-text hover:border-night-text"
+            }`}
           >
-            <h3 class="font-sans text-xl font-semibold tracking-tight">{t.name}</h3>
-            <div class="mt-6 flex items-baseline gap-2">
-              <span class="font-sans text-5xl font-semibold tracking-[-0.03em]">
-                {t.price}
-              </span>
-              <span class={`font-mono text-xs ${t.featured ? "text-night-muted" : "text-night-faint"}`}>
-                {t.cadence}
-              </span>
-            </div>
-            <p class={`mt-4 text-sm leading-relaxed ${t.featured ? "text-night-soft-text" : "text-night-soft-text"}`}>
-              {t.blurb}
-            </p>
-            <ul class="mt-6 flex-1 space-y-2.5 text-sm">
-              {t.features.map((f) => (
-                <li class="flex items-start gap-2">
-                  <span class={`mt-1.5 h-1 w-2.5 flex-shrink-0 ${t.featured ? "bg-accent" : "bg-night-text"}`} />
-                  <span class={t.featured ? "text-night-text" : "text-night-soft-text"}>{f}</span>
-                </li>
-              ))}
-            </ul>
-            <a
-              href={t.cta.href}
-              class={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-opacity ${
-                t.featured
-                  ? "bg-accent text-ink hover:opacity-90"
-                  : "border border-night-hairline-strong bg-night-soft text-night-text hover:border-night-text"
-              }`}
-            >
-              {t.cta.label}
-              <span aria-hidden>&rarr;</span>
-            </a>
-          </article>
-        ))
-      }
+            {t.cta.label}
+            <span aria-hidden>&rarr;</span>
+          </a>
+        </article>
+      ))}
     </div>
   </div>
 </section>

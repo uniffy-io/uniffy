@@ -18,23 +18,22 @@ const pillars = [
 ];
 ---
 
-<section id="sovereign" class="border-b border-night-hairline bg-night-band px-6 py-24 md:px-10 md:py-32">
+<section id="sovereign" class="section-separator-bottom bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
   <div class="mx-auto max-w-7xl">
-    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
+    <h2 class="section-heading">
       Sovereign by default
-    </p>
-    <h2 class="max-w-5xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
-      Your data. Your servers. <span class="text-night-muted">Your call.</span>
     </h2>
-    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text">
-      Notion, ClickUp, Monday, Airtable, Slack &mdash; none of them let you run their
-      product yourself. We do. And we publish the source.
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      Your data, your servers, your call. Most workspace tools rent you access to
+      their infrastructure. Uniffy publishes the source and lets you run the same
+      product on your own hardware, in any region you choose. No feature gating
+      between cloud and self-host.
     </p>
 
-    <div class="mt-16 grid gap-6 md:grid-cols-3">
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 md:mt-16">
       {
         pillars.map((p) => (
-          <article class="rounded-2xl border border-night-hairline bg-night-soft p-8 md:p-10">
+          <article class="rounded-2xl border border-night-hairline bg-night-soft p-6 sm:p-8 md:p-10">
             <div class="inline-flex items-center rounded-full border border-night-hairline-strong bg-night px-2.5 py-1 font-mono text-xs text-night-text">
               {p.tag}
             </div>

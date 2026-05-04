@@ -4,26 +4,74 @@ import type { CardData } from "@/components/cardTypes";
 
 const cards: CardData[] = [
   {
+    type: "chat",
+    title: "#engineering",
+    lastMessage: "Pushed the egress worker fix, deploying to staging now.",
+    lastSender: "Marko",
+    updatedAt: "8m ago",
+    memberCount: 24,
+    tags: ["backend", "infra"],
+  },
+  {
+    type: "user",
+    title: "Teddy Ivanova",
+    email: "teddy@uniffy.io",
+    presence: "online",
+    customStatus: { emoji: "writing", text: "Drafting the Q3 plan" },
+  },
+  {
     type: "note",
     title: "Architecture decisions log",
     description: "Why we chose ConnectRPC over GraphQL, and the trade-offs we accepted on schema federation.",
     tags: ["adr", "backend"],
     updatedAt: "5h ago",
-    updatedBy: "Lena",
+    updatedBy: "Teddy",
+  },
+  {
+    type: "diagram",
+    title: "Agent runtime topology",
+    kind: "Excalidraw",
+    description: "Egress workers, queue fan-out, and the retry path for failed jobs.",
+    tags: ["infra", "runtime"],
+    updatedAt: "yesterday",
+  },
+  {
+    type: "agent",
+    title: "Triage assistant",
+    model: "claude-opus-4.7",
+    status: "running",
+    description: "Routes inbound issues, drafts replies, and tags by domain owner.",
+    tags: ["support", "automation"],
+    updatedAt: "2m ago",
   },
   {
     type: "file",
     title: "Brand guidelines.pdf",
     mime: "application/pdf",
     size: "3.2 MB",
+    description: "Logo usage, type scale, and accent palette for marketing assets.",
+    tags: ["brand", "design"],
     updatedAt: "3d ago",
   },
   {
-    type: "user",
-    title: "Sara Chen",
-    email: "sara@uniffy.io",
-    presence: "online",
-    customStatus: { emoji: "✏️", text: "Writing the Q3 plan" },
+    type: "project",
+    title: "Agent runtime hardening",
+    slug: "AGT-12",
+    completedTasks: 14,
+    totalTasks: 22,
+    description: "Egress workers, retry logic, and observability for the agent runtime fleet.",
+    tags: ["infra", "priority"],
+    updatedAt: "1h ago",
+  },
+  {
+    type: "task",
+    title: "Wire up egress worker retries",
+    status: "in-progress",
+    assignee: "Teddy",
+    dueDate: "May 9",
+    description: "Exponential backoff plus a dead-letter queue for jobs that exceed five attempts.",
+    tags: ["backend"],
+    updatedAt: "30m ago",
   },
   {
     type: "event",
@@ -35,40 +83,350 @@ const cards: CardData[] = [
     temporal: "Thursday",
   },
   {
+    type: "room",
+    title: "War room - incident #482",
+    isLive: true,
+    participants: 6,
+    description: "Triage for the egress worker outage. Live transcript + recording attached.",
+    tags: ["incident", "p1"],
+    updatedAt: "just now",
+  },
+];
+
+const leadEmbeds: CardData[] = [
+  {
+    type: "note",
+    title: "Roadmap Q3 2026",
+    description: "Three flagship initiatives: agent runtime hardening, public sharing, and federated calendar.",
+    tags: ["planning", "leadership"],
+    updatedAt: "2m ago",
+    updatedBy: "Teddy",
+    isBeingEdited: true,
+    editorName: "Georgi",
+  },
+  {
     type: "project",
     title: "Agent runtime hardening",
     slug: "AGT-12",
     completedTasks: 14,
     totalTasks: 22,
+    description: "Egress workers, retry logic, and observability for the agent runtime fleet.",
+    tags: ["infra", "priority"],
     updatedAt: "1h ago",
   },
   {
-    type: "chat",
-    title: "#engineering",
-    lastMessage: "Pushed the egress worker fix, deploying to staging now",
-    lastSender: "Marko",
-    updatedAt: "8m ago",
-    memberCount: 24,
+    type: "file",
+    title: "Brand guidelines.pdf",
+    mime: "application/pdf",
+    size: "3.2 MB",
+    description: "Logo usage, type scale, and accent palette for marketing assets.",
+    tags: ["brand", "design"],
+    updatedAt: "3d ago",
+  },
+  {
+    type: "room",
+    title: "Launch prep - Q3",
+    isLive: true,
+    participants: 4,
+    description: "Quick sync on the rollout plan and the marketing copy for the announcement.",
+    tags: ["launch"],
+    updatedAt: "just now",
+  },
+];
+
+type Reply = {
+  sender: string;
+  initials: string;
+  avatarColor: string;
+  time: string;
+  text: string;
+  isAgent?: boolean;
+};
+const replies: Reply[] = [
+  { sender: "Georgi Asparuhov", initials: "GA", avatarColor: "bg-orange-500", time: "10:46", text: "Awesome" },
+  {
+    sender: "EngineeringAgent",
+    initials: "EA",
+    avatarColor: "border border-accent/55 bg-accent/10 text-accent",
+    time: "10:47",
+    text: "Happy to assist. I'll keep an eye on the deploy and ping the channel if anything spikes.",
+    isAgent: true,
   },
 ];
 ---
 
-<section id="product" class="border-b border-night-hairline bg-night-soft px-6 py-24 md:px-10 md:py-32">
+<section id="product" data-live-section class="section-separator-bottom bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
   <div class="mx-auto max-w-7xl">
-    <p class="mb-4 font-mono text-xs uppercase tracking-wider text-night-faint">
-      Mentions are alive
-    </p>
-    <h2 class="max-w-4xl font-sans text-4xl font-semibold leading-[1.05] tracking-[-0.025em] text-night-text md:text-6xl">
-      Type <span class="font-mono text-accent">@</span>, get the whole thing. <span class="text-night-muted">Not just a link.</span>
+    <h2 class="section-heading">
+      Mentions, but for everything
     </h2>
-    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text">
-      Every mention is a live preview of the real content. Title, status,
-      participants, due time, processing state &mdash; all updated as the source updates.
-      No copy-paste. No stale screenshots.
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      You already know how to <span class="font-mono text-accent">@</span> a teammate to tag them.
+      In Uniffy the same <span class="font-mono text-accent">@</span> pulls in any piece of your work.
+      Notes, files, projects, tasks, channels, agents, rooms, calendar events.
+      The reference becomes a live chip carrying the current title, owner, status, and activity.
+      Edit the source once and every mention everywhere catches up. No copy-paste. No broken links.
+      No stale screenshots.
     </p>
 
-    <div class="mt-16 grid grid-cols-1 justify-items-center gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {cards.map((card) => <ExpandedMentionCard card={card} />)}
+    <div class="mt-12 overflow-hidden rounded-2xl border border-night-hairline bg-night-soft shadow-2xl shadow-black/40 md:mt-16">
+      <div class="flex items-center justify-between border-b border-night-hairline bg-night-band px-4 py-3 sm:px-5">
+        <div class="flex items-center gap-2.5">
+          <span class="grid h-7 w-7 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M216 48H40a16 16 0 0 0-16 16v160a15.85 15.85 0 0 0 9.24 14.5 16.13 16.13 0 0 0 6.78 1.5 15.89 15.89 0 0 0 9.93-3.49l43.51-34.51H216a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16Z"/></svg>
+          </span>
+          <div class="leading-tight">
+            <p class="text-sm font-semibold text-night-text">#q3-launch</p>
+            <p class="font-mono text-[11px] text-night-faint">12 members &middot; product, design, eng</p>
+          </div>
+        </div>
+        <span class="hidden items-center gap-1.5 font-mono text-[11px] text-night-faint sm:inline-flex">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+          live
+        </span>
+      </div>
+
+      <div class="divide-y divide-night-hairline/60">
+        <div class="flex gap-3 px-4 py-5 sm:px-5 md:px-6">
+          <span class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-semibold text-white shadow-sm">
+            TI
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm font-semibold text-night-text">Teddy Ivanova</span>
+              <span class="font-mono text-[11px] text-night-faint">10:42</span>
+            </div>
+            <p class="mt-1 text-sm leading-relaxed text-night-soft-text">
+              Everything for the Q3 launch - plan, project, brand kit, and the live prep room - in one place:
+            </p>
+            <div class="mt-3 -mr-4 overflow-x-auto pr-4 sm:-mr-5 sm:pr-5 md:mr-0 md:pr-0">
+              <div class="flex items-stretch gap-4">
+                {leadEmbeds.map((card) => (
+                  <div class="flex shrink-0">
+                    <ExpandedMentionCard card={card} variant="dark" className="h-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {replies.map((r) => (
+          <div class="flex gap-3 px-4 py-4 sm:px-5 md:px-6">
+            {r.isAgent ? (
+              <span class={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-md ${r.avatarColor}`}>
+                <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39a56,56,0,0,0,0,101.2V176a48,48,0,0,0,88,26.49A48,48,0,0,0,216,176v-1.41A56.09,56.09,0,0,0,248,124Z"/></svg>
+              </span>
+            ) : (
+              <span class={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-white shadow-sm ${r.avatarColor}`}>
+                {r.initials}
+              </span>
+            )}
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-night-text">{r.sender}</span>
+                {r.isAgent && (
+                  <span class="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                    <svg width="9" height="9" viewBox="0 0 256 256" fill="currentColor"><path d="M200 48h-64V16a8 8 0 0 0-16 0v32H56a32 32 0 0 0-32 32v112a32 32 0 0 0 32 32h144a32 32 0 0 0 32-32V80a32 32 0 0 0-32-32Zm-96 88a16 16 0 1 1 16-16 16 16 0 0 1-16 16Zm84 32H68a4 4 0 0 1 0-8h120a4 4 0 0 1 0 8Zm-4-32a16 16 0 1 1 16-16 16 16 0 0 1-16 16Z"/></svg>
+                    via Agent
+                  </span>
+                )}
+                <span class="font-mono text-[11px] text-night-faint">{r.time}</span>
+              </div>
+              <p class="mt-1 text-sm text-night-soft-text">{r.text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="flex items-center gap-3 border-t border-night-hairline bg-night-band px-4 py-3 sm:px-5">
+        <div class="flex flex-1 items-center gap-2 rounded-lg border border-night-hairline bg-night-soft px-3 py-2">
+          <span class="font-mono text-sm font-bold text-accent">@</span>
+          <span class="text-sm text-night-faint">type to mention anything in your workspace...</span>
+        </div>
+        <span class="hidden font-mono text-[11px] text-night-faint sm:inline">enter to send</span>
+      </div>
+    </div>
+
+    <div class="mt-16 border-t border-night-hairline pt-12 md:mt-20 md:pt-16">
+      <p class="mb-4 text-center font-mono text-xs uppercase tracking-wider text-night-faint md:text-left">
+        Every type Uniffy supports
+      </p>
+      <h3 class="text-center font-sans text-2xl font-semibold leading-tight tracking-[-0.02em] text-night-text md:text-left md:text-3xl">
+        Every content type. <span class="text-night-muted">All mentionable, everywhere.</span>
+      </h3>
+
+      <div class="mt-10 grid auto-rows-fr grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
+        {cards.map((card) => <ExpandedMentionCard card={card} variant="dark" className="h-full" />)}
+      </div>
     </div>
   </div>
 </section>
+
+<script>
+  type ChatLine = { sender: string; text: string };
+  const chatRotation: ChatLine[] = [
+    { sender: "Georgi", text: "Pushed the egress worker fix, deploying to staging now." },
+    { sender: "Teddy", text: "Retry path is in. Watching the error rate before next batch." },
+    { sender: "Lena", text: "Approved the brand kit, kicking off the rollout email." },
+    { sender: "Ivo", text: "Status board is back up, all checks green again." },
+  ];
+
+  const noteDescriptions = [
+    "Three flagship initiatives this quarter: agent runtime hardening, public sharing, and the federated calendar work for enterprise.",
+    "Sara just expanded the rollout window section. New customer-comms checklist attached at the bottom.",
+    "Marko added the egress quota table. Federated calendar pushed to early Q4 to keep the runtime work clear.",
+    "Updated with the launch dates and the dependency map between agent runtime and public sharing.",
+  ];
+
+  const taskStatuses = ["todo", "in-progress", "done"] as const;
+  const taskLabels: Record<string, string> = {
+    todo: "To do",
+    "in-progress": "In progress",
+    done: "Done",
+    blocked: "Blocked",
+  };
+  const taskColors: Record<string, string> = {
+    todo: "text-ink-muted",
+    "in-progress": "text-blue-600",
+    done: "text-emerald-600",
+    blocked: "text-rose-600",
+  };
+
+  const agentStatuses = ["running", "idle", "running"] as const;
+  const agentLabels: Record<string, string> = { running: "Running", idle: "Idle", offline: "Offline" };
+  const agentBg: Record<string, string> = {
+    running: "bg-emerald-500/10 text-emerald-600",
+    idle: "bg-amber-500/10 text-amber-600",
+    offline: "bg-ink/10 text-ink-muted",
+  };
+  const agentDot: Record<string, string> = {
+    running: "bg-emerald-500 animate-pulse",
+    idle: "bg-amber-500",
+    offline: "bg-ink-muted",
+  };
+
+  const eventTemporal = ["in 1h", "in 45m", "in 30m", "in 15m", "starting now"];
+
+  const updatedRotation = ["just now", "1m ago", "3m ago", "8m ago", "15m ago"];
+
+  function bumpProject(card: HTMLElement) {
+    const root = card.querySelector<HTMLElement>("[data-project-root]");
+    if (!root) return;
+    const total = parseInt(root.dataset.total ?? "0", 10);
+    if (!total) return;
+    let completed = parseInt(root.dataset.completed ?? "0", 10);
+    completed = completed + 1;
+    if (completed > total) completed = Math.max(1, total - 5);
+    root.dataset.completed = String(completed);
+
+    const numEl = card.querySelector<HTMLElement>('[data-live="project-completed"]');
+    const pctEl = card.querySelector<HTMLElement>('[data-live="project-percent"]');
+    const barEl = card.querySelector<HTMLElement>('[data-live="project-bar"]');
+    const pct = Math.round((completed / total) * 100);
+    if (numEl) numEl.textContent = String(completed);
+    if (pctEl) pctEl.textContent = pct + "%";
+    if (barEl) barEl.style.width = pct + "%";
+  }
+
+  function bumpRoom(card: HTMLElement) {
+    const el = card.querySelector<HTMLElement>('[data-live="room-participants"]');
+    if (!el) return;
+    let n = parseInt(el.textContent ?? "0", 10);
+    n = n + 1;
+    if (n > 14) n = 3;
+    el.textContent = String(n);
+  }
+
+  let chatIdx = 0;
+  function swapChat(card: HTMLElement) {
+    const senderEl = card.querySelector<HTMLElement>('[data-live="chat-sender"]');
+    const msgEl = card.querySelector<HTMLElement>('[data-live="chat-message"]');
+    if (!senderEl || !msgEl) return;
+    chatIdx = (chatIdx + 1) % chatRotation.length;
+    const next = chatRotation[chatIdx];
+    senderEl.textContent = next.sender;
+    msgEl.textContent = next.text;
+  }
+
+  let noteIdx = 0;
+  function swapNote(card: HTMLElement) {
+    const el = card.querySelector<HTMLElement>('[data-live="note-description"]');
+    if (!el) return;
+    noteIdx = (noteIdx + 1) % noteDescriptions.length;
+    el.textContent = noteDescriptions[noteIdx];
+  }
+
+  function cycleTask(card: HTMLElement) {
+    const el = card.querySelector<HTMLElement>('[data-live="task-status"]');
+    if (!el) return;
+    const current = (el.dataset.status ?? "todo") as keyof typeof taskLabels;
+    const next = taskStatuses[(taskStatuses.indexOf(current as any) + 1) % taskStatuses.length];
+    el.dataset.status = next;
+    el.textContent = taskLabels[next];
+    el.className = `text-[10px] font-medium ${taskColors[next]}`;
+  }
+
+  function cycleAgent(card: HTMLElement) {
+    const wrap = card.querySelector<HTMLElement>('[data-live="agent-status"]');
+    if (!wrap) return;
+    const current = wrap.dataset.status ?? "running";
+    const next = agentStatuses[(agentStatuses.indexOf(current as any) + 1) % agentStatuses.length];
+    wrap.dataset.status = next;
+    wrap.className = `inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${agentBg[next]}`;
+    const dot = wrap.querySelector<HTMLElement>("span:first-child");
+    const label = wrap.querySelector<HTMLElement>("span:last-child");
+    if (dot) dot.className = `h-1 w-1 rounded-full ${agentDot[next]}`;
+    if (label) label.textContent = agentLabels[next];
+  }
+
+  let eventIdx = 0;
+  function tickEvent(card: HTMLElement) {
+    const el = card.querySelector<HTMLElement>('[data-live="event-temporal"]');
+    if (!el) return;
+    eventIdx = (eventIdx + 1) % eventTemporal.length;
+    el.textContent = eventTemporal[eventIdx];
+  }
+
+  function bumpUpdatedAt(card: HTMLElement) {
+    const el = card.querySelector<HTMLElement>('[data-live="updated-at"]');
+    if (!el) return;
+    const idx = updatedRotation.indexOf(el.textContent ?? "");
+    const nextIdx = idx < 0 ? 0 : (idx + 1) % updatedRotation.length;
+    el.textContent = updatedRotation[nextIdx];
+  }
+
+  function setupLiveCadence() {
+    const section = document.querySelector<HTMLElement>("[data-live-section]");
+    if (!section) return;
+    const cards = Array.from(section.querySelectorAll<HTMLElement>(".expanded-mention-card"));
+    if (cards.length === 0) return;
+
+    let idx = 0;
+    function tick() {
+      const card = cards[idx % cards.length];
+      idx++;
+      card.classList.add("is-pinging");
+      window.setTimeout(() => card.classList.remove("is-pinging"), 1400);
+
+      const type = card.dataset.cardType;
+      if (type === "project") bumpProject(card);
+      else if (type === "room") bumpRoom(card);
+      else if (type === "chat") swapChat(card);
+      else if (type === "note") swapNote(card);
+      else if (type === "task") cycleTask(card);
+      else if (type === "agent") cycleAgent(card);
+      else if (type === "event") tickEvent(card);
+      bumpUpdatedAt(card);
+    }
+
+    window.setTimeout(tick, 600);
+    window.setInterval(tick, 2400);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupLiveCadence, { once: true });
+  } else {
+    setupLiveCadence();
+  }
+</script>

@@ -16,6 +16,8 @@ export type FileCard = {
   size: string;
   updatedAt: string;
   thumbnailUrl?: string;
+  description?: string;
+  tags?: string[];
 };
 
 export type EventCard = {
@@ -44,6 +46,8 @@ export type ProjectCard = {
   completedTasks: number;
   totalTasks: number;
   updatedAt: string;
+  description?: string;
+  tags?: string[];
 };
 
 export type ChatCard = {
@@ -53,6 +57,47 @@ export type ChatCard = {
   lastSender: string;
   updatedAt: string;
   memberCount?: number;
+  tags?: string[];
+};
+
+export type DiagramCard = {
+  type: "diagram";
+  title: string;
+  kind: string;
+  updatedAt: string;
+  description?: string;
+  tags?: string[];
+};
+
+export type AgentCard = {
+  type: "agent";
+  title: string;
+  model: string;
+  status: "running" | "idle" | "offline";
+  updatedAt: string;
+  description?: string;
+  tags?: string[];
+};
+
+export type TaskCard = {
+  type: "task";
+  title: string;
+  status: "todo" | "in-progress" | "done" | "blocked";
+  assignee?: string;
+  dueDate?: string;
+  updatedAt: string;
+  description?: string;
+  tags?: string[];
+};
+
+export type RoomCard = {
+  type: "room";
+  title: string;
+  isLive: boolean;
+  participants: number;
+  updatedAt: string;
+  description?: string;
+  tags?: string[];
 };
 
 export type CardData =
@@ -61,4 +106,8 @@ export type CardData =
   | EventCard
   | UserCard
   | ProjectCard
-  | ChatCard;
+  | ChatCard
+  | DiagramCard
+  | AgentCard
+  | TaskCard
+  | RoomCard;

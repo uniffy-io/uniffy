@@ -1,44 +1,100 @@
 ---
-const links = [
-  { href: "#product", label: "Product" },
-  { href: "#ai", label: "AI" },
-  { href: "#sovereign", label: "Sovereign" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "https://docs.uniffy.io", label: "Docs" },
+type NavLink = {
+  href: string;
+  label: string;
+  icon: "mention" | "cpu" | "shield" | "scales" | "tag" | "book";
+  external?: boolean;
+  spyId?: string;
+};
+
+const links: NavLink[] = [
+  { href: "#product", label: "Product", icon: "mention", spyId: "product" },
+  { href: "#ai", label: "AI", icon: "cpu", spyId: "ai" },
+  { href: "#sovereign", label: "Sovereign", icon: "shield", spyId: "sovereign" },
+  { href: "#compare", label: "Compare", icon: "scales", spyId: "compare" },
+  { href: "#pricing", label: "Pricing", icon: "tag", spyId: "pricing" },
+  { href: "https://docs.uniffy.io", label: "Docs", icon: "book", external: true },
 ];
 ---
 
-<header class="site-header sticky top-0 z-50 border-b border-night-hairline bg-night/75 backdrop-blur-xl">
+<a
+  href="#main"
+  class="skip-link sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-accent focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:font-bold focus:uppercase focus:tracking-wider focus:text-ink"
+>
+  Skip to content
+</a>
+
+<header
+  class="site-header sticky top-0 z-50 border-b border-night-hairline bg-night/80 backdrop-blur-xl"
+  data-site-header
+>
   <div class="site-header__beam pointer-events-none absolute inset-x-0 -bottom-px h-px"></div>
 
-  <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-10">
-    <a href="/" class="brand group relative flex items-center gap-2.5 font-sans text-2xl font-bold tracking-tight">
-      <span class="brand__mark relative grid h-8 w-8 place-items-center">
-        <span class="brand__halo pointer-events-none absolute inset-0 rounded-full"></span>
+  <div class="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
+    <a href="/" class="brand group relative flex items-center gap-2.5 font-sans text-xl font-bold tracking-tight" aria-label="Uniffy home">
+      <span class="brand__cell relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-night-hairline transition-colors duration-300 group-hover:border-accent/60">
         <img
-          src="/web-app-manifest-192x192.png"
-          alt="Uniffy"
+          src="/uniffy-glyph.png"
+          alt=""
           width="32"
           height="32"
-          class="brand__logo h-8 w-8"
+          class="h-7 w-7"
         />
       </span>
-      <span class="brand__word relative text-night-text">
-        uniffy
-        <span class="brand__word-underline pointer-events-none absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-accent"></span>
-      </span>
+      <span class="brand__word relative text-night-text">Uniffy</span>
     </a>
 
-    <nav class="hidden items-center gap-1 md:flex">
+    <nav class="hidden lg:flex items-center gap-0.5" aria-label="Primary">
       {
         links.map((link) => (
           <a
             href={link.href}
-            class="nav-link group relative px-3 py-2 text-sm font-bold text-night-muted transition-colors duration-200 hover:text-night-text"
+            data-nav-link
+            data-spy={link.spyId ?? ""}
+            target={link.external ? "_blank" : undefined}
+            rel={link.external ? "noreferrer" : undefined}
+            class="nav-cell group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-200"
           >
-            <span class="relative z-10">{link.label}</span>
-            <span class="nav-link__dot pointer-events-none absolute left-1.5 top-1/2 h-1 w-1 -translate-y-1/2 scale-0 rounded-full bg-accent shadow-[0_0_8px_rgba(197,255,63,0.8)] transition-transform duration-200 ease-out group-hover:scale-100"></span>
-            <span class="nav-link__underline pointer-events-none absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 bg-gradient-to-r from-accent via-accent to-transparent transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+            <span class="nav-cell__icon relative grid h-7 w-7 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors duration-200">
+              {link.icon === "mention" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M128,24A104,104,0,1,0,232,128a8,8,0,0,0-16,0,88,88,0,1,1-88-88,86.06,86.06,0,0,1,57.39,21.71l.16.14A87.65,87.65,0,0,1,216,128c0,17.94-7,32-16,32s-16-14.06-16-32V88a8,8,0,0,0-16,0v.36A48,48,0,1,0,176,160a32.08,32.08,0,0,0,40,16.81c14.93-5,24-21.27,24-48.81A104,104,0,0,0,128,24Zm0,136a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z" />
+                </svg>
+              )}
+              {link.icon === "cpu" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M168,80H88a8,8,0,0,0-8,8v80a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V88A8,8,0,0,0,168,80Zm-8,80H96V96h64Zm72-32a8,8,0,0,0-8-8H216V72a16,16,0,0,0-16-16H184V40a8,8,0,0,0-16,0V56H144V40a8,8,0,0,0-16,0V56H112V40a8,8,0,0,0-16,0V56H72A16,16,0,0,0,56,72V88H40a8,8,0,0,0,0,16H56v24H40a8,8,0,0,0,0,16H56v24H40a8,8,0,0,0,0,16H56v16a16,16,0,0,0,16,16H88v16a8,8,0,0,0,16,0V200h16v16a8,8,0,0,0,16,0V200h16v16a8,8,0,0,0,16,0V200h16a16,16,0,0,0,16-16V168h16a8,8,0,0,0,0-16H200V128h16a8,8,0,0,0,0-16H200V88h16A8,8,0,0,0,224,128ZM200,184H72V72H200Z" />
+                </svg>
+              )}
+              {link.icon === "shield" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56l160,0Z" />
+                </svg>
+              )}
+              {link.icon === "scales" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M239.43,133l-32-80A8,8,0,0,0,200,48H136V32a8,8,0,0,0-16,0V48H56a8,8,0,0,0-7.43,5l-32,80A8.13,8.13,0,0,0,16,136a40,40,0,0,0,80,0,8.13,8.13,0,0,0-.57-3l-26.06-65.1L120,64.85V200H88a8,8,0,0,0,0,16h80a8,8,0,0,0,0-16H136V64.85l50.63,3,26.06,65.16A8.13,8.13,0,0,0,212.43,136a40,40,0,0,0,80,0A8.13,8.13,0,0,0,239.43,133ZM56,160a24,24,0,0,1-23.32-18.36L56,84.06l23.32,57.58A24,24,0,0,1,56,160Zm144,0a24,24,0,0,1-23.32-18.36L200,84.06l23.32,57.58A24,24,0,0,1,200,160Z" />
+                </svg>
+              )}
+              {link.icon === "tag" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63ZM147.31,232,48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z" />
+                </svg>
+              )}
+              {link.icon === "book" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48ZM96,192H40V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm120,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h56Z" />
+                </svg>
+              )}
+            </span>
+            <span class="nav-cell__label font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200">
+              {link.label}
+            </span>
+            {link.external && (
+              <svg viewBox="0 0 256 256" class="h-3 w-3 text-night-faint transition-colors duration-200 group-hover:text-night-muted" fill="currentColor" aria-hidden="true">
+                <path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z" />
+              </svg>
+            )}
           </a>
         ))
       }
@@ -47,22 +103,137 @@ const links = [
     <div class="flex items-center gap-2">
       <a
         href="https://cloud.uniffy.io/login"
-        class="signin group relative hidden px-3 py-2 text-sm font-bold text-night-muted transition-colors duration-200 hover:text-night-text md:inline-flex"
+        class="signin hidden md:inline-flex items-center rounded-md px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200 hover:text-night-text"
       >
-        <span class="relative z-10">Sign in</span>
-        <span class="pointer-events-none absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+        Sign in
       </a>
       <a
         href="https://cloud.uniffy.io/signup"
-        class="cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition-all duration-300 hover:bg-accent hover:shadow-[0_0_0_1px_rgba(197,255,63,0.6),0_8px_24px_-6px_rgba(197,255,63,0.55)]"
+        class="cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-md bg-accent px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-ink transition-shadow duration-300 hover:shadow-[0_0_0_1px_rgba(197,255,63,0.6),0_8px_24px_-6px_rgba(197,255,63,0.55)]"
       >
         <span class="cta__shimmer pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent"></span>
         <span class="relative z-10">Start free</span>
         <span class="cta__arrow relative z-10 inline-block transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden>&rarr;</span>
       </a>
+
+      <button
+        type="button"
+        data-mobile-menu-toggle
+        aria-controls="mobile-nav"
+        aria-expanded="false"
+        aria-label="Open menu"
+        class="mobile-toggle inline-grid h-9 w-9 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors hover:border-night-hairline-strong hover:text-night-text lg:hidden"
+      >
+        <svg viewBox="0 0 256 256" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+          <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z" />
+        </svg>
+      </button>
     </div>
   </div>
 </header>
+
+<div
+  id="mobile-nav"
+  data-mobile-nav
+  class="mobile-nav fixed inset-0 z-[55] hidden lg:hidden"
+  aria-hidden="true"
+>
+  <div class="mobile-nav__scrim absolute inset-0 bg-night/80 backdrop-blur-md" data-mobile-menu-close></div>
+
+  <div class="mobile-nav__panel relative ml-auto flex h-full w-full max-w-sm flex-col border-l border-night-hairline bg-night-soft shadow-2xl">
+    <div class="flex items-center justify-between border-b border-night-hairline px-5 py-4">
+      <a href="/" class="flex items-center gap-2.5 font-sans text-lg font-bold tracking-tight text-night-text">
+        <span class="grid h-9 w-9 place-items-center overflow-hidden rounded-lg border border-night-hairline">
+          <img src="/uniffy-glyph.png" alt="" width="24" height="24" class="h-6 w-6" />
+        </span>
+        Uniffy
+      </a>
+      <button
+        type="button"
+        data-mobile-menu-close
+        aria-label="Close menu"
+        class="grid h-9 w-9 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors hover:border-night-hairline-strong hover:text-night-text"
+      >
+        <svg viewBox="0 0 256 256" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+          <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+        </svg>
+      </button>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Mobile">
+      <ul class="flex flex-col gap-0.5">
+        {
+          links.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                data-mobile-nav-link
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noreferrer" : undefined}
+                class="flex items-center gap-3 rounded-md border border-transparent px-3 py-3 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors hover:border-night-hairline hover:bg-night-band hover:text-night-text"
+              >
+                <span class="grid h-7 w-7 place-items-center rounded-md border border-night-hairline text-night-muted">
+                  {link.icon === "mention" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M128,24A104,104,0,1,0,232,128a8,8,0,0,0-16,0,88,88,0,1,1-88-88,86.06,86.06,0,0,1,57.39,21.71l.16.14A87.65,87.65,0,0,1,216,128c0,17.94-7,32-16,32s-16-14.06-16-32V88a8,8,0,0,0-16,0v.36A48,48,0,1,0,176,160a32.08,32.08,0,0,0,40,16.81c14.93-5,24-21.27,24-48.81A104,104,0,0,0,128,24Zm0,136a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z" />
+                    </svg>
+                  )}
+                  {link.icon === "cpu" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M168,80H88a8,8,0,0,0-8,8v80a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V88A8,8,0,0,0,168,80Zm-8,80H96V96h64Zm72-32a8,8,0,0,0-8-8H216V72a16,16,0,0,0-16-16H184V40a8,8,0,0,0-16,0V56H144V40a8,8,0,0,0-16,0V56H112V40a8,8,0,0,0-16,0V56H72A16,16,0,0,0,56,72V88H40a8,8,0,0,0,0,16H56v24H40a8,8,0,0,0,0,16H56v24H40a8,8,0,0,0,0,16H56v16a16,16,0,0,0,16,16H88v16a8,8,0,0,0,16,0V200h16v16a8,8,0,0,0,16,0V200h16v16a8,8,0,0,0,16,0V200h16a16,16,0,0,0,16-16V168h16a8,8,0,0,0,0-16H200V128h16a8,8,0,0,0,0-16H200V88h16A8,8,0,0,0,224,128ZM200,184H72V72H200Z" />
+                    </svg>
+                  )}
+                  {link.icon === "shield" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56l160,0Z" />
+                    </svg>
+                  )}
+                  {link.icon === "scales" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M239.43,133l-32-80A8,8,0,0,0,200,48H136V32a8,8,0,0,0-16,0V48H56a8,8,0,0,0-7.43,5l-32,80A8.13,8.13,0,0,0,16,136a40,40,0,0,0,80,0,8.13,8.13,0,0,0-.57-3l-26.06-65.1L120,64.85V200H88a8,8,0,0,0,0,16h80a8,8,0,0,0,0-16H136V64.85l50.63,3,26.06,65.16A8.13,8.13,0,0,0,212.43,136a40,40,0,0,0,80,0A8.13,8.13,0,0,0,239.43,133ZM56,160a24,24,0,0,1-23.32-18.36L56,84.06l23.32,57.58A24,24,0,0,1,56,160Zm144,0a24,24,0,0,1-23.32-18.36L200,84.06l23.32,57.58A24,24,0,0,1,200,160Z" />
+                    </svg>
+                  )}
+                  {link.icon === "tag" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63ZM147.31,232,48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z" />
+                    </svg>
+                  )}
+                  {link.icon === "book" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48ZM96,192H40V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm120,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h56Z" />
+                    </svg>
+                  )}
+                </span>
+                {link.label}
+                {link.external && (
+                  <svg viewBox="0 0 256 256" class="ml-auto h-3 w-3 text-night-faint" fill="currentColor" aria-hidden="true">
+                    <path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z" />
+                  </svg>
+                )}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="flex flex-col gap-2 border-t border-night-hairline px-5 py-4">
+      <a
+        href="https://cloud.uniffy.io/login"
+        class="inline-flex items-center justify-center rounded-md border border-night-hairline px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-night-text transition-colors hover:border-night-hairline-strong"
+      >
+        Sign in
+      </a>
+      <a
+        href="https://cloud.uniffy.io/signup"
+        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink transition-opacity hover:opacity-90"
+      >
+        Start free
+        <span aria-hidden>&rarr;</span>
+      </a>
+    </div>
+  </div>
+</div>
 
 <style>
   .site-header__beam {
@@ -77,23 +248,21 @@ const links = [
     opacity: 0.35;
   }
 
-  .brand__logo {
-    filter: invert(1) hue-rotate(180deg);
+  .nav-cell:hover .nav-cell__icon {
+    border-color: var(--color-night-hairline-strong);
+    color: var(--color-night-text);
+  }
+  .nav-cell:hover .nav-cell__label {
+    color: var(--color-night-text);
   }
 
-  .brand__halo {
-    display: none;
+  .nav-cell.is-active .nav-cell__icon {
+    border-color: rgba(197, 255, 63, 0.55);
+    background: rgba(197, 255, 63, 0.10);
+    color: var(--color-accent);
   }
-
-  .brand__word-underline {
-    transition: transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
-  }
-  .brand:hover .brand__word-underline {
-    transform: scaleX(1);
-  }
-
-  .nav-link__dot {
-    transform-origin: center;
+  .nav-cell.is-active .nav-cell__label {
+    color: var(--color-night-text);
   }
 
   .cta__shimmer {
@@ -103,11 +272,102 @@ const links = [
     transform: translateX(100%);
   }
 
+  .mobile-nav.is-open {
+    display: block;
+  }
+  .mobile-nav.is-open .mobile-nav__panel {
+    animation: mobile-nav-slide 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes mobile-nav-slide {
+    from { transform: translateX(16px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .cta__shimmer,
-    .nav-link__underline,
-    .nav-link__dot {
+    .nav-cell__icon,
+    .nav-cell__label,
+    .mobile-nav__panel {
       transition: none;
+      animation: none;
     }
   }
 </style>
+
+<script>
+  function setupMobileMenu() {
+    const nav = document.querySelector<HTMLElement>("[data-mobile-nav]");
+    const toggles = document.querySelectorAll<HTMLElement>("[data-mobile-menu-toggle]");
+    const closers = document.querySelectorAll<HTMLElement>("[data-mobile-menu-close]");
+    const navLinks = document.querySelectorAll<HTMLAnchorElement>("[data-mobile-nav-link]");
+    if (!nav) return;
+
+    const open = () => {
+      nav.classList.add("is-open");
+      nav.setAttribute("aria-hidden", "false");
+      toggles.forEach((t) => t.setAttribute("aria-expanded", "true"));
+      document.documentElement.style.overflow = "hidden";
+    };
+    const close = () => {
+      nav.classList.remove("is-open");
+      nav.setAttribute("aria-hidden", "true");
+      toggles.forEach((t) => t.setAttribute("aria-expanded", "false"));
+      document.documentElement.style.overflow = "";
+    };
+
+    toggles.forEach((t) => t.addEventListener("click", open));
+    closers.forEach((c) => c.addEventListener("click", close));
+    navLinks.forEach((l) => l.addEventListener("click", close));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && nav.classList.contains("is-open")) close();
+    });
+  }
+
+  function setupScrollSpy() {
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-nav-link]"));
+    const spyLinks = links.filter((l) => l.dataset.spy);
+    if (spyLinks.length === 0) return;
+
+    const sections = spyLinks
+      .map((l) => {
+        const id = l.dataset.spy!;
+        const el = document.getElementById(id);
+        return el ? { id, el, link: l } : null;
+      })
+      .filter((x): x is { id: string; el: HTMLElement; link: HTMLAnchorElement } => x !== null);
+
+    const setActive = (id: string | null) => {
+      for (const { link, id: linkId } of sections) {
+        link.classList.toggle("is-active", linkId === id);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length > 0) {
+          const top = visible[0].target.id;
+          setActive(top);
+        }
+      },
+      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+
+    sections.forEach(({ el }) => observer.observe(el));
+  }
+
+  function boot() {
+    setupMobileMenu();
+    setupScrollSpy();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
+</script>

@@ -48,3 +48,83 @@ body {
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
+
+.bg-night-gradient {
+  background-color: var(--color-night);
+  background-image:
+    radial-gradient(ellipse at 75% 50%, rgba(40, 70, 50, 0.16) 0%, rgba(17, 22, 30, 0.5) 35%, rgba(13, 17, 23, 0) 65%),
+    radial-gradient(ellipse at 20% 20%, rgba(20, 28, 44, 0.4) 0%, rgba(6, 8, 13, 0) 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(6, 8, 13, 0.55) 0%, rgba(13, 17, 23, 0) 60%);
+}
+
+.section-separator-bottom {
+  position: relative;
+}
+.section-separator-bottom::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(197, 255, 63, 0.05) 20%,
+    rgba(197, 255, 63, 0.45) 55%,
+    rgba(197, 255, 63, 0.85) 100%
+  );
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: section-divider-fill linear both;
+  animation-timeline: view();
+  animation-range: contain 0% contain 100%;
+}
+
+@keyframes section-divider-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports not (animation-timeline: view()) {
+  .section-separator-bottom::after {
+    transform: scaleX(1);
+    animation: none;
+  }
+}
+
+.section-heading {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  line-height: 1.15;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-night-faint);
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .section-heading {
+    font-size: 1.875rem;
+    text-align: left;
+  }
+}
+@media (min-width: 1024px) {
+  .section-heading {
+    font-size: 2.25rem;
+  }
+}
+
+.section-intro {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (min-width: 768px) {
+  .section-intro {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

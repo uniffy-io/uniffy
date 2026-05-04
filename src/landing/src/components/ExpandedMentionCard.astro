@@ -19,6 +19,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
 ---
 
 <div
+  data-card-type={card.type}
   class={`expanded-mention-card ${variantClass} group relative block w-80 overflow-hidden rounded-xl border border-hairline bg-paper shadow-[0_1px_2px_rgba(10,10,10,0.04),0_4px_12px_-4px_rgba(10,10,10,0.06)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-ink/15 hover:shadow-[0_2px_4px_rgba(10,10,10,0.04),0_24px_48px_-16px_rgba(10,10,10,0.18),0_8px_24px_-12px_rgba(10,10,10,0.1)] ${className}`}
 >
   {card.type === "note" && (
@@ -26,7 +27,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-violet-500/10 via-violet-500/5 to-transparent"></div>
       <div class="relative px-5 pt-3 pb-1 pr-10">
         <div class="flex items-center gap-2.5">
-          <span data-tether-anchor class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-sm">
+          <span data-tether-anchor class="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
             <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M227.32 73.37 182.63 28.69a16 16 0 0 0-22.63 0L36.69 152a15.86 15.86 0 0 0-4.69 11.31V208a16 16 0 0 0 16 16h44.69a15.86 15.86 0 0 0 11.31-4.69L227.32 96a16 16 0 0 0 0-22.63ZM92.69 208H48v-44.69l88-88L180.69 120ZM192 108.69 147.32 64l24-24L216 84.69Z"/></svg>
           </span>
           <div class="min-w-0 flex-1">
@@ -48,7 +49,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       </div>
       {card.description && (
         <div class="px-5 pb-2 pl-[3.375rem]">
-          <p class="line-clamp-3 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+          <p class="line-clamp-3 text-xs leading-relaxed text-ink-muted" data-live="note-description">{card.description}</p>
         </div>
       )}
       {card.tags && card.tags.length > 0 && (
@@ -62,7 +63,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-1.5">
         <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
           <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
-          <span>{card.updatedAt}</span>
+          <span data-live="updated-at">{card.updatedAt}</span>
           {card.updatedBy && (
             <>
               <span class="text-ink-faint">·</span>
@@ -89,7 +90,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       )}
       <div class="relative px-5 pt-3 pb-2 pr-10">
         <div class="flex items-start gap-3">
-          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-accent/55 bg-accent/10 text-accent">
             <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66 82.34 173.66 42.34A8 8 0 0 0 168 40H72a16 16 0 0 0-16 16v144a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16V88a8 8 0 0 0-2.34-5.66ZM168 56l32 32h-32ZM72 56h80v40a8 8 0 0 0 8 8h40v96H72Zm88 84a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h48a8 8 0 0 1 8 8Zm0 32a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h48a8 8 0 0 1 8 8Z"/></svg>
           </span>
           <div class="min-w-0 flex-1 pt-0.5">
@@ -102,6 +103,19 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
           </div>
         </div>
       </div>
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.875rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      {card.tags && card.tags.length > 0 && (
+        <div class="flex flex-wrap items-center gap-1.5 px-5 pb-2 pl-[3.875rem]">
+          <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor" class="shrink-0 text-ink-faint"><path d="M243.31 136 144 36.69A15.86 15.86 0 0 0 132.69 32H40a8 8 0 0 0-8 8v92.69A15.86 15.86 0 0 0 36.69 144L136 243.31a16 16 0 0 0 22.63 0l84.68-84.68a16 16 0 0 0 0-22.63ZM84 96a12 12 0 1 1 12-12 12 12 0 0 1-12 12Z"/></svg>
+          {card.tags.slice(0, 4).map((tag: string) => (
+            <span class="inline-flex items-center rounded-full bg-paper-soft px-1.5 py-px text-[10px] font-medium text-ink-muted">{tag}</span>
+          ))}
+        </div>
+      )}
       <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
         <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
           <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
@@ -120,7 +134,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-rose-500/10 via-rose-500/5 to-transparent"></div>
       <div class="relative px-5 pt-3.5 pb-1.5 pr-10">
         <div class="flex items-start gap-3">
-          <span data-tether-anchor class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md">
+          <span data-tether-anchor class="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent/55 bg-accent/10 text-accent">
             <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M208 32h-24v-8a8 8 0 0 0-16 0v8H88v-8a8 8 0 0 0-16 0v8H48a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16Zm0 16v32H48V48Zm0 160H48V96h160v112Zm-72-72a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm44 0a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-88 36a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm44 0a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm44 0a12 12 0 1 1-12-12 12 12 0 0 1 12 12Z"/></svg>
           </span>
           <div class="min-w-0 flex-1 pt-0.5">
@@ -132,7 +146,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
                   <span class="text-ink-faint">·</span>
                   <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-1.5 py-px text-[10px] font-medium text-rose-700">
                     <span class="h-1 w-1 rounded-full bg-rose-500"></span>
-                    {card.temporal}
+                    <span data-live="event-temporal">{card.temporal}</span>
                   </span>
                 </>
               )}
@@ -186,10 +200,10 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="relative px-5 pt-3.5 pb-2 pr-10">
         <div class="flex items-start gap-3">
           <div class="relative shrink-0">
-            <span data-tether-anchor class="grid h-12 w-12 place-items-center rounded-xl bg-emerald-500 text-sm font-semibold text-white shadow-lg ring-2 ring-paper">
+            <span data-tether-anchor class="grid h-8 w-8 place-items-center rounded-md border border-accent/55 bg-accent/10 text-[11px] font-semibold text-accent">
               {card.title.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
             </span>
-            <span class={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ${presenceStyles[card.presence].dot} ring-2 ring-paper`}></span>
+            <span class={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ${presenceStyles[card.presence].dot} ring-1 ring-paper`}></span>
           </div>
           <div class="min-w-0 flex-1 pt-0.5">
             <p class="truncate text-sm font-semibold text-ink">{card.title}</p>
@@ -225,7 +239,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent"></div>
       <div class="relative px-5 pt-3 pb-2 pr-10">
         <div class="flex items-center gap-2.5">
-          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
             <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216 40H40a16 16 0 0 0-16 16v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16ZM96 200H40v-72h56Zm0-88H40V56h56Zm64 88h-48v-128h48Zm56 0h-40V56h40Z"/></svg>
           </span>
           <div class="min-w-0 flex-1">
@@ -238,15 +252,28 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
           </div>
         </div>
       </div>
-      <div class="px-5 pb-3 pl-[3.375rem]">
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.375rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      <div class="px-5 pb-2 pl-[3.375rem]" data-project-root data-completed={card.completedTasks} data-total={card.totalTasks}>
         <div class="mb-1.5 flex items-baseline justify-between text-xs">
-          <span class="text-ink-muted">{card.completedTasks} of {card.totalTasks} tasks</span>
-          <span class="font-medium text-ink">{Math.round((card.completedTasks / card.totalTasks) * 100)}%</span>
+          <span class="text-ink-muted"><span data-live="project-completed">{card.completedTasks}</span> of {card.totalTasks} tasks</span>
+          <span class="font-medium text-ink" data-live="project-percent">{Math.round((card.completedTasks / card.totalTasks) * 100)}%</span>
         </div>
         <div class="h-1.5 overflow-hidden rounded-full bg-paper-soft">
-          <div class="h-full bg-gradient-to-r from-orange-500 to-orange-600" style={`width: ${(card.completedTasks / card.totalTasks) * 100}%`}></div>
+          <div class="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-[width] duration-700 ease-out" data-live="project-bar" style={`width: ${(card.completedTasks / card.totalTasks) * 100}%`}></div>
         </div>
       </div>
+      {card.tags && card.tags.length > 0 && (
+        <div class="flex flex-wrap items-center gap-1.5 px-5 pb-2 pl-[3.375rem]">
+          <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor" class="shrink-0 text-ink-faint"><path d="M243.31 136 144 36.69A15.86 15.86 0 0 0 132.69 32H40a8 8 0 0 0-8 8v92.69A15.86 15.86 0 0 0 36.69 144L136 243.31a16 16 0 0 0 22.63 0l84.68-84.68a16 16 0 0 0 0-22.63ZM84 96a12 12 0 1 1 12-12 12 12 0 0 1-12 12Z"/></svg>
+          {card.tags.slice(0, 4).map((tag: string) => (
+            <span class="inline-flex items-center rounded-full bg-paper-soft px-1.5 py-px text-[10px] font-medium text-ink-muted">{tag}</span>
+          ))}
+        </div>
+      )}
       <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
         <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
           <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
@@ -265,7 +292,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
       <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-violet-500/10 via-violet-500/5 to-transparent"></div>
       <div class="relative px-5 pt-3 pb-2 pr-10">
         <div class="flex items-center gap-2.5">
-          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-sm">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
             <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216 48H40a16 16 0 0 0-16 16v160a15.85 15.85 0 0 0 9.24 14.5 16.13 16.13 0 0 0 6.78 1.5 15.89 15.89 0 0 0 9.93-3.49l43.51-34.51H216a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16Z"/></svg>
           </span>
           <div class="min-w-0 flex-1">
@@ -282,12 +309,210 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
           </div>
         </div>
       </div>
-      <div class="px-5 pb-2.5 pl-[3.375rem]">
+      <div class="px-5 pb-2 pl-[3.375rem]">
         <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">
-          <span class="font-medium text-ink-soft">{card.lastSender}:</span> {card.lastMessage}
+          <span class="font-medium text-ink-soft" data-live="chat-sender">{card.lastSender}</span>: <span data-live="chat-message">{card.lastMessage}</span>
         </p>
       </div>
+      {card.tags && card.tags.length > 0 && (
+        <div class="flex flex-wrap items-center gap-1.5 px-5 pb-2 pl-[3.375rem]">
+          <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor" class="shrink-0 text-ink-faint"><path d="M243.31 136 144 36.69A15.86 15.86 0 0 0 132.69 32H40a8 8 0 0 0-8 8v92.69A15.86 15.86 0 0 0 36.69 144L136 243.31a16 16 0 0 0 22.63 0l84.68-84.68a16 16 0 0 0 0-22.63ZM84 96a12 12 0 1 1 12-12 12 12 0 0 1-12 12Z"/></svg>
+          {card.tags.slice(0, 4).map((tag: string) => (
+            <span class="inline-flex items-center rounded-full bg-paper-soft px-1.5 py-px text-[10px] font-medium text-ink-muted">{tag}</span>
+          ))}
+        </div>
+      )}
       <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-1.5">
+        <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
+          <span>{card.updatedAt}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 text-xs text-ink-muted">
+          <svg width="11" height="11" viewBox="0 0 256 256" fill="currentColor"><path d="M200 64v104a8 8 0 0 1-16 0V83.31l-114.34 114.35a8 8 0 0 1-11.32-11.32L172.69 72H88a8 8 0 0 1 0-16h104a8 8 0 0 1 8 8Z"/></svg>
+          <span>Open</span>
+        </span>
+      </div>
+    </>
+  )}
+
+  {card.type === "diagram" && (
+    <>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-teal-500/10 via-teal-500/5 to-transparent"></div>
+      <div class="relative px-5 pt-3 pb-2 pr-10">
+        <div class="flex items-center gap-2.5">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M176 152a39.7 39.7 0 0 0-28.62 12.09l-46.1-29.63a39.8 39.8 0 0 0 0-12.92l46.1-29.63a40 40 0 1 0-8.66-13.45l-46.1 29.63a40 40 0 1 0 0 39.82l46.1 29.63A40 40 0 1 0 176 152Z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-ink">{card.title}</p>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-medium text-teal-600">Diagram</span>
+              <span class="text-ink-faint">·</span>
+              <span class="text-[10px] text-ink-muted">{card.kind}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.375rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      {card.tags && card.tags.length > 0 && (
+        <div class="flex flex-wrap items-center gap-1.5 px-5 pb-2 pl-[3.375rem]">
+          <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor" class="shrink-0 text-ink-faint"><path d="M243.31 136 144 36.69A15.86 15.86 0 0 0 132.69 32H40a8 8 0 0 0-8 8v92.69A15.86 15.86 0 0 0 36.69 144L136 243.31a16 16 0 0 0 22.63 0l84.68-84.68a16 16 0 0 0 0-22.63ZM84 96a12 12 0 1 1 12-12 12 12 0 0 1-12 12Z"/></svg>
+          {card.tags.slice(0, 4).map((tag: string) => (
+            <span class="inline-flex items-center rounded-full bg-paper-soft px-1.5 py-px text-[10px] font-medium text-ink-muted">{tag}</span>
+          ))}
+        </div>
+      )}
+      <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
+        <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
+          <span>{card.updatedAt}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 text-xs text-ink-muted">
+          <svg width="11" height="11" viewBox="0 0 256 256" fill="currentColor"><path d="M200 64v104a8 8 0 0 1-16 0V83.31l-114.34 114.35a8 8 0 0 1-11.32-11.32L172.69 72H88a8 8 0 0 1 0-16h104a8 8 0 0 1 8 8Z"/></svg>
+          <span>Open</span>
+        </span>
+      </div>
+    </>
+  )}
+
+  {card.type === "agent" && (
+    <>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-cyan-500/10 via-cyan-500/5 to-transparent"></div>
+      <div class="relative px-5 pt-3 pb-2 pr-10">
+        <div class="flex items-center gap-2.5">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M200 48h-64V16a8 8 0 0 0-16 0v32H56a32 32 0 0 0-32 32v112a32 32 0 0 0 32 32h144a32 32 0 0 0 32-32V80a32 32 0 0 0-32-32Zm-96 88a16 16 0 1 1 16-16 16 16 0 0 1-16 16Zm84 32H68a4 4 0 0 1 0-8h120a4 4 0 0 1 0 8Zm-4-32a16 16 0 1 1 16-16 16 16 0 0 1-16 16Z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-ink">{card.title}</p>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-medium text-cyan-600">Agent</span>
+              <span class="text-ink-faint">·</span>
+              <span class="font-mono text-[10px] text-ink-muted">{card.model}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.375rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      <div class="px-5 pb-2 pl-[3.375rem]">
+        <span data-live="agent-status" data-status={card.status} class={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${card.status === "running" ? "bg-emerald-500/10 text-emerald-600" : card.status === "idle" ? "bg-amber-500/10 text-amber-600" : "bg-ink/10 text-ink-muted"}`}>
+          <span class={`h-1 w-1 rounded-full ${card.status === "running" ? "bg-emerald-500 animate-pulse" : card.status === "idle" ? "bg-amber-500" : "bg-ink-muted"}`}></span>
+          <span>{card.status === "running" ? "Running" : card.status === "idle" ? "Idle" : "Offline"}</span>
+        </span>
+      </div>
+      <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
+        <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
+          <span>{card.updatedAt}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 text-xs text-ink-muted">
+          <svg width="11" height="11" viewBox="0 0 256 256" fill="currentColor"><path d="M200 64v104a8 8 0 0 1-16 0V83.31l-114.34 114.35a8 8 0 0 1-11.32-11.32L172.69 72H88a8 8 0 0 1 0-16h104a8 8 0 0 1 8 8Z"/></svg>
+          <span>Open</span>
+        </span>
+      </div>
+    </>
+  )}
+
+  {card.type === "task" && (
+    <>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent"></div>
+      <div class="relative px-5 pt-3 pb-2 pr-10">
+        <div class="flex items-center gap-2.5">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66 77.66 105.66 201.66a8 8 0 0 1-11.32 0l-56-56a8 8 0 0 1 11.32-11.32L100 184.69 218.34 66.34a8 8 0 0 1 11.32 11.32Z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-ink">{card.title}</p>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-medium text-amber-600">Task</span>
+              <span class="text-ink-faint">·</span>
+              <span data-live="task-status" data-status={card.status} class={`text-[10px] font-medium ${card.status === "done" ? "text-emerald-600" : card.status === "blocked" ? "text-rose-600" : card.status === "in-progress" ? "text-blue-600" : "text-ink-muted"}`}>
+                {card.status === "in-progress" ? "In progress" : card.status === "todo" ? "To do" : card.status === "done" ? "Done" : "Blocked"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.375rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      {(card.assignee || card.dueDate) && (
+        <div class="flex items-center gap-2 px-5 pb-2 pl-[3.375rem] text-[10px] text-ink-muted">
+          {card.assignee && (
+            <span class="inline-flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M230.93 220a8 8 0 0 1-6.93 4H32a8 8 0 0 1-6.92-12c15.23-26.33 38.7-45.21 66.09-54.16a72 72 0 1 1 73.66 0c27.39 8.95 50.86 27.83 66.09 54.16a8 8 0 0 1 .01 8Z"/></svg>
+              {card.assignee}
+            </span>
+          )}
+          {card.assignee && card.dueDate && <span class="text-ink-faint">·</span>}
+          {card.dueDate && (
+            <span class="inline-flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M208 32h-24v-8a8 8 0 0 0-16 0v8H88v-8a8 8 0 0 0-16 0v8H48a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16Zm0 16v32H48V48Zm0 160H48V96h160v112Z"/></svg>
+              {card.dueDate}
+            </span>
+          )}
+        </div>
+      )}
+      <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
+        <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
+          <span>{card.updatedAt}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 text-xs text-ink-muted">
+          <svg width="11" height="11" viewBox="0 0 256 256" fill="currentColor"><path d="M200 64v104a8 8 0 0 1-16 0V83.31l-114.34 114.35a8 8 0 0 1-11.32-11.32L172.69 72H88a8 8 0 0 1 0-16h104a8 8 0 0 1 8 8Z"/></svg>
+          <span>Open</span>
+        </span>
+      </div>
+    </>
+  )}
+
+  {card.type === "room" && (
+    <>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-fuchsia-500/10 via-fuchsia-500/5 to-transparent"></div>
+      <div class="relative px-5 pt-3 pb-2 pr-10">
+        <div class="flex items-center gap-2.5">
+          <span data-tether-anchor class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-accent/55 bg-accent/10 text-accent">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M128 176a48.05 48.05 0 0 0 48-48V64a48 48 0 0 0-96 0v64a48.05 48.05 0 0 0 48 48ZM96 64a32 32 0 0 1 64 0v64a32 32 0 0 1-64 0Zm40 143.6V232a8 8 0 0 1-16 0v-24.4A80.11 80.11 0 0 1 48 128a8 8 0 0 1 16 0a64 64 0 0 0 128 0a8 8 0 0 1 16 0a80.11 80.11 0 0 1-72 79.6Z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-ink">{card.title}</p>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-medium text-fuchsia-600">Room</span>
+              {card.isLive && (
+                <>
+                  <span class="text-ink-faint">·</span>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-1.5 py-px text-[10px] font-medium text-rose-600">
+                    <span class="h-1 w-1 animate-pulse rounded-full bg-rose-500"></span>
+                    Live
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      {card.description && (
+        <div class="px-5 pb-2 pl-[3.375rem]">
+          <p class="line-clamp-2 text-xs leading-relaxed text-ink-muted">{card.description}</p>
+        </div>
+      )}
+      <div class="px-5 pb-2 pl-[3.375rem] text-[10px] text-ink-muted">
+        <span class="inline-flex items-center gap-1">
+          <svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M230.93 220a8 8 0 0 1-6.93 4H32a8 8 0 0 1-6.92-12c15.23-26.33 38.7-45.21 66.09-54.16a72 72 0 1 1 73.66 0c27.39 8.95 50.86 27.83 66.09 54.16a8 8 0 0 1 .01 8Z"/></svg>
+          <span data-live="room-participants">{card.participants}</span> participants
+        </span>
+      </div>
+      <div class="flex items-center justify-between border-t border-hairline bg-paper-soft px-5 py-2">
         <span class="inline-flex items-center gap-1.5 text-xs text-ink-muted">
           <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm56 112h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 0 16Z"/></svg>
           <span>{card.updatedAt}</span>
@@ -302,6 +527,27 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
 </div>
 
 <style>
+  .expanded-mention-card {
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.4s ease-out, box-shadow 0.4s ease-out;
+  }
+  .expanded-mention-card.is-pinging {
+    border-color: rgba(197, 255, 63, 0.65);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.4),
+      0 8px 24px -8px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba(197, 255, 63, 0.18) !important;
+  }
+  .expanded-mention-card > .border-t.bg-paper-soft {
+    margin-top: auto;
+  }
+  .expanded-mention-card .text-ink-muted,
+  .expanded-mention-card .text-ink-faint,
+  .expanded-mention-card .text-ink-soft {
+    font-family: var(--font-mono);
+  }
+
   .card-dark {
     --color-paper: #161b22;
     --color-paper-soft: #1c2128;

@@ -10,9 +10,9 @@ const heroCards: CardData[] = [
       "Three flagship initiatives this quarter: agent runtime hardening, public sharing, and the federated calendar work for enterprise.",
     tags: ["planning", "leadership", "q3"],
     updatedAt: "2m ago",
-    updatedBy: "Sara",
+    updatedBy: "Teddy",
     isBeingEdited: true,
-    editorName: "Marko",
+    editorName: "Georgi",
   },
   {
     type: "event",
@@ -29,15 +29,37 @@ const heroCards: CardData[] = [
     mime: "application/vnd.ms-excel",
     size: "1.4 MB",
     updatedAt: "yesterday",
+    description:
+      "Quarterly P&L breakdown with headcount projections and runway scenarios for the finance review.",
+    tags: ["finance", "q1", "approved"],
+  },
+  {
+    type: "project",
+    title: "Agent runtime hardening",
+    slug: "agent-runtime",
+    completedTasks: 14,
+    totalTasks: 23,
+    updatedAt: "1h ago",
+    description: "Egress workers, retry logic, and observability for the agent runtime fleet.",
+    tags: ["infra", "priority"],
+  },
+  {
+    type: "chat",
+    title: "#design-review",
+    lastMessage: "ship the new mention chips today? approvals already in from Teddy and Georgi.",
+    lastSender: "Ivo",
+    updatedAt: "just now",
+    memberCount: 12,
+    tags: ["design", "frontend"],
   },
 ];
 ---
 
-<section class="hero-section relative overflow-hidden border-b border-paper/10 px-6 pt-24 pb-32 md:px-10 md:pt-32 md:pb-40">
+<section class="hero-section relative flex flex-col overflow-hidden px-5 pt-16 pb-14 sm:px-6 sm:pt-20 sm:pb-16 md:px-10 md:pt-24 md:pb-20 lg:min-h-screen">
   <div class="hero-stars pointer-events-none absolute inset-0 z-[0]"></div>
-  <div class="relative z-[1] mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
-    <div class="relative z-10 lg:-ml-24 xl:-ml-40">
-      <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-paper/15 bg-paper/[0.06] px-3 py-1 font-mono text-xs font-bold text-paper backdrop-blur-sm">
+  <div class="relative z-[1] mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
+    <div class="relative z-10 lg:-ml-24 xl:-ml-40 lg:flex lg:flex-col lg:justify-center">
+      <div class="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 self-start rounded-2xl border border-paper/15 bg-paper/[0.06] px-3 py-1.5 font-mono text-[11px] font-bold text-paper backdrop-blur-sm sm:rounded-full sm:py-1 sm:text-xs">
         <span class="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(197,255,63,0.7)]"></span>
         <span>Source-available</span>
         <span class="text-paper/30">·</span>
@@ -48,37 +70,37 @@ const heroCards: CardData[] = [
         <span>No Cloud Act</span>
       </div>
 
-      <h1 class="font-sans text-5xl font-semibold leading-[1.02] tracking-[-0.03em] text-paper md:text-6xl lg:text-[5.25rem] xl:text-[6rem]">
-        Work infrastructure<br /><span class="hero-headline-accent">finally unified</span>
+      <h1 class="hero-headline m-0 mb-6 font-sans md:mb-7">
+        Work Infrastructure<span class="hero-headline__dot"> ,</span><br class="hidden sm:inline" /> <span class="hero-headline__accent italic">finally unified</span><span class="hero-headline__dot"> .</span>
       </h1>
 
-      <p class="mt-8 max-w-xl text-lg leading-relaxed text-paper/70 md:text-xl">
-        Notes, chat, files, projects, calendar, AI - one workspace, everything is reachable.
-        Fully private. No trackers, no data harvesting, no training on your data.
+      <p class="mb-8 max-w-xl text-base leading-relaxed text-paper/70 sm:text-lg md:mb-9 md:text-xl">
+        Notes, Diagrams, Chat, Files, Projects, Calendar, AI. One workspace, everything is reachable and talks back.
+        Fully private. No trackers, no advertasing, no data harvesting, no training on your data.
       </p>
 
-      <div class="mt-10 flex flex-wrap items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <a
           href="https://cloud.uniffy.io/signup"
-          class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+          class="inline-flex items-center gap-2 rounded-full bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 sm:px-6 sm:py-3"
         >
           Start free
           <span aria-hidden>&rarr;</span>
         </a>
         <a
           href="#sovereign"
-          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-5 py-2.5 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1] sm:px-6 sm:py-3"
         >
           Self-host
         </a>
-        <span class="ml-2 font-mono text-xs text-paper/65">Free for teams up to 10</span>
+        <span class="basis-full font-mono text-xs text-paper/65 sm:basis-auto sm:ml-2">Free for teams up to 10 users forever</span>
       </div>
     </div>
 
-    <div class="relative h-[480px] lg:h-[680px]" data-hero-stage>
+    <div class="relative h-[360px] sm:h-[440px] md:h-[520px] lg:h-[680px]" data-hero-stage>
       <div class="hero-stage__backdrop pointer-events-none absolute -inset-32 z-[0]"></div>
 
-      <div class="hero-planet pointer-events-none absolute left-1/2 top-1/2 z-[2] aspect-square w-[340px] max-w-[90%] -translate-x-1/2 -translate-y-1/2">
+      <div class="hero-planet pointer-events-none absolute left-1/2 top-1/2 z-[2] hidden aspect-square -translate-x-1/2 -translate-y-1/2 md:block md:w-[320px] lg:w-[340px]">
         <svg
           class="hero-planet__orbits absolute -inset-10 h-[calc(100%+5rem)] w-[calc(100%+5rem)]"
           viewBox="0 0 800 800"
@@ -117,17 +139,23 @@ const heroCards: CardData[] = [
         </div>
       </div>
 
-      <div class="hero-card hero-card--tr absolute -right-4 top-0 lg:left-[calc(50%+45px)] lg:right-auto lg:top-[calc(50%-390px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Note">
+      <div class="hero-card hero-card--tr absolute right-2 top-2 md:-right-4 md:top-0 lg:left-[calc(50%+45px)] lg:right-auto lg:top-[calc(50%-390px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Note">
         <ExpandedMentionCard card={heroCards[0]} variant="dark" />
       </div>
-      <div class="hero-card hero-card--bl hero-card--bright absolute -left-8 bottom-0 lg:bottom-auto lg:left-[calc(50%-325px)] lg:top-[calc(50%+250px)] z-40 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Event">
+      <div class="hero-card hero-card--bl absolute left-2 bottom-2 md:-left-8 md:bottom-0 lg:bottom-auto lg:left-[calc(50%-325px)] lg:top-[calc(50%+250px)] z-40 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Event">
         <ExpandedMentionCard card={heroCards[1]} variant="dark" />
       </div>
-      <div class="hero-card hero-card--br absolute -right-8 bottom-4 lg:bottom-auto lg:left-[calc(50%+55px)] lg:right-auto lg:top-[calc(50%+268px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="File">
+      <div class="hero-card hero-card--br hidden md:block absolute md:-right-8 md:bottom-4 lg:bottom-auto lg:left-[calc(50%+55px)] lg:right-auto lg:top-[calc(50%+268px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="File">
         <ExpandedMentionCard card={heroCards[2]} variant="dark" />
       </div>
+      <div class="hero-card hero-card--mr hidden lg:block absolute lg:left-[calc(50%+225px)] lg:top-[calc(50%-90px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Project">
+        <ExpandedMentionCard card={heroCards[3]} variant="dark" />
+      </div>
+      <div class="hero-card hero-card--tl hidden lg:block absolute lg:left-[calc(50%-415px)] lg:top-[calc(50%-200px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Chat">
+        <ExpandedMentionCard card={heroCards[4]} variant="dark" />
+      </div>
 
-      <canvas class="hero-network pointer-events-none absolute inset-0 z-[3] h-full w-full" data-hero-network></canvas>
+      <canvas class="hero-network pointer-events-none absolute inset-0 z-[3] hidden h-full w-full md:block" data-hero-network></canvas>
     </div>
   </div>
 </section>
@@ -139,6 +167,23 @@ const heroCards: CardData[] = [
       radial-gradient(ellipse at 75% 50%, rgba(40, 70, 50, 0.18) 0%, rgba(17, 22, 30, 0.6) 35%, rgba(10, 14, 26, 0) 65%),
       radial-gradient(ellipse at 20% 20%, rgba(20, 28, 44, 0.45) 0%, rgba(6, 8, 13, 0) 55%),
       radial-gradient(ellipse at 50% 100%, rgba(6, 8, 13, 0.6) 0%, rgba(10, 14, 26, 0) 60%);
+  }
+
+  .hero-section::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(197, 255, 63, 0.05) 20%,
+      rgba(197, 255, 63, 0.45) 55%,
+      rgba(197, 255, 63, 0.85) 100%
+    );
+    pointer-events: none;
   }
 
   .hero-stars {
@@ -153,17 +198,29 @@ const heroCards: CardData[] = [
       radial-gradient(1px 1px at 40% 92%, rgba(255, 255, 255, 0.3), transparent 60%);
   }
 
-  .hero-headline-accent {
-    background: linear-gradient(
-      90deg,
-      rgba(230, 237, 243, 0.95) 0%,
-      rgba(230, 237, 243, 0.92) 45%,
-      rgba(215, 240, 170, 0.85) 72%,
-      #c5ff3f 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .hero-headline {
+    font-weight: 500;
+    font-size: clamp(32px, 8vw, 64px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    color: rgba(255, 255, 255, 0.92);
+    overflow-wrap: anywhere;
+  }
+  @media (min-width: 1024px) {
+    .hero-headline {
+      font-size: clamp(40px, 4.8vw, 64px);
+      line-height: 0.98;
+      white-space: nowrap;
+    }
+  }
+
+  .hero-headline__dot {
+    color: #9ec060;
+    font-size: 0.7em;
+  }
+
+  .hero-headline__accent {
+    font-size: 0.88em;
   }
 
   .hero-planet {
@@ -254,23 +311,29 @@ const heroCards: CardData[] = [
       drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35))
       drop-shadow(0 0 24px rgba(197, 255, 63, 0.10));
   }
+  .hero-card :global(.expanded-mention-card) {
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+  }
+  @media (min-width: 640px) {
+    .hero-card :global(.expanded-mention-card) {
+      width: 280px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hero-card :global(.expanded-mention-card) {
+      width: 320px;
+    }
+  }
+  .hero-card :global(.expanded-mention-card > .border-t.bg-paper-soft) {
+    margin-top: auto;
+  }
   .hero-card--bl { animation-delay: -3s; animation-duration: 11s; }
   .hero-card--br { animation-delay: -6s; animation-duration: 10s; }
-
-  .hero-card--bright {
-    filter:
-      drop-shadow(0 16px 28px rgba(0, 0, 0, 0.55))
-      drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4))
-      drop-shadow(0 0 14px rgba(244, 63, 94, 0.42));
-  }
-  .hero-card--bright .card-dark.expanded-mention-card {
-    --color-paper: #20262f;
-    --color-paper-soft: #272d37;
-    --color-ink: #f3f6fa;
-    --color-ink-soft: #dfe5ec;
-    --color-hairline: rgba(244, 63, 94, 0.25);
-    --color-hairline-strong: rgba(244, 63, 94, 0.4);
-  }
+  .hero-card--mr { animation-delay: -4s; animation-duration: 12s; }
+  .hero-card--tl { animation-delay: -8s; animation-duration: 13s; }
 
   @keyframes hero-planet-float {
     0%, 100% { transform: translate(-50%, -50%); }
@@ -347,14 +410,14 @@ const heroCards: CardData[] = [
     let height = 0;
 
     function readPlanet() {
-      if (!planetEl) {
+      const planetRect = planetEl?.getBoundingClientRect();
+      if (!planetEl || !planetRect || planetRect.width === 0) {
         planetCx = width / 2;
         planetCy = height / 2;
         planetRadius = Math.min(width, height) * 0.42;
         return;
       }
       const canvasRect = canvas.getBoundingClientRect();
-      const planetRect = planetEl.getBoundingClientRect();
       planetCx = planetRect.left - canvasRect.left + planetRect.width / 2;
       planetCy = planetRect.top - canvasRect.top + planetRect.height / 2;
       planetRadius = planetRect.width / 2;
