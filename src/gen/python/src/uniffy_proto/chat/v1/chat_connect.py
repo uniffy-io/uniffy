@@ -112,6 +112,15 @@ class ChatService(Protocol):
     async def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def rename_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_agent_chats(self, request: chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_category(self, request: chat_dot_v1_dot_chat__pb2.CreateCategoryRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -473,6 +482,36 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_channel_resources,
+                ),
+                "/chat.v1.ChatService/CreateAgentChat": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateAgentChat",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+                        output=chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_agent_chat,
+                ),
+                "/chat.v1.ChatService/RenameAgentChat": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RenameAgentChat",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+                        output=chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rename_agent_chat,
+                ),
+                "/chat.v1.ChatService/ListAgentChats": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListAgentChats",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_agent_chats,
                 ),
                 "/chat.v1.ChatService/CreateCategory": Endpoint.unary(
                     method=MethodInfo(
@@ -1246,6 +1285,66 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_agent_chat(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateAgentChat",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+                output=chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def rename_agent_chat(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RenameAgentChat",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+                output=chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_agent_chats(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentChats",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_category(
         self,
         request: chat_dot_v1_dot_chat__pb2.CreateCategoryRequest,
@@ -1551,6 +1650,12 @@ class ChatServiceSync(Protocol):
     def get_unread_counts(self, request: chat_dot_v1_dot_chat__pb2.GetUnreadCountsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetUnreadCountsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rename_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_agent_chats(self, request: chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_category(self, request: chat_dot_v1_dot_chat__pb2.CreateCategoryRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1901,6 +2006,36 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_channel_resources,
+                ),
+                "/chat.v1.ChatService/CreateAgentChat": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateAgentChat",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+                        output=chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_agent_chat,
+                ),
+                "/chat.v1.ChatService/RenameAgentChat": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RenameAgentChat",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+                        output=chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rename_agent_chat,
+                ),
+                "/chat.v1.ChatService/ListAgentChats": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListAgentChats",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_agent_chats,
                 ),
                 "/chat.v1.ChatService/CreateCategory": EndpointSync.unary(
                     method=MethodInfo(
@@ -2668,6 +2803,66 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest,
                 output=chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def create_agent_chat(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateAgentChat",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
+                output=chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rename_agent_chat(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RenameAgentChat",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest,
+                output=chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_agent_chats(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentChats",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListAgentChatsRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListAgentChatsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

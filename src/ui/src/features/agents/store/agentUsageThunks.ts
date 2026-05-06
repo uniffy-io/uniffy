@@ -7,6 +7,7 @@ interface DailyUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    cacheReadInputTokens: number;
 }
 
 interface ModelUsageEntry {
@@ -53,6 +54,7 @@ export interface UsageStats {
     totalRuns: number;
     totalInputTokens: number;
     totalOutputTokens: number;
+    totalCacheReadInputTokens: number;
     totalSessions: number;
     avgDurationMs: number;
     dailyUsage: DailyUsageEntry[];
@@ -87,6 +89,7 @@ export const fetchUsageStats = createAsyncThunk<
             totalRuns: Number(response.totalRuns),
             totalInputTokens: Number(response.totalInputTokens),
             totalOutputTokens: Number(response.totalOutputTokens),
+            totalCacheReadInputTokens: Number(response.totalCacheReadInputTokens),
             totalSessions: Number(response.totalSessions),
             avgDurationMs: response.avgDurationMs,
             dailyUsage: response.dailyUsage.map((d) => ({
@@ -94,6 +97,7 @@ export const fetchUsageStats = createAsyncThunk<
                 runs: Number(d.runs),
                 inputTokens: Number(d.inputTokens),
                 outputTokens: Number(d.outputTokens),
+                cacheReadInputTokens: Number(d.cacheReadInputTokens),
             })),
             modelUsage: response.modelUsage.map((m) => ({
                 model: m.model,

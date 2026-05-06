@@ -131,18 +131,50 @@ class FileOperations(BaseContentOperations[File]):
         return f"/files/{model.id}"
 
     def _get_search_description(self, model: File) -> str | None:
-        """Get search description from file metadata."""
-        return model.description
+        """Get search description from file metadata.
+
+        Falls back to a snippet of the extracted text when the user did not
+        provide a description, so mention previews can show file contents.
+        """
+        if model.description:
+            return model.description
+        if model.media_info and model.media_info.extracted_text:
+            return model.media_info.extracted_text[:300].strip() or None
+        return None
 
     def _get_search_tags(self, model: File) -> list[str] | None:
         """Get tags for search index."""
         return model.tags if model.tags else None
 
     def _get_search_metadata(self, model: File) -> dict[str, str] | None:
-        """Get MIME type metadata for search index."""
+        """Sync metadata path -- MIME type and parent folder id.
+
+        ``folder_id`` lets folder deletion cascade-remove every file
+        it contained from the search index in a single filter call.
+        ``parent_label`` (folder name) is added in
+        :meth:`_get_search_metadata_async` so the lookup against the
+        folders table can run with the session.
+        """
+        meta: dict[str, str] = {}
         if model.mime_type:
-            return {"mime_type": model.mime_type}
-        return None
+            meta["mime_type"] = model.mime_type
+        if model.folder_id:
+            meta["folder_id"] = str(model.folder_id)
+        return meta or None
+
+    async def _get_search_metadata_async(self, model: File) -> dict[str, str] | None:
+        """Append parent-folder name so mention chips can show a
+        breadcrumb without a second round-trip.
+        """
+        meta = dict(self._get_search_metadata(model) or {})
+        if model.folder_id:
+            result = await self.session.execute(
+                select(Folder.name).where(Folder.id == model.folder_id)
+            )
+            name = result.scalar_one_or_none()
+            if name:
+                meta["parent_label"] = name
+        return meta or None
 
     async def _fetch_by_id(
         self,
@@ -1187,6 +1219,7 @@ class FolderOperations:
             if not role_can_edit(role):
                 raise PermissionDeniedError("edit", "folder")
 
+        name_changed = name is not None and name != folder.name
         if name is not None:
             if len(name) > 255:
                 raise ValidationError("Folder name must be 255 characters or fewer")
@@ -1201,7 +1234,42 @@ class FolderOperations:
         await self.session.commit()
         await self.session.refresh(folder)
 
+        # Folder rename: every file inside carries the folder name as
+        # ``parent_label`` in its search-index metadata, so re-index
+        # them and broadcast a mention-state change so visible chips
+        # pick up the new breadcrumb without a refresh.
+        if name_changed:
+            await self._refresh_files_in_folder(folder.id, folder.name)
+
         return folder
+
+    async def _refresh_files_in_folder(self, folder_id: UUID, parent_label: str) -> None:
+        """Re-index every active file in the folder and broadcast the
+        new ``parent_label`` so mention chips update live.
+        """
+        from uniffy.core.valkey.mentions import publish_mention_state
+
+        file_ops = FileOperations(self.session)
+        result = await self.session.execute(
+            select(File).where(
+                File.folder_id == folder_id,
+                File.is_deleted == False,  # noqa: E712
+            )
+        )
+        files = list(result.scalars().all())
+        for f in files:
+            try:
+                await file_ops._index_for_search(f)
+            except Exception:
+                logger.warning(f"Failed to re-index file {f.id} after folder rename")
+            try:
+                await publish_mention_state(
+                    organization_id=f.organization_id,
+                    urn=build_content_urn(ContentType.FILE, f.id),
+                    changes={"parent_label": parent_label},
+                )
+            except Exception:
+                logger.warning(f"Failed to publish parent_label for file {f.id}")
 
     async def delete(
         self,
@@ -1394,6 +1462,9 @@ class FolderOperations:
                     await self.session.delete(version)
             await self.session.flush()
 
+        from uniffy.core.search.indexer import SearchIndexer
+
+        indexer = SearchIndexer(self.session)
         for file in files:
             if permanent:
                 s3 = get_s3_client()
@@ -1402,6 +1473,13 @@ class FolderOperations:
             else:
                 file.is_deleted = True
                 file.deleted_at = datetime.now(UTC)
+            # Drop the file from the search index regardless of
+            # permanent vs soft delete -- a soft-deleted file should
+            # not show up in global search either.
+            try:
+                await indexer.remove(build_content_urn(ContentType.FILE, file.id))
+            except Exception:
+                logger.warning(f"Search remove failed for file {file.id}")
             files_deleted += 1
 
         if permanent and files:

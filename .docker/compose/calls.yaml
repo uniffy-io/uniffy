@@ -1,0 +1,114 @@
+# Calls infrastructure - LiveKit SFU (always on) + coturn TURN relay (opt-in).
+# LiveKit reuses the existing valkey on DB 1 (app uses DB 0) for room registry.
+# coturn off by default; enable with: ./run.sh calls-turn-up
+
+x-defaults: &defaults
+    restart: unless-stopped
+    networks: [uniffy-network]
+    logging:
+        driver: json-file
+        options:
+            max-size: "10m"
+            max-file: "3"
+
+services:
+    livekit:
+        <<: *defaults
+        image: livekit/livekit-server:v1.11.0
+        container_name: uniffy-livekit
+        command: --config /etc/livekit.yaml --node-ip 127.0.0.1
+        ports:
+            - "7880:7880" # signaling (HTTP/WebSocket)
+            - "7881:7881" # ICE/TCP fallback
+            - "7882:7882/udp" # ICE/UDP media (single-port mux)
+        configs:
+            - source: livekit_config
+              target: /etc/livekit.yaml
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        depends_on:
+            valkey:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "wget",
+                    "--quiet",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:7880",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    # Off by default. Enable with: ./run.sh calls-turn-up
+    # Most local dev does not need TURN since browsers connect via host loopback.
+    # Bring up when testing across NATs or simulating restrictive firewalls.
+    coturn:
+        <<: *defaults
+        image: coturn/coturn:4.6
+        container_name: uniffy-coturn
+        profiles: ["calls-turn"]
+        command: |
+            -n
+            --use-auth-secret
+            --static-auth-secret=uniffy-coturn-dev
+            --realm=turn.localhost
+            --listening-port=3478
+            --no-tls
+            --no-dtls
+            --no-cli
+            --min-port=49160
+            --max-port=49200
+            --log-file=stdout
+            --verbose
+        ports:
+            - "3478:3478/udp"
+            - "3478:3478/tcp"
+            - "49160-49200:49160-49200/udp"
+
+configs:
+    livekit_config:
+        content: |
+            port: 7880
+            bind_addresses:
+              - ""
+
+            rtc:
+              tcp_port: 7881
+              udp_port: 7882
+              use_external_ip: false
+              enable_loopback_candidate: true
+
+            keys:
+              devkey: devsecret-change-me-in-prod-32chars-min
+
+            redis:
+              address: valkey:6379
+              password: uniffy-valkey-dev
+              db: 1
+
+            turn:
+              enabled: false
+
+            webhook:
+              api_key: devkey
+              urls:
+                - http://host.docker.internal:8000/internal/webhooks/livekit
+
+            logging:
+              level: info
+              json: false
+
+            room:
+              empty_timeout: 60
+              departure_timeout: 30
+              max_participants: 50
+
+            development: true
+
+networks:
+    uniffy-network:
+        driver: bridge

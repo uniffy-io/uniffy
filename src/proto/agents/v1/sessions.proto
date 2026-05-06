@@ -202,14 +202,26 @@ message GetSessionContextStatsResponse {
   int32 compacted_messages = 3;
   // Number of summary messages currently in the context window
   int32 summary_count = 4;
-  // Estimated tokens used by active messages
+  // Provider-reported prompt + completion size of the most recent
+  // assistant turn (last_input_tokens + last_output_tokens). Zero
+  // before the first reply.
   int32 active_tokens = 5;
   // Token budget for conversation history (65% of context window)
   int32 token_budget = 6;
-  // Estimated tokens remaining before compaction triggers
+  // Tokens remaining before compaction triggers
   int32 tokens_until_compaction = 7;
   // Model context window size in tokens
   int32 context_window_tokens = 8;
+  // Full prompt size of the most recent assistant turn -- uncached
+  // input plus tokens served from the prompt cache. Zero pre-first-turn.
+  int32 last_input_tokens = 9;
+  // Provider-reported output_tokens of the most recent assistant turn
+  // (the assistant's reply). Zero pre-first-turn.
+  int32 last_output_tokens = 10;
+  // Tokens served from Anthropic's prompt cache on the last turn
+  // (`cache_read_input_tokens`). Counted toward last_input_tokens but
+  // billed at ~10% of the base input price -- the savings signal.
+  int32 last_cache_read_tokens = 11;
 }
 
 message CompactSessionRequest {

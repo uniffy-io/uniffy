@@ -1,0 +1,54 @@
+# Database / cache inspection UIs - pgadmin, redisinsight.
+# Optional but always-on locally. Comment out the include in docker-compose.yml
+# if you do not want them.
+
+x-defaults: &defaults
+  restart: unless-stopped
+  networks: [uniffy-network]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  pgadmin:
+    <<: *defaults
+    image: dpage/pgadmin4:latest
+    container_name: uniffy-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@uniffy.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  redisinsight:
+    <<: *defaults
+    image: redis/redisinsight:latest
+    container_name: uniffy-redisinsight
+    environment:
+      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
+      RI_REDIS_HOST: valkey
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_PASSWORD: uniffy-valkey-dev
+      RI_REDIS_ALIAS: uniffy-valkey
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      valkey:
+        condition: service_healthy
+
+volumes:
+  pgadmin_data:
+  redisinsight_data:
+
+networks:
+  uniffy-network:
+    driver: bridge

@@ -65,7 +65,7 @@ async def _flush_channel_cursors(client: Any) -> int:
             channel_id = UUID(parts[1])
             key = f"chat:read:{user_id}:{channel_id}"
             parsed.append((user_id, channel_id, key))
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             continue
 
     if not parsed:
@@ -97,7 +97,7 @@ async def _flush_channel_cursors(client: Any) -> int:
                 "last_read_message_id": message_id,
                 "last_read_at": read_at,
             })
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             continue
 
     if not rows_to_upsert:
@@ -170,7 +170,7 @@ async def _flush_thread_cursors(client: Any) -> int:
             root_message_id = UUID(parts[1])
             key = f"chat:thread_read:{user_id}:{root_message_id}"
             parsed.append((user_id, root_message_id, key))
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             continue
 
     if not parsed:
@@ -198,7 +198,7 @@ async def _flush_thread_cursors(client: Any) -> int:
                 "last_read_at": read_at,
                 "unread_mentions": 0,
             })
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             continue
 
     if not rows_to_upsert:

@@ -15,6 +15,9 @@ interface ChatUiState {
   channelHeaderExpanded: boolean;
   channelsSectionCollapsed: boolean;
   dmSectionCollapsed: boolean;
+  agentChatsSectionCollapsed: boolean;
+  agentChatPickerOpen: boolean;
+  renameAgentChatChannelId: string | null;
   splitActive: boolean;
   focusedPane: 'left' | 'right';
   jumpToMessageId: string | null;
@@ -49,6 +52,9 @@ const initialState: ChatUiState = {
   channelHeaderExpanded: false,
   channelsSectionCollapsed: false,
   dmSectionCollapsed: false,
+  agentChatsSectionCollapsed: false,
+  agentChatPickerOpen: false,
+  renameAgentChatChannelId: null,
   splitActive: false,
   focusedPane: 'left',
   jumpToMessageId: null,
@@ -134,6 +140,21 @@ export const chatUiSlice = createSlice({
     },
     toggleDmSection: (state) => {
       state.dmSectionCollapsed = !state.dmSectionCollapsed;
+    },
+    toggleAgentChatsSection: (state) => {
+      state.agentChatsSectionCollapsed = !state.agentChatsSectionCollapsed;
+    },
+    openAgentChatPicker: (state) => {
+      state.agentChatPickerOpen = true;
+    },
+    closeAgentChatPicker: (state) => {
+      state.agentChatPickerOpen = false;
+    },
+    openRenameAgentChatDialog: (state, action: PayloadAction<string>) => {
+      state.renameAgentChatChannelId = action.payload;
+    },
+    closeRenameAgentChatDialog: (state) => {
+      state.renameAgentChatChannelId = null;
     },
     activateSplit: (state) => {
       state.splitActive = true;
@@ -230,6 +251,11 @@ export const {
   toggleChannelHeaderExpanded,
   toggleChannelsSection,
   toggleDmSection,
+  toggleAgentChatsSection,
+  openAgentChatPicker,
+  closeAgentChatPicker,
+  openRenameAgentChatDialog,
+  closeRenameAgentChatDialog,
   activateSplit,
   deactivateSplit,
   setFocusedPane,
@@ -283,6 +309,15 @@ export const selectChannelsSectionCollapsed = (state: RootState): boolean =>
 
 export const selectDmSectionCollapsed = (state: RootState): boolean =>
   state.chatUi.dmSectionCollapsed;
+
+export const selectAgentChatsSectionCollapsed = (state: RootState): boolean =>
+  state.chatUi.agentChatsSectionCollapsed;
+
+export const selectAgentChatPickerOpen = (state: RootState): boolean =>
+  state.chatUi.agentChatPickerOpen;
+
+export const selectRenameAgentChatChannelId = (state: RootState): string | null =>
+  state.chatUi.renameAgentChatChannelId;
 
 export const selectSplitActive = (state: RootState): boolean =>
   state.chatUi.splitActive;

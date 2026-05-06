@@ -1,6 +1,7 @@
 """Note operations."""
 
 import copy
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -41,6 +42,57 @@ from uniffy.core.types import (
     SubjectType,
 )
 from uniffy.domains.notes import queries
+
+_MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^|\]]+)\|[^\]]+\\?\]\\?\]\\?\]")
+_MENTION_RE = re.compile(r"\[\[\[([^|]+)\|[^\]]+\]\]\]")
+_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]+\)")
+_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_FENCED_CODE_RE = re.compile(r"```[\s\S]*?```")
+_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+_HEADER_RE = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+_BOLD_STAR_RE = re.compile(r"\*\*([^*]+)\*\*")
+_ITALIC_STAR_RE = re.compile(r"\*([^*]+)\*")
+_BOLD_UNDER_RE = re.compile(r"__([^_]+)__")
+_ITALIC_UNDER_RE = re.compile(r"_([^_]+)_")
+_STRIKE_RE = re.compile(r"~~([^~]+)~~")
+_BLOCKQUOTE_RE = re.compile(r"^>\s+", re.MULTILINE)
+_UL_MARKER_RE = re.compile(r"^[\s]*[-*+]\s+", re.MULTILINE)
+_OL_MARKER_RE = re.compile(r"^[\s]*\d+\.\s+", re.MULTILINE)
+_TABLE_SEP_RE = re.compile(r"^\|?[\s:]*[-]{2,}[\s:]*(\|[\s:]*[-]{2,}[\s:]*)*\|?\s*$", re.MULTILINE)
+_HR_RE = re.compile(r"^[-*_]{3,}\s*$", re.MULTILINE)
+_WS_RE = re.compile(r"\s+")
+
+
+def _strip_markdown(text: str) -> str:
+    """Strip markdown formatting and URN mention syntax to plain text.
+
+    Mirrors the frontend ``stripMarkdown`` helper so the snippet that
+    feeds the search index matches what the chip would render.
+    """
+    if not text:
+        return ""
+    s = _MENTION_ESCAPED_RE.sub(r"\1", text)
+    s = _MENTION_RE.sub(r"\1", s)
+    s = _IMAGE_RE.sub(r"\1", s)
+    s = _LINK_RE.sub(r"\1", s)
+    s = _HTML_TAG_RE.sub(" ", s)
+    s = _FENCED_CODE_RE.sub(" ", s)
+    s = _INLINE_CODE_RE.sub(r"\1", s)
+    s = _HEADER_RE.sub("", s)
+    s = _BOLD_STAR_RE.sub(r"\1", s)
+    s = _ITALIC_STAR_RE.sub(r"\1", s)
+    s = _BOLD_UNDER_RE.sub(r"\1", s)
+    s = _ITALIC_UNDER_RE.sub(r"\1", s)
+    s = _STRIKE_RE.sub(r"\1", s)
+    s = _BLOCKQUOTE_RE.sub("", s)
+    s = _UL_MARKER_RE.sub("", s)
+    s = _OL_MARKER_RE.sub("", s)
+    s = _TABLE_SEP_RE.sub("", s)
+    s = s.replace("|", " ")
+    s = _HR_RE.sub("", s)
+    s = _WS_RE.sub(" ", s)
+    return s.strip()
 
 
 @dataclass
@@ -105,11 +157,22 @@ class NoteOperations(BaseContentOperations[Note]):
         return f"/notes/{model.id}"
 
     def _get_search_description(self, model: Note) -> str | None:
-        """Return a snippet for search result previews."""
+        """Return a snippet for search result previews.
+
+        Markdown is stripped before slicing so the preview text reads
+        cleanly in mention chips and search results -- otherwise the
+        first 200 bytes of a note would render as raw ``[[[label|urn]]]``
+        / ``# heading`` / ``**bold**`` syntax.
+        """
         if model.node_type == NodeType.CANVAS:
-            return None
+            texts = self._extract_canvas_text(model.canvas_content or {})
+            if not texts:
+                return None
+            joined = " ".join(texts).strip()
+            return joined[:200] if joined else None
         if model.content:
-            return model.content[:200]
+            stripped = _strip_markdown(model.content)
+            return stripped[:200] if stripped else None
         return None
 
     def _get_search_tags(self, model: Note) -> list[str] | None:
@@ -120,6 +183,18 @@ class NoteOperations(BaseContentOperations[Note]):
         if model.inline_tags:
             all_tags.update(model.inline_tags)
         return sorted(all_tags) if all_tags else None
+
+    async def _get_search_metadata_async(self, model: Note) -> dict[str, str] | None:
+        """Add parent-folder title so mention chips show a breadcrumb."""
+        meta = dict(self._get_search_metadata(model) or {})
+        if model.parent_id:
+            result = await self.session.execute(
+                select(Note.title).where(Note.id == model.parent_id)
+            )
+            title = result.scalar_one_or_none()
+            if title:
+                meta["parent_label"] = title
+        return meta or None
 
     @staticmethod
     def _extract_canvas_text(canvas_data: dict) -> list[str]:
@@ -278,6 +353,8 @@ class NoteOperations(BaseContentOperations[Note]):
 
         if title_changed:
             await self._propagate_title_to_mentions(organization_id, note)
+            if note.node_type == NodeType.FOLDER:
+                await self._refresh_children_parent_label(note)
 
         if note.access_mode != AccessMode.OWNER_ONLY:
             await emit_notification(
@@ -693,6 +770,36 @@ class NoteOperations(BaseContentOperations[Note]):
                 content_id=note.id,
             )
         )
+
+    async def _refresh_children_parent_label(self, parent: Note) -> None:
+        """Re-index every direct child note under a renamed folder.
+
+        Children carry the folder's title as ``parent_label`` in their
+        search metadata, so a rename forces a per-child re-index plus a
+        mention-state broadcast for visible chips.
+        """
+        from uniffy.core.valkey.mentions import publish_mention_state
+
+        result = await self.session.execute(
+            select(Note).where(
+                Note.parent_id == parent.id,
+                Note.is_deleted == False,  # noqa: E712
+            )
+        )
+        children = list(result.scalars().all())
+        for child in children:
+            try:
+                await self._index_for_search(child)
+            except Exception:
+                logger.warning(f"Failed to re-index child note {child.id} after folder rename")
+            try:
+                await publish_mention_state(
+                    organization_id=child.organization_id,
+                    urn=build_content_urn(self.content_type, child.id),
+                    changes={"parent_label": parent.title},
+                )
+            except Exception:
+                logger.warning(f"Failed to publish parent_label for note {child.id}")
 
     async def _propagate_title_to_mentions(
         self,

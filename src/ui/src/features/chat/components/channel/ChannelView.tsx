@@ -11,6 +11,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
 import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
+import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chatThunks';
 import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
 import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
@@ -145,14 +146,23 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     );
   }
 
+  const resolvedName = getChannelDisplayName(activeChannel);
   const channelDisplayName =
     activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM'
-      ? activeChannel.name
-      : `#${activeChannel.name}`;
+      ? resolvedName
+      : `#${resolvedName}`;
 
   return (
     <div
       className="flex flex-col h-full"
+      style={{
+        // Subtle polish: a faint primary-tinted spotlight in the top-right
+        // and a complementary cool wash in the bottom-left. Both alphas are
+        // tiny (4-6%) so the overall background still reads as bg-background
+        // but the canvas gains depth instead of feeling like a flat slab.
+        backgroundImage:
+          'radial-gradient(ellipse 90% 60% at 100% 0%, hsl(var(--primary) / 0.03), transparent 60%), radial-gradient(ellipse 80% 60% at 0% 100%, hsl(var(--ring) / 0.02), transparent 60%)',
+      }}
       onMouseDown={onFocus}
       data-testid="chat-channel-view"
       data-channel-id={effectiveChannelId ?? ''}

@@ -51,6 +51,9 @@ const (
 	ChatService_MarkThreadRead_FullMethodName                   = "/chat.v1.ChatService/MarkThreadRead"
 	ChatService_GetUnreadCounts_FullMethodName                  = "/chat.v1.ChatService/GetUnreadCounts"
 	ChatService_GetChannelResources_FullMethodName              = "/chat.v1.ChatService/GetChannelResources"
+	ChatService_CreateAgentChat_FullMethodName                  = "/chat.v1.ChatService/CreateAgentChat"
+	ChatService_RenameAgentChat_FullMethodName                  = "/chat.v1.ChatService/RenameAgentChat"
+	ChatService_ListAgentChats_FullMethodName                   = "/chat.v1.ChatService/ListAgentChats"
 	ChatService_CreateCategory_FullMethodName                   = "/chat.v1.ChatService/CreateCategory"
 	ChatService_UpdateCategory_FullMethodName                   = "/chat.v1.ChatService/UpdateCategory"
 	ChatService_DeleteCategory_FullMethodName                   = "/chat.v1.ChatService/DeleteCategory"
@@ -110,6 +113,10 @@ type ChatServiceClient interface {
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
 	// Channel resources
 	GetChannelResources(ctx context.Context, in *GetChannelResourcesRequest, opts ...grpc.CallOption) (*GetChannelResourcesResponse, error)
+	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
+	CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error)
+	RenameAgentChat(ctx context.Context, in *RenameAgentChatRequest, opts ...grpc.CallOption) (*RenameAgentChatResponse, error)
+	ListAgentChats(ctx context.Context, in *ListAgentChatsRequest, opts ...grpc.CallOption) (*ListAgentChatsResponse, error)
 	// Categories
 	CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CreateCategoryResponse, error)
 	UpdateCategory(ctx context.Context, in *UpdateCategoryRequest, opts ...grpc.CallOption) (*UpdateCategoryResponse, error)
@@ -476,6 +483,36 @@ func (c *chatServiceClient) GetChannelResources(ctx context.Context, in *GetChan
 	return out, nil
 }
 
+func (c *chatServiceClient) CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAgentChatResponse)
+	err := c.cc.Invoke(ctx, ChatService_CreateAgentChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) RenameAgentChat(ctx context.Context, in *RenameAgentChatRequest, opts ...grpc.CallOption) (*RenameAgentChatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenameAgentChatResponse)
+	err := c.cc.Invoke(ctx, ChatService_RenameAgentChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) ListAgentChats(ctx context.Context, in *ListAgentChatsRequest, opts ...grpc.CallOption) (*ListAgentChatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAgentChatsResponse)
+	err := c.cc.Invoke(ctx, ChatService_ListAgentChats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CreateCategoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateCategoryResponse)
@@ -641,6 +678,10 @@ type ChatServiceServer interface {
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
 	// Channel resources
 	GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error)
+	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
+	CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error)
+	RenameAgentChat(context.Context, *RenameAgentChatRequest) (*RenameAgentChatResponse, error)
+	ListAgentChats(context.Context, *ListAgentChatsRequest) (*ListAgentChatsResponse, error)
 	// Categories
 	CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error)
 	UpdateCategory(context.Context, *UpdateCategoryRequest) (*UpdateCategoryResponse, error)
@@ -782,6 +823,15 @@ func (UnimplementedChatServiceServer) GetUnreadCounts(context.Context, *GetUnrea
 }
 func (UnimplementedChatServiceServer) GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChannelResources not implemented")
+}
+func (UnimplementedChatServiceServer) CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAgentChat not implemented")
+}
+func (UnimplementedChatServiceServer) RenameAgentChat(context.Context, *RenameAgentChatRequest) (*RenameAgentChatResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenameAgentChat not implemented")
+}
+func (UnimplementedChatServiceServer) ListAgentChats(context.Context, *ListAgentChatsRequest) (*ListAgentChatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAgentChats not implemented")
 }
 func (UnimplementedChatServiceServer) CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCategory not implemented")
@@ -1416,6 +1466,60 @@ func _ChatService_GetChannelResources_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_CreateAgentChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAgentChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).CreateAgentChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_CreateAgentChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).CreateAgentChat(ctx, req.(*CreateAgentChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_RenameAgentChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenameAgentChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).RenameAgentChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_RenameAgentChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).RenameAgentChat(ctx, req.(*RenameAgentChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_ListAgentChats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAgentChatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ListAgentChats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ListAgentChats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ListAgentChats(ctx, req.(*ListAgentChatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_CreateCategory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCategoryRequest)
 	if err := dec(in); err != nil {
@@ -1766,6 +1870,18 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChannelResources",
 			Handler:    _ChatService_GetChannelResources_Handler,
+		},
+		{
+			MethodName: "CreateAgentChat",
+			Handler:    _ChatService_CreateAgentChat_Handler,
+		},
+		{
+			MethodName: "RenameAgentChat",
+			Handler:    _ChatService_RenameAgentChat_Handler,
+		},
+		{
+			MethodName: "ListAgentChats",
+			Handler:    _ChatService_ListAgentChats_Handler,
 		},
 		{
 			MethodName: "CreateCategory",

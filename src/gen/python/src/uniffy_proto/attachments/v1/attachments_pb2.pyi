@@ -98,6 +98,30 @@ class ListAttachmentsResponse(_message.Message):
     total_count: int
     def __init__(self, attachments: _Optional[_Iterable[_Union[Attachment, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
+class BatchListAttachmentsRequest(_message.Message):
+    __slots__ = ("organization_id", "content_type", "content_ids")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_IDS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    content_type: _common_pb2.ContentType
+    content_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BatchListAttachmentsGroup(_message.Message):
+    __slots__ = ("content_id", "attachments")
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHMENTS_FIELD_NUMBER: _ClassVar[int]
+    content_id: str
+    attachments: _containers.RepeatedCompositeFieldContainer[Attachment]
+    def __init__(self, content_id: _Optional[str] = ..., attachments: _Optional[_Iterable[_Union[Attachment, _Mapping]]] = ...) -> None: ...
+
+class BatchListAttachmentsResponse(_message.Message):
+    __slots__ = ("groups",)
+    GROUPS_FIELD_NUMBER: _ClassVar[int]
+    groups: _containers.RepeatedCompositeFieldContainer[BatchListAttachmentsGroup]
+    def __init__(self, groups: _Optional[_Iterable[_Union[BatchListAttachmentsGroup, _Mapping]]] = ...) -> None: ...
+
 class ListSharedAttachmentsRequest(_message.Message):
     __slots__ = ("organization_id", "content_type_filter", "page", "page_size")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

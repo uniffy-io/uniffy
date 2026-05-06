@@ -17,7 +17,7 @@
 
 import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { CaretDown, Robot } from '@phosphor-icons/react';
+import { CaretDown, Robot, Trash } from '@phosphor-icons/react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import { buildFileUrl, buildMediaStreamUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/mention/MentionPreview';
@@ -52,6 +52,156 @@ function useTimeoutCleanup(...refs: RefObject<ReturnType<typeof setTimeout> | nu
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+}
+
+// Per-URN expand/collapse preference, persisted in localStorage so the
+// reader's choice survives page reloads and component re-mounts.
+const TOGGLE_STORAGE_PREFIX = 'mention-toggle:';
+
+function readToggle(urn: string): boolean | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(TOGGLE_STORAGE_PREFIX + urn);
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeToggle(urn: string, value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TOGGLE_STORAGE_PREFIX + urn, String(value));
+  } catch {
+    // Quota / private mode -- ignore.
+  }
+}
+
+/**
+ * Loading skeleton that matches the expanded card footprint so chips
+ * don't pop in / shift size when liveState arrives from the resolver.
+ */
+function MentionExpandedCardSkeleton({ label }: { label: string }) {
+  return (
+    <span
+      aria-busy="true"
+      aria-label={`Loading ${label}`}
+      className={cn(
+        'mention-expanded-card not-prose relative block',
+        'w-80 my-2 px-4 py-3',
+        'bg-card/95 backdrop-blur-xl',
+        'rounded-xl border border-border/50 shadow-sm',
+        'overflow-hidden',
+      )}
+    >
+      <span className="flex items-start gap-3 animate-pulse">
+        <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg bg-muted" />
+        <span className="block flex-1 min-w-0 pt-1 space-y-2">
+          <span className="block h-3.5 w-3/4 rounded bg-muted" />
+          <span className="block h-2.5 w-1/3 rounded bg-muted" />
+          <span className="block h-2.5 w-full rounded bg-muted/60" />
+          <span className="block h-2.5 w-5/6 rounded bg-muted/60" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Tombstone chip for a URN whose target was deleted.
+ *
+ * Renders inline with a strikethrough label, dashed muted border, and a
+ * trash icon so the reader can tell something used to be there. Click /
+ * hover preview / live indicators are all suppressed -- there is nothing
+ * to fetch or to navigate to.
+ */
+function MentionTombstoneChip({
+  typeLabel,
+  compact = false,
+}: {
+  typeLabel: string;
+  compact?: boolean;
+}) {
+  // Deliberately drops the original label. When something has been
+  // removed the reader is not entitled to its title -- they can know
+  // *that* something was here and what type it was, nothing more.
+  const labelText = `Deleted ${typeLabel.toLowerCase()}`;
+  return (
+    <span
+      role="img"
+      aria-label={labelText}
+      title={labelText}
+      className={cn(
+        'mention-chip-tombstone inline-flex items-center align-middle',
+        'rounded-md border border-dashed border-muted-foreground/40',
+        'bg-muted/40 text-muted-foreground',
+        'select-none cursor-not-allowed',
+        compact
+          ? 'gap-1 px-1.5 py-0.5 mx-0.5 text-xs'
+          : 'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
+      )}
+    >
+      <span className={cn(
+        'grid place-items-center shrink-0 rounded',
+        compact ? 'w-3.5 h-3.5' : 'w-5 h-5',
+        'bg-muted-foreground/10 text-muted-foreground/70',
+      )}>
+        <Trash size={compact ? 8 : 11} weight="duotone" />
+      </span>
+      <span className={cn(
+        'font-medium italic',
+        compact ? 'text-xs' : 'text-sm',
+      )}>
+        {labelText}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Tombstone expanded card variant -- block-level "deleted" placeholder.
+ */
+function MentionTombstoneCard({
+  typeLabel,
+}: {
+  typeLabel: string;
+}) {
+  const heading = `Deleted ${typeLabel.toLowerCase()}`;
+  return (
+    <span
+      role="img"
+      aria-label={heading}
+      className={cn(
+        'mention-expanded-card not-prose relative block',
+        'w-80 my-2 px-4 py-3',
+        'bg-muted/40 backdrop-blur-xl text-muted-foreground',
+        'rounded-xl border border-dashed border-muted-foreground/40',
+        'cursor-not-allowed select-none',
+      )}
+      title={heading}
+    >
+      <span className="flex items-start gap-3">
+        <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg bg-muted-foreground/10 text-muted-foreground/70">
+          <Trash size={18} weight="duotone" />
+        </span>
+        <span className="block flex-1 min-w-0 pt-0.5">
+          {/* Original title intentionally omitted. A deleted reference
+              should reveal nothing about what used to be here beyond
+              the content type -- the audience for the original label
+              is gone with the content. */}
+          <span className="block font-semibold text-sm italic text-foreground/70">
+            {heading}
+          </span>
+          <span className="block mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            This reference no longer points to a live item. The original
+            content was removed or you no longer have access to it.
+          </span>
+        </span>
+      </span>
+    </span>
+  );
 }
 
 /**
@@ -90,6 +240,7 @@ interface TypeStyle {
   iconBoxAccent: string;
   border: string;
   shadow: string;
+  glow: string;
   badgeBg: string;
   accentText: string;
 }
@@ -104,6 +255,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
     iconBoxAccent: theme.iconBoxAccent,
     border: theme.border,
     shadow: theme.shadow,
+    glow: theme.glow,
     badgeBg: theme.badgeBg,
     accentText: theme.accentText,
   };
@@ -170,8 +322,20 @@ function MentionChipInner({
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
   const isLive = isLiveContent(resolvedLiveState?.updatedAt);
 
-  const [userToggled, setUserToggled] = useState<boolean | null>(null);
-  const isExpanded = canExpand && !!resolvedLiveState && (userToggled ?? defaultExpanded);
+  // Persist the reader's expand/collapse choice per URN so it survives
+  // page reloads. The provider-driven `mentionDisplay` setting still
+  // sets the *initial* shape; this just remembers explicit toggles.
+  const [userToggled, setUserToggled] = useState<boolean | null>(() => readToggle(urn));
+  const persistToggle = useCallback((value: boolean) => {
+    setUserToggled(value);
+    writeToggle(urn, value);
+  }, [urn]);
+  const wantsExpanded = canExpand && (userToggled ?? defaultExpanded);
+  const isExpanded = wantsExpanded && !!resolvedLiveState;
+
+  // Tombstone short-circuit: render dead-link variant for deleted targets.
+  // Skips hover/expand/click logic -- there is nothing to navigate to.
+  const isDeleted = resolvedLiveState?.status === 'deleted';
 
   // Hover preview state
   const [showPreview, setShowPreview] = useState(false);
@@ -260,19 +424,34 @@ function MentionChipInner({
     }
   }, [parsed.type, resolvedLiveState]);
 
-  // Expanded card mode
+  // Tombstone branch: deleted targets render a dead-link placeholder
+  // regardless of the user's expanded/compact preference.
+  if (isDeleted) {
+    return wantsExpanded
+      ? <MentionTombstoneCard typeLabel={typeLabel} />
+      : <MentionTombstoneChip typeLabel={typeLabel} />;
+  }
+
+  // Expanded card mode -- description sourced from liveState (populated
+  // by the batch resolver) with a hover-preview fallback for races.
   if (isExpanded && resolvedLiveState) {
     return (
       <MentionExpandedCard
         urn={urn}
         label={label}
         liveState={resolvedLiveState}
-        description={preview?.description}
+        description={resolvedLiveState.description ?? preview?.description}
         onClick={onClick}
-        onCollapse={() => setUserToggled(false)}
+        onCollapse={() => persistToggle(false)}
         onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
       />
     );
+  }
+
+  // Skeleton: reserve the expanded card footprint while liveState
+  // resolves so chips don't shift from compact-inline to block-card.
+  if (wantsExpanded && !resolvedLiveState) {
+    return <MentionExpandedCardSkeleton label={label} />;
   }
 
   return (
@@ -293,6 +472,8 @@ function MentionChipInner({
           // Border - with live breathing glow
           'border', style.border,
           isLive && 'mention-chip-live',
+          // Per-type colored inner glow for at-a-glance type recognition
+          style.glow,
           // Interaction
           'cursor-pointer select-none',
           'transition-all duration-200 ease-out',
@@ -407,7 +588,7 @@ function MentionChipInner({
         {/* Expand button */}
         {!isExpanded && canExpand && resolvedLiveState && (
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setUserToggled(true); }}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); persistToggle(true); }}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
             className="inline-flex items-center shrink-0 p-0.5 -mr-1 rounded hover:bg-foreground/10 text-muted-foreground transition-colors"
             title="Expand card"
@@ -463,6 +644,7 @@ function MentionChipCompactInner({
   const contextState = useMentionState(urn);
   const resolvedLiveState = liveState ?? contextState;
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
+  const isDeleted = resolvedLiveState?.status === 'deleted';
 
   // Hover preview
   const [showPreview, setShowPreview] = useState(false);
@@ -516,6 +698,10 @@ function MentionChipCompactInner({
     }
   }, [parsed.type, resolvedLiveState]);
 
+  if (isDeleted) {
+    return <MentionTombstoneChip typeLabel={typeLabel} compact />;
+  }
+
   return (
     <>
       <span
@@ -529,6 +715,7 @@ function MentionChipCompactInner({
           'rounded-md',
           'bg-gradient-to-r', style.gradient,
           'border', style.border,
+          style.glow,
           'cursor-pointer select-none',
           'transition-all duration-150',
           'hover:shadow-sm',
@@ -640,6 +827,7 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
         'bg-gradient-to-r', style.gradient,
         'backdrop-blur-sm',
         'border', style.border,
+        style.glow,
         'cursor-pointer select-none',
         'transition-all duration-200 ease-out',
         'hover:shadow-md hover:scale-[1.01]',

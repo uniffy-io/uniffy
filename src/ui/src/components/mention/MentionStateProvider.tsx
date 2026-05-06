@@ -67,8 +67,11 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   const state: MentionLiveState = {
     urn,
     title: meta.title || undefined,
+    description: meta.description || undefined,
     updatedAt: m.updated_at || undefined,
     updatedByName: m.updated_by_name || undefined,
+    parentLabel: m.parent_label || undefined,
+    status: m.urn_status === 'DELETED' ? 'deleted' : 'ok',
   };
 
   // Shared tags
@@ -125,6 +128,12 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
       if (meta.memberCount || m.member_count) state.memberCount = meta.memberCount || parseInt(m.member_count, 10) || 0;
       break;
 
+    case UrnType.CHAT_MESSAGE:
+      state.channelType = meta.channelType || m.channel_type || undefined;
+      state.chatSenderName = m.sender_name || undefined;
+      state.chatChannelId = m.channel_id || undefined;
+      break;
+
     case UrnType.AGENT:
       state.agentEmoji = meta.agentEmoji || undefined;
       state.agentThemeColor = meta.agentThemeColor || undefined;
@@ -137,6 +146,111 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   }
 
   return state;
+}
+
+/**
+ * Convert a snake_case proto map payload from the notification stream
+ * into a typed ``Partial<MentionLiveState>`` patch. Mirrors the field
+ * mapping in ``metadataToLiveState`` so live updates land on the same
+ * camelCase keys the chip components read.
+ */
+function streamChangesToLiveState(changes: Record<string, string>): Partial<MentionLiveState> {
+  const patch: Partial<MentionLiveState> = {};
+  for (const [key, raw] of Object.entries(changes)) {
+    const value = raw ?? '';
+    switch (key) {
+      case 'title':
+        patch.title = value || undefined; break;
+      case 'description':
+        patch.description = value || undefined; break;
+      case 'updated_at':
+        patch.updatedAt = value || undefined; break;
+      case 'updated_by_name':
+        patch.updatedByName = value || undefined; break;
+      case 'urn_status':
+        patch.status = value === 'DELETED' ? 'deleted' : 'ok'; break;
+      case 'parent_label':
+        patch.parentLabel = value || undefined; break;
+
+      // TASK
+      case 'status':
+        patch.taskStatus = value || undefined;
+        patch.projectStatus = value || undefined;
+        break;
+      case 'due_date':
+        patch.taskDueDate = value || undefined; break;
+      case 'assignee_name':
+        patch.taskAssignee = value || undefined; break;
+      case 'priority':
+        patch.taskPriority = value || undefined; break;
+      case 'priority_label':
+        patch.taskPriorityLabel = value || undefined; break;
+      case 'priority_color':
+        patch.taskPriorityColor = value || undefined; break;
+      case 'status_label':
+        patch.taskStatusLabel = value || undefined; break;
+      case 'status_color':
+        patch.taskStatusColor = value || undefined; break;
+      case 'task_type':
+        patch.taskType = value || undefined; break;
+      case 'project_name':
+        patch.taskProjectName = value || undefined; break;
+      case 'project_slug':
+        patch.taskProjectSlug = value || undefined; break;
+      case 'project_color':
+        patch.taskProjectColor = value || undefined; break;
+      case 'assignee_ids':
+        patch.taskAssigneeIds = value ? value.split(',').filter(Boolean) : undefined;
+        break;
+
+      // CALENDAR_EVENT
+      case 'start_time':
+        patch.eventStartTime = value || undefined; break;
+      case 'end_time':
+        patch.eventEndTime = value || undefined; break;
+      case 'is_all_day':
+        patch.eventIsAllDay = value === 'true'; break;
+      case 'location':
+        patch.eventLocation = value || undefined; break;
+      case 'meeting_url':
+        patch.eventMeetingUrl = value || undefined; break;
+
+      // FILE
+      case 'processing_status':
+        patch.fileProcessingStatus = (value || undefined) as MentionLiveState['fileProcessingStatus'];
+        break;
+      case 'mime_type':
+        patch.fileMimeType = value || undefined; break;
+      case 'file_size':
+        patch.fileSize = value ? parseInt(value, 10) || undefined : undefined; break;
+
+      // NOTE
+      case 'node_type':
+        patch.noteNodeType = value || undefined; break;
+
+      // PROJECT
+      case 'completed_tasks':
+        patch.projectCompletedTasks = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'total_tasks':
+        patch.projectTotalTasks = value ? parseInt(value, 10) || 0 : 0; break;
+
+      // CHAT
+      case 'channel_type':
+        patch.channelType = value || undefined; break;
+      case 'member_count':
+        patch.memberCount = value ? parseInt(value, 10) || 0 : 0; break;
+
+      // CHAT_MESSAGE
+      case 'sender_name':
+        patch.chatSenderName = value || undefined; break;
+      case 'channel_id':
+        patch.chatChannelId = value || undefined; break;
+
+      default:
+        break;
+    }
+  }
+  return patch;
 }
 
 interface MentionStateProviderProps {
@@ -228,7 +342,12 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
 
       setStates((prev) => {
         const existing = prev.get(urn);
-        const updated: MentionLiveState = { ...existing, urn, ...changes };
+        // Stream payloads are proto map<string,string> with snake_case
+        // keys. Translate to the typed MentionLiveState shape before
+        // merging so consumers (which read camelCase fields) see the
+        // update. Unknown keys are ignored.
+        const patch = streamChangesToLiveState(changes as Record<string, string>);
+        const updated: MentionLiveState = { ...existing, urn, ...patch };
         const next = new Map(prev);
         next.set(urn, updated);
         setMentionState(urn, updated);

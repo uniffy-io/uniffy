@@ -23,6 +23,7 @@ import {
 } from '@phosphor-icons/react';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { NoteEditingIndicator } from '@/components/mention/LiveIndicators';
+import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
 import type { MentionLiveState } from '@/components/mention/types';
 
 interface NoteMentionPreviewProps {
@@ -82,11 +83,17 @@ export function NoteMentionPreview({
           </span>
           <span className="block flex-1 min-w-0">
             <span className="block font-semibold text-sm truncate">{title}</span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 flex-wrap">
+              {liveState.parentLabel && (
+                <>
+                  <ParentBadge label={liveState.parentLabel} />
+                  <MetaSeparator />
+                </>
+              )}
               <span className="text-[10px] font-medium text-primary">{typeLabel}</span>
               {liveState.noteIsBeingEdited && (
                 <>
-                  <span className="text-muted-foreground/40">.</span>
+                  <MetaSeparator />
                   <NoteEditingIndicator editorName={liveState.noteEditorName} />
                 </>
               )}

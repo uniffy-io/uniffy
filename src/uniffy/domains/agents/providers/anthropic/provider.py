@@ -103,6 +103,7 @@ class AnthropicProvider(LLMProvider):
         system: str | None = None,
         tools: list[dict] | None = None,
         stream: bool = False,
+        cache_key: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the Anthropic API.
 
@@ -232,6 +233,15 @@ class AnthropicProvider(LLMProvider):
     ) -> dict:
         """Build the kwargs dict for the messages.create() call.
 
+        Caching: render order is ``tools -> system -> messages``. A
+        single ``cache_control: ephemeral`` breakpoint on the last
+        system block covers BOTH tools and system in one cache entry,
+        so subsequent turns within the cache TTL pay ~10% of the input
+        price for that prefix. We do not put a separate breakpoint on
+        the last tool -- it would write a redundant second cache entry
+        (paying the 1.25x write premium twice on the first turn) for
+        the same coverage.
+
         Parameters
         ----------
         messages : list[dict]
@@ -249,7 +259,6 @@ class AnthropicProvider(LLMProvider):
             Keyword arguments for the API call.
 
         """
-        # Clean messages for Anthropic API (strip tool_name, map canonical blocks)
         clean_messages = self._clean_messages(messages)
 
         kwargs: dict = {
@@ -259,10 +268,16 @@ class AnthropicProvider(LLMProvider):
         }
 
         if system:
-            kwargs["system"] = system
+            kwargs["system"] = [
+                {
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
 
         if tools:
-            kwargs["tools"] = tools
+            kwargs["tools"] = list(tools)
 
         return kwargs
 
@@ -348,6 +363,12 @@ class AnthropicProvider(LLMProvider):
             model=response.model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
+            cache_creation_input_tokens=int(
+                getattr(response.usage, "cache_creation_input_tokens", 0) or 0
+            ),
+            cache_read_input_tokens=int(
+                getattr(response.usage, "cache_read_input_tokens", 0) or 0
+            ),
             tool_calls=tool_calls,
             stop_reason=response.stop_reason or "end_turn",
         )
@@ -400,6 +421,22 @@ class AnthropicProvider(LLMProvider):
                         model=final_message.model,
                         input_tokens=final_message.usage.input_tokens,
                         output_tokens=final_message.usage.output_tokens,
+                        cache_creation_input_tokens=int(
+                            getattr(
+                                final_message.usage,
+                                "cache_creation_input_tokens",
+                                0,
+                            )
+                            or 0
+                        ),
+                        cache_read_input_tokens=int(
+                            getattr(
+                                final_message.usage,
+                                "cache_read_input_tokens",
+                                0,
+                            )
+                            or 0
+                        ),
                         tool_calls=tool_calls,
                         stop_reason=final_message.stop_reason or "end_turn",
                     )

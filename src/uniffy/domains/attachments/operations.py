@@ -423,6 +423,87 @@ class AttachmentOperations:
 
         return [(row[0], row[1], row[2]) for row in result.all()]
 
+    async def batch_list_attachments(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_ids: list[UUID],
+    ) -> dict[UUID, list[tuple[Attachment, File, User | None]]]:
+        """List attachments for many content rows in a single round-trip.
+
+        Replaces the N+1 ``ListAttachments`` fan-out the chat client
+        used to fire when opening a channel. Returns a mapping of
+        ``content_id -> [(attachment, file, owner)]``; callers should
+        treat missing keys as "no attachments".
+
+        Verifies access per-content-row but groups the verification so
+        chat messages from the same channel only pay the membership
+        check once. Non-chat types fall back to per-row verification --
+        still O(N) permission lookups, but a single SQL round-trip
+        for the attachment join itself.
+        """
+        if not content_ids:
+            return {}
+        content_ids = content_ids[:200]
+
+        accessible_ids: list[UUID] = []
+        if content_type == ContentType.CHAT_MESSAGE:
+            from uniffy.core.models.chat.message import ChatMessage
+            from uniffy.domains.chat.access import ChatAccessChecker
+
+            msg_rows = await self._session.execute(
+                select(ChatMessage.id, ChatMessage.channel_id).where(
+                    ChatMessage.id.in_(content_ids),
+                    ChatMessage.is_deleted == False,  # noqa: E712
+                )
+            )
+            messages_by_channel: dict[UUID, list[UUID]] = {}
+            for mid, cid in msg_rows.all():
+                messages_by_channel.setdefault(cid, []).append(mid)
+
+            checker = ChatAccessChecker(self._session)
+            for channel_id, message_ids in messages_by_channel.items():
+                try:
+                    channel = await checker.get_channel(channel_id, organization_id)
+                    await checker.check_access(user_id, organization_id, channel)
+                    accessible_ids.extend(message_ids)
+                except (NotFoundError, PermissionDeniedError):
+                    continue
+        else:
+            for cid in content_ids:
+                try:
+                    role = await self._resolve_parent_role(
+                        user_id, organization_id, content_type, cid
+                    )
+                    if role_can_view(role):
+                        accessible_ids.append(cid)
+                except NotFoundError:
+                    continue
+
+        if not accessible_ids:
+            return {}
+
+        result = await self._session.execute(
+            select(Attachment, File, User)
+            .join(File, Attachment.file_id == File.id)
+            .outerjoin(User, File.owner_id == User.id)
+            .where(
+                Attachment.organization_id == organization_id,
+                Attachment.content_type == content_type,
+                Attachment.content_id.in_(accessible_ids),
+            )
+            .order_by(Attachment.attached_at.desc())
+        )
+
+        grouped: dict[UUID, list[tuple[Attachment, File, User | None]]] = {}
+        for row in result.all():
+            attachment = row[0]
+            grouped.setdefault(attachment.content_id, []).append(
+                (attachment, row[1], row[2])
+            )
+        return grouped
+
     async def list_shared_attachments(
         self,
         user_id: UUID,

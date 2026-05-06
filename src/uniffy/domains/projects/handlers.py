@@ -355,7 +355,7 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except json.JSONDecodeError, ValueError:
+                except (json.JSONDecodeError, ValueError):
                     field_values[key] = value
             kwargs["field_values"] = field_values
 
@@ -466,7 +466,7 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except json.JSONDecodeError, ValueError:
+                except (json.JSONDecodeError, ValueError):
                     field_values[key] = value
             updates["field_values"] = field_values
 
@@ -642,7 +642,7 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except NotFoundError, PermissionDeniedError, ValueError:
+                    except (NotFoundError, PermissionDeniedError, ValueError):
                         continue
                 return DeleteTasksResponse(success=True, deleted_count=count)
         except ConnectError:

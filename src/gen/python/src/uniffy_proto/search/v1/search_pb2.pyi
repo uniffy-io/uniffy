@@ -22,6 +22,7 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_PROMPT: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_CHAT_MESSAGE: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_ROOM: _ClassVar[SearchResultType]
+    SEARCH_RESULT_TYPE_AGENT_CHAT: _ClassVar[SearchResultType]
 SEARCH_RESULT_TYPE_UNSPECIFIED: SearchResultType
 SEARCH_RESULT_TYPE_NOTE: SearchResultType
 SEARCH_RESULT_TYPE_FILE: SearchResultType
@@ -34,6 +35,7 @@ SEARCH_RESULT_TYPE_AGENT: SearchResultType
 SEARCH_RESULT_TYPE_PROMPT: SearchResultType
 SEARCH_RESULT_TYPE_CHAT_MESSAGE: SearchResultType
 SEARCH_RESULT_TYPE_ROOM: SearchResultType
+SEARCH_RESULT_TYPE_AGENT_CHAT: SearchResultType
 
 class SearchRequest(_message.Message):
     __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "exclude_types", "metadata_filters")
@@ -186,7 +188,7 @@ class ResolveUrnsResponse(_message.Message):
     def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
 
 class UrnMetadata(_message.Message):
-    __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name", "priority", "priority_label", "priority_color", "status_label", "status_color", "task_type", "task_number", "project_name", "project_slug", "project_color", "subtask_completed", "subtask_total", "blocked_by_count", "event_start_time", "event_end_time", "event_is_all_day", "event_location", "event_meeting_url", "file_mime_type", "file_size", "note_node_type", "channel_type", "agent_emoji", "agent_theme_color", "user_avatar_url", "user_email", "assignee_ids", "content_tags")
+    __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name", "priority", "priority_label", "priority_color", "status_label", "status_color", "task_type", "task_number", "project_name", "project_slug", "project_color", "subtask_completed", "subtask_total", "blocked_by_count", "event_start_time", "event_end_time", "event_is_all_day", "event_location", "event_meeting_url", "file_mime_type", "file_size", "note_node_type", "channel_type", "agent_emoji", "agent_theme_color", "user_avatar_url", "user_email", "assignee_ids", "content_tags", "urn_status")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -235,6 +237,7 @@ class UrnMetadata(_message.Message):
     USER_EMAIL_FIELD_NUMBER: _ClassVar[int]
     ASSIGNEE_IDS_FIELD_NUMBER: _ClassVar[int]
     CONTENT_TAGS_FIELD_NUMBER: _ClassVar[int]
+    URN_STATUS_FIELD_NUMBER: _ClassVar[int]
     title: str
     description: str
     type: SearchResultType
@@ -276,4 +279,5 @@ class UrnMetadata(_message.Message):
     user_email: str
     assignee_ids: _containers.RepeatedScalarFieldContainer[str]
     content_tags: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., status: _Optional[str] = ..., due_date: _Optional[str] = ..., assignee_name: _Optional[str] = ..., processing_status: _Optional[str] = ..., completed_tasks: _Optional[int] = ..., total_tasks: _Optional[int] = ..., member_count: _Optional[int] = ..., updated_by_name: _Optional[str] = ..., priority: _Optional[str] = ..., priority_label: _Optional[str] = ..., priority_color: _Optional[str] = ..., status_label: _Optional[str] = ..., status_color: _Optional[str] = ..., task_type: _Optional[str] = ..., task_number: _Optional[int] = ..., project_name: _Optional[str] = ..., project_slug: _Optional[str] = ..., project_color: _Optional[str] = ..., subtask_completed: _Optional[int] = ..., subtask_total: _Optional[int] = ..., blocked_by_count: _Optional[int] = ..., event_start_time: _Optional[str] = ..., event_end_time: _Optional[str] = ..., event_is_all_day: _Optional[bool] = ..., event_location: _Optional[str] = ..., event_meeting_url: _Optional[str] = ..., file_mime_type: _Optional[str] = ..., file_size: _Optional[int] = ..., note_node_type: _Optional[str] = ..., channel_type: _Optional[str] = ..., agent_emoji: _Optional[str] = ..., agent_theme_color: _Optional[str] = ..., user_avatar_url: _Optional[str] = ..., user_email: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., content_tags: _Optional[_Iterable[str]] = ...) -> None: ...
+    urn_status: str
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., status: _Optional[str] = ..., due_date: _Optional[str] = ..., assignee_name: _Optional[str] = ..., processing_status: _Optional[str] = ..., completed_tasks: _Optional[int] = ..., total_tasks: _Optional[int] = ..., member_count: _Optional[int] = ..., updated_by_name: _Optional[str] = ..., priority: _Optional[str] = ..., priority_label: _Optional[str] = ..., priority_color: _Optional[str] = ..., status_label: _Optional[str] = ..., status_color: _Optional[str] = ..., task_type: _Optional[str] = ..., task_number: _Optional[int] = ..., project_name: _Optional[str] = ..., project_slug: _Optional[str] = ..., project_color: _Optional[str] = ..., subtask_completed: _Optional[int] = ..., subtask_total: _Optional[int] = ..., blocked_by_count: _Optional[int] = ..., event_start_time: _Optional[str] = ..., event_end_time: _Optional[str] = ..., event_is_all_day: _Optional[bool] = ..., event_location: _Optional[str] = ..., event_meeting_url: _Optional[str] = ..., file_mime_type: _Optional[str] = ..., file_size: _Optional[int] = ..., note_node_type: _Optional[str] = ..., channel_type: _Optional[str] = ..., agent_emoji: _Optional[str] = ..., agent_theme_color: _Optional[str] = ..., user_avatar_url: _Optional[str] = ..., user_email: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., content_tags: _Optional[_Iterable[str]] = ..., urn_status: _Optional[str] = ...) -> None: ...

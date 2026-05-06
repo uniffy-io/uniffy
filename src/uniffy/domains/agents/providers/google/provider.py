@@ -206,24 +206,45 @@ class GoogleProvider(LLMProvider):
         system: str | None = None,
         tools: list[dict] | None = None,
         stream: bool = False,
+        cache_key: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the Google Gemini API.
 
         Converts messages and tools from Anthropic format to Google format,
         sends the request, and converts the response back.
 
+        Caching: Gemini 2.5+ implicit caching activates automatically
+        on stable prefixes >= 1024 tokens (Flash) / 2048 tokens (Pro).
+        We don't pass a cache key -- Gemini does not expose a routing
+        knob the way OpenAI's ``prompt_cache_key`` does. Older models
+        (``gemini-2.0-*`` and below) have no implicit caching at all
+        and ``cached_content_token_count`` always reports 0. Explicit
+        caching via ``CachedContent`` is unusable for our agent
+        runtime because the API rejects it when ``system_instruction``,
+        ``tools``, or ``tool_config`` are set on the request.
+
+        Known bug: implicit caching has been reported to silently fail
+        on Gemini 3 Flash Preview when ``tools`` are defined --
+        ``cached_content_token_count`` stays 0 even on identical
+        prefixes well above the token threshold. Track at
+        https://github.com/vercel/ai/issues/11513. No client-side
+        workaround beyond switching models.
+
         Parameters
         ----------
         messages : list[dict]
             Messages in Anthropic format.
         model : str
-            Model identifier (e.g. "gemini-2.0-flash").
+            Model identifier (e.g. "gemini-2.5-flash").
         system : str | None
             System prompt (passed as system_instruction).
         tools : list[dict] | None
             Tool definitions in Anthropic format.
         stream : bool
             Whether to stream the response.
+        cache_key : str | None
+            Accepted for interface symmetry; ignored. Google's
+            implicit cache routes by prefix hash internally.
 
         Returns
         -------
@@ -231,6 +252,7 @@ class GoogleProvider(LLMProvider):
             Result or streaming iterator.
 
         """
+        del cache_key  # Google ignores; see docstring.
         google_contents = convert_messages_to_google(messages)
         config = self._build_config(
             system=system,
@@ -412,17 +434,16 @@ class GoogleProvider(LLMProvider):
 
         stop_reason = self._determine_stop_reason(response, tool_calls)
 
-        input_tokens = 0
-        output_tokens = 0
-        if response.usage_metadata:
-            input_tokens = response.usage_metadata.prompt_token_count or 0
-            output_tokens = response.usage_metadata.candidates_token_count or 0
+        prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
+            response.usage_metadata
+        )
 
         return CompletionResult(
             content=content,
             model=model,
-            input_tokens=input_tokens,
+            input_tokens=prompt_tokens - cached_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cached_tokens,
             tool_calls=tool_calls,
             stop_reason=stop_reason,
         )
@@ -453,7 +474,8 @@ class GoogleProvider(LLMProvider):
         try:
             accumulated_content = ""
             tool_calls: list[ToolCall] = []
-            input_tokens = 0
+            prompt_tokens = 0
+            cached_tokens = 0
             output_tokens = 0
 
             stream = await self._client.aio.models.generate_content_stream(
@@ -463,8 +485,9 @@ class GoogleProvider(LLMProvider):
             )
             async for chunk in stream:
                 if chunk.usage_metadata:
-                    input_tokens = chunk.usage_metadata.prompt_token_count or 0
-                    output_tokens = chunk.usage_metadata.candidates_token_count or 0
+                    prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
+                        chunk.usage_metadata
+                    )
 
                 if not chunk.candidates:
                     continue
@@ -498,8 +521,9 @@ class GoogleProvider(LLMProvider):
                 result=CompletionResult(
                     content=accumulated_content,
                     model=model,
-                    input_tokens=input_tokens,
+                    input_tokens=prompt_tokens - cached_tokens,
                     output_tokens=output_tokens,
+                    cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
                     stop_reason=stop_reason,
                 )
@@ -507,6 +531,29 @@ class GoogleProvider(LLMProvider):
         except Exception as e:
             logger.error(f"Google streaming error: {e}")
             yield ErrorEvent(error=str(e))
+
+
+def _split_google_usage(usage_metadata) -> tuple[int, int, int]:
+    """Return ``(prompt_tokens, cached_tokens, candidates_tokens)``.
+
+    Gemini 2.5 Flash and Pro auto-cache common prefixes (implicit
+    caching). The cached portion is reported under
+    ``usage_metadata.cached_content_token_count`` and is a subset of
+    ``prompt_token_count``. Splitting here lets the runtime store
+    cache hits in the same shape used for Anthropic / OpenAI:
+    ``input_tokens`` = uncached input, ``cache_read_input_tokens`` =
+    cached subset.
+
+    Returns zeros when ``usage_metadata`` is missing (older models /
+    failed responses) or the cache field is absent.
+    """
+    if usage_metadata is None:
+        return 0, 0, 0
+    prompt_tokens = int(getattr(usage_metadata, "prompt_token_count", 0) or 0)
+    candidates_tokens = int(getattr(usage_metadata, "candidates_token_count", 0) or 0)
+    cached_tokens = int(getattr(usage_metadata, "cached_content_token_count", 0) or 0)
+    cached_tokens = min(cached_tokens, prompt_tokens)
+    return prompt_tokens, cached_tokens, candidates_tokens
 
     @staticmethod
     def _determine_stop_reason(response: Any, tool_calls: list[ToolCall]) -> str:

@@ -118,6 +118,15 @@ const (
 	// ChatServiceGetChannelResourcesProcedure is the fully-qualified name of the ChatService's
 	// GetChannelResources RPC.
 	ChatServiceGetChannelResourcesProcedure = "/chat.v1.ChatService/GetChannelResources"
+	// ChatServiceCreateAgentChatProcedure is the fully-qualified name of the ChatService's
+	// CreateAgentChat RPC.
+	ChatServiceCreateAgentChatProcedure = "/chat.v1.ChatService/CreateAgentChat"
+	// ChatServiceRenameAgentChatProcedure is the fully-qualified name of the ChatService's
+	// RenameAgentChat RPC.
+	ChatServiceRenameAgentChatProcedure = "/chat.v1.ChatService/RenameAgentChat"
+	// ChatServiceListAgentChatsProcedure is the fully-qualified name of the ChatService's
+	// ListAgentChats RPC.
+	ChatServiceListAgentChatsProcedure = "/chat.v1.ChatService/ListAgentChats"
 	// ChatServiceCreateCategoryProcedure is the fully-qualified name of the ChatService's
 	// CreateCategory RPC.
 	ChatServiceCreateCategoryProcedure = "/chat.v1.ChatService/CreateCategory"
@@ -197,6 +206,10 @@ type ChatServiceClient interface {
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
+	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
+	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
+	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
+	ListAgentChats(context.Context, *connect.Request[v1.ListAgentChatsRequest]) (*connect.Response[v1.ListAgentChatsResponse], error)
 	// Categories
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	UpdateCategory(context.Context, *connect.Request[v1.UpdateCategoryRequest]) (*connect.Response[v1.UpdateCategoryResponse], error)
@@ -438,6 +451,24 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("GetChannelResources")),
 			connect.WithClientOptions(opts...),
 		),
+		createAgentChat: connect.NewClient[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse](
+			httpClient,
+			baseURL+ChatServiceCreateAgentChatProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CreateAgentChat")),
+			connect.WithClientOptions(opts...),
+		),
+		renameAgentChat: connect.NewClient[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse](
+			httpClient,
+			baseURL+ChatServiceRenameAgentChatProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("RenameAgentChat")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgentChats: connect.NewClient[v1.ListAgentChatsRequest, v1.ListAgentChatsResponse](
+			httpClient,
+			baseURL+ChatServiceListAgentChatsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListAgentChats")),
+			connect.WithClientOptions(opts...),
+		),
 		createCategory: connect.NewClient[v1.CreateCategoryRequest, v1.CreateCategoryResponse](
 			httpClient,
 			baseURL+ChatServiceCreateCategoryProcedure,
@@ -547,6 +578,9 @@ type chatServiceClient struct {
 	markThreadRead                   *connect.Client[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse]
 	getUnreadCounts                  *connect.Client[v1.GetUnreadCountsRequest, v1.GetUnreadCountsResponse]
 	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
+	createAgentChat                  *connect.Client[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse]
+	renameAgentChat                  *connect.Client[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse]
+	listAgentChats                   *connect.Client[v1.ListAgentChatsRequest, v1.ListAgentChatsResponse]
 	createCategory                   *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
 	updateCategory                   *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
 	deleteCategory                   *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
@@ -721,6 +755,21 @@ func (c *chatServiceClient) GetChannelResources(ctx context.Context, req *connec
 	return c.getChannelResources.CallUnary(ctx, req)
 }
 
+// CreateAgentChat calls chat.v1.ChatService.CreateAgentChat.
+func (c *chatServiceClient) CreateAgentChat(ctx context.Context, req *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
+	return c.createAgentChat.CallUnary(ctx, req)
+}
+
+// RenameAgentChat calls chat.v1.ChatService.RenameAgentChat.
+func (c *chatServiceClient) RenameAgentChat(ctx context.Context, req *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error) {
+	return c.renameAgentChat.CallUnary(ctx, req)
+}
+
+// ListAgentChats calls chat.v1.ChatService.ListAgentChats.
+func (c *chatServiceClient) ListAgentChats(ctx context.Context, req *connect.Request[v1.ListAgentChatsRequest]) (*connect.Response[v1.ListAgentChatsResponse], error) {
+	return c.listAgentChats.CallUnary(ctx, req)
+}
+
 // CreateCategory calls chat.v1.ChatService.CreateCategory.
 func (c *chatServiceClient) CreateCategory(ctx context.Context, req *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error) {
 	return c.createCategory.CallUnary(ctx, req)
@@ -822,6 +871,10 @@ type ChatServiceHandler interface {
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
+	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
+	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
+	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
+	ListAgentChats(context.Context, *connect.Request[v1.ListAgentChatsRequest]) (*connect.Response[v1.ListAgentChatsResponse], error)
 	// Categories
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	UpdateCategory(context.Context, *connect.Request[v1.UpdateCategoryRequest]) (*connect.Response[v1.UpdateCategoryResponse], error)
@@ -1059,6 +1112,24 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("GetChannelResources")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceCreateAgentChatHandler := connect.NewUnaryHandler(
+		ChatServiceCreateAgentChatProcedure,
+		svc.CreateAgentChat,
+		connect.WithSchema(chatServiceMethods.ByName("CreateAgentChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceRenameAgentChatHandler := connect.NewUnaryHandler(
+		ChatServiceRenameAgentChatProcedure,
+		svc.RenameAgentChat,
+		connect.WithSchema(chatServiceMethods.ByName("RenameAgentChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListAgentChatsHandler := connect.NewUnaryHandler(
+		ChatServiceListAgentChatsProcedure,
+		svc.ListAgentChats,
+		connect.WithSchema(chatServiceMethods.ByName("ListAgentChats")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceCreateCategoryHandler := connect.NewUnaryHandler(
 		ChatServiceCreateCategoryProcedure,
 		svc.CreateCategory,
@@ -1197,6 +1268,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetUnreadCountsHandler.ServeHTTP(w, r)
 		case ChatServiceGetChannelResourcesProcedure:
 			chatServiceGetChannelResourcesHandler.ServeHTTP(w, r)
+		case ChatServiceCreateAgentChatProcedure:
+			chatServiceCreateAgentChatHandler.ServeHTTP(w, r)
+		case ChatServiceRenameAgentChatProcedure:
+			chatServiceRenameAgentChatHandler.ServeHTTP(w, r)
+		case ChatServiceListAgentChatsProcedure:
+			chatServiceListAgentChatsHandler.ServeHTTP(w, r)
 		case ChatServiceCreateCategoryProcedure:
 			chatServiceCreateCategoryHandler.ServeHTTP(w, r)
 		case ChatServiceUpdateCategoryProcedure:
@@ -1356,6 +1433,18 @@ func (UnimplementedChatServiceHandler) GetUnreadCounts(context.Context, *connect
 
 func (UnimplementedChatServiceHandler) GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelResources is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.CreateAgentChat is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.RenameAgentChat is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListAgentChats(context.Context, *connect.Request[v1.ListAgentChatsRequest]) (*connect.Response[v1.ListAgentChatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ListAgentChats is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error) {

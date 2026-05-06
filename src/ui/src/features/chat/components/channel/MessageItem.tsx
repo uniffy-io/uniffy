@@ -203,7 +203,7 @@ function MessageItemInner({
       <div
         className={cn(
           'group relative px-4 py-1',
-          'hover:bg-muted/40 transition-colors',
+          'hover:bg-muted/15 transition-colors',
         )}
         data-testid={`chat-message-${message.id}`}
         data-message-kind="deleted"
@@ -223,7 +223,7 @@ function MessageItemInner({
       className={cn(
         'bubble-enter group relative px-4',
         isGrouped ? 'py-0.5' : 'py-1.5',
-        'hover:bg-muted/40 transition-colors',
+        'hover:bg-muted/15 transition-colors',
         isSelected && 'bg-primary/5 border-l-2 border-primary',
         isHighlighted && 'bg-primary/10 border-l-2 border-primary',
         message.isPinned && !isHighlighted && 'border-l-2 border-primary/50 bg-primary/5',
@@ -323,10 +323,10 @@ function MessageItemInner({
               <span className="truncate max-w-[340px] opacity-70 inline-flex items-center min-w-0">
                 <MessageContent
                   content={message.replyContext.contentPreview}
+                  compactMentions
                   className={cn(
                     '!text-xs !text-muted-foreground truncate',
                     '[&_*]:!text-xs [&_p]:!m-0 [&_p]:!inline',
-                    '[&_.mention-chip]:!py-0 [&_.mention-chip]:!px-1.5',
                     '[&_.mention-chip-compact]:!py-0',
                   )}
                 />

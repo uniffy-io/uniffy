@@ -187,6 +187,7 @@ class SessionMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
@@ -203,6 +204,7 @@ class SessionMessageWriter:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
             model=model,
             tool_name=tool_name,
             tool_call_id=tool_call_id,
@@ -300,23 +302,37 @@ class ChatChannelMessageWriter:
     def approval_channel_id(self) -> UUID | None:
         return self._channel_id
 
-    async def _record_active_tokens(self, input_tokens: int) -> None:
-        """Cache the provider-reported prompt size on the binding row.
+    async def _record_active_tokens(
+        self,
+        input_tokens: int,
+        output_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
+    ) -> None:
+        """Cache provider-reported prompt + completion sizes on the binding.
 
-        `input_tokens` comes straight from the LLM response and is the only
-        accurate signal for "how many tokens the model just ingested". The
-        chat context meter (`GetChannelAgentContextStats`) reads this column
-        instead of re-running a heuristic over raw chat rows.
+        ``input_tokens`` and ``output_tokens`` come straight from the LLM
+        response and are the only accurate signal for what the model just
+        ingested + just produced. ``cache_read_input_tokens`` is the
+        share of the prompt served from Anthropic's prompt cache --
+        billed at ~10% of base input price. The chat context meter
+        reads these columns instead of re-running a heuristic.
+
+        ``last_active_token_estimate`` stores the *full* prompt size
+        (uncached input + cache hits), since both contribute to context
+        window pressure. The cache-hit count is stored separately so
+        the meter can show the savings.
 
         The UPDATE is gated by ``last_active_token_estimate < :new_value
-        OR last_active_token_estimate IS NULL`` so when two agents in the
-        same channel commit concurrently the larger estimate wins
-        deterministically (the smaller commit becomes a no-op rather
-        than overwriting the larger one).
+        OR last_active_token_estimate IS NULL`` so when two agents in
+        the same channel commit concurrently the larger input wins
+        deterministically. Output and cache fields are written in the
+        same row so the trio stays paired with the latest turn.
         """
-        if input_tokens <= 0:
+        if input_tokens <= 0 and cache_read_input_tokens <= 0:
             return
-        new_value = int(input_tokens)
+        new_cache_read = max(0, int(cache_read_input_tokens))
+        new_input = max(0, int(input_tokens)) + new_cache_read
+        new_output = max(0, int(output_tokens))
         with contextlib.suppress(Exception):
             await self._session.execute(
                 update(AgentChannelBinding)
@@ -324,11 +340,15 @@ class ChatChannelMessageWriter:
                     AgentChannelBinding.channel_id == self._channel_id,
                     AgentChannelBinding.agent_id == self._agent_id,
                     or_(
-                        AgentChannelBinding.last_active_token_estimate < new_value,
+                        AgentChannelBinding.last_active_token_estimate < new_input,
                         AgentChannelBinding.last_active_token_estimate.is_(None),
                     ),
                 )
-                .values(last_active_token_estimate=new_value)
+                .values(
+                    last_active_token_estimate=new_input,
+                    last_output_token_estimate=new_output,
+                    last_cache_read_token_estimate=new_cache_read,
+                )
             )
 
     async def add_message(
@@ -338,6 +358,7 @@ class ChatChannelMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
@@ -386,6 +407,8 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_read_input_tokens:
+            meta["cache_read_input_tokens"] = cache_read_input_tokens
 
         urn_mentions = (
             sorted(
@@ -408,7 +431,9 @@ class ChatChannelMessageWriter:
             mentioned_urns=urn_mentions or None,
         )
         self._session.add(chat_msg)
-        await self._record_active_tokens(input_tokens)
+        await self._record_active_tokens(
+            input_tokens, output_tokens, cache_read_input_tokens
+        )
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
@@ -468,6 +493,7 @@ class ChatChannelMessageWriter:
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
     ) -> AgentMessage:
         """Write final content + token usage onto a reserved placeholder.
@@ -483,6 +509,7 @@ class ChatChannelMessageWriter:
                 content=content,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                cache_read_input_tokens=cache_read_input_tokens,
                 model=model,
             )
 
@@ -506,8 +533,12 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_read_input_tokens:
+            meta["cache_read_input_tokens"] = cache_read_input_tokens
         chat_msg.message_metadata = meta
-        await self._record_active_tokens(input_tokens)
+        await self._record_active_tokens(
+            input_tokens, output_tokens, cache_read_input_tokens
+        )
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
@@ -519,6 +550,7 @@ class ChatChannelMessageWriter:
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
             created_at=chat_msg.created_at,
         )
 

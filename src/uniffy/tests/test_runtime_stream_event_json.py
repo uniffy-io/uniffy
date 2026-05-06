@@ -39,7 +39,6 @@ def _make_message(role: str = "assistant") -> AgentMessage:
         output_tokens=2,
         model="claude-sonnet-4-6",
         created_at=datetime.now(UTC),
-        token_estimate=3,
     )
 
 

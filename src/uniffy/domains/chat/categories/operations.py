@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,12 +69,19 @@ class ChatCategoryOperations:
         if not category:
             raise NotFoundError("category", category_id)
 
+        rename = name is not None and name != category.name
         if name is not None:
             category.name = name
         category.updated_at = datetime.now(UTC)
 
         await self.session.commit()
         await self.session.refresh(category)
+
+        # Category rename: every channel in this category carries the
+        # name in its search-index metadata, so re-index each one.
+        if rename:
+            await self._refresh_channels_in_category(category_id)
+
         return category
 
     async def delete(
@@ -95,6 +103,10 @@ class ChatCategoryOperations:
         if not category:
             raise NotFoundError("category", category_id)
 
+        # Snapshot ids before mutation -- after the UPDATE the rows no
+        # longer carry this category_id, so we cannot find them again.
+        affected_ids = await self._channel_ids_in_category(category_id)
+
         # Move channels to uncategorized
         await self.session.execute(
             update(ChatChannel)
@@ -104,6 +116,10 @@ class ChatCategoryOperations:
 
         await self.session.delete(category)
         await self.session.commit()
+
+        # Re-index every previously-categorized channel so the search
+        # document reflects the empty category.
+        await self._refresh_channels_by_id(affected_ids)
 
     async def list_categories(
         self,
@@ -157,6 +173,9 @@ class ChatCategoryOperations:
         )
         await self.session.commit()
 
+        # Re-index so mention chips show the new category name.
+        await self._refresh_channels_by_id([channel_id])
+
     async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
         """Verify user is org admin/owner or chat domain admin."""
         if await self.access.is_org_admin(user_id, organization_id):
@@ -164,3 +183,36 @@ class ChatCategoryOperations:
         if await self.access.is_chat_domain_admin(user_id, organization_id):
             return
         raise PermissionDeniedError("admin", "Requires org admin or chat domain admin")
+
+    async def _channel_ids_in_category(self, category_id: UUID) -> list[UUID]:
+        """Return channel ids currently assigned to the given category."""
+        result = await self.session.execute(
+            select(ChatChannel.id).where(ChatChannel.category_id == category_id)
+        )
+        return list(result.scalars().all())
+
+    async def _refresh_channels_in_category(self, category_id: UUID) -> None:
+        """Re-index every channel currently in the category."""
+        ids = await self._channel_ids_in_category(category_id)
+        await self._refresh_channels_by_id(ids)
+
+    async def _refresh_channels_by_id(self, channel_ids: list[UUID]) -> None:
+        """Re-index a set of channels via ``ChatChannelOperations``.
+
+        Imported lazily to avoid a circular import between the chat
+        category and channel modules; both reach into the other's
+        models but only the category side needs the runtime hook.
+        """
+        if not channel_ids:
+            return
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        channel_ops = ChatChannelOperations(self.session, self.access)
+        result = await self.session.execute(
+            select(ChatChannel).where(ChatChannel.id.in_(channel_ids))
+        )
+        for channel in result.scalars().all():
+            try:
+                await channel_ops._refresh_channel_live_state(channel)
+            except Exception:
+                logger.warning(f"Failed to refresh live state for channel {channel.id}")

@@ -53,6 +53,12 @@ class ChatChannel(SQLModel, table=True):
         default=None,
         sa_column=Column(ForeignKey("chat_channel_categories.id", ondelete="SET NULL"), index=True),
     )
+    is_agent_dm: bool = Field(default=False, nullable=False)
+    custom_name: str | None = Field(default=None, max_length=200, nullable=True)
+    agent_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("agents_agents.id", ondelete="SET NULL"), nullable=True),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -62,6 +68,13 @@ class ChatChannel(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+
+    @property
+    def effective_name(self) -> str:
+        """Display name preferring user override over the auto-generated name."""
+        if self.custom_name and self.custom_name.strip():
+            return self.custom_name
+        return self.name
 
 
 class ChatChannelStats(SQLModel, table=True):

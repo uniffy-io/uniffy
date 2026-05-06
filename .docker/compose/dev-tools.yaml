@@ -1,0 +1,25 @@
+# Developer tooling - Playwright MCP server.
+# Comes up with the dev stack (profile: dev) so Claude Code has it ready.
+
+services:
+  # Playwright MCP server. Drives a headless chromium inside the container,
+  # reachable from Claude Code via SSE at http://localhost:8931/sse. The
+  # container reaches host-side dev stack via host.docker.internal.
+  mcp-playwright:
+    image: mcr.microsoft.com/playwright:v1.59.0-jammy
+    container_name: uniffy-mcp-playwright
+    profiles: ["dev"]
+    restart: unless-stopped
+    command: >-
+      npx -y @playwright/mcp@latest
+      --port 8931 --host 0.0.0.0
+      --browser chromium --headless --isolated
+    ports:
+      - "8931:8931"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [uniffy-network]
+
+networks:
+  uniffy-network:
+    driver: bridge

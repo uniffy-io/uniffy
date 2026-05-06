@@ -146,6 +146,7 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
         'rounded-md border',
         'bg-gradient-to-r', theme.gradient,
         theme.border,
+        theme.glow,
         'cursor-default select-none',
       )}
     >

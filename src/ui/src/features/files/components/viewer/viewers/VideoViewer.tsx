@@ -31,7 +31,12 @@ interface VideoViewerProps {
 
 export function VideoViewer({ file }: VideoViewerProps) {
     const dispatch = useAppDispatch();
-    const { isPlaying, volume, isMuted } = useAppSelector((state) => state.fileViewer);
+    // Per-field subscriptions -- subscribing to the whole slice re-rendered
+    // the player on every timeupdate (currentTime changes every ~250ms),
+    // which thrashed videojs and caused intermittent stream errors.
+    const isPlaying = useAppSelector((state) => state.fileViewer.isPlaying);
+    const volume = useAppSelector((state) => state.fileViewer.volume);
+    const isMuted = useAppSelector((state) => state.fileViewer.isMuted);
     const { url: streamUrl, loading: swLoading, error: swError } = useMediaStream(file.id);
     const [error, setError] = useState<string | null>(null);
 

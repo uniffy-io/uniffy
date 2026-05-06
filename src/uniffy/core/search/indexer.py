@@ -235,6 +235,20 @@ class SearchIndexer:
         client = get_meilisearch_client()
         await client.delete_document(urn, organization_id)
 
+    async def remove_by_filter(self, filter_expr: str) -> None:
+        """Bulk-remove documents matching a Meilisearch filter expression.
+
+        Used for cascade deletes -- e.g. dropping every chat_message
+        when its parent channel is deleted, or every task under a
+        deleted project. The filter must reference filterable
+        attributes only (see ``filterable_attributes`` in
+        ``meilisearch.py``).
+        """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        await client.delete_documents_by_filter_expr(filter_expr)
+
     async def remove_by_content(
         self,
         content_type: ContentType,

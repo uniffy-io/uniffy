@@ -25,6 +25,11 @@ service AttachmentsService {
   // List all attachments for a piece of content.
   rpc ListAttachments(ListAttachmentsRequest) returns (ListAttachmentsResponse);
 
+  // Batch-list attachments for many content rows of the same type.
+  // Used by chat to hydrate attachments for an entire page of messages
+  // in one round-trip (replaces an N+1 ListAttachments fan-out).
+  rpc BatchListAttachments(BatchListAttachmentsRequest) returns (BatchListAttachmentsResponse);
+
   // List attachments from content shared with the user.
   rpc ListSharedAttachments(ListSharedAttachmentsRequest) returns (ListSharedAttachmentsResponse);
 
@@ -94,6 +99,27 @@ message ListAttachmentsRequest {
 message ListAttachmentsResponse {
   repeated Attachment attachments = 1;
   int32 total_count = 2;
+}
+
+// BATCH LIST ATTACHMENTS
+
+message BatchListAttachmentsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  // Content rows to look up. Capped at 200 server-side; callers that
+  // need more pagination should issue multiple batches.
+  repeated string content_ids = 3;
+}
+
+// One entry per requested content_id. Content rows with no
+// attachments are omitted -- callers must default to empty arrays.
+message BatchListAttachmentsGroup {
+  string content_id = 1;
+  repeated Attachment attachments = 2;
+}
+
+message BatchListAttachmentsResponse {
+  repeated BatchListAttachmentsGroup groups = 1;
 }
 
 // LIST SHARED ATTACHMENTS

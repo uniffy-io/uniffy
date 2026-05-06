@@ -73,7 +73,7 @@ def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
 
         try:
             data = _json.loads(canvas_data)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return []
     else:
         data = canvas_data

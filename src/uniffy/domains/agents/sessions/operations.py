@@ -1,6 +1,5 @@
 """Business logic for session and message management."""
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
@@ -8,7 +7,6 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.message import AgentMessage
@@ -21,40 +19,45 @@ VALID_SESSION_KINDS = {"direct", "group", "global", "cron"}
 VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
 
 
+# Hard cap on rows handed to the LLM when the async compaction worker
+# hasn't caught up yet. The runtime trusts the provider-reported prompt
+# size for budget decisions; this cap protects against pathological row
+# counts (thousands of tool messages in a stuck session) hitting the API.
+EMERGENCY_TRUNCATION_KEEP_ROWS = 100
+
+
 def apply_emergency_truncation(
     context: list[AgentMessage],
     token_budget: int,
 ) -> list[AgentMessage]:
-    """Drop oldest non-summary tool rows when the context still overruns budget.
+    """Drop oldest tool rows when active context exceeds the row cap.
 
-    Compaction is async (ARQ ``compact_session``); the worker may not have
-    caught up by the time the runtime issues an LLM call. This helper is
-    the in-memory safety net: walk the context oldest-first, drop
-    ``role="tool"`` rows until the running ``token_estimate`` total falls
-    below ``token_budget`` (or no more tool rows remain). Orphaned
-    ``tool_use`` blocks left behind on assistant messages are tolerated --
+    Compaction is async (ARQ ``compact_session``); the worker may not
+    have caught up by the time the runtime issues an LLM call. This is
+    the in-memory safety net. We have no per-row token data anymore (we
+    only trust provider-reported prompt sizes), so the cap is row-based:
+    if the active context is over ``EMERGENCY_TRUNCATION_KEEP_ROWS``,
+    drop oldest ``role="tool"`` rows until we fit. Orphaned ``tool_use``
+    blocks left on assistant messages are tolerated --
     ``RuntimeOperations._build_llm_messages`` synthesises an
-    "interrupted" tool_result for any orphan it finds.
+    "interrupted" tool_result for any orphan.
 
     Summary messages are never dropped (they are the compressed history).
+    ``token_budget`` is accepted for API compatibility but unused.
     Returns the trimmed list. Mutates nothing in place.
     """
-    if token_budget <= 0 or not context:
+    del token_budget  # unused; sizing is row-based now
+    if len(context) <= EMERGENCY_TRUNCATION_KEEP_ROWS:
         return list(context)
 
-    total = sum(int(getattr(m, "token_estimate", 0) or 0) for m in context)
-    if total <= token_budget:
-        return list(context)
-
-    keep: list[AgentMessage] = list(context)
+    keep: list[AgentMessage | None] = list(context)
     for idx, msg in enumerate(context):
-        if total <= token_budget:
+        active_count = sum(1 for m in keep if m is not None)
+        if active_count <= EMERGENCY_TRUNCATION_KEEP_ROWS:
             break
         if msg.role != "tool":
             continue
-        msg_tokens = int(getattr(msg, "token_estimate", 0) or 0)
-        keep[idx] = None  # type: ignore[call-overload]
-        total -= msg_tokens
+        keep[idx] = None
 
     return [m for m in keep if m is not None]
 
@@ -63,11 +66,20 @@ def apply_emergency_truncation(
 # we allow for conversation history (the rest is reserved for system prompt,
 # tool schemas, and the LLM's response).
 DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO = 0.65
-# When compaction triggers, compact messages until active token usage
-# drops below this ratio of the model's context window.
-COMPACTION_TARGET_RATIO = 0.40
+# When compaction triggers, compact this fraction of the oldest
+# compactable units in one pass. The next turn re-triggers if still
+# over budget; we no longer have per-row token data to size the cut
+# precisely against a target ratio.
+COMPACTION_FRACTION = 0.50
 # Fallback context window when model info is unavailable.
 FALLBACK_CONTEXT_WINDOW = 200_000
+# Most recent non-summary rows fed into the next LLM prompt. The async
+# compaction worker keeps the active set bounded under normal load; this
+# cap is the safety ceiling for the read path.
+MAX_CONTEXT_RECENT_MESSAGES = 200
+# Most recent summary rows included in the prompt (oldest summaries are
+# already merged into a super-summary by ``_consolidate_summaries``).
+MAX_CONTEXT_SUMMARIES = 5
 
 
 @dataclass
@@ -94,7 +106,6 @@ class _CompactionUnit:
     """
 
     messages: list[AgentMessage]
-    tokens: int = 0
 
 
 def _build_compaction_units(messages: list[AgentMessage]) -> list[_CompactionUnit]:
@@ -120,70 +131,28 @@ def _build_compaction_units(messages: list[AgentMessage]) -> list[_CompactionUni
     while i < len(messages):
         msg = messages[i]
 
-        # Assistant message with a tool_call_id starts a tool chain
         if msg.role == "assistant" and msg.tool_call_id:
             chain = [msg]
             i += 1
-
-            # Collect all subsequent tool results that belong to this chain
-            # and any follow-up assistant messages with tool calls
             while i < len(messages):
                 next_msg = messages[i]
-                if next_msg.role == "tool":
-                    chain.append(next_msg)
-                    i += 1
-                elif next_msg.role == "assistant" and next_msg.tool_call_id:
-                    # Another tool call in the same turn
+                if next_msg.role == "tool" or (
+                    next_msg.role == "assistant" and next_msg.tool_call_id
+                ):
                     chain.append(next_msg)
                     i += 1
                 elif next_msg.role == "assistant" and not next_msg.tool_call_id:
-                    # Final assistant response after tool results
                     chain.append(next_msg)
                     i += 1
                     break
                 else:
                     break
-
-            tokens = sum(_estimate_message_tokens(m) for m in chain)
-            units.append(_CompactionUnit(messages=chain, tokens=tokens))
+            units.append(_CompactionUnit(messages=chain))
         else:
-            # Standalone message (user, assistant without tools, system)
-            tokens = _estimate_message_tokens(msg)
-            units.append(_CompactionUnit(messages=[msg], tokens=tokens))
+            units.append(_CompactionUnit(messages=[msg]))
             i += 1
 
     return units
-
-
-def _estimate_message_tokens(msg: AgentMessage) -> int:
-    """Estimate token count for a message based on content length.
-
-    Uses a rough heuristic of ~4 characters per token for English text.
-    This is intentionally conservative (overestimates slightly) to avoid
-    exceeding the actual context window.
-
-    Parameters
-    ----------
-    msg : AgentMessage
-        The message to estimate tokens for.
-
-    Returns
-    -------
-    int
-        Estimated token count.
-
-    """
-    chars = len(msg.content or "")
-    if msg.tool_args:
-        try:
-            chars += len(json.dumps(msg.tool_args))
-        except TypeError, ValueError:
-            chars += 100
-    if msg.tool_result:
-        chars += len(msg.tool_result)
-    # Role overhead (role tag, formatting)
-    chars += 20
-    return max(1, chars // 4)
 
 
 class SessionOperations:
@@ -503,6 +472,7 @@ class SessionOperations:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
@@ -583,6 +553,7 @@ class SessionOperations:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
             model=model,
             tool_name=tool_name,
             tool_call_id=tool_call_id,
@@ -591,7 +562,6 @@ class SessionOperations:
             file_ids=file_ids,
             is_thinking=is_thinking,
         )
-        message.token_estimate = _estimate_message_tokens(message)
         self._session.add(message)
 
         # Update session aggregates
@@ -689,8 +659,11 @@ class SessionOperations:
     ) -> dict:
         """Get context window statistics for a session.
 
-        All thresholds and budgets are token-based, estimated from
-        message content length (~4 chars/token).
+        ``active_tokens`` is the provider-reported prompt size of the
+        most recent assistant turn (its ``input_tokens`` plus
+        ``output_tokens``). That value is exactly what the model just
+        ingested + just produced, which is the floor of the next
+        prompt. Returns 0 before the first assistant reply.
 
         Parameters
         ----------
@@ -706,7 +679,7 @@ class SessionOperations:
         Returns
         -------
         dict
-            Token-based statistics about context usage and compaction state.
+            Token statistics about context usage and compaction state.
 
         Raises
         ------
@@ -729,39 +702,36 @@ class SessionOperations:
             raise NotFoundError("AgentSession", str(session_id))
         self._verify_session_access(agent_session, user_id)
 
-        # Total messages (all, including compacted)
-        total_result = await self._session.execute(
-            select(func.count())
-            .select_from(AgentMessage)
-            .where(AgentMessage.session_id == session_id)
+        counts_result = await self._session.execute(
+            select(
+                func.count().label("total"),
+                func.count()
+                .filter(AgentMessage.is_compacted == True)  # noqa: E712
+                .label("compacted"),
+                func.count()
+                .filter(
+                    and_(
+                        AgentMessage.is_compacted == False,  # noqa: E712
+                        AgentMessage.role == "summary",
+                    )
+                )
+                .label("summary"),
+                func.count()
+                .filter(AgentMessage.is_compacted == False)  # noqa: E712
+                .label("active"),
+            ).where(AgentMessage.session_id == session_id)
         )
-        total_messages = total_result.scalar() or 0
+        counts = counts_result.one()
+        total_messages = int(counts.total or 0)
+        compacted_messages = int(counts.compacted or 0)
+        summary_count = int(counts.summary or 0)
+        active_messages = int(counts.active or 0)
 
-        # Compacted messages
-        compacted_result = await self._session.execute(
-            select(func.count())
-            .select_from(AgentMessage)
-            .where(
-                AgentMessage.session_id == session_id,
-                AgentMessage.is_compacted == True,  # noqa: E712
-            )
+        last_input, last_output, last_cache_read = (
+            await self._latest_active_prompt_tokens(session_id)
         )
-        compacted_messages = compacted_result.scalar() or 0
+        active_tokens = last_input + last_output
 
-        # All active (non-compacted) messages for token estimation
-        active_result = await self._session.execute(
-            select(AgentMessage).where(
-                AgentMessage.session_id == session_id,
-                AgentMessage.is_compacted == False,  # noqa: E712
-            )
-        )
-        active_msgs = list(active_result.scalars().all())
-
-        active_messages = len(active_msgs)
-        summary_count = sum(1 for m in active_msgs if m.role == "summary")
-        active_tokens = sum(_estimate_message_tokens(m) for m in active_msgs)
-
-        # Token budget for conversation history
         token_budget = int(context_window_tokens * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
         tokens_until_compaction = max(0, token_budget - active_tokens)
 
@@ -771,10 +741,49 @@ class SessionOperations:
             "compacted_messages": compacted_messages,
             "summary_count": summary_count,
             "active_tokens": active_tokens,
+            "last_input_tokens": last_input,
+            "last_output_tokens": last_output,
+            "last_cache_read_tokens": last_cache_read,
             "token_budget": token_budget,
             "tokens_until_compaction": tokens_until_compaction,
             "context_window_tokens": context_window_tokens,
         }
+
+    async def _latest_active_prompt_tokens(
+        self, session_id: UUID
+    ) -> tuple[int, int, int]:
+        """Provider-reported size of the most recent active assistant turn.
+
+        Returns ``(prompt_tokens, output_tokens, cache_read_tokens)``
+        for the latest non-compacted assistant message. ``prompt_tokens``
+        is the full prompt the model saw -- uncached input plus tokens
+        served from the prompt cache, since both count toward context
+        window pressure even though cache reads are billed at ~10%.
+        ``cache_read_tokens`` is surfaced separately so the meter can
+        show how much of the prompt was free. Returns ``(0, 0, 0)`` if
+        no assistant has replied yet.
+        """
+        result = await self._session.execute(
+            select(
+                AgentMessage.input_tokens,
+                AgentMessage.output_tokens,
+                AgentMessage.cache_read_input_tokens,
+            )
+            .where(
+                AgentMessage.session_id == session_id,
+                AgentMessage.role == "assistant",
+                AgentMessage.is_compacted == False,  # noqa: E712
+            )
+            .order_by(AgentMessage.created_at.desc())
+            .limit(1)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return 0, 0, 0
+        uncached_input = int(row[0] or 0)
+        output = int(row[1] or 0)
+        cache_read = int(row[2] or 0)
+        return uncached_input + cache_read, output, cache_read
 
     async def get_session_context(
         self,
@@ -784,13 +793,16 @@ class SessionOperations:
         session_id: UUID,
         token_budget: int | None = None,
     ) -> tuple[list[AgentMessage], int]:
-        """Get recent messages for LLM context assembly.
+        """Get messages for LLM context assembly.
 
-        Returns summary messages first (if any), then the most recent
-        non-compacted messages that fit within the token budget. The
-        recent-messages slice is computed by a single window-function
-        query over ``token_estimate``, so the read path does not
-        re-estimate per row.
+        Returns active summaries (capped at the most recent
+        ``MAX_CONTEXT_SUMMARIES``) followed by the most recent
+        ``MAX_CONTEXT_RECENT_MESSAGES`` non-summary messages. We size
+        by row count instead of per-message token heuristic: provider-
+        reported tokens only exist on assistant messages, so any per-
+        row estimate would be a guess. The async compaction worker
+        keeps the active set bounded; ``apply_emergency_truncation`` is
+        the in-memory safety net.
 
         Parameters
         ----------
@@ -801,7 +813,7 @@ class SessionOperations:
         session_id : UUID
             Session to get context for.
         token_budget : int | None
-            Maximum estimated tokens for context (default: 65% of 200k).
+            Accepted for API compatibility, unused (sizing is row-based).
 
         Returns
         -------
@@ -816,6 +828,7 @@ class SessionOperations:
             If the user cannot access this session.
 
         """
+        del token_budget  # unused
         await self._org_ops.require_org_member(user_id, organization_id)
 
         session_result = await self._session.execute(
@@ -829,12 +842,6 @@ class SessionOperations:
             raise NotFoundError("AgentSession", str(session_id))
 
         self._verify_session_access(agent_session, user_id)
-
-        budget = (
-            token_budget
-            if token_budget and token_budget > 0
-            else int(FALLBACK_CONTEXT_WINDOW * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
-        )
 
         count_result = await self._session.execute(
             select(func.count())
@@ -853,56 +860,22 @@ class SessionOperations:
                 AgentMessage.role == "summary",
                 AgentMessage.is_compacted == False,  # noqa: E712
             )
-            .order_by(AgentMessage.created_at)
+            .order_by(AgentMessage.created_at.desc())
+            .limit(MAX_CONTEXT_SUMMARIES)
         )
-        all_summaries = list(summary_result.scalars().all())
+        summaries = list(reversed(summary_result.scalars().all()))
 
-        summary_budget = budget // 5
-        tokens_used = 0
-        summaries: list[AgentMessage] = []
-        for s in reversed(all_summaries):
-            s_tokens = int(s.token_estimate or 0) or _estimate_message_tokens(s)
-            if tokens_used + s_tokens > summary_budget and summaries:
-                break
-            summaries.insert(0, s)
-            tokens_used += s_tokens
-
-        remaining_budget = max(0, budget - tokens_used)
-
-        cumulative = func.sum(
-            func.coalesce(AgentMessage.token_estimate, 0)
-        ).over(order_by=AgentMessage.created_at.desc()).label("cumulative_tokens")
-
-        ranked = (
-            select(AgentMessage, cumulative)
+        recent_result = await self._session.execute(
+            select(AgentMessage)
             .where(
                 AgentMessage.session_id == session_id,
                 AgentMessage.is_compacted == False,  # noqa: E712
                 AgentMessage.role != "summary",
             )
-            .subquery()
+            .order_by(AgentMessage.created_at.desc())
+            .limit(MAX_CONTEXT_RECENT_MESSAGES)
         )
-        ranked_msg = aliased(AgentMessage, ranked)
-
-        most_recent_id = (
-            select(ranked.c.id)
-            .order_by(ranked.c.cumulative_tokens)
-            .limit(1)
-            .scalar_subquery()
-        )
-
-        recent_stmt = (
-            select(ranked_msg)
-            .where(
-                or_(
-                    ranked.c.cumulative_tokens <= remaining_budget,
-                    ranked_msg.id == most_recent_id,
-                )
-            )
-            .order_by(ranked_msg.created_at)
-        )
-        recent_result = await self._session.execute(recent_stmt)
-        recent = list(recent_result.scalars().all())
+        recent = list(reversed(recent_result.scalars().all()))
 
         return summaries + recent, total
 
@@ -963,14 +936,16 @@ class SessionOperations:
         session_id: UUID,
         token_budget: int,
     ) -> bool:
-        """Enqueue async compaction when active token usage exceeds the budget.
+        """Enqueue async compaction when active context exceeds the budget.
 
-        The active-tokens probe is a single ``SUM(token_estimate)`` over
-        non-compacted, non-summary rows -- cheap, no LLM call. When the
-        sum exceeds ``token_budget`` an ARQ ``compact_session`` job is
-        enqueued. The worker side is idempotent via a Valkey
-        ``SET NX compaction_lock:{session_id}`` lock, so spamming this
-        helper across concurrent requests does not duplicate the work.
+        The active-tokens probe reads provider-reported
+        ``input_tokens + output_tokens`` from the latest non-compacted
+        assistant message -- the ground truth for "how big the prompt
+        was last turn". When that exceeds ``token_budget`` an ARQ
+        ``compact_session`` job is enqueued. The worker side is
+        idempotent via a Valkey ``SET NX compaction_lock:{session_id}``
+        lock, so spamming this helper across concurrent requests does
+        not duplicate the work.
 
         Returns
         -------
@@ -982,14 +957,8 @@ class SessionOperations:
         if token_budget <= 0:
             return False
 
-        result = await self._session.execute(
-            select(func.coalesce(func.sum(AgentMessage.token_estimate), 0)).where(
-                AgentMessage.session_id == session_id,
-                AgentMessage.is_compacted == False,  # noqa: E712
-                AgentMessage.role != "summary",
-            )
-        )
-        active_tokens = int(result.scalar() or 0)
+        last_input, last_output, _ = await self._latest_active_prompt_tokens(session_id)
+        active_tokens = last_input + last_output
         if active_tokens <= token_budget:
             return False
 
@@ -1056,9 +1025,13 @@ class SessionOperations:
         """
         no_op = CompactionResult(performed=False)
         token_budget = int(context_window_tokens * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
-        target_tokens = int(context_window_tokens * COMPACTION_TARGET_RATIO)
 
-        # Fetch all active non-summary messages ordered oldest first
+        last_input, last_output, _ = await self._latest_active_prompt_tokens(session_id)
+        tokens_before = last_input + last_output
+
+        if not force and tokens_before <= token_budget:
+            return no_op
+
         active_result = await self._session.execute(
             select(AgentMessage)
             .where(
@@ -1070,45 +1043,22 @@ class SessionOperations:
         )
         all_active = list(active_result.scalars().all())
 
-        # Build compaction units - atomic groups of messages
         units = _build_compaction_units(all_active)
-
-        # Need at least 2 units (compact some, keep some)
         if len(units) < 2:
             return no_op
 
-        # Calculate total active tokens
-        total_active_tokens = sum(u.tokens for u in units)
+        # Compact a fraction of the oldest units. Without per-row token
+        # data we no longer compact "until we hit a target ratio"; we
+        # compact a chunk and let the next turn re-trigger if still over.
+        max_compactable = len(units) - 1
+        units_to_drop = max(1, int(max_compactable * COMPACTION_FRACTION))
+        units_to_compact = units[:units_to_drop]
 
-        if not force and total_active_tokens <= token_budget:
-            return no_op
-
-        # Determine how many tokens to remove to reach the target
-        tokens_to_remove = total_active_tokens - target_tokens
-        if tokens_to_remove <= 0 and not force:
-            return no_op
-
-        # Walk from oldest, accumulating units until we have enough
-        # tokens to compact. Always keep at least the last unit.
-        units_to_compact: list[_CompactionUnit] = []
-        compact_tokens = 0
-        max_compactable = len(units) - 1  # keep at least the last unit
-
-        for i in range(max_compactable):
-            units_to_compact.append(units[i])
-            compact_tokens += units[i].tokens
-            if not force and compact_tokens >= tokens_to_remove:
-                break
-
-        if not units_to_compact:
-            return no_op
-
-        # Flatten units into messages
         messages_to_compact: list[AgentMessage] = []
         for unit in units_to_compact:
             messages_to_compact.extend(unit.messages)
-
-        tokens_before = total_active_tokens
+        if not messages_to_compact:
+            return no_op
 
         entries: list[tuple[str, str]] = []
         for msg in messages_to_compact:
@@ -1136,28 +1086,24 @@ class SessionOperations:
             output_tokens=summary_result.output_tokens,
             model=model,
         )
-        summary_message.token_estimate = _estimate_message_tokens(summary_message)
         self._session.add(summary_message)
         await self._session.commit()
 
-        # Calculate post-compaction tokens
-        summary_msg_tokens = _estimate_message_tokens(summary_message)
-        tokens_after = tokens_before - compact_tokens + summary_msg_tokens
-
-        # Re-compact old summaries if too many have accumulated
         await self._consolidate_summaries(
             session_id=session_id,
             provider=provider,
             model=model,
-            max_summaries=5,
+            max_summaries=MAX_CONTEXT_SUMMARIES,
         )
 
+        # tokens_after is unknown until the next live turn reports back
+        # via input_tokens. We report 0 here rather than estimate.
         return CompactionResult(
             performed=True,
             messages_compacted=len(messages_to_compact),
             tokens_before=tokens_before,
-            tokens_after=tokens_after,
-            tokens_saved=max(0, tokens_before - tokens_after),
+            tokens_after=0,
+            tokens_saved=tokens_before,
             summary_tokens=summary_result.input_tokens + summary_result.output_tokens,
         )
 
@@ -1239,7 +1185,6 @@ class SessionOperations:
         for summary in to_merge:
             summary.is_compacted = True
 
-        # Create the consolidated summary with token usage
         consolidated = AgentMessage(
             session_id=session_id,
             role="summary",
@@ -1248,7 +1193,6 @@ class SessionOperations:
             output_tokens=result.output_tokens,
             model=model,
         )
-        consolidated.token_estimate = _estimate_message_tokens(consolidated)
         self._session.add(consolidated)
         await self._session.commit()
 

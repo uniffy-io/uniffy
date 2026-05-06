@@ -14,6 +14,8 @@ import { cn } from '@/shared/utils/cn';
 import { useFormattedKeybinding } from '@/features/settings';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
+import { createChannel } from '@/features/chat/store/chatThunks';
+import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 
@@ -48,7 +50,14 @@ export function GlobalSearch() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleResultSelect = (result: SearchResultItem) => {
+    const closeAfterSelect = () => {
+        setIsOpen(false);
+        setIsFocused(false);
+        clearResults();
+        inputRef.current?.blur();
+    };
+
+    const handleResultSelect = async (result: SearchResultItem) => {
         // For FILE results, open the viewer modal instead of navigating
         // This keeps the user on their current page
         if (result.type === SearchResultType.FILE) {
@@ -57,13 +66,34 @@ export function GlobalSearch() {
             if (fileId) {
                 dispatch(openViewerWithFetch({ fileId }));
             }
-        } else {
-            navigate(result.url);
+            closeAfterSelect();
+            return;
         }
-        setIsOpen(false);
-        setIsFocused(false);
-        clearResults();
-        inputRef.current?.blur();
+
+        // For USER results, open (or create) the 1:1 DM with that user instead
+        // of routing to the user profile page.
+        if (result.type === SearchResultType.USER) {
+            const userId = result.urn.split(':').pop();
+            if (userId) {
+                try {
+                    const channel = await dispatch(
+                        createChannel({
+                            name: '',
+                            channelType: ChannelType.DIRECT,
+                            memberIds: [userId],
+                        }),
+                    ).unwrap();
+                    navigate(`/chat/${channel.id}`);
+                    closeAfterSelect();
+                    return;
+                } catch {
+                    // Fall through to default navigation if DM open failed.
+                }
+            }
+        }
+
+        navigate(result.url);
+        closeAfterSelect();
     };
 
     const handleClose = () => {

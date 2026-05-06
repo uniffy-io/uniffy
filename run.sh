@@ -23,15 +23,19 @@ help() {
   echo -e "  ${CYAN}clean${NC}           Clean generated files and caches"
   echo ""
   echo -e "  ${CYAN}Development${NC}"
-  echo -e "  ${CYAN}dev${NC}             Run backend + frontend + worker (all-in-one)"
-  echo -e "  ${CYAN}backend${NC}         Run backend with hot reload"
+  echo -e "  ${CYAN}dev${NC}             Containerized dev stack: backend + workers + ui + infra (default)"
+  echo -e "  ${CYAN}dev-down${NC}        Stop the dev stack"
+  echo -e "  ${CYAN}dev-logs [svc]${NC}  Tail dev stack logs (all services or one)"
+  echo -e "  ${CYAN}dev-rebuild${NC}     Rebuild dev images from scratch (after Dockerfile change)"
+  echo -e "  ${CYAN}dev-native${NC}      Native processes on host (infra still in containers) - legacy"
+  echo -e "  ${CYAN}backend${NC}         Run backend natively with hot reload"
   echo -e "  ${CYAN}ui [cmd]${NC}        Run pnpm command in ui workspace (default: dev)"
   echo -e "  ${CYAN}mobile [cmd]${NC}    Run pnpm command in mobile workspace (default: start)"
-  echo -e "  ${CYAN}mobile-dev${NC}      Run backend + mobile app in web view"
-  echo -e "  ${CYAN}worker-core${NC}     Run the core background worker (thumbnails, notifications, ...)"
-  echo -e "  ${CYAN}worker-core-dev${NC} Run the core worker with hot reload"
-  echo -e "  ${CYAN}worker-egress${NC}   Run the egress background worker (agent runtime, compaction, cron)"
-  echo -e "  ${CYAN}worker-egress-dev${NC} Run the egress worker with hot reload"
+  echo -e "  ${CYAN}mobile-dev${NC}      Run backend + mobile app in web view (native)"
+  echo -e "  ${CYAN}worker-core${NC}     Run the core background worker natively"
+  echo -e "  ${CYAN}worker-core-dev${NC} Run the core worker natively with hot reload"
+  echo -e "  ${CYAN}worker-egress${NC}   Run the egress background worker natively"
+  echo -e "  ${CYAN}worker-egress-dev${NC} Run the egress worker natively with hot reload"
   echo ""
   echo -e "  ${CYAN}Quality${NC}"
   echo -e "  ${CYAN}lint${NC}            Run all linters (backend + frontend)"
@@ -54,10 +58,14 @@ help() {
   echo -e "  ${CYAN}cli-lint${NC}        Run Go linters on unictl"
   echo -e "  ${CYAN}cli-test${NC}        Run unictl tests"
   echo ""
-  echo -e "  ${CYAN}MCP${NC}"
-  echo -e "  ${CYAN}mcp-up${NC}          Start the Playwright MCP server (Claude Code -> browser)"
-  echo -e "  ${CYAN}mcp-down${NC}        Stop the Playwright MCP server"
-  echo -e "  ${CYAN}mcp-logs${NC}        Tail Playwright MCP server logs"
+  echo -e "  ${CYAN}Calls${NC}"
+  echo -e "  ${CYAN}livekit-logs${NC}    Tail LiveKit server logs"
+  echo -e "  ${CYAN}calls-turn-up${NC}   Start coturn (TURN/STUN relay) for cross-NAT testing"
+  echo -e "  ${CYAN}calls-turn-down${NC} Stop coturn"
+  echo -e "  ${CYAN}calls-turn-logs${NC} Tail coturn logs"
+  echo ""
+  echo -e "  ${CYAN}Data${NC}"
+  echo -e "  ${CYAN}data-reset${NC}      Wipe postgres + valkey + meilisearch + rustfs volumes; restart backend"
   echo ""
   echo -e "  ${CYAN}Ops${NC}"
   echo -e "  ${CYAN}licenses${NC}        Generate third-party license files"
@@ -140,10 +148,37 @@ clean() {
 }
 
 dev() {
-  echo "Starting development servers..."
-  echo "Backend: http://0.0.0.0:8000"
-  echo "Frontend: http://0.0.0.0:5173"
-  echo "Workers: core + egress"
+  echo "Starting containerized dev stack..."
+  echo "  Backend:  http://localhost:8000"
+  echo "  Frontend: http://localhost:5173"
+  echo "  Landing:  http://localhost:4321"
+  echo "  LiveKit:  ws://localhost:7880"
+  echo "  Workers:  core + egress (metrics 9091, 9092)"
+  echo ""
+  echo "First start: builds dev images + runs uv sync + pnpm install (~3-5 min)."
+  echo "Subsequent starts skip install when lockfiles are unchanged."
+  echo ""
+  docker compose --profile dev up
+}
+
+dev_down() {
+  docker compose --profile dev down
+}
+
+dev_logs() {
+  docker compose --profile dev logs -f "${1:-}"
+}
+
+dev_rebuild() {
+  echo "Rebuilding dev images (no cache)..."
+  docker compose --profile dev build --no-cache backend ui
+}
+
+dev_native() {
+  echo "Starting native dev (host processes, infra still in containers)..."
+  echo "  Backend:  http://0.0.0.0:8000"
+  echo "  Frontend: http://0.0.0.0:5173"
+  echo "  Workers:  core + egress"
   trap 'kill 0' EXIT
   uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/ &
   uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/ &
@@ -227,20 +262,59 @@ db_drop_staging() {
   kubectl exec -it uniffy-db-1 -n uniffy -- psql -U postgres -c "CREATE DATABASE uniffy OWNER uniffy;"
 }
 
-mcp_up() {
-  echo "Starting Playwright MCP server..."
-  docker compose --profile mcp up -d mcp-playwright
-  echo "MCP server: http://localhost:8931/sse"
-  echo "Restart Claude Code to load .mcp.json and pick up the server."
+livekit_logs() {
+  docker compose logs -f livekit
 }
 
-mcp_down() {
-  echo "Stopping Playwright MCP server..."
-  docker compose --profile mcp down
+data_reset() {
+  cat <<'EOF'
+This will WIPE the following docker volumes (data is gone):
+  uniffy-local_postgres_data
+  uniffy-local_valkey_data
+  uniffy-local_meilisearch_data
+  uniffy-local_rustfs_data
+  uniffy-local_rustfs_logs
+
+UI and landing containers stay running.
+Backend + workers restart to re-run migrations against the empty Postgres.
+
+EOF
+  read -r -p "Continue? [y/N] " ans
+  case "${ans:-N}" in
+    y|Y|yes|YES) ;;
+    *) echo "Aborted."; return 1 ;;
+  esac
+  set -x
+  docker compose stop postgres valkey meilisearch rustfs
+  docker compose rm -f postgres valkey meilisearch rustfs
+  docker volume rm \
+    uniffy-local_postgres_data \
+    uniffy-local_valkey_data \
+    uniffy-local_meilisearch_data \
+    uniffy-local_rustfs_data \
+    uniffy-local_rustfs_logs
+  docker compose up -d postgres valkey meilisearch rustfs
+  docker compose restart backend worker-core worker-egress
+  set +x
+  echo ""
+  echo "Done. Tail backend logs to watch migrations:"
+  echo "  docker compose logs -f backend"
 }
 
-mcp_logs() {
-  docker compose --profile mcp logs -f mcp-playwright
+calls_turn_up() {
+  echo "Starting coturn (TURN/STUN relay)..."
+  docker compose --profile calls-turn up -d coturn
+  echo "coturn:    udp/3478, tcp/3478, udp/49160-49200"
+  echo "Add ICE servers in your client to use it."
+}
+
+calls_turn_down() {
+  echo "Stopping coturn..."
+  docker compose --profile calls-turn down
+}
+
+calls_turn_logs() {
+  docker compose --profile calls-turn logs -f coturn
 }
 
 worker_core() {
@@ -343,6 +417,10 @@ install) install ;;
 proto) proto ;;
 clean) clean ;;
 dev) dev ;;
+dev-down) dev_down ;;
+dev-logs) shift; dev_logs "${1:-}" ;;
+dev-rebuild) dev_rebuild ;;
+dev-native) dev_native ;;
 mobile-dev) mobile_dev ;;
 backend) backend ;;
 ui) ui "${2:-}" ;;
@@ -373,8 +451,10 @@ landing-dev) landing_dev ;;
 landing-build) landing_build ;;
 landing-preview) landing_preview ;;
 landing-deploy) landing_deploy ;;
-mcp-up) mcp_up ;;
-mcp-down) mcp_down ;;
-mcp-logs) mcp_logs ;;
+livekit-logs) livekit_logs ;;
+data-reset) data_reset ;;
+calls-turn-up) calls_turn_up ;;
+calls-turn-down) calls_turn_down ;;
+calls-turn-logs) calls_turn_logs ;;
 help | *) help ;;
 esac

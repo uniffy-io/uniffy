@@ -68,7 +68,7 @@ def _parse_canvas_content(content: str | None) -> dict | None:
         return None
     try:
         parsed = json.loads(content)
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return None
     return parsed if isinstance(parsed, dict) else None
 

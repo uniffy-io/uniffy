@@ -69,6 +69,11 @@ export enum SearchResultType {
    * @generated from enum value: SEARCH_RESULT_TYPE_ROOM = 11;
    */
   ROOM = 11,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_AGENT_CHAT = 12;
+   */
+  AGENT_CHAT = 12,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SearchResultType)
 proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
@@ -84,6 +89,7 @@ proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
   { no: 9, name: "SEARCH_RESULT_TYPE_PROMPT" },
   { no: 10, name: "SEARCH_RESULT_TYPE_CHAT_MESSAGE" },
   { no: 11, name: "SEARCH_RESULT_TYPE_ROOM" },
+  { no: 12, name: "SEARCH_RESULT_TYPE_AGENT_CHAT" },
 ]);
 
 /**
@@ -1004,6 +1010,17 @@ export class UrnMetadata extends Message<UrnMetadata> {
    */
   contentTags: string[] = [];
 
+  /**
+   * Tombstone marker for mentions whose target was deleted or is no
+   * longer accessible. Empty/"OK" for live URNs, "DELETED" for missing
+   * ones. ResolveUrns synthesizes this when the search index does not
+   * contain the requested URN, so the frontend can render a tombstone
+   * chip instead of a generic fallback.
+   *
+   * @generated from field: string urn_status = 48;
+   */
+  urnStatus = "";
+
   constructor(data?: PartialMessage<UrnMetadata>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1053,6 +1070,7 @@ export class UrnMetadata extends Message<UrnMetadata> {
     { no: 45, name: "user_email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 46, name: "assignee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 47, name: "content_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 48, name: "urn_status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UrnMetadata {

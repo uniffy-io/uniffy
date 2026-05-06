@@ -292,7 +292,19 @@ function AgentContextBarBody({
             {/* Stats breakdown */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                 <span>
-                    Active: <span className="font-medium text-foreground">{formatTokenCount(stats.activeTokens)}</span> tokens ({stats.activeMessages} msgs)
+                    Active: <span className="font-medium text-foreground">{formatTokenCount(stats.activeTokens)}</span> tokens
+                    {stats.activeTokens > 0 && (
+                        <span className="text-muted-foreground/70">
+                            {' '}(in <span className="font-medium text-foreground">{formatTokenCount(stats.lastInputTokens)}</span>
+                            {stats.lastCacheReadTokens > 0 && (
+                                <>
+                                    , <span className="font-medium text-emerald-500">{formatTokenCount(stats.lastCacheReadTokens)} cached</span>
+                                </>
+                            )}
+                            {' '}/ out <span className="font-medium text-foreground">{formatTokenCount(stats.lastOutputTokens)}</span>)
+                        </span>
+                    )}
+                    {' '}({stats.activeMessages} msgs)
                 </span>
                 {stats.summaryCount > 0 && (
                     <span>

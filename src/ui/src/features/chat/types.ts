@@ -48,6 +48,12 @@ export interface ChatChannel {
   memberCount: number;
   // DM participant user IDs (populated for DIRECT and GROUP_DM)
   dmMemberIds: string[];
+  // Named agent chat metadata. `isAgentDm` is true for 1:1 user-agent DMs;
+  // `customName` overrides `name` when set; `agentId` denormalises the agent
+  // participant for sidebar grouping and "all chats with agent X" lookups.
+  isAgentDm: boolean;
+  customName?: string;
+  agentId?: string;
   // Unread tracking (populated from GetUnreadCounts)
   unreadCount?: number;
   mentionCount?: number;

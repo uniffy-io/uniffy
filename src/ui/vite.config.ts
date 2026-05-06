@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
@@ -140,10 +140,11 @@ export default defineConfig({
       },
     },
     fs: {
-      allow: [
-        path.resolve(__dirname, '.'),
-        path.resolve(__dirname, '../gen/typescript'),
-      ],
+      // Allow serving files from anywhere in the workspace. searchForWorkspaceRoot
+      // walks up to the pnpm workspace root (repo root) which includes the
+      // hoisted node_modules/.pnpm/ store - needed for fontsource fonts and
+      // any other asset imported from a node_module.
+      allow: [searchForWorkspaceRoot(__dirname)],
     },
     watch: {
       followSymlinks: true,

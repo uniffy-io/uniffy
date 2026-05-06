@@ -1,0 +1,126 @@
+# Containerized dev stack - backend, worker-core, worker-egress, ui, landing.
+# All services bind-mount the repo, watch for changes, and reload.
+# Dependency installs (uv sync, pnpm install) are skipped on subsequent
+# starts when the lockfile hash is unchanged.
+#
+# Behavior:
+#   docker compose up                       brings up infra only
+#   docker compose --profile dev up         brings up infra + dev services
+#   ./run.sh dev                            equivalent shortcut
+#
+# Works identically on:
+#   1. native localhost
+#   2. SSH'd remote dev box with port forwarding:
+#      ssh -L 5173:localhost:5173 -L 8000:localhost:8000 \
+#          -L 7880:localhost:7880 -L 7882:localhost:7882 \
+#          dev-machine
+#   Browser on your laptop hits http://localhost:5173 and connects through
+#   the tunnel to the remote stack. UDP (LiveKit media on 7882) does not
+#   tunnel cleanly via SSH; use a VPN to the dev machine for call media.
+
+x-backend-base: &backend-base
+  build:
+    context: ../..
+    dockerfile: src/uniffy/dev.Dockerfile
+  image: uniffy-dev-backend
+  pull_policy: never
+  restart: unless-stopped
+  networks: [uniffy-network]
+  env_file:
+    - ../../.env
+    - ../dev/backend.env
+  volumes:
+    - ../../:/app
+    - /app/.venv                  # anonymous volume hides host venv
+    - /app/.ruff_cache
+    - /app/.pytest_cache
+  depends_on:
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+    meilisearch:
+      condition: service_healthy
+  profiles: [dev]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  backend:
+    <<: *backend-base
+    container_name: uniffy-dev-backend
+    command: uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/
+    ports:
+      - "8000:8000"
+
+  worker-core:
+    <<: *backend-base
+    container_name: uniffy-dev-worker-core
+    command: uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/
+    ports:
+      - "9091:9091"
+
+  worker-egress:
+    <<: *backend-base
+    container_name: uniffy-dev-worker-egress
+    command: uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/
+    ports:
+      - "9092:9092"
+
+  # Shared base for every Node workspace dev container (ui, landing, ...).
+  # Each service overrides command, ports, and PNPM_FILTER.
+  ui:
+    build: &node-build
+      context: ../..
+      dockerfile: src/ui/dev.Dockerfile
+    image: uniffy-dev-node
+    container_name: uniffy-dev-ui
+    pull_policy: never
+    restart: unless-stopped
+    command: pnpm --filter uniffy-ui dev
+    environment:
+      PNPM_FILTER: "uniffy-ui..."
+    env_file:
+      - ../dev/ui.env
+    volumes: &node-volumes
+      - ../../:/app
+      - /app/node_modules
+      - /app/src/ui/node_modules
+      - /app/src/mobile/node_modules
+      - /app/src/landing/node_modules
+      - /app/src/gen/typescript/node_modules
+      - /app/src/ui/.vite-worker
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks: [uniffy-network]
+    profiles: [dev]
+    logging: &node-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  landing:
+    build: *node-build
+    image: uniffy-dev-node
+    container_name: uniffy-dev-landing
+    pull_policy: never
+    restart: unless-stopped
+    command: pnpm --filter uniffy-landing dev -- --host 0.0.0.0
+    environment:
+      PNPM_FILTER: "uniffy-landing..."
+    volumes: *node-volumes
+    ports:
+      - "4321:4321"
+    networks: [uniffy-network]
+    profiles: [dev]
+    logging: *node-logging
+
+networks:
+  uniffy-network:
+    driver: bridge

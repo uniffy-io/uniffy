@@ -8,9 +8,12 @@
  * are evicted.
  */
 
-import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Hash, Lock } from '@phosphor-icons/react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
+import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
+import { getInitials } from '@/components/subject/utils';
+import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import {
   selectActiveChannelId,
@@ -31,6 +34,7 @@ import {
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
 import { NewMessagesPill } from '@/features/chat/components/channel/NewMessagesPill';
+import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 import type { ChatMessage } from '@/features/chat/types';
 
 const GROUPING_THRESHOLD_MS = 5 * 60 * 1000;
@@ -123,24 +127,76 @@ function UnreadSeparator() {
   );
 }
 
-function ChannelEmptyState({ channelName, description, isPrivate }: {
-  channelName: string;
+function ChannelEmptyState({ heading, description, accent }: {
+  heading: string;
   description: string;
-  isPrivate: boolean;
+  accent: ReactNode;
 }) {
-  const Icon = isPrivate ? Lock : Hash;
-
   return (
     <div className="flex items-center justify-center h-full text-muted-foreground">
       <div className="text-center max-w-md px-4">
-        <Icon size={48} className="mx-auto mb-3 text-muted-foreground/30" />
+        <div className="mb-4 flex justify-center">{accent}</div>
         <p className="text-lg font-semibold text-foreground">
-          This is the start of #{channelName}
+          {heading}
         </p>
         <p className="text-sm mt-1">
-          {description || 'Start connecting with your team.'}
+          {description}
         </p>
       </div>
+    </div>
+  );
+}
+
+const HERO_AVATAR_BASE =
+  'w-16 h-16 rounded-full ring-4 ring-background object-cover bg-primary/15 text-primary flex items-center justify-center text-xl font-medium shrink-0';
+
+function HeroAvatar({
+  userId,
+  displayName,
+  className,
+}: {
+  userId: string;
+  displayName: string;
+  className?: string;
+}) {
+  const avatarSrc = useAvatarUrl(userId, 'md');
+  const [failed, setFailed] = useState(false);
+  if (avatarSrc && !failed) {
+    return (
+      <img
+        src={avatarSrc}
+        alt={displayName}
+        className={cn(HERO_AVATAR_BASE, className)}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className={cn(HERO_AVATAR_BASE, className)} title={displayName}>
+      {getInitials(displayName || userId.slice(-2).toUpperCase())}
+    </div>
+  );
+}
+
+function DmPairAccent({
+  selfId,
+  selfName,
+  peerId,
+  peerName,
+}: {
+  selfId: string;
+  selfName: string;
+  peerId: string;
+  peerName: string;
+}) {
+  return (
+    <div className="relative inline-flex items-center" aria-hidden="true">
+      <HeroAvatar userId={selfId} displayName={selfName} className="opacity-90" />
+      <HeroAvatar
+        userId={peerId}
+        displayName={peerName}
+        className="-ml-5 scale-110 z-10"
+      />
     </div>
   );
 }
@@ -323,9 +379,51 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     [unreadSeparatorId, highlightedId],
   );
 
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
+
   if (!activeChannel) return null;
 
   const isPrivate = activeChannel.channelType === 'PRIVATE';
+  const isDirect = activeChannel.channelType === 'DIRECT';
+  const isGroupDm = activeChannel.channelType === 'GROUP_DM';
+  const isDm = isDirect || isGroupDm;
+  const peerNames = (() => {
+    if (!isDm) return '';
+    const raw = getChannelDisplayName(activeChannel);
+    if (!currentUserName) return raw;
+    const others = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((n) => n && n !== currentUserName);
+    return others.length > 0 ? others.join(', ') : raw;
+  })();
+  const peerUserId = (() => {
+    if (!isDirect) return '';
+    return (activeChannel.dmMemberIds ?? []).find((id) => id && id !== (currentUserId ?? '')) ?? '';
+  })();
+
+  const heading = isDm
+    ? `This is the start of your conversation with ${peerNames}`
+    : `This is the start of #${getChannelDisplayName(activeChannel)}`;
+
+  const description = isDirect
+    ? 'Just the two of you. Say hello.'
+    : isGroupDm
+      ? `Group conversation with ${activeChannel.memberCount} people.`
+      : activeChannel.description || 'Start connecting with your team.';
+
+  const accent: ReactNode = isDirect && peerUserId
+    ? (
+      <DmPairAccent
+        selfId={currentUserId ?? ''}
+        selfName={currentUserName}
+        peerId={peerUserId}
+        peerName={peerNames}
+      />
+    )
+    : isPrivate
+      ? <Lock size={48} className="text-muted-foreground/30" />
+      : <Hash size={48} className="text-muted-foreground/30" />;
 
   if (rootMessages.length === 0) {
     if (!hasLoaded || isLoadingMore) {
@@ -343,9 +441,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
       <div className="flex-1 flex flex-col" data-testid="chat-message-list" data-empty="true">
         <div className="flex-1">
           <ChannelEmptyState
-            channelName={activeChannel.name}
-            description={activeChannel.description}
-            isPrivate={isPrivate}
+            heading={heading}
+            description={description}
+            accent={accent}
           />
         </div>
         <TypingIndicator typingUsers={typingUsers} />

@@ -64,9 +64,11 @@ def build_system_prompt(
     # Section 2: Agent name and metadata
     sections.append(f"Your name is {agent_name}.")
 
-    # Section 3: Current date/time and timezone
+    # Section 3: Current date and timezone. Day-level granularity only --
+    # a minute-level timestamp here would invalidate the prompt cache on
+    # every turn. The agent calls a tool when it needs the actual time.
     now = datetime.now(UTC)
-    time_parts = [f"Current date and time: {now.strftime('%Y-%m-%d %H:%M UTC')}."]
+    time_parts = [f"Today's date is {now.strftime('%Y-%m-%d')} (UTC)."]
     if user_timezone:
         time_parts.append(f"The user's local timezone is {user_timezone}.")
     sections.append(" ".join(time_parts))

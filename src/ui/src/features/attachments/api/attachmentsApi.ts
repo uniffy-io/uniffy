@@ -10,6 +10,7 @@ import { transport } from '@/config/api';
 import { AttachmentsService } from '@uniffy/proto/attachments/v1/attachments_connect';
 import type {
     AttachFileRequest,
+    BatchListAttachmentsRequest,
     DetachFileRequest,
     ListAttachmentsRequest,
     ListSharedAttachmentsRequest,
@@ -46,6 +47,15 @@ export const attachmentsApi = {
      */
     listAttachments: async (request: PartialMessage<ListAttachmentsRequest>) => {
         return attachmentsClient.listAttachments(request);
+    },
+
+    /**
+     * Batch-list attachments for many content rows of the same type.
+     * Use this for hot paths (chat channel open) instead of N parallel
+     * `listAttachments` calls.
+     */
+    batchListAttachments: async (request: PartialMessage<BatchListAttachmentsRequest>) => {
+        return attachmentsClient.batchListAttachments(request);
     },
 
     /**

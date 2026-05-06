@@ -23,6 +23,7 @@ import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { uploadImage } from "@/components/editor/utils/imageUploader";
 import { MentionChipCompact } from "@/components/mention";
+import { getMentionUrl } from "@/components/mention/mentionStateEmitter";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import { parseUrn, urnToPath } from "@/shared/utils/urn";
@@ -130,8 +131,11 @@ function MarkdownLink({ href, children }: { href?: string; children?: React.Reac
 
         const handleClick = (e?: React.MouseEvent) => {
             if (!parsed.isValid) return;
-            const path = urnToPath(href);
-            if (path === "#") return;
+            // Prefer the resolved URL from search-index metadata so
+            // type-specific routing (e.g. /chat/{ch}#{msg}) works.
+            const resolved = getMentionUrl(href);
+            const path = resolved || urnToPath(href);
+            if (!path || path === "#") return;
             if (e?.metaKey || e?.ctrlKey) {
                 openInNewTab(path);
             } else {
@@ -988,7 +992,19 @@ function ChatPanel() {
                         {/* Stats breakdown */}
                         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                             <span>
-                                Active: <span className="font-medium text-foreground">{formatTokenCount(contextStats.activeTokens)}</span> tokens ({contextStats.activeMessages} msgs)
+                                Active: <span className="font-medium text-foreground">{formatTokenCount(contextStats.activeTokens)}</span> tokens
+                                {contextStats.activeTokens > 0 && (
+                                    <span className="text-muted-foreground/70">
+                                        {' '}(in <span className="font-medium text-foreground">{formatTokenCount(contextStats.lastInputTokens)}</span>
+                                        {contextStats.lastCacheReadTokens > 0 && (
+                                            <>
+                                                , <span className="font-medium text-emerald-500">{formatTokenCount(contextStats.lastCacheReadTokens)} cached</span>
+                                            </>
+                                        )}
+                                        {' '}/ out <span className="font-medium text-foreground">{formatTokenCount(contextStats.lastOutputTokens)}</span>)
+                                    </span>
+                                )}
+                                {' '}({contextStats.activeMessages} msgs)
                             </span>
                             {contextStats.summaryCount > 0 && (
                                 <span>

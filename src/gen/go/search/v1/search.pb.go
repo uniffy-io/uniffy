@@ -37,6 +37,7 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_PROMPT         SearchResultType = 9
 	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 10
 	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 11
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 12
 )
 
 // Enum value maps for SearchResultType.
@@ -54,6 +55,7 @@ var (
 		9:  "SEARCH_RESULT_TYPE_PROMPT",
 		10: "SEARCH_RESULT_TYPE_CHAT_MESSAGE",
 		11: "SEARCH_RESULT_TYPE_ROOM",
+		12: "SEARCH_RESULT_TYPE_AGENT_CHAT",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
@@ -68,6 +70,7 @@ var (
 		"SEARCH_RESULT_TYPE_PROMPT":         9,
 		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   10,
 		"SEARCH_RESULT_TYPE_ROOM":           11,
+		"SEARCH_RESULT_TYPE_AGENT_CHAT":     12,
 	}
 )
 
@@ -871,8 +874,14 @@ type UrnMetadata struct {
 	UserAvatarUrl string `protobuf:"bytes,44,opt,name=user_avatar_url,json=userAvatarUrl,proto3" json:"user_avatar_url,omitempty"` // avatar image URL
 	UserEmail     string `protobuf:"bytes,45,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`               // email address
 	// Shared
-	AssigneeIds   []string `protobuf:"bytes,46,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"` // user IDs for avatar rendering
-	ContentTags   []string `protobuf:"bytes,47,rep,name=content_tags,json=contentTags,proto3" json:"content_tags,omitempty"` // content tags
+	AssigneeIds []string `protobuf:"bytes,46,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"` // user IDs for avatar rendering
+	ContentTags []string `protobuf:"bytes,47,rep,name=content_tags,json=contentTags,proto3" json:"content_tags,omitempty"` // content tags
+	// Tombstone marker for mentions whose target was deleted or is no
+	// longer accessible. Empty/"OK" for live URNs, "DELETED" for missing
+	// ones. ResolveUrns synthesizes this when the search index does not
+	// contain the requested URN, so the frontend can render a tombstone
+	// chip instead of a generic fallback.
+	UrnStatus     string `protobuf:"bytes,48,opt,name=urn_status,json=urnStatus,proto3" json:"urn_status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1194,6 +1203,13 @@ func (x *UrnMetadata) GetContentTags() []string {
 	return nil
 }
 
+func (x *UrnMetadata) GetUrnStatus() string {
+	if x != nil {
+		return x.UrnStatus
+	}
+	return ""
+}
+
 var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
@@ -1264,7 +1280,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\bresolved\x18\x01 \x03(\v2,.search.v1.ResolveUrnsResponse.ResolvedEntryR\bresolved\x1aS\n" +
 	"\rResolvedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xa8\f\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xc7\f\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1311,10 +1327,12 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
 	"user_email\x18- \x01(\tR\tuserEmail\x12!\n" +
 	"\fassignee_ids\x18. \x03(\tR\vassigneeIds\x12!\n" +
-	"\fcontent_tags\x18/ \x03(\tR\vcontentTags\x1a;\n" +
+	"\fcontent_tags\x18/ \x03(\tR\vcontentTags\x12\x1d\n" +
+	"\n" +
+	"urn_status\x180 \x01(\tR\turnStatus\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8d\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb0\x03\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1328,7 +1346,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x19SEARCH_RESULT_TYPE_PROMPT\x10\t\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_CHAT_MESSAGE\x10\n" +
 	"\x12\x1b\n" +
-	"\x17SEARCH_RESULT_TYPE_ROOM\x10\v2\x8d\x03\n" +
+	"\x17SEARCH_RESULT_TYPE_ROOM\x10\v\x12!\n" +
+	"\x1dSEARCH_RESULT_TYPE_AGENT_CHAT\x10\f2\x8d\x03\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12H\n" +
 	"\tIndexItem\x12\x1b.search.v1.IndexItemRequest\x1a\x1c.search.v1.IndexItemResponse\"\x00\x12K\n" +

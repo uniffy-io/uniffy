@@ -42,6 +42,9 @@ const (
 	// AttachmentsServiceListAttachmentsProcedure is the fully-qualified name of the
 	// AttachmentsService's ListAttachments RPC.
 	AttachmentsServiceListAttachmentsProcedure = "/attachments.v1.AttachmentsService/ListAttachments"
+	// AttachmentsServiceBatchListAttachmentsProcedure is the fully-qualified name of the
+	// AttachmentsService's BatchListAttachments RPC.
+	AttachmentsServiceBatchListAttachmentsProcedure = "/attachments.v1.AttachmentsService/BatchListAttachments"
 	// AttachmentsServiceListSharedAttachmentsProcedure is the fully-qualified name of the
 	// AttachmentsService's ListSharedAttachments RPC.
 	AttachmentsServiceListSharedAttachmentsProcedure = "/attachments.v1.AttachmentsService/ListSharedAttachments"
@@ -59,6 +62,10 @@ type AttachmentsServiceClient interface {
 	DetachFile(context.Context, *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error)
 	// List all attachments for a piece of content.
 	ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error)
+	// Batch-list attachments for many content rows of the same type.
+	// Used by chat to hydrate attachments for an entire page of messages
+	// in one round-trip (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error)
 	// List attachments from content shared with the user.
 	ListSharedAttachments(context.Context, *connect.Request[v1.ListSharedAttachmentsRequest]) (*connect.Response[v1.ListSharedAttachmentsResponse], error)
 	// Get the user's Attachments folder ID.
@@ -95,6 +102,12 @@ func NewAttachmentsServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(attachmentsServiceMethods.ByName("ListAttachments")),
 			connect.WithClientOptions(opts...),
 		),
+		batchListAttachments: connect.NewClient[v1.BatchListAttachmentsRequest, v1.BatchListAttachmentsResponse](
+			httpClient,
+			baseURL+AttachmentsServiceBatchListAttachmentsProcedure,
+			connect.WithSchema(attachmentsServiceMethods.ByName("BatchListAttachments")),
+			connect.WithClientOptions(opts...),
+		),
 		listSharedAttachments: connect.NewClient[v1.ListSharedAttachmentsRequest, v1.ListSharedAttachmentsResponse](
 			httpClient,
 			baseURL+AttachmentsServiceListSharedAttachmentsProcedure,
@@ -115,6 +128,7 @@ type attachmentsServiceClient struct {
 	attachFile            *connect.Client[v1.AttachFileRequest, v1.AttachFileResponse]
 	detachFile            *connect.Client[v1.DetachFileRequest, v1.DetachFileResponse]
 	listAttachments       *connect.Client[v1.ListAttachmentsRequest, v1.ListAttachmentsResponse]
+	batchListAttachments  *connect.Client[v1.BatchListAttachmentsRequest, v1.BatchListAttachmentsResponse]
 	listSharedAttachments *connect.Client[v1.ListSharedAttachmentsRequest, v1.ListSharedAttachmentsResponse]
 	getAttachmentsFolder  *connect.Client[v1.GetAttachmentsFolderRequest, v1.GetAttachmentsFolderResponse]
 }
@@ -132,6 +146,11 @@ func (c *attachmentsServiceClient) DetachFile(ctx context.Context, req *connect.
 // ListAttachments calls attachments.v1.AttachmentsService.ListAttachments.
 func (c *attachmentsServiceClient) ListAttachments(ctx context.Context, req *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error) {
 	return c.listAttachments.CallUnary(ctx, req)
+}
+
+// BatchListAttachments calls attachments.v1.AttachmentsService.BatchListAttachments.
+func (c *attachmentsServiceClient) BatchListAttachments(ctx context.Context, req *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error) {
+	return c.batchListAttachments.CallUnary(ctx, req)
 }
 
 // ListSharedAttachments calls attachments.v1.AttachmentsService.ListSharedAttachments.
@@ -153,6 +172,10 @@ type AttachmentsServiceHandler interface {
 	DetachFile(context.Context, *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error)
 	// List all attachments for a piece of content.
 	ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error)
+	// Batch-list attachments for many content rows of the same type.
+	// Used by chat to hydrate attachments for an entire page of messages
+	// in one round-trip (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error)
 	// List attachments from content shared with the user.
 	ListSharedAttachments(context.Context, *connect.Request[v1.ListSharedAttachmentsRequest]) (*connect.Response[v1.ListSharedAttachmentsResponse], error)
 	// Get the user's Attachments folder ID.
@@ -185,6 +208,12 @@ func NewAttachmentsServiceHandler(svc AttachmentsServiceHandler, opts ...connect
 		connect.WithSchema(attachmentsServiceMethods.ByName("ListAttachments")),
 		connect.WithHandlerOptions(opts...),
 	)
+	attachmentsServiceBatchListAttachmentsHandler := connect.NewUnaryHandler(
+		AttachmentsServiceBatchListAttachmentsProcedure,
+		svc.BatchListAttachments,
+		connect.WithSchema(attachmentsServiceMethods.ByName("BatchListAttachments")),
+		connect.WithHandlerOptions(opts...),
+	)
 	attachmentsServiceListSharedAttachmentsHandler := connect.NewUnaryHandler(
 		AttachmentsServiceListSharedAttachmentsProcedure,
 		svc.ListSharedAttachments,
@@ -205,6 +234,8 @@ func NewAttachmentsServiceHandler(svc AttachmentsServiceHandler, opts ...connect
 			attachmentsServiceDetachFileHandler.ServeHTTP(w, r)
 		case AttachmentsServiceListAttachmentsProcedure:
 			attachmentsServiceListAttachmentsHandler.ServeHTTP(w, r)
+		case AttachmentsServiceBatchListAttachmentsProcedure:
+			attachmentsServiceBatchListAttachmentsHandler.ServeHTTP(w, r)
 		case AttachmentsServiceListSharedAttachmentsProcedure:
 			attachmentsServiceListSharedAttachmentsHandler.ServeHTTP(w, r)
 		case AttachmentsServiceGetAttachmentsFolderProcedure:
@@ -228,6 +259,10 @@ func (UnimplementedAttachmentsServiceHandler) DetachFile(context.Context, *conne
 
 func (UnimplementedAttachmentsServiceHandler) ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("attachments.v1.AttachmentsService.ListAttachments is not implemented"))
+}
+
+func (UnimplementedAttachmentsServiceHandler) BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("attachments.v1.AttachmentsService.BatchListAttachments is not implemented"))
 }
 
 func (UnimplementedAttachmentsServiceHandler) ListSharedAttachments(context.Context, *connect.Request[v1.ListSharedAttachmentsRequest]) (*connect.Response[v1.ListSharedAttachmentsResponse], error) {

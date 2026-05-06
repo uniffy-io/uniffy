@@ -537,6 +537,166 @@ func (x *ListAttachmentsResponse) GetTotalCount() int32 {
 	return 0
 }
 
+type BatchListAttachmentsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	// Content rows to look up. Capped at 200 server-side; callers that
+	// need more pagination should issue multiple batches.
+	ContentIds    []string `protobuf:"bytes,3,rep,name=content_ids,json=contentIds,proto3" json:"content_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchListAttachmentsRequest) Reset() {
+	*x = BatchListAttachmentsRequest{}
+	mi := &file_attachments_v1_attachments_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchListAttachmentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchListAttachmentsRequest) ProtoMessage() {}
+
+func (x *BatchListAttachmentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_attachments_v1_attachments_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchListAttachmentsRequest.ProtoReflect.Descriptor instead.
+func (*BatchListAttachmentsRequest) Descriptor() ([]byte, []int) {
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *BatchListAttachmentsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *BatchListAttachmentsRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *BatchListAttachmentsRequest) GetContentIds() []string {
+	if x != nil {
+		return x.ContentIds
+	}
+	return nil
+}
+
+// One entry per requested content_id. Content rows with no
+// attachments are omitted -- callers must default to empty arrays.
+type BatchListAttachmentsGroup struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ContentId     string                 `protobuf:"bytes,1,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	Attachments   []*Attachment          `protobuf:"bytes,2,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchListAttachmentsGroup) Reset() {
+	*x = BatchListAttachmentsGroup{}
+	mi := &file_attachments_v1_attachments_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchListAttachmentsGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchListAttachmentsGroup) ProtoMessage() {}
+
+func (x *BatchListAttachmentsGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_attachments_v1_attachments_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchListAttachmentsGroup.ProtoReflect.Descriptor instead.
+func (*BatchListAttachmentsGroup) Descriptor() ([]byte, []int) {
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *BatchListAttachmentsGroup) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *BatchListAttachmentsGroup) GetAttachments() []*Attachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+type BatchListAttachmentsResponse struct {
+	state         protoimpl.MessageState       `protogen:"open.v1"`
+	Groups        []*BatchListAttachmentsGroup `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchListAttachmentsResponse) Reset() {
+	*x = BatchListAttachmentsResponse{}
+	mi := &file_attachments_v1_attachments_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchListAttachmentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchListAttachmentsResponse) ProtoMessage() {}
+
+func (x *BatchListAttachmentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_attachments_v1_attachments_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchListAttachmentsResponse.ProtoReflect.Descriptor instead.
+func (*BatchListAttachmentsResponse) Descriptor() ([]byte, []int) {
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *BatchListAttachmentsResponse) GetGroups() []*BatchListAttachmentsGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
 type ListSharedAttachmentsRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -549,7 +709,7 @@ type ListSharedAttachmentsRequest struct {
 
 func (x *ListSharedAttachmentsRequest) Reset() {
 	*x = ListSharedAttachmentsRequest{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[8]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -561,7 +721,7 @@ func (x *ListSharedAttachmentsRequest) String() string {
 func (*ListSharedAttachmentsRequest) ProtoMessage() {}
 
 func (x *ListSharedAttachmentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[8]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -574,7 +734,7 @@ func (x *ListSharedAttachmentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSharedAttachmentsRequest.ProtoReflect.Descriptor instead.
 func (*ListSharedAttachmentsRequest) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{8}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListSharedAttachmentsRequest) GetOrganizationId() string {
@@ -618,7 +778,7 @@ type ListSharedAttachmentsResponse struct {
 
 func (x *ListSharedAttachmentsResponse) Reset() {
 	*x = ListSharedAttachmentsResponse{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[9]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -630,7 +790,7 @@ func (x *ListSharedAttachmentsResponse) String() string {
 func (*ListSharedAttachmentsResponse) ProtoMessage() {}
 
 func (x *ListSharedAttachmentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[9]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -643,7 +803,7 @@ func (x *ListSharedAttachmentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSharedAttachmentsResponse.ProtoReflect.Descriptor instead.
 func (*ListSharedAttachmentsResponse) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{9}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListSharedAttachmentsResponse) GetGroups() []*SharedAttachmentGroup {
@@ -692,7 +852,7 @@ type SharedAttachmentGroup struct {
 
 func (x *SharedAttachmentGroup) Reset() {
 	*x = SharedAttachmentGroup{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[10]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -704,7 +864,7 @@ func (x *SharedAttachmentGroup) String() string {
 func (*SharedAttachmentGroup) ProtoMessage() {}
 
 func (x *SharedAttachmentGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[10]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -717,7 +877,7 @@ func (x *SharedAttachmentGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SharedAttachmentGroup.ProtoReflect.Descriptor instead.
 func (*SharedAttachmentGroup) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{10}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SharedAttachmentGroup) GetContentType() v1.ContentType {
@@ -746,7 +906,7 @@ type SharedAttachment struct {
 
 func (x *SharedAttachment) Reset() {
 	*x = SharedAttachment{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[11]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -758,7 +918,7 @@ func (x *SharedAttachment) String() string {
 func (*SharedAttachment) ProtoMessage() {}
 
 func (x *SharedAttachment) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[11]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -771,7 +931,7 @@ func (x *SharedAttachment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SharedAttachment.ProtoReflect.Descriptor instead.
 func (*SharedAttachment) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{11}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SharedAttachment) GetAttachment() *Attachment {
@@ -804,7 +964,7 @@ type GetAttachmentsFolderRequest struct {
 
 func (x *GetAttachmentsFolderRequest) Reset() {
 	*x = GetAttachmentsFolderRequest{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[12]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -816,7 +976,7 @@ func (x *GetAttachmentsFolderRequest) String() string {
 func (*GetAttachmentsFolderRequest) ProtoMessage() {}
 
 func (x *GetAttachmentsFolderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[12]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +989,7 @@ func (x *GetAttachmentsFolderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttachmentsFolderRequest.ProtoReflect.Descriptor instead.
 func (*GetAttachmentsFolderRequest) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{12}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetAttachmentsFolderRequest) GetOrganizationId() string {
@@ -848,7 +1008,7 @@ type GetAttachmentsFolderResponse struct {
 
 func (x *GetAttachmentsFolderResponse) Reset() {
 	*x = GetAttachmentsFolderResponse{}
-	mi := &file_attachments_v1_attachments_proto_msgTypes[13]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -860,7 +1020,7 @@ func (x *GetAttachmentsFolderResponse) String() string {
 func (*GetAttachmentsFolderResponse) ProtoMessage() {}
 
 func (x *GetAttachmentsFolderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_attachments_v1_attachments_proto_msgTypes[13]
+	mi := &file_attachments_v1_attachments_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -873,7 +1033,7 @@ func (x *GetAttachmentsFolderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttachmentsFolderResponse.ProtoReflect.Descriptor instead.
 func (*GetAttachmentsFolderResponse) Descriptor() ([]byte, []int) {
-	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{13}
+	return file_attachments_v1_attachments_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetAttachmentsFolderResponse) GetFolderId() string {
@@ -935,7 +1095,18 @@ const file_attachments_v1_attachments_proto_rawDesc = "" +
 	"\x17ListAttachmentsResponse\x12<\n" +
 	"\vattachments\x18\x01 \x03(\v2\x1a.attachments.v1.AttachmentR\vattachments\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
-	"totalCount\"\xdd\x01\n" +
+	"totalCount\"\xa2\x01\n" +
+	"\x1bBatchListAttachmentsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1f\n" +
+	"\vcontent_ids\x18\x03 \x03(\tR\n" +
+	"contentIds\"x\n" +
+	"\x19BatchListAttachmentsGroup\x12\x1d\n" +
+	"\n" +
+	"content_id\x18\x01 \x01(\tR\tcontentId\x12<\n" +
+	"\vattachments\x18\x02 \x03(\v2\x1a.attachments.v1.AttachmentR\vattachments\"a\n" +
+	"\x1cBatchListAttachmentsResponse\x12A\n" +
+	"\x06groups\x18\x01 \x03(\v2).attachments.v1.BatchListAttachmentsGroupR\x06groups\"\xdd\x01\n" +
 	"\x1cListSharedAttachmentsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12K\n" +
 	"\x13content_type_filter\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeH\x00R\x11contentTypeFilter\x88\x01\x01\x12\x12\n" +
@@ -962,13 +1133,14 @@ const file_attachments_v1_attachments_proto_rawDesc = "" +
 	"\x1bGetAttachmentsFolderRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\";\n" +
 	"\x1cGetAttachmentsFolderResponse\x12\x1b\n" +
-	"\tfolder_id\x18\x01 \x01(\tR\bfolderId2\x8b\x04\n" +
+	"\tfolder_id\x18\x01 \x01(\tR\bfolderId2\xfe\x04\n" +
 	"\x12AttachmentsService\x12S\n" +
 	"\n" +
 	"AttachFile\x12!.attachments.v1.AttachFileRequest\x1a\".attachments.v1.AttachFileResponse\x12S\n" +
 	"\n" +
 	"DetachFile\x12!.attachments.v1.DetachFileRequest\x1a\".attachments.v1.DetachFileResponse\x12b\n" +
-	"\x0fListAttachments\x12&.attachments.v1.ListAttachmentsRequest\x1a'.attachments.v1.ListAttachmentsResponse\x12t\n" +
+	"\x0fListAttachments\x12&.attachments.v1.ListAttachmentsRequest\x1a'.attachments.v1.ListAttachmentsResponse\x12q\n" +
+	"\x14BatchListAttachments\x12+.attachments.v1.BatchListAttachmentsRequest\x1a,.attachments.v1.BatchListAttachmentsResponse\x12t\n" +
 	"\x15ListSharedAttachments\x12,.attachments.v1.ListSharedAttachmentsRequest\x1a-.attachments.v1.ListSharedAttachmentsResponse\x12q\n" +
 	"\x14GetAttachmentsFolder\x12+.attachments.v1.GetAttachmentsFolderRequest\x1a,.attachments.v1.GetAttachmentsFolderResponseBEZCgithub.com/uniffy-io/uniffy-proto-go/attachments/v1;attachmentsv1b\x06proto3"
 
@@ -984,7 +1156,7 @@ func file_attachments_v1_attachments_proto_rawDescGZIP() []byte {
 	return file_attachments_v1_attachments_proto_rawDescData
 }
 
-var file_attachments_v1_attachments_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_attachments_v1_attachments_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_attachments_v1_attachments_proto_goTypes = []any{
 	(*Attachment)(nil),                    // 0: attachments.v1.Attachment
 	(*AttachedFileOwner)(nil),             // 1: attachments.v1.AttachedFileOwner
@@ -994,43 +1166,51 @@ var file_attachments_v1_attachments_proto_goTypes = []any{
 	(*DetachFileResponse)(nil),            // 5: attachments.v1.DetachFileResponse
 	(*ListAttachmentsRequest)(nil),        // 6: attachments.v1.ListAttachmentsRequest
 	(*ListAttachmentsResponse)(nil),       // 7: attachments.v1.ListAttachmentsResponse
-	(*ListSharedAttachmentsRequest)(nil),  // 8: attachments.v1.ListSharedAttachmentsRequest
-	(*ListSharedAttachmentsResponse)(nil), // 9: attachments.v1.ListSharedAttachmentsResponse
-	(*SharedAttachmentGroup)(nil),         // 10: attachments.v1.SharedAttachmentGroup
-	(*SharedAttachment)(nil),              // 11: attachments.v1.SharedAttachment
-	(*GetAttachmentsFolderRequest)(nil),   // 12: attachments.v1.GetAttachmentsFolderRequest
-	(*GetAttachmentsFolderResponse)(nil),  // 13: attachments.v1.GetAttachmentsFolderResponse
-	(v1.ContentType)(0),                   // 14: common.v1.ContentType
-	(*timestamppb.Timestamp)(nil),         // 15: google.protobuf.Timestamp
+	(*BatchListAttachmentsRequest)(nil),   // 8: attachments.v1.BatchListAttachmentsRequest
+	(*BatchListAttachmentsGroup)(nil),     // 9: attachments.v1.BatchListAttachmentsGroup
+	(*BatchListAttachmentsResponse)(nil),  // 10: attachments.v1.BatchListAttachmentsResponse
+	(*ListSharedAttachmentsRequest)(nil),  // 11: attachments.v1.ListSharedAttachmentsRequest
+	(*ListSharedAttachmentsResponse)(nil), // 12: attachments.v1.ListSharedAttachmentsResponse
+	(*SharedAttachmentGroup)(nil),         // 13: attachments.v1.SharedAttachmentGroup
+	(*SharedAttachment)(nil),              // 14: attachments.v1.SharedAttachment
+	(*GetAttachmentsFolderRequest)(nil),   // 15: attachments.v1.GetAttachmentsFolderRequest
+	(*GetAttachmentsFolderResponse)(nil),  // 16: attachments.v1.GetAttachmentsFolderResponse
+	(v1.ContentType)(0),                   // 17: common.v1.ContentType
+	(*timestamppb.Timestamp)(nil),         // 18: google.protobuf.Timestamp
 }
 var file_attachments_v1_attachments_proto_depIdxs = []int32{
-	14, // 0: attachments.v1.Attachment.content_type:type_name -> common.v1.ContentType
-	15, // 1: attachments.v1.Attachment.attached_at:type_name -> google.protobuf.Timestamp
+	17, // 0: attachments.v1.Attachment.content_type:type_name -> common.v1.ContentType
+	18, // 1: attachments.v1.Attachment.attached_at:type_name -> google.protobuf.Timestamp
 	1,  // 2: attachments.v1.Attachment.owner_info:type_name -> attachments.v1.AttachedFileOwner
-	14, // 3: attachments.v1.AttachFileRequest.content_type:type_name -> common.v1.ContentType
+	17, // 3: attachments.v1.AttachFileRequest.content_type:type_name -> common.v1.ContentType
 	0,  // 4: attachments.v1.AttachFileResponse.attachment:type_name -> attachments.v1.Attachment
-	14, // 5: attachments.v1.ListAttachmentsRequest.content_type:type_name -> common.v1.ContentType
+	17, // 5: attachments.v1.ListAttachmentsRequest.content_type:type_name -> common.v1.ContentType
 	0,  // 6: attachments.v1.ListAttachmentsResponse.attachments:type_name -> attachments.v1.Attachment
-	14, // 7: attachments.v1.ListSharedAttachmentsRequest.content_type_filter:type_name -> common.v1.ContentType
-	10, // 8: attachments.v1.ListSharedAttachmentsResponse.groups:type_name -> attachments.v1.SharedAttachmentGroup
-	14, // 9: attachments.v1.SharedAttachmentGroup.content_type:type_name -> common.v1.ContentType
-	11, // 10: attachments.v1.SharedAttachmentGroup.attachments:type_name -> attachments.v1.SharedAttachment
-	0,  // 11: attachments.v1.SharedAttachment.attachment:type_name -> attachments.v1.Attachment
-	2,  // 12: attachments.v1.AttachmentsService.AttachFile:input_type -> attachments.v1.AttachFileRequest
-	4,  // 13: attachments.v1.AttachmentsService.DetachFile:input_type -> attachments.v1.DetachFileRequest
-	6,  // 14: attachments.v1.AttachmentsService.ListAttachments:input_type -> attachments.v1.ListAttachmentsRequest
-	8,  // 15: attachments.v1.AttachmentsService.ListSharedAttachments:input_type -> attachments.v1.ListSharedAttachmentsRequest
-	12, // 16: attachments.v1.AttachmentsService.GetAttachmentsFolder:input_type -> attachments.v1.GetAttachmentsFolderRequest
-	3,  // 17: attachments.v1.AttachmentsService.AttachFile:output_type -> attachments.v1.AttachFileResponse
-	5,  // 18: attachments.v1.AttachmentsService.DetachFile:output_type -> attachments.v1.DetachFileResponse
-	7,  // 19: attachments.v1.AttachmentsService.ListAttachments:output_type -> attachments.v1.ListAttachmentsResponse
-	9,  // 20: attachments.v1.AttachmentsService.ListSharedAttachments:output_type -> attachments.v1.ListSharedAttachmentsResponse
-	13, // 21: attachments.v1.AttachmentsService.GetAttachmentsFolder:output_type -> attachments.v1.GetAttachmentsFolderResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	17, // 7: attachments.v1.BatchListAttachmentsRequest.content_type:type_name -> common.v1.ContentType
+	0,  // 8: attachments.v1.BatchListAttachmentsGroup.attachments:type_name -> attachments.v1.Attachment
+	9,  // 9: attachments.v1.BatchListAttachmentsResponse.groups:type_name -> attachments.v1.BatchListAttachmentsGroup
+	17, // 10: attachments.v1.ListSharedAttachmentsRequest.content_type_filter:type_name -> common.v1.ContentType
+	13, // 11: attachments.v1.ListSharedAttachmentsResponse.groups:type_name -> attachments.v1.SharedAttachmentGroup
+	17, // 12: attachments.v1.SharedAttachmentGroup.content_type:type_name -> common.v1.ContentType
+	14, // 13: attachments.v1.SharedAttachmentGroup.attachments:type_name -> attachments.v1.SharedAttachment
+	0,  // 14: attachments.v1.SharedAttachment.attachment:type_name -> attachments.v1.Attachment
+	2,  // 15: attachments.v1.AttachmentsService.AttachFile:input_type -> attachments.v1.AttachFileRequest
+	4,  // 16: attachments.v1.AttachmentsService.DetachFile:input_type -> attachments.v1.DetachFileRequest
+	6,  // 17: attachments.v1.AttachmentsService.ListAttachments:input_type -> attachments.v1.ListAttachmentsRequest
+	8,  // 18: attachments.v1.AttachmentsService.BatchListAttachments:input_type -> attachments.v1.BatchListAttachmentsRequest
+	11, // 19: attachments.v1.AttachmentsService.ListSharedAttachments:input_type -> attachments.v1.ListSharedAttachmentsRequest
+	15, // 20: attachments.v1.AttachmentsService.GetAttachmentsFolder:input_type -> attachments.v1.GetAttachmentsFolderRequest
+	3,  // 21: attachments.v1.AttachmentsService.AttachFile:output_type -> attachments.v1.AttachFileResponse
+	5,  // 22: attachments.v1.AttachmentsService.DetachFile:output_type -> attachments.v1.DetachFileResponse
+	7,  // 23: attachments.v1.AttachmentsService.ListAttachments:output_type -> attachments.v1.ListAttachmentsResponse
+	10, // 24: attachments.v1.AttachmentsService.BatchListAttachments:output_type -> attachments.v1.BatchListAttachmentsResponse
+	12, // 25: attachments.v1.AttachmentsService.ListSharedAttachments:output_type -> attachments.v1.ListSharedAttachmentsResponse
+	16, // 26: attachments.v1.AttachmentsService.GetAttachmentsFolder:output_type -> attachments.v1.GetAttachmentsFolderResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_attachments_v1_attachments_proto_init() }
@@ -1039,14 +1219,14 @@ func file_attachments_v1_attachments_proto_init() {
 		return
 	}
 	file_attachments_v1_attachments_proto_msgTypes[0].OneofWrappers = []any{}
-	file_attachments_v1_attachments_proto_msgTypes[8].OneofWrappers = []any{}
+	file_attachments_v1_attachments_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_attachments_v1_attachments_proto_rawDesc), len(file_attachments_v1_attachments_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

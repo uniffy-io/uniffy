@@ -1368,14 +1368,26 @@ type GetSessionContextStatsResponse struct {
 	CompactedMessages int32 `protobuf:"varint,3,opt,name=compacted_messages,json=compactedMessages,proto3" json:"compacted_messages,omitempty"`
 	// Number of summary messages currently in the context window
 	SummaryCount int32 `protobuf:"varint,4,opt,name=summary_count,json=summaryCount,proto3" json:"summary_count,omitempty"`
-	// Estimated tokens used by active messages
+	// Provider-reported prompt + completion size of the most recent
+	// assistant turn (last_input_tokens + last_output_tokens). Zero
+	// before the first reply.
 	ActiveTokens int32 `protobuf:"varint,5,opt,name=active_tokens,json=activeTokens,proto3" json:"active_tokens,omitempty"`
 	// Token budget for conversation history (65% of context window)
 	TokenBudget int32 `protobuf:"varint,6,opt,name=token_budget,json=tokenBudget,proto3" json:"token_budget,omitempty"`
-	// Estimated tokens remaining before compaction triggers
+	// Tokens remaining before compaction triggers
 	TokensUntilCompaction int32 `protobuf:"varint,7,opt,name=tokens_until_compaction,json=tokensUntilCompaction,proto3" json:"tokens_until_compaction,omitempty"`
 	// Model context window size in tokens
 	ContextWindowTokens int32 `protobuf:"varint,8,opt,name=context_window_tokens,json=contextWindowTokens,proto3" json:"context_window_tokens,omitempty"`
+	// Full prompt size of the most recent assistant turn -- uncached
+	// input plus tokens served from the prompt cache. Zero pre-first-turn.
+	LastInputTokens int32 `protobuf:"varint,9,opt,name=last_input_tokens,json=lastInputTokens,proto3" json:"last_input_tokens,omitempty"`
+	// Provider-reported output_tokens of the most recent assistant turn
+	// (the assistant's reply). Zero pre-first-turn.
+	LastOutputTokens int32 `protobuf:"varint,10,opt,name=last_output_tokens,json=lastOutputTokens,proto3" json:"last_output_tokens,omitempty"`
+	// Tokens served from Anthropic's prompt cache on the last turn
+	// (`cache_read_input_tokens`). Counted toward last_input_tokens but
+	// billed at ~10% of the base input price -- the savings signal.
+	LastCacheReadTokens int32 `protobuf:"varint,11,opt,name=last_cache_read_tokens,json=lastCacheReadTokens,proto3" json:"last_cache_read_tokens,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1462,6 +1474,27 @@ func (x *GetSessionContextStatsResponse) GetTokensUntilCompaction() int32 {
 func (x *GetSessionContextStatsResponse) GetContextWindowTokens() int32 {
 	if x != nil {
 		return x.ContextWindowTokens
+	}
+	return 0
+}
+
+func (x *GetSessionContextStatsResponse) GetLastInputTokens() int32 {
+	if x != nil {
+		return x.LastInputTokens
+	}
+	return 0
+}
+
+func (x *GetSessionContextStatsResponse) GetLastOutputTokens() int32 {
+	if x != nil {
+		return x.LastOutputTokens
+	}
+	return 0
+}
+
+func (x *GetSessionContextStatsResponse) GetLastCacheReadTokens() int32 {
+	if x != nil {
+		return x.LastCacheReadTokens
 	}
 	return 0
 }
@@ -1768,7 +1801,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x1dGetSessionContextStatsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"\xf8\x02\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\"\x87\x04\n" +
 	"\x1eGetSessionContextStatsResponse\x12%\n" +
 	"\x0etotal_messages\x18\x01 \x01(\x05R\rtotalMessages\x12'\n" +
 	"\x0factive_messages\x18\x02 \x01(\x05R\x0eactiveMessages\x12-\n" +
@@ -1777,7 +1810,11 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\ractive_tokens\x18\x05 \x01(\x05R\factiveTokens\x12!\n" +
 	"\ftoken_budget\x18\x06 \x01(\x05R\vtokenBudget\x126\n" +
 	"\x17tokens_until_compaction\x18\a \x01(\x05R\x15tokensUntilCompaction\x122\n" +
-	"\x15context_window_tokens\x18\b \x01(\x05R\x13contextWindowTokens\"_\n" +
+	"\x15context_window_tokens\x18\b \x01(\x05R\x13contextWindowTokens\x12*\n" +
+	"\x11last_input_tokens\x18\t \x01(\x05R\x0flastInputTokens\x12,\n" +
+	"\x12last_output_tokens\x18\n" +
+	" \x01(\x05R\x10lastOutputTokens\x123\n" +
+	"\x16last_cache_read_tokens\x18\v \x01(\x05R\x13lastCacheReadTokens\"_\n" +
 	"\x15CompactSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +

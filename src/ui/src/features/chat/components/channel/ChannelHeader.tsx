@@ -48,6 +48,9 @@ import { SplitChannelPicker } from '@/features/chat/components/channel/SplitChan
 import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMessagesPanel';
 import { selectPinnedCountForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
+import { Input } from '@/components/ui/input';
+import { renameAgentChat } from '@/features/chat/store/chatThunks';
+import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 
 const headerButtonClass = cn(
   'group/btn relative flex items-center justify-center h-7 w-7 rounded-md',
@@ -121,29 +124,19 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   }, [dispatch]);
 
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const pinnedCount = useAppSelector((state) =>
     activeChannel ? selectPinnedCountForChannel(state, activeChannel.id) : 0,
   );
 
   const isDm = activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM';
   const isOneOnOneDm = activeChannel?.channelType === 'DIRECT';
-
-  // For 1:1 DMs, the "other" subject id can be an agent. `dmMemberIds` carries
-  // mixed user/agent ids; we resolve the non-self id and check the agents slice.
-  const otherSubjectId = useMemo(() => {
-    if (!activeChannel || !isOneOnOneDm) return '';
-    const ids = activeChannel.dmMemberIds ?? [];
-    if (ids.length > 0) {
-      return ids.find((id) => id !== currentUserId) ?? activeChannel.ownerId;
-    }
-    return activeChannel.ownerId;
-  }, [activeChannel, isOneOnOneDm, currentUserId]);
+  const isAgentDm = !!activeChannel?.isAgentDm;
 
   const agent = useAppSelector((state) =>
-    otherSubjectId ? state.agents.agents[otherSubjectId] ?? null : null,
+    isAgentDm && activeChannel?.agentId
+      ? state.agents.agents[activeChannel.agentId] ?? null
+      : null,
   );
-  const isAgentDm = !!agent;
 
   // Show the Gauge icon on every non-(1:1-DM) channel regardless of whether
   // we have already fetched its member roster. Conditioning on
@@ -153,11 +146,68 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
   const headerName = useMemo(() => {
     if (!activeChannel) return '';
-    if (isAgentDm && agent) return agent.name;
+    if (isAgentDm) return getChannelDisplayName(activeChannel);
     if (!isDm || !currentUserName) return activeChannel.name;
     const parts = activeChannel.name.split(', ').filter((n) => n !== currentUserName);
     return parts.length > 0 ? parts.join(', ') : activeChannel.name;
-  }, [isDm, isAgentDm, agent, activeChannel, currentUserName]);
+  }, [isDm, isAgentDm, activeChannel, currentUserName]);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditingName) return;
+    const timer = setTimeout(() => nameInputRef.current?.focus(), 30);
+    return () => clearTimeout(timer);
+  }, [isEditingName]);
+
+  const handleNameClick = useCallback(() => {
+    if (!activeChannel) return;
+    if (isAgentDm) {
+      setNameDraft(activeChannel.customName ?? '');
+      setIsEditingName(true);
+      return;
+    }
+    dispatch(toggleChannelHeaderExpanded());
+  }, [activeChannel, isAgentDm, dispatch]);
+
+  const submitNameDraft = useCallback(async () => {
+    if (!activeChannel || !isAgentDm) {
+      setIsEditingName(false);
+      return;
+    }
+    const trimmed = nameDraft.trim();
+    const next = trimmed.length === 0 ? null : trimmed;
+    const current = activeChannel.customName ?? null;
+    if (next === current) {
+      setIsEditingName(false);
+      return;
+    }
+    setIsSavingName(true);
+    try {
+      await dispatch(
+        renameAgentChat({ channelId: activeChannel.id, customName: next }),
+      ).unwrap();
+    } finally {
+      setIsSavingName(false);
+      setIsEditingName(false);
+    }
+  }, [activeChannel, isAgentDm, nameDraft, dispatch]);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void submitNameDraft();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsEditingName(false);
+      }
+    },
+    [submitNameDraft],
+  );
 
   if (!activeChannel) return null;
 
@@ -187,17 +237,34 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             size="sm"
           />
         )}
-        <button
-          type="button"
-          onClick={() => dispatch(toggleChannelHeaderExpanded())}
-          className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-          data-testid="chat-channel-name"
-        >
-          <span>{headerName}</span>
-          {!isDm && (
-            isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />
-          )}
-        </button>
+        {isAgentDm && isEditingName ? (
+          <Input
+            ref={nameInputRef}
+            type="text"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={() => void submitNameDraft()}
+            onKeyDown={handleNameKeyDown}
+            disabled={isSavingName}
+            placeholder={activeChannel.name}
+            maxLength={201}
+            className="h-7 text-sm font-semibold w-56"
+            data-testid="chat-channel-name-input"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={handleNameClick}
+            className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            data-testid="chat-channel-name"
+            title={isAgentDm ? 'Click to rename' : undefined}
+          >
+            <span>{headerName}</span>
+            {!isDm && (
+              isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />
+            )}
+          </button>
+        )}
 
         {/* Member count (hidden for 1:1 DMs) */}
         {!(activeChannel.channelType === 'DIRECT') && (
@@ -267,7 +334,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           {showSearch && activeChannel && (
             <ChatSearchPanel
               channelId={activeChannel.id}
-              channelName={activeChannel.name}
+              channelName={getChannelDisplayName(activeChannel)}
               anchorRef={searchBtnRef}
               onClose={() => setShowSearch(false)}
             />

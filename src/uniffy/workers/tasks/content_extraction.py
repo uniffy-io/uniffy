@@ -196,6 +196,12 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
 
         keywords = " ".join(filter(None, parts))
 
+        # Surface a snippet of the extracted text as the description when the
+        # user did not write one. Mention previews render the description, so
+        # this gives users a peek at the file contents (CSV header row, first
+        # paragraph of a doc, etc) without opening the viewer.
+        description = file.description or (extracted_text[:300].strip() if extracted_text else None)
+
         indexer = SearchIndexer()
         await indexer.index(
             urn=urn,
@@ -207,7 +213,7 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
             baseline_role=(file.baseline_role.value if file.baseline_role is not None else None),
             owner_id=file.owner_id,
             keywords=keywords,
-            description=file.description,
+            description=description,
         )
     except Exception:
         logger.warning("Failed to re-index file after extraction", file_id=str(file.id))

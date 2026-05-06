@@ -247,11 +247,14 @@ async function handleMediaRequest(
         const mimeType = firstChunk.mimeType || 'application/octet-stream';
         const filename = firstChunk.filename || 'file';
 
-        // Determine if this is a partial (206) or full (200) response.
-        // Return 206 only when the browser explicitly sent a Range header.
-        // Returning an unsolicited 206 breaks <audio>/<video> initial loads
-        // where the browser expects a normal 200 response.
-        const isPartial = hasRangeHeader && rangeEnd < totalSize - 1;
+        // 206 iff the browser explicitly sent a Range header. Unsolicited
+        // 206 responses break <audio>/<video> initial loads. Conversely,
+        // a Range request that happens to cover the file's tail
+        // (`bytes=N-` resolving to the last byte) MUST still return 206 --
+        // returning 200 with `Content-Length: totalSize` while the body
+        // only carries `totalSize - N` bytes leaves the browser short of
+        // the declared content and trips MEDIA_ERR_NETWORK on small files.
+        const isPartial = hasRangeHeader;
 
         // Build response headers
         const headers: HeadersInit = {

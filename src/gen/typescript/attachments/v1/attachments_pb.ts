@@ -434,6 +434,141 @@ export class ListAttachmentsResponse extends Message<ListAttachmentsResponse> {
 }
 
 /**
+ * @generated from message attachments.v1.BatchListAttachmentsRequest
+ */
+export class BatchListAttachmentsRequest extends Message<BatchListAttachmentsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * Content rows to look up. Capped at 200 server-side; callers that
+   * need more pagination should issue multiple batches.
+   *
+   * @generated from field: repeated string content_ids = 3;
+   */
+  contentIds: string[] = [];
+
+  constructor(data?: PartialMessage<BatchListAttachmentsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "attachments.v1.BatchListAttachmentsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BatchListAttachmentsRequest {
+    return new BatchListAttachmentsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BatchListAttachmentsRequest {
+    return new BatchListAttachmentsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BatchListAttachmentsRequest {
+    return new BatchListAttachmentsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BatchListAttachmentsRequest | PlainMessage<BatchListAttachmentsRequest> | undefined, b: BatchListAttachmentsRequest | PlainMessage<BatchListAttachmentsRequest> | undefined): boolean {
+    return proto3.util.equals(BatchListAttachmentsRequest, a, b);
+  }
+}
+
+/**
+ * One entry per requested content_id. Content rows with no
+ * attachments are omitted -- callers must default to empty arrays.
+ *
+ * @generated from message attachments.v1.BatchListAttachmentsGroup
+ */
+export class BatchListAttachmentsGroup extends Message<BatchListAttachmentsGroup> {
+  /**
+   * @generated from field: string content_id = 1;
+   */
+  contentId = "";
+
+  /**
+   * @generated from field: repeated attachments.v1.Attachment attachments = 2;
+   */
+  attachments: Attachment[] = [];
+
+  constructor(data?: PartialMessage<BatchListAttachmentsGroup>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "attachments.v1.BatchListAttachmentsGroup";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "attachments", kind: "message", T: Attachment, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BatchListAttachmentsGroup {
+    return new BatchListAttachmentsGroup().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BatchListAttachmentsGroup {
+    return new BatchListAttachmentsGroup().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BatchListAttachmentsGroup {
+    return new BatchListAttachmentsGroup().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BatchListAttachmentsGroup | PlainMessage<BatchListAttachmentsGroup> | undefined, b: BatchListAttachmentsGroup | PlainMessage<BatchListAttachmentsGroup> | undefined): boolean {
+    return proto3.util.equals(BatchListAttachmentsGroup, a, b);
+  }
+}
+
+/**
+ * @generated from message attachments.v1.BatchListAttachmentsResponse
+ */
+export class BatchListAttachmentsResponse extends Message<BatchListAttachmentsResponse> {
+  /**
+   * @generated from field: repeated attachments.v1.BatchListAttachmentsGroup groups = 1;
+   */
+  groups: BatchListAttachmentsGroup[] = [];
+
+  constructor(data?: PartialMessage<BatchListAttachmentsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "attachments.v1.BatchListAttachmentsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groups", kind: "message", T: BatchListAttachmentsGroup, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BatchListAttachmentsResponse {
+    return new BatchListAttachmentsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BatchListAttachmentsResponse {
+    return new BatchListAttachmentsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BatchListAttachmentsResponse {
+    return new BatchListAttachmentsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BatchListAttachmentsResponse | PlainMessage<BatchListAttachmentsResponse> | undefined, b: BatchListAttachmentsResponse | PlainMessage<BatchListAttachmentsResponse> | undefined): boolean {
+    return proto3.util.equals(BatchListAttachmentsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message attachments.v1.ListSharedAttachmentsRequest
  */
 export class ListSharedAttachmentsRequest extends Message<ListSharedAttachmentsRequest> {

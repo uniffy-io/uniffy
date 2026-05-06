@@ -100,6 +100,16 @@ class BaseContentOperations[TModel](ABC):
         """Optional extra metadata for search indexing."""
         return None
 
+    async def _get_search_metadata_async(self, model: TModel) -> dict[str, str] | None:
+        """Async metadata hook called from ``_index_for_search``.
+
+        Subclasses that need to fetch related rows (parent folder name,
+        category title, etc.) override this. Default delegates to the
+        sync ``_get_search_metadata`` so existing overrides keep
+        working without changes.
+        """
+        return self._get_search_metadata(model)
+
     # Core CRUD operations
 
     async def get_by_id(
@@ -313,7 +323,7 @@ class BaseContentOperations[TModel](ABC):
             blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
             tags=self._get_search_tags(model),
-            metadata=self._get_search_metadata(model),
+            metadata=await self._get_search_metadata_async(model),
         )
 
     async def _get_member_id_lists(

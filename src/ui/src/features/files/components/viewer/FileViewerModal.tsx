@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useShortcutHandlers } from '@/features/settings';
@@ -32,24 +33,32 @@ import '../../styles/viewer.css';
 
 export function FileViewerModal() {
     const dispatch = useAppDispatch();
-    const {
-        isOpen,
-        isFullscreen,
-        currentFileId,
-        fileData,
-        playlist,
-        playlistIndex,
-        zoom,
-        rotation,
-        currentPage,
-        totalPages,
-    } = useAppSelector((state) => state.fileViewer);
-    const filesFromStore = useAppSelector((state) => state.files.files);
+    const navigate = useNavigate();
+    const location = useLocation();
+    // Per-field subscriptions: video playback dispatches setCurrentTime
+    // every ~250ms, so subscribing to the whole `state.fileViewer` slice
+    // re-rendered the modal (and the video player) on every tick. Each
+    // hook subscribes only to the field it actually reads.
+    const isOpen = useAppSelector((state) => state.fileViewer.isOpen);
+    const isFullscreen = useAppSelector((state) => state.fileViewer.isFullscreen);
+    const currentFileId = useAppSelector((state) => state.fileViewer.currentFileId);
+    const fileData = useAppSelector((state) => state.fileViewer.fileData);
+    const playlist = useAppSelector((state) => state.fileViewer.playlist);
+    const playlistIndex = useAppSelector((state) => state.fileViewer.playlistIndex);
+    const zoom = useAppSelector((state) => state.fileViewer.zoom);
+    const rotation = useAppSelector((state) => state.fileViewer.rotation);
+    const currentPage = useAppSelector((state) => state.fileViewer.currentPage);
+    const totalPages = useAppSelector((state) => state.fileViewer.totalPages);
+    // Narrow the files-store subscription to the single row we need so an
+    // unrelated file mutation does not re-render the viewer.
+    const fileFromStore = useAppSelector((state) =>
+        currentFileId ? state.files.files[currentFileId] ?? null : null,
+    );
 
     // Get current file - prefer viewer's fileData, fallback to files store
     // This allows viewer to work when opened from search without files domain loaded
     const file: SerializedFile | null = currentFileId
-        ? fileData || filesFromStore[currentFileId] || null
+        ? fileData || fileFromStore || null
         : null;
 
     const hasNext = playlistIndex < playlist.length - 1;
@@ -104,6 +113,20 @@ export function FileViewerModal() {
         }
     }, [dispatch, currentPage, totalPages]);
 
+    // Close viewer and return to origin when opened via /files/:fileId deep link
+    // (mention chip click, pasted URL, file row click). Without this the user
+    // would be stranded on the FilesPage they never intended to visit.
+    const handleClose = useCallback(() => {
+        dispatch(closeViewer());
+        if (/^\/files\/[^/]+/.test(location.pathname)) {
+            if (location.key === 'default') {
+                navigate('/files', { replace: true });
+            } else {
+                navigate(-1);
+            }
+        }
+    }, [dispatch, navigate, location.pathname, location.key]);
+
     // Keyboard shortcuts - PDF mode changes arrow key behavior
     // Disable most shortcuts when in edit mode (editor has its own shortcuts)
     useShortcutHandlers(
@@ -112,7 +135,7 @@ export function FileViewerModal() {
                 if (isEditing) {
                     setIsEditing(false);
                 } else {
-                    dispatch(closeViewer());
+                    handleClose();
                 }
             },
             'viewer.next': () => {
@@ -150,11 +173,6 @@ export function FileViewerModal() {
         },
         { enabled: isOpen && !isEditing }
     );
-
-    // Handle escape key via Dialog's onClose
-    const handleClose = useCallback(() => {
-        dispatch(closeViewer());
-    }, [dispatch]);
 
     // Handle fullscreen changes
     useEffect(() => {
@@ -205,6 +223,7 @@ export function FileViewerModal() {
                         {!isEditing && (
                             <ViewerToolbar
                                 file={file}
+                                onClose={handleClose}
                                 onDownload={handleDownload}
                                 onEdit={handleEdit}
                                 isEditing={isEditing}

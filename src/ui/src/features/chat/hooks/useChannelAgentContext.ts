@@ -30,6 +30,9 @@ export interface ChannelAgentContextStats {
     compactedMessages: number;
     summaryCount: number;
     activeTokens: number;
+    lastInputTokens: number;
+    lastOutputTokens: number;
+    lastCacheReadTokens: number;
     tokenBudget: number;
     tokensUntilCompaction: number;
     contextWindowTokens: number;
@@ -82,6 +85,9 @@ function statsFromProto(proto: {
     compactedMessages: number;
     summaryCount: number;
     activeTokens: number;
+    lastInputTokens: number;
+    lastOutputTokens: number;
+    lastCacheReadTokens: number;
     tokenBudget: number;
     tokensUntilCompaction: number;
     contextWindowTokens: number;
@@ -95,6 +101,9 @@ function statsFromProto(proto: {
         compactedMessages: proto.compactedMessages,
         summaryCount: proto.summaryCount,
         activeTokens: proto.activeTokens,
+        lastInputTokens: proto.lastInputTokens,
+        lastOutputTokens: proto.lastOutputTokens,
+        lastCacheReadTokens: proto.lastCacheReadTokens,
         tokenBudget: proto.tokenBudget,
         tokensUntilCompaction: proto.tokensUntilCompaction,
         contextWindowTokens: proto.contextWindowTokens || 200_000,
