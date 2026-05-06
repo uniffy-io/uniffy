@@ -5,4 +5,6 @@ export { FileMentionPreview } from '@/components/mention/previews/FileMentionPre
 export { NoteMentionPreview } from '@/components/mention/previews/NoteMentionPreview';
 export { UserMentionPreview } from '@/components/mention/previews/UserMentionPreview';
 export { ChatMentionPreview } from '@/components/mention/previews/ChatMentionPreview';
+export { ChatMessageMentionPreview } from '@/components/mention/previews/ChatMessageMentionPreview';
 export { AgentMentionPreview } from '@/components/mention/previews/AgentMentionPreview';
+export { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';

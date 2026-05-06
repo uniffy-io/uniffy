@@ -132,6 +132,15 @@ export function urnToPath(urn: string): string {
     return `/projects/task/${parsed.id}`;
   }
 
+  // Chat messages cannot be reached without their channel id, which is
+  // not encoded in the URN. Callers must use the resolved URL from the
+  // mention state (``/chat/{channel}#{message}``); this fallback used
+  // to incorrectly point ``/chat/{message_id}`` and routed the user to
+  // a non-existent channel.
+  if (parsed.type === UrnType.CHAT_MESSAGE) {
+    return '#';
+  }
+
   const route = getContentTypeRoute(parsed.type);
   return route ? `/${route}/${parsed.id}` : '#';
 }

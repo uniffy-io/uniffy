@@ -67,6 +67,7 @@ interface TypeTheme {
   iconBoxAccent: string;
   accentText: string;
   border: string;
+  glow: string;
 }
 
 function getTypeTheme(type: UrnType): TypeTheme {
@@ -79,6 +80,7 @@ function getTypeTheme(type: UrnType): TypeTheme {
     iconBoxAccent: theme.iconBoxAccent,
     accentText: theme.accentText,
     border: theme.border,
+    glow: theme.glow,
   };
 }
 
@@ -155,6 +157,7 @@ export function MentionPreview({
           'bg-card/95 backdrop-blur-xl',
           'text-card-foreground',
           'rounded-xl shadow-2xl',
+          theme.glow,
           'border border-border/50',
           'overflow-hidden',
           'animate-in fade-in-0 zoom-in-95 duration-200',

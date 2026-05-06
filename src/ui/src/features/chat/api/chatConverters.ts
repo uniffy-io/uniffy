@@ -81,6 +81,9 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     lastRootMessageAt: timestampToIso(proto.lastRootMessageAt),
     memberCount: proto.memberCount,
     dmMemberIds: Array.from(proto.dmMemberIds),
+    isAgentDm: proto.isAgentDm,
+    customName: proto.customName ?? undefined,
+    agentId: proto.agentId ?? undefined,
   };
 }
 

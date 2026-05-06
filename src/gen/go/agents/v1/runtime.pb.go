@@ -109,8 +109,12 @@ type GetUsageStatsResponse struct {
 	CronTotalFailures     int64 `protobuf:"varint,14,opt,name=cron_total_failures,json=cronTotalFailures,proto3" json:"cron_total_failures,omitempty"`
 	CronTotalInputTokens  int64 `protobuf:"varint,15,opt,name=cron_total_input_tokens,json=cronTotalInputTokens,proto3" json:"cron_total_input_tokens,omitempty"`
 	CronTotalOutputTokens int64 `protobuf:"varint,16,opt,name=cron_total_output_tokens,json=cronTotalOutputTokens,proto3" json:"cron_total_output_tokens,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Tokens served from Anthropic's prompt cache across all runs in
+	// the period. Counted toward total_input_tokens (the prompt was that
+	// big from the model's POV) but billed at ~10% of base input price.
+	TotalCacheReadInputTokens int64 `protobuf:"varint,17,opt,name=total_cache_read_input_tokens,json=totalCacheReadInputTokens,proto3" json:"total_cache_read_input_tokens,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *GetUsageStatsResponse) Reset() {
@@ -255,14 +259,23 @@ func (x *GetUsageStatsResponse) GetCronTotalOutputTokens() int64 {
 	return 0
 }
 
+func (x *GetUsageStatsResponse) GetTotalCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.TotalCacheReadInputTokens
+	}
+	return 0
+}
+
 type DailyUsage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Date          string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
-	Runs          int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
-	InputTokens   int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens  int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
+	Runs         int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
+	InputTokens  int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	// Cache reads in this bucket; subset of input_tokens.
+	CacheReadInputTokens int64 `protobuf:"varint,5,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DailyUsage) Reset() {
@@ -319,6 +332,13 @@ func (x *DailyUsage) GetInputTokens() int64 {
 func (x *DailyUsage) GetOutputTokens() int64 {
 	if x != nil {
 		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *DailyUsage) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
 	}
 	return 0
 }
@@ -1659,7 +1679,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14GetUsageStatsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04days\x18\x02 \x01(\x05R\x04days\x12\x1a\n" +
-	"\binterval\x18\x03 \x01(\tR\binterval\"\xc2\x06\n" +
+	"\binterval\x18\x03 \x01(\tR\binterval\"\x84\a\n" +
 	"\x15GetUsageStatsResponse\x12\x1d\n" +
 	"\n" +
 	"total_runs\x18\x01 \x01(\x03R\ttotalRuns\x12,\n" +
@@ -1683,13 +1703,15 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14cron_total_successes\x18\r \x01(\x03R\x12cronTotalSuccesses\x12.\n" +
 	"\x13cron_total_failures\x18\x0e \x01(\x03R\x11cronTotalFailures\x125\n" +
 	"\x17cron_total_input_tokens\x18\x0f \x01(\x03R\x14cronTotalInputTokens\x127\n" +
-	"\x18cron_total_output_tokens\x18\x10 \x01(\x03R\x15cronTotalOutputTokens\"|\n" +
+	"\x18cron_total_output_tokens\x18\x10 \x01(\x03R\x15cronTotalOutputTokens\x12@\n" +
+	"\x1dtotal_cache_read_input_tokens\x18\x11 \x01(\x03R\x19totalCacheReadInputTokens\"\xb3\x01\n" +
 	"\n" +
 	"DailyUsage\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12\x12\n" +
 	"\x04runs\x18\x02 \x01(\x03R\x04runs\x12!\n" +
 	"\finput_tokens\x18\x03 \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\"~\n" +
+	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\x125\n" +
+	"\x17cache_read_input_tokens\x18\x05 \x01(\x03R\x14cacheReadInputTokens\"~\n" +
 	"\n" +
 	"ModelUsage\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x12\n" +

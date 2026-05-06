@@ -12,12 +12,21 @@ export type TaskStatus = string;
 /** File processing status */
 export type FileProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
 
+/** Tombstone state for a URN whose target was deleted or is unreachable */
+export type MentionStatus = 'ok' | 'deleted';
+
 /** Live state payload - type-specific fields that update in real-time */
 export interface MentionLiveState {
   urn: string;
   title?: string;
+  /** Stripped, indexed snippet (~200 chars). Source of truth for the
+   *  expanded card body so chips do not need a second hover-fetch. */
+  description?: string;
   updatedAt?: string;
   updatedByName?: string;
+
+  /** Tombstone marker. 'deleted' = referenced target no longer exists. */
+  status?: MentionStatus;
 
   // TASK
   taskStatus?: TaskStatus;
@@ -64,6 +73,15 @@ export interface MentionLiveState {
   memberCount?: number;
   unreadCount?: number;
   channelType?: string;
+
+  // CHAT_MESSAGE -- message author + parent channel (channel name lives
+  // in `parentLabel`, channel id in `chatChannelId` for navigation).
+  chatSenderName?: string;
+  chatChannelId?: string;
+
+  /** Parent container name -- chat category, file folder, note folder.
+   *  Rendered as a breadcrumb in the expanded card's meta row. */
+  parentLabel?: string;
 
   // AGENT
   agentEmoji?: string;

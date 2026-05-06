@@ -631,6 +631,7 @@ class RuntimeOperations:
                 model=model,
                 system=system_prompt,
                 tools=tool_schemas,
+                cache_key=str(agent_session.agent_id),
             )
 
             # 13. Agentic tool loop
@@ -649,6 +650,7 @@ class RuntimeOperations:
                     user_id=user_id,
                     organization_id=organization_id,
                     session_id=session_id,
+                    agent_id=agent_session.agent_id,
                     provider=provider,
                     model=model,
                     system_prompt=system_prompt,
@@ -690,6 +692,7 @@ class RuntimeOperations:
             content=result.content,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
+            cache_read_input_tokens=result.cache_read_input_tokens,
             model=result.model,
         )
 
@@ -703,6 +706,7 @@ class RuntimeOperations:
             model=result.model,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
+            cache_read_input_tokens=result.cache_read_input_tokens,
             tool_calls=run_tool_calls or None,
             tool_iterations=tool_iterations,
             duration_ms=duration_ms,
@@ -719,6 +723,7 @@ class RuntimeOperations:
         user_id: UUID,
         organization_id: UUID,
         session_id: UUID,
+        agent_id: UUID,
         provider,
         model: str,
         system_prompt: str,
@@ -811,6 +816,7 @@ class RuntimeOperations:
                     tool_args=tc.input,
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                 )
                 # Track tool calls for run log
@@ -867,6 +873,7 @@ class RuntimeOperations:
                 model=model,
                 system=system_prompt,
                 tools=tool_schemas,
+                cache_key=str(agent_id),
             )
 
             # If the LLM is done (no more tool calls), exit the loop
@@ -1241,6 +1248,7 @@ class RuntimeOperations:
             system=system_prompt,
             tools=tool_schemas,
             stream=True,
+            cache_key=str(agent_id),
         )
 
         # Forward tokens in real-time as they arrive from the provider.
@@ -1311,6 +1319,7 @@ class RuntimeOperations:
                     content=completion.content or "",
                     input_tokens=completion.input_tokens,
                     output_tokens=completion.output_tokens,
+                    cache_read_input_tokens=completion.cache_read_input_tokens,
                     model=completion.model,
                 )
 
@@ -1328,6 +1337,7 @@ class RuntimeOperations:
                 writer=writer,
                 provider=provider,
                 model=model,
+                agent_id=agent_id,
                 system_prompt=system_prompt,
                 tool_schemas=tool_schemas,
                 llm_messages=llm_messages,
@@ -1349,6 +1359,9 @@ class RuntimeOperations:
                         model=event.model_used,
                         input_tokens=msg.input_tokens if msg else 0,
                         output_tokens=msg.output_tokens if msg else 0,
+                        cache_read_input_tokens=(
+                            msg.cache_read_input_tokens if msg else 0
+                        ),
                         tool_calls=run_tool_calls or None,
                         tool_iterations=tool_iterations,
                         duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1373,6 +1386,7 @@ class RuntimeOperations:
                 content=completion.content or "",
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
+                cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
             )
         else:
@@ -1381,6 +1395,7 @@ class RuntimeOperations:
                 content=completion.content,
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
+                cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
             )
 
@@ -1396,6 +1411,7 @@ class RuntimeOperations:
             model=completion.model,
             input_tokens=completion.input_tokens,
             output_tokens=completion.output_tokens,
+            cache_read_input_tokens=completion.cache_read_input_tokens,
             tool_calls=None,
             tool_iterations=0,
             duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1415,6 +1431,7 @@ class RuntimeOperations:
         writer: MessageWriter,
         provider,
         model: str,
+        agent_id: UUID,
         system_prompt: str,
         tool_schemas: list[dict],
         llm_messages: list[dict],
@@ -1497,6 +1514,7 @@ class RuntimeOperations:
                     tool_args=tc.input,
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                 )
                 tool_call_message_ids[tc.id] = stored.id
@@ -1631,6 +1649,7 @@ class RuntimeOperations:
                 system=system_prompt,
                 tools=tool_schemas,
                 stream=True,
+                cache_key=str(agent_id),
             )
 
             stream_result: _StreamSegmentResult | None = None
@@ -1661,6 +1680,7 @@ class RuntimeOperations:
                         content=result.content or "",
                         input_tokens=result.input_tokens,
                         output_tokens=result.output_tokens,
+                        cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
                     )
                 else:
@@ -1669,6 +1689,7 @@ class RuntimeOperations:
                         content=result.content,
                         input_tokens=result.input_tokens,
                         output_tokens=result.output_tokens,
+                        cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
                     )
                 yield RuntimeDoneEvent(
@@ -1686,6 +1707,7 @@ class RuntimeOperations:
                     content=result.content or "",
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                 )
 
@@ -1927,6 +1949,7 @@ class RuntimeOperations:
         model: str,
         input_tokens: int,
         output_tokens: int,
+        cache_read_input_tokens: int = 0,
         tool_calls: list[dict] | None,
         tool_iterations: int,
         duration_ms: int,
@@ -1952,6 +1975,7 @@ class RuntimeOperations:
                 provider_key_id=provider_key_id,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                cache_read_input_tokens=cache_read_input_tokens,
                 tool_calls=tool_calls,
                 tool_iterations=tool_iterations,
                 duration_ms=duration_ms,

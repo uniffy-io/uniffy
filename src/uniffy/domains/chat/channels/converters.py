@@ -113,6 +113,12 @@ def channel_to_proto(
     if channel.category_id:
         proto.category_id = str(channel.category_id)
 
+    proto.is_agent_dm = channel.is_agent_dm
+    if channel.custom_name is not None:
+        proto.custom_name = channel.custom_name
+    if channel.agent_id is not None:
+        proto.agent_id = str(channel.agent_id)
+
     if channel.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(channel.created_at))
     if channel.updated_at:

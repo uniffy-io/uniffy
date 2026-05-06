@@ -55,6 +55,11 @@ service ChatService {
   // Channel resources
   rpc GetChannelResources(GetChannelResourcesRequest) returns (GetChannelResourcesResponse) {}
 
+  // Named agent chats - multiple chats per (user, agent) pair, each renamable.
+  rpc CreateAgentChat(CreateAgentChatRequest) returns (CreateAgentChatResponse) {}
+  rpc RenameAgentChat(RenameAgentChatRequest) returns (RenameAgentChatResponse) {}
+  rpc ListAgentChats(ListAgentChatsRequest) returns (ListAgentChatsResponse) {}
+
   // Categories
   rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse) {}
   rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse) {}
@@ -169,6 +174,13 @@ message ChatChannel {
   optional bool is_member = 31;
   // DM participant user IDs (populated for DIRECT and GROUP_DM channels)
   repeated string dm_member_ids = 32;
+  // True when this is a 1:1 DM between a user and an agent (named agent chat).
+  bool is_agent_dm = 33;
+  // Optional user-supplied display name override for agent chats. When unset,
+  // clients should display ``name``.
+  optional string custom_name = 34;
+  // Denormalised agent participant for ``is_agent_dm=true`` channels.
+  optional string agent_id = 35;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -672,6 +684,48 @@ message GetChannelResourcesResponse {
   int32 total_count = 2;
 }
 
+// NAMED AGENT CHAT REQUESTS/RESPONSES
+
+message CreateAgentChatRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  // Optional initial display name. When omitted the server uses the agent's
+  // display name, suffixed with " (N)" if the user already has chats with
+  // this agent.
+  optional string custom_name = 3;
+}
+
+message CreateAgentChatResponse {
+  ChatChannel channel = 1;
+}
+
+message RenameAgentChatRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Empty string or unset clears the user's custom name; the auto-generated
+  // ``name`` field is restored on the client.
+  optional string custom_name = 3;
+}
+
+message RenameAgentChatResponse {
+  ChatChannel channel = 1;
+}
+
+message ListAgentChatsRequest {
+  string organization_id = 1;
+  // Optional filter to chats with a specific agent.
+  optional string agent_id = 2;
+  // Opaque cursor for pagination.
+  optional string cursor = 3;
+  // Max channels to return per page. Server clamps to <= 500.
+  optional int32 page_size = 4;
+}
+
+message ListAgentChatsResponse {
+  repeated ChatChannel channels = 1;
+  optional string next_cursor = 2;
+}
+
 // CATEGORY REQUESTS/RESPONSES
 
 message CreateCategoryRequest {
@@ -795,12 +849,12 @@ message ChannelAgentContextStats {
   int32 compacted_messages = 3;
   // Count of metadata.kind="summary" rows authored by this agent.
   int32 summary_count = 4;
-  // Cached estimate updated by the runtime after each turn
-  // (`binding.last_active_token_estimate`).
+  // Provider-reported prompt + completion size of the most recent agent
+  // turn (last_input_tokens + last_output_tokens). Zero pre-first-turn.
   int32 active_tokens = 5;
   // Token budget for chat history (65% of context window).
   int32 token_budget = 6;
-  // Estimated tokens remaining before auto-compaction triggers.
+  // Tokens remaining before auto-compaction triggers.
   int32 tokens_until_compaction = 7;
   // Resolved model context window in tokens (from agent.primary_model).
   int32 context_window_tokens = 8;
@@ -809,6 +863,17 @@ message ChannelAgentContextStats {
   bool was_reset = 9;
   // The timestamp of the last manual reset (NULL when `was_reset=false`).
   optional google.protobuf.Timestamp manual_reset_at = 10;
+  // Full prompt size of the most recent agent turn -- uncached input
+  // plus tokens served from the prompt cache. Stored on
+  // `binding.last_active_token_estimate`. Zero pre-first-turn.
+  int32 last_input_tokens = 11;
+  // Provider-reported output_tokens of the most recent agent turn
+  // (`binding.last_output_token_estimate`). Zero pre-first-turn.
+  int32 last_output_tokens = 12;
+  // Tokens served from Anthropic's prompt cache on the last turn
+  // (`binding.last_cache_read_token_estimate`). Counted toward
+  // last_input_tokens but billed at ~10% of base input price.
+  int32 last_cache_read_tokens = 13;
 }
 
 message GetChannelAgentContextStatsRequest {

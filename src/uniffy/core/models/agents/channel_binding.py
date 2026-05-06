@@ -124,6 +124,14 @@ class AgentChannelBinding(SQLModel, table=True):
         default=0,
         sa_column=Column(Integer(), nullable=False, server_default=text("0")),
     )
+    last_output_token_estimate: int = Field(
+        default=0,
+        sa_column=Column(Integer(), nullable=False, server_default=text("0")),
+    )
+    last_cache_read_token_estimate: int = Field(
+        default=0,
+        sa_column=Column(Integer(), nullable=False, server_default=text("0")),
+    )
     manual_reset_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),

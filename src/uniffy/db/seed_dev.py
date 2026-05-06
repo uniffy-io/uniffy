@@ -183,7 +183,7 @@ async def seed_development_data(
 async def _seed_provider_keys(session, default_org, admin_user) -> list:
     """Seed LLM provider keys from environment variables.
 
-    Reads CLAUDE_SETUP_TOKEN, OPENAI_API_KEY, and GOOGLE_GENAI_API_KEY
+    Reads CLAUDE_API_KEY, OPENAI_API_KEY, and GOOGLE_GENAI_API_KEY
     from the environment and creates provider key records for the default org.
 
     Parameters
@@ -208,10 +208,10 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
 
     provider_key_configs = [
         {
-            "env_var": "CLAUDE_SETUP_TOKEN",
+            "env_var": "CLAUDE_API_KEY",
             "provider": "anthropic",
-            "credential_type": "setup_token",
-            "label": "anthropic-gt-cc",
+            "credential_type": "api_key",
+            "label": "anthropic-dev",
         },
         {
             "env_var": "OPENAI_API_KEY",
@@ -316,7 +316,9 @@ PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
     },
     "google": {
         "name": "Uniffy Google",
-        "primary_model": "gemini-2.0-flash",
+        # Gemini 2.5+ required for implicit prompt caching. Older
+        # 2.0-flash always reports cached_content_token_count=0.
+        "primary_model": "gemini-2.5-flash",
         "avatar_emoji": "G",
         "theme_color": "#4285f4",
     },

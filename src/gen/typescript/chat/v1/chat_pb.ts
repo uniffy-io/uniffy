@@ -346,6 +346,28 @@ export class ChatChannel extends Message<ChatChannel> {
    */
   dmMemberIds: string[] = [];
 
+  /**
+   * True when this is a 1:1 DM between a user and an agent (named agent chat).
+   *
+   * @generated from field: bool is_agent_dm = 33;
+   */
+  isAgentDm = false;
+
+  /**
+   * Optional user-supplied display name override for agent chats. When unset,
+   * clients should display ``name``.
+   *
+   * @generated from field: optional string custom_name = 34;
+   */
+  customName?: string;
+
+  /**
+   * Denormalised agent participant for ``is_agent_dm=true`` channels.
+   *
+   * @generated from field: optional string agent_id = 35;
+   */
+  agentId?: string;
+
   constructor(data?: PartialMessage<ChatChannel>) {
     super();
     proto3.util.initPartial(data, this);
@@ -376,6 +398,9 @@ export class ChatChannel extends Message<ChatChannel> {
     { no: 30, name: "current_user_role", kind: "enum", T: proto3.getEnumType(ChannelRole), opt: true },
     { no: 31, name: "is_member", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 32, name: "dm_member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 33, name: "is_agent_dm", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 34, name: "custom_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 35, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatChannel {
@@ -4133,6 +4158,289 @@ export class GetChannelResourcesResponse extends Message<GetChannelResourcesResp
 }
 
 /**
+ * @generated from message chat.v1.CreateAgentChatRequest
+ */
+export class CreateAgentChatRequest extends Message<CreateAgentChatRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * Optional initial display name. When omitted the server uses the agent's
+   * display name, suffixed with " (N)" if the user already has chats with
+   * this agent.
+   *
+   * @generated from field: optional string custom_name = 3;
+   */
+  customName?: string;
+
+  constructor(data?: PartialMessage<CreateAgentChatRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.CreateAgentChatRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "custom_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentChatRequest {
+    return new CreateAgentChatRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateAgentChatRequest {
+    return new CreateAgentChatRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateAgentChatRequest {
+    return new CreateAgentChatRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateAgentChatRequest | PlainMessage<CreateAgentChatRequest> | undefined, b: CreateAgentChatRequest | PlainMessage<CreateAgentChatRequest> | undefined): boolean {
+    return proto3.util.equals(CreateAgentChatRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.CreateAgentChatResponse
+ */
+export class CreateAgentChatResponse extends Message<CreateAgentChatResponse> {
+  /**
+   * @generated from field: chat.v1.ChatChannel channel = 1;
+   */
+  channel?: ChatChannel;
+
+  constructor(data?: PartialMessage<CreateAgentChatResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.CreateAgentChatResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "channel", kind: "message", T: ChatChannel },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentChatResponse {
+    return new CreateAgentChatResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateAgentChatResponse {
+    return new CreateAgentChatResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateAgentChatResponse {
+    return new CreateAgentChatResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateAgentChatResponse | PlainMessage<CreateAgentChatResponse> | undefined, b: CreateAgentChatResponse | PlainMessage<CreateAgentChatResponse> | undefined): boolean {
+    return proto3.util.equals(CreateAgentChatResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.RenameAgentChatRequest
+ */
+export class RenameAgentChatRequest extends Message<RenameAgentChatRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * Empty string or unset clears the user's custom name; the auto-generated
+   * ``name`` field is restored on the client.
+   *
+   * @generated from field: optional string custom_name = 3;
+   */
+  customName?: string;
+
+  constructor(data?: PartialMessage<RenameAgentChatRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.RenameAgentChatRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "custom_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RenameAgentChatRequest {
+    return new RenameAgentChatRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RenameAgentChatRequest {
+    return new RenameAgentChatRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RenameAgentChatRequest {
+    return new RenameAgentChatRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RenameAgentChatRequest | PlainMessage<RenameAgentChatRequest> | undefined, b: RenameAgentChatRequest | PlainMessage<RenameAgentChatRequest> | undefined): boolean {
+    return proto3.util.equals(RenameAgentChatRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.RenameAgentChatResponse
+ */
+export class RenameAgentChatResponse extends Message<RenameAgentChatResponse> {
+  /**
+   * @generated from field: chat.v1.ChatChannel channel = 1;
+   */
+  channel?: ChatChannel;
+
+  constructor(data?: PartialMessage<RenameAgentChatResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.RenameAgentChatResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "channel", kind: "message", T: ChatChannel },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RenameAgentChatResponse {
+    return new RenameAgentChatResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RenameAgentChatResponse {
+    return new RenameAgentChatResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RenameAgentChatResponse {
+    return new RenameAgentChatResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RenameAgentChatResponse | PlainMessage<RenameAgentChatResponse> | undefined, b: RenameAgentChatResponse | PlainMessage<RenameAgentChatResponse> | undefined): boolean {
+    return proto3.util.equals(RenameAgentChatResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.ListAgentChatsRequest
+ */
+export class ListAgentChatsRequest extends Message<ListAgentChatsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * Optional filter to chats with a specific agent.
+   *
+   * @generated from field: optional string agent_id = 2;
+   */
+  agentId?: string;
+
+  /**
+   * Opaque cursor for pagination.
+   *
+   * @generated from field: optional string cursor = 3;
+   */
+  cursor?: string;
+
+  /**
+   * Max channels to return per page. Server clamps to <= 500.
+   *
+   * @generated from field: optional int32 page_size = 4;
+   */
+  pageSize?: number;
+
+  constructor(data?: PartialMessage<ListAgentChatsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ListAgentChatsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAgentChatsRequest {
+    return new ListAgentChatsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAgentChatsRequest {
+    return new ListAgentChatsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAgentChatsRequest {
+    return new ListAgentChatsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAgentChatsRequest | PlainMessage<ListAgentChatsRequest> | undefined, b: ListAgentChatsRequest | PlainMessage<ListAgentChatsRequest> | undefined): boolean {
+    return proto3.util.equals(ListAgentChatsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.ListAgentChatsResponse
+ */
+export class ListAgentChatsResponse extends Message<ListAgentChatsResponse> {
+  /**
+   * @generated from field: repeated chat.v1.ChatChannel channels = 1;
+   */
+  channels: ChatChannel[] = [];
+
+  /**
+   * @generated from field: optional string next_cursor = 2;
+   */
+  nextCursor?: string;
+
+  constructor(data?: PartialMessage<ListAgentChatsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ListAgentChatsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "channels", kind: "message", T: ChatChannel, repeated: true },
+    { no: 2, name: "next_cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAgentChatsResponse {
+    return new ListAgentChatsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAgentChatsResponse {
+    return new ListAgentChatsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAgentChatsResponse {
+    return new ListAgentChatsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAgentChatsResponse | PlainMessage<ListAgentChatsResponse> | undefined, b: ListAgentChatsResponse | PlainMessage<ListAgentChatsResponse> | undefined): boolean {
+    return proto3.util.equals(ListAgentChatsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message chat.v1.CreateCategoryRequest
  */
 export class CreateCategoryRequest extends Message<CreateCategoryRequest> {
@@ -4931,8 +5239,8 @@ export class ChannelAgentContextStats extends Message<ChannelAgentContextStats> 
   summaryCount = 0;
 
   /**
-   * Cached estimate updated by the runtime after each turn
-   * (`binding.last_active_token_estimate`).
+   * Provider-reported prompt + completion size of the most recent agent
+   * turn (last_input_tokens + last_output_tokens). Zero pre-first-turn.
    *
    * @generated from field: int32 active_tokens = 5;
    */
@@ -4946,7 +5254,7 @@ export class ChannelAgentContextStats extends Message<ChannelAgentContextStats> 
   tokenBudget = 0;
 
   /**
-   * Estimated tokens remaining before auto-compaction triggers.
+   * Tokens remaining before auto-compaction triggers.
    *
    * @generated from field: int32 tokens_until_compaction = 7;
    */
@@ -4974,6 +5282,32 @@ export class ChannelAgentContextStats extends Message<ChannelAgentContextStats> 
    */
   manualResetAt?: Timestamp;
 
+  /**
+   * Full prompt size of the most recent agent turn -- uncached input
+   * plus tokens served from the prompt cache. Stored on
+   * `binding.last_active_token_estimate`. Zero pre-first-turn.
+   *
+   * @generated from field: int32 last_input_tokens = 11;
+   */
+  lastInputTokens = 0;
+
+  /**
+   * Provider-reported output_tokens of the most recent agent turn
+   * (`binding.last_output_token_estimate`). Zero pre-first-turn.
+   *
+   * @generated from field: int32 last_output_tokens = 12;
+   */
+  lastOutputTokens = 0;
+
+  /**
+   * Tokens served from Anthropic's prompt cache on the last turn
+   * (`binding.last_cache_read_token_estimate`). Counted toward
+   * last_input_tokens but billed at ~10% of base input price.
+   *
+   * @generated from field: int32 last_cache_read_tokens = 13;
+   */
+  lastCacheReadTokens = 0;
+
   constructor(data?: PartialMessage<ChannelAgentContextStats>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4992,6 +5326,9 @@ export class ChannelAgentContextStats extends Message<ChannelAgentContextStats> 
     { no: 8, name: "context_window_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "was_reset", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "manual_reset_at", kind: "message", T: Timestamp, opt: true },
+    { no: 11, name: "last_input_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 12, name: "last_output_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 13, name: "last_cache_read_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelAgentContextStats {

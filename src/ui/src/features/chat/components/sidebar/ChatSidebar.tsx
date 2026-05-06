@@ -22,6 +22,7 @@ import {
   CaretRight,
   CaretDoubleLeft,
   CaretDoubleRight,
+  Robot,
 } from '@phosphor-icons/react';
 import {
   DndContext,
@@ -43,6 +44,8 @@ import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRai
 import { setSplitChannel, selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleDmSection,
+  toggleAgentChatsSection,
+  openAgentChatPicker,
   collapseSidebar,
   expandSidebar,
   selectSplitActive,
@@ -109,6 +112,7 @@ export function ChatSidebar() {
   const categories = useAppSelector(selectCategories);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const dmSectionCollapsed = useAppSelector((state) => state.chatUi.dmSectionCollapsed);
+  const agentChatsSectionCollapsed = useAppSelector((state) => state.chatUi.agentChatsSectionCollapsed);
   const splitActive = useAppSelector(selectSplitActive);
   const focusedPane = useAppSelector(selectFocusedPane);
   const unreadThreadCount = useAppSelector((state) =>
@@ -161,7 +165,14 @@ export function ChatSidebar() {
 
   const directMessages = useMemo(
     () => filteredChannels
-      .filter(c => c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM')
+      .filter(c => !c.isAgentDm && (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'))
+      .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
+    [filteredChannels],
+  );
+
+  const agentChats = useMemo(
+    () => filteredChannels
+      .filter(c => c.isAgentDm)
       .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
     [filteredChannels],
   );
@@ -376,6 +387,62 @@ export function ChatSidebar() {
             ))}
           </SortableContext>
         </DndContext>
+
+        {/* Agent Chats section - sits above Direct Messages so users can scan
+            their named agent conversations first. */}
+        <div
+          className="mt-1"
+          data-testid="chat-sidebar-agent-chats-section"
+          data-state={agentChatsSectionCollapsed ? 'collapsed' : 'expanded'}
+        >
+          <div className="flex items-center justify-between w-full px-3 py-1.5 group">
+            <button
+              type="button"
+              onClick={() => dispatch(toggleAgentChatsSection())}
+              className="flex items-center gap-1 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="chat-sidebar-agent-chats-toggle"
+            >
+              {agentChatsSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
+              Agent Chats
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(openAgentChatPicker())}
+              aria-label="New agent chat"
+              className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
+              data-testid="chat-sidebar-new-agent-chat-button"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          {!agentChatsSectionCollapsed && (
+            <div className="space-y-px">
+              {agentChats.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => dispatch(openAgentChatPicker())}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 mx-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors max-w-[calc(100%-12px)]"
+                  data-testid="chat-sidebar-agent-chats-empty"
+                >
+                  <Robot size={14} />
+                  Start a new agent chat
+                </button>
+              ) : (
+                agentChats.map(channel => (
+                  <DirectMessageListItem
+                    key={channel.id}
+                    channel={channel}
+                    isActive={channel.id === activeChannelId}
+                    unreadCount={unreadCounts[channel.id] ?? 0}
+                    isMuted={isChannelMuted(channel.id)}
+                    onClick={() => handleChannelSelect(channel.id)}
+                  />
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Direct Messages section */}
         <div className="mt-1" data-testid="chat-sidebar-dm-section" data-state={dmSectionCollapsed ? 'collapsed' : 'expanded'}>

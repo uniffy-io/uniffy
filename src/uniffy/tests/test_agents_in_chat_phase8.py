@@ -25,7 +25,6 @@ from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import generate_id as uuid7
 from uniffy.domains.agents.chat_integration.context import (
     ContextStats,
-    _estimate_chat_tokens,
     _format_chat_entry,
 )
 from uniffy.domains.agents.chat_integration.context_handlers import (
@@ -72,6 +71,9 @@ def _stats(
         compacted_messages=12,
         summary_count=2,
         active_tokens=1234,
+        last_input_tokens=1000,
+        last_output_tokens=234,
+        last_cache_read_tokens=800,
         token_budget=130_000,
         tokens_until_compaction=128_766,
         context_window_tokens=200_000,
@@ -88,6 +90,9 @@ class TestStatsToProto:
         assert proto.compacted_messages == 12
         assert proto.summary_count == 2
         assert proto.active_tokens == 1234
+        assert proto.last_input_tokens == 1000
+        assert proto.last_output_tokens == 234
+        assert proto.last_cache_read_tokens == 800
         assert proto.token_budget == 130_000
         assert proto.tokens_until_compaction == 128_766
         assert proto.context_window_tokens == 200_000
@@ -232,12 +237,3 @@ class TestFormatChatEntry:
         assert body.startswith("[Tool result: notes.search]")
 
 
-class TestEstimateChatTokens:
-    def test_returns_at_least_one_per_message(self) -> None:
-        msgs = [_chat_msg(sender_id=uuid7(), content="")]
-        assert _estimate_chat_tokens(msgs) >= 1
-
-    def test_scales_with_content_length(self) -> None:
-        small = [_chat_msg(sender_id=uuid7(), content="hi")]
-        large = [_chat_msg(sender_id=uuid7(), content="x" * 4000)]
-        assert _estimate_chat_tokens(large) > _estimate_chat_tokens(small) * 10

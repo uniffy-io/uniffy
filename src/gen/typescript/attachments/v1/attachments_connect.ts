@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AttachFileRequest, AttachFileResponse, DetachFileRequest, DetachFileResponse, GetAttachmentsFolderRequest, GetAttachmentsFolderResponse, ListAttachmentsRequest, ListAttachmentsResponse, ListSharedAttachmentsRequest, ListSharedAttachmentsResponse } from "./attachments_pb.js";
+import { AttachFileRequest, AttachFileResponse, BatchListAttachmentsRequest, BatchListAttachmentsResponse, DetachFileRequest, DetachFileResponse, GetAttachmentsFolderRequest, GetAttachmentsFolderResponse, ListAttachmentsRequest, ListAttachmentsResponse, ListSharedAttachmentsRequest, ListSharedAttachmentsResponse } from "./attachments_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -50,6 +50,19 @@ export const AttachmentsService = {
       name: "ListAttachments",
       I: ListAttachmentsRequest,
       O: ListAttachmentsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Batch-list attachments for many content rows of the same type.
+     * Used by chat to hydrate attachments for an entire page of messages
+     * in one round-trip (replaces an N+1 ListAttachments fan-out).
+     *
+     * @generated from rpc attachments.v1.AttachmentsService.BatchListAttachments
+     */
+    batchListAttachments: {
+      name: "BatchListAttachments",
+      I: BatchListAttachmentsRequest,
+      O: BatchListAttachmentsResponse,
       kind: MethodKind.Unary,
     },
     /**

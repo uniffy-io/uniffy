@@ -14,6 +14,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     AddMembersResponse,
     ArchiveChannelRequest,
     ArchiveChannelResponse,
+    CreateAgentChatRequest,
+    CreateAgentChatResponse,
     CreateChannelRequest,
     CreateChannelResponse,
     DeleteChannelRequest,
@@ -30,6 +32,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     JoinChannelResponse,
     LeaveChannelRequest,
     LeaveChannelResponse,
+    ListAgentChatsRequest,
+    ListAgentChatsResponse,
     ListChannelsRequest,
     ListChannelsResponse,
     MarkChannelReadRequest,
@@ -38,6 +42,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     MarkThreadReadResponse,
     RemoveMembersRequest,
     RemoveMembersResponse,
+    RenameAgentChatRequest,
+    RenameAgentChatResponse,
     SetTypingRequest,
     SetTypingResponse,
     UpdateChannelMemberRequest,
@@ -308,6 +314,159 @@ class ChannelHandlers:
                 stats = stats_result.scalar_one_or_none()
 
                 return UpdateChannelResponse(channel=channel_to_proto(channel, stats))
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def create_agent_chat(
+        self,
+        request: CreateAgentChatRequest,
+        ctx: RequestContext,
+    ) -> CreateAgentChatResponse:
+        """Create a new named chat between the user and an agent."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            agent_id = UUID(request.agent_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        custom_name = request.custom_name if request.HasField("custom_name") else None
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                channel = await ops.create_agent_chat(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_id,
+                    custom_name=custom_name,
+                )
+
+                from uniffy.core.models.chat.channel import ChatChannelStats
+
+                stats_result = await session.execute(
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
+                )
+                stats = stats_result.scalar_one_or_none()
+
+                dm_ids = [str(user_id), str(agent_id)]
+
+                return CreateAgentChatResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        stats,
+                        current_user_role=None,
+                        is_member=True,
+                        dm_member_ids=dm_ids,
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError, ConflictError) as e:
+            _handle_error(e)
+
+    async def rename_agent_chat(
+        self,
+        request: RenameAgentChatRequest,
+        ctx: RequestContext,
+    ) -> RenameAgentChatResponse:
+        """Set or clear the user's custom name for an agent chat."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        custom_name = request.custom_name if request.HasField("custom_name") else None
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                channel = await ops.rename_agent_chat(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    custom_name=custom_name,
+                )
+
+                from uniffy.core.models.chat.channel import ChatChannelStats
+
+                stats_result = await session.execute(
+                    select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
+                )
+                stats = stats_result.scalar_one_or_none()
+
+                return RenameAgentChatResponse(channel=channel_to_proto(channel, stats))
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def list_agent_chats(
+        self,
+        request: ListAgentChatsRequest,
+        ctx: RequestContext,
+    ) -> ListAgentChatsResponse:
+        """List the user's agent chats, optionally filtered by ``agent_id``."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        agent_filter: UUID | None = None
+        if request.HasField("agent_id"):
+            try:
+                agent_filter = UUID(request.agent_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid agent_id")
+
+        cursor = request.cursor if request.HasField("cursor") else None
+        limit = request.page_size if request.HasField("page_size") else 0
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                rows, next_cursor = await ops.list_agent_chats(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_filter,
+                    cursor=cursor,
+                    limit=limit,
+                )
+
+                channel_ids = [c.id for c, _ in rows]
+                dm_ids_by_channel: dict[UUID, list[str]] = {}
+                if channel_ids:
+                    cached_map = await get_cached_dm_peers_many(channel_ids)
+                    missing = [cid for cid in channel_ids if cid not in cached_map]
+                    if missing:
+                        member_rows = await session.execute(
+                            select(
+                                ChatChannelMemberModel.channel_id,
+                                ChatChannelMemberModel.subject_id,
+                            ).where(ChatChannelMemberModel.channel_id.in_(missing))
+                        )
+                        for cid, sid in member_rows.all():
+                            if sid is None:
+                                continue
+                            dm_ids_by_channel.setdefault(cid, []).append(str(sid))
+                        for cid in missing:
+                            await set_cached_dm_peers(cid, dm_ids_by_channel.get(cid, []))
+                    for cid, peers in cached_map.items():
+                        dm_ids_by_channel[cid] = peers
+
+                channels_proto = [
+                    channel_to_proto(
+                        channel,
+                        stats,
+                        is_member=True,
+                        dm_member_ids=dm_ids_by_channel.get(channel.id),
+                    )
+                    for channel, stats in rows
+                ]
+
+                response = ListAgentChatsResponse(channels=channels_proto)
+                if next_cursor is not None:
+                    response.next_cursor = next_cursor
+                return response
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 

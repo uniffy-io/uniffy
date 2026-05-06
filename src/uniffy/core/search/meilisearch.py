@@ -92,6 +92,8 @@ INDEX_SETTINGS = MeilisearchSettings(
         "updated_at",  # Time-bounded searches (e.g., "modified this week")
         "metadata.channel_id",  # Chat message scoping by channel
         "metadata.sender_id",  # Chat message filtering by sender
+        "metadata.project_id",  # Cascade-remove tasks when project is deleted
+        "metadata.folder_id",  # Cascade-remove files when folder is deleted
     ],
     # Fields available for sorting
     sortable_attributes=[
@@ -406,6 +408,11 @@ class MeilisearchClient:
         """
         Delete a document from Meilisearch.
 
+        Awaits the Meilisearch task so the deletion is observable as
+        soon as this call returns. Without the wait, the user can still
+        see the doc in search for a few hundred ms after delete --
+        Meilisearch deletes are async by default.
+
         Parameters
         ----------
         urn : str
@@ -419,9 +426,9 @@ class MeilisearchClient:
         index = self.client.index(self.config.index_name)
 
         if organization_id:
-            # Delete specific document
             doc_id = build_document_id(urn, organization_id)
-            await index.delete_document(doc_id)
+            task = await index.delete_document(doc_id)
+            await self._await_task(task)
             elapsed_ms = (time.perf_counter() - start) * 1000
             SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
             SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
@@ -431,9 +438,8 @@ class MeilisearchClient:
                 urn=urn,
             )
         else:
-            # Delete all documents with this URN across all orgs
-            # Use filter-based deletion
-            await index.delete_documents_by_filter(f'urn = "{urn}"')
+            task = await index.delete_documents_by_filter(f'urn = "{urn}"')
+            await self._await_task(task)
             elapsed_ms = (time.perf_counter() - start) * 1000
             SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
             SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
@@ -442,6 +448,60 @@ class MeilisearchClient:
                 ms=f"{elapsed_ms:.1f}",
                 urn=urn,
             )
+
+    async def _await_task(self, task: object | None) -> None:
+        """Block until a Meilisearch task settles.
+
+        Meilisearch's update API queues work and returns a ``TaskInfo``
+        immediately. For *deletes* we want the caller to observe a
+        consistent index when the call returns -- without this wait,
+        global search keeps returning a doc the user just deleted for
+        a few hundred ms (or longer under load).
+
+        Errors are swallowed: a slow-or-down Meilisearch must not crash
+        the calling delete path. The DB row is already gone; the index
+        will catch up.
+        """
+        if task is None:
+            return
+        task_uid = getattr(task, "task_uid", None) or getattr(task, "taskUid", None)
+        if task_uid is None:
+            return
+        try:
+            await self.client.wait_for_task(task_uid, timeout_in_ms=5000)
+        except Exception:
+            logger.warning("Meilisearch: wait_for_task failed", task_uid=task_uid)
+
+    async def delete_documents_by_filter_expr(self, filter_expr: str) -> None:
+        """Delete every document matching an arbitrary Meilisearch filter.
+
+        Awaits the Meilisearch task so the cascade is observable when
+        the call returns. The filter must reference attributes declared
+        in ``filterable_attributes``; Meilisearch rejects expressions
+        that touch non-filterable fields with a 400 error, which we
+        surface as a logged warning rather than crashing the calling
+        delete path.
+        """
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        try:
+            task = await index.delete_documents_by_filter(filter_expr)
+            await self._await_task(task)
+        except Exception:
+            logger.warning(
+                "Meilisearch: delete_documents_by_filter_expr failed",
+                filter=filter_expr,
+                exc_info=True,
+            )
+            return
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
+        logger.info(
+            "Meilisearch: delete_documents_by_filter_expr",
+            ms=f"{elapsed_ms:.1f}",
+            filter=filter_expr,
+        )
 
     async def search(
         self,

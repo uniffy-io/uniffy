@@ -12,6 +12,7 @@
 import { useCallback, useMemo } from 'react';
 import { CaretUp } from '@phosphor-icons/react';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import {
   TaskMentionPreview,
@@ -21,6 +22,7 @@ import {
   NoteMentionPreview,
   UserMentionPreview,
   ChatMentionPreview,
+  ChatMessageMentionPreview,
   AgentMentionPreview,
 } from '@/components/mention/previews';
 import type { MentionLiveState } from '@/components/mention/types';
@@ -46,6 +48,7 @@ export function MentionExpandedCard({
   onEmbed,
 }: MentionExpandedCardProps) {
   const parsed = parseUrn(urn);
+  const glow = getContentTypeConfig(parsed.type).theme.glow;
 
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(urn);
@@ -81,6 +84,8 @@ export function MentionExpandedCard({
         return <UserMentionPreview {...previewProps} />;
       case UrnType.CHAT:
         return <ChatMentionPreview {...previewProps} />;
+      case UrnType.CHAT_MESSAGE:
+        return <ChatMessageMentionPreview {...previewProps} />;
       case UrnType.AGENT:
         return <AgentMentionPreview {...previewProps} />;
       default:
@@ -96,6 +101,7 @@ export function MentionExpandedCard({
         'bg-card/95 backdrop-blur-xl',
         'text-card-foreground',
         'rounded-xl shadow-md',
+        glow,
         'border border-border/50',
         'overflow-hidden',
         'cursor-pointer',

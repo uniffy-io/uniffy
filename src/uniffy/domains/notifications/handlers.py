@@ -874,7 +874,7 @@ class NotificationsHandlers:
                     )
                     last_send = now
 
-        except asyncio.CancelledError, GeneratorExit:
+        except (asyncio.CancelledError, GeneratorExit):
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
                 component="notifications handler",

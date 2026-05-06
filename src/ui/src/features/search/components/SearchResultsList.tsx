@@ -38,6 +38,7 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
   [SearchResultType.CHAT]: UrnType.CHAT,
+  [SearchResultType.AGENT_CHAT]: UrnType.AGENT_CHAT,
   [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
   [SearchResultType.USER]: UrnType.USER,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
@@ -256,7 +257,7 @@ export function SearchResultsList({
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2 mx-1.5 rounded-lg text-left',
                       'transition-all duration-150 relative',
-                      isSelected ? 'bg-muted/80' : 'hover:bg-muted/40'
+                      isSelected ? cn('bg-muted/80', theme.glow) : 'hover:bg-muted/40'
                     )}
                     style={{ width: 'calc(100% - 12px)' }}
                   >

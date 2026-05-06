@@ -96,7 +96,7 @@ def expand_recurrence(
     # Resolve the event's local timezone to preserve wall-clock time across DST
     try:
         tz = ZoneInfo(timezone)
-    except KeyError, ValueError:
+    except (KeyError, ValueError):
         tz = ZoneInfo("UTC")
 
     # Convert master start/end to local time to extract wall-clock hour/minute

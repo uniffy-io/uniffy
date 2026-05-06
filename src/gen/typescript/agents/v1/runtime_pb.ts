@@ -160,6 +160,15 @@ export class GetUsageStatsResponse extends Message<GetUsageStatsResponse> {
    */
   cronTotalOutputTokens = protoInt64.zero;
 
+  /**
+   * Tokens served from Anthropic's prompt cache across all runs in
+   * the period. Counted toward total_input_tokens (the prompt was that
+   * big from the model's POV) but billed at ~10% of base input price.
+   *
+   * @generated from field: int64 total_cache_read_input_tokens = 17;
+   */
+  totalCacheReadInputTokens = protoInt64.zero;
+
   constructor(data?: PartialMessage<GetUsageStatsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -184,6 +193,7 @@ export class GetUsageStatsResponse extends Message<GetUsageStatsResponse> {
     { no: 14, name: "cron_total_failures", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 15, name: "cron_total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 16, name: "cron_total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 17, name: "total_cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUsageStatsResponse {
@@ -229,6 +239,13 @@ export class DailyUsage extends Message<DailyUsage> {
    */
   outputTokens = protoInt64.zero;
 
+  /**
+   * Cache reads in this bucket; subset of input_tokens.
+   *
+   * @generated from field: int64 cache_read_input_tokens = 5;
+   */
+  cacheReadInputTokens = protoInt64.zero;
+
   constructor(data?: PartialMessage<DailyUsage>) {
     super();
     proto3.util.initPartial(data, this);
@@ -241,6 +258,7 @@ export class DailyUsage extends Message<DailyUsage> {
     { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DailyUsage {

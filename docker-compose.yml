@@ -1,178 +1,19 @@
 name: uniffy-local
 
-services:
-  postgres:
-    image: postgres:18-alpine
-    container_name: uniffy-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: uniffy
-      POSTGRES_PASSWORD: uniffy
-      POSTGRES_DB: uniffy
-      POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./.docker/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U uniffy -d uniffy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - uniffy-network
+# Modular compose. Each domain in its own file under .docker/compose/.
+# Run any subset directly:  docker compose -f .docker/compose/<name>.yaml up
+# Or all at once:           docker compose up
+#
+# Profiles for opt-in services:
+#   --profile mcp           mcp-playwright (Claude Code -> browser)
+#   --profile calls-turn    coturn TURN relay
+#
+# Helpers in run.sh: mcp-up/down/logs, calls-turn-up/down/logs, livekit-logs
 
-  meilisearch:
-    image: getmeili/meilisearch:v1.33
-    container_name: uniffy-meilisearch
-    restart: unless-stopped
-    environment:
-      MEILI_MASTER_KEY: uniffy-dev-master-key
-      MEILI_ENV: production
-      MEILI_DB_PATH: /meili_data/data.ms
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      # Disable telemetry (Amplitude analytics + Sentry error tracking)
-      MEILI_NO_ANALYTICS: true
-      # Max RAM for indexing (default: 2/3 of available RAM)
-      MEILI_MAX_INDEXING_MEMORY: 3GiB
-      # Max OS threads for indexing (default: half of available CPU cores)
-      MEILI_MAX_INDEXING_THREADS: 4
-      # Max HTTP payload size (default: ~100MB)
-      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 104857600
-      # Max concurrent search requests (default: 1000)
-      # MEILI_EXPERIMENTAL_SEARCH_QUEUE_SIZE: 1000
-      MEILI_LOG_LEVEL: INFO
-      MEILI_EXPERIMENTAL_LOGS_MODE: human
-      # MEILI_DUMP_DIR: /meili_data/dumps
-      # MEILI_SNAPSHOT_DIR: /meili_data/snapshots
-      # MEILI_SCHEDULE_SNAPSHOT: 86400
-    ports:
-      - "7700:7700"
-    volumes:
-      - meilisearch_data:/meili_data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - uniffy-network
-
-  valkey:
-    image: valkey/valkey:9-alpine
-    container_name: uniffy-valkey
-    restart: unless-stopped
-    environment:
-      VALKEY_PASSWORD: uniffy-valkey-dev
-    ports:
-      - "6380:6379"
-    volumes:
-      - valkey_data:/data
-    command: valkey-server --appendonly yes --requirepass uniffy-valkey-dev
-    healthcheck:
-      test: ["CMD", "valkey-cli", "-a", "uniffy-valkey-dev", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - uniffy-network
-
-  redisinsight:
-    image: redis/redisinsight:latest
-    container_name: uniffy-redisinsight
-    restart: unless-stopped
-    environment:
-      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
-      RI_REDIS_HOST: valkey
-      RI_REDIS_PORT: "6379"
-      RI_REDIS_PASSWORD: uniffy-valkey-dev
-      RI_REDIS_ALIAS: uniffy-valkey
-    ports:
-      - "5540:5540"
-    volumes:
-      - redisinsight_data:/data
-    depends_on:
-      valkey:
-        condition: service_healthy
-    networks:
-      - uniffy-network
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: uniffy-pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@uniffy.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-    networks:
-      - uniffy-network
-
-  rustfs:
-    image: rustfs/rustfs:latest
-    container_name: uniffy-rustfs
-    restart: unless-stopped
-    environment:
-      RUSTFS_ROOT_USER: rustfsadmin
-      RUSTFS_ROOT_PASSWORD: rustfsadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - rustfs_data:/data
-      - rustfs_logs:/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - uniffy-network
-
-  # Playwright MCP server. Off by default; bring up with the `mcp` profile
-  # (see ./run.sh mcp-up). Exposes an SSE endpoint that Claude Code reaches
-  # via .mcp.json at the repo root, and drives a headless chromium inside
-  # the container. The container reaches the host-side dev stack via
-  # `host.docker.internal` (host-gateway).
-  mcp-playwright:
-    image: mcr.microsoft.com/playwright:v1.59.0-jammy
-    container_name: uniffy-mcp-playwright
-    profiles: ["mcp"]
-    restart: unless-stopped
-    command: >-
-      npx -y @playwright/mcp@latest
-      --port 8931 --host 0.0.0.0
-      --browser chromium --headless --isolated
-    ports:
-      - "8931:8931"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - uniffy-network
-
-volumes:
-  postgres_data:
-    driver: local
-  meilisearch_data:
-    driver: local
-  valkey_data:
-    driver: local
-  redisinsight_data:
-    driver: local
-  pgadmin_data:
-    driver: local
-  rustfs_data:
-    driver: local
-  rustfs_logs:
-    driver: local
-
-networks:
-  uniffy-network:
-    driver: bridge
+include:
+  - .docker/compose/core.yaml          # postgres, valkey, meilisearch
+  - .docker/compose/storage.yaml       # rustfs (S3-compatible)
+  - .docker/compose/admin.yaml         # pgadmin, redisinsight (db inspection UIs)
+  - .docker/compose/calls.yaml         # livekit (always on), coturn (profile: calls-turn)
+  - .docker/compose/dev-tools.yaml     # mcp-playwright (profile: mcp)
+  - .docker/compose/dev.yaml           # backend, worker-core, worker-egress, ui (profile: dev)

@@ -19,6 +19,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.NOTE]: '#8b5cf6',           // violet-500 (fallback, usually uses primary)
   [UrnType.FILE]: '#3b82f6',           // blue-500
   [UrnType.CHAT]: '#8b5cf6',           // violet-500
+  [UrnType.AGENT_CHAT]: '#06b6d4',     // cyan-500 (matches AGENT)
   [UrnType.USER]: '#10b981',           // emerald-500
   [UrnType.CALENDAR_EVENT]: '#f43f5e', // rose-500
   [UrnType.PROJECT]: '#f97316',        // orange-500
@@ -47,8 +48,10 @@ export interface UrnTypeTheme {
   badgeBg: string;
   /** Border color */
   border: string;
-  /** Shadow color for glow effects */
+  /** Shadow color for glow effects (strong, used in hover states) */
   shadow: string;
+  /** Subtle per-type colored INNER glow (Tailwind 4 inset-shadow). Sits inside the chip/card edge so users differentiate types without outer halo */
+  glow: string;
 }
 
 export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
@@ -58,8 +61,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-primary',
     badgeBg: 'bg-primary/10',
-    border: 'border-primary/20',
+    border: 'border-primary/40 dark:border-primary/20',
     shadow: 'shadow-primary/50',
+    glow: 'inset-shadow-sm inset-shadow-primary/30',
   },
   [UrnType.FILE]: {
     gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
@@ -67,8 +71,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-blue-600 dark:text-blue-400',
     badgeBg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
+    border: 'border-blue-500/40 dark:border-blue-500/20',
     shadow: 'shadow-blue-500/50',
+    glow: 'inset-shadow-sm inset-shadow-blue-500/30',
   },
   [UrnType.CHAT]: {
     gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
@@ -76,8 +81,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-violet-600 dark:text-violet-400',
     badgeBg: 'bg-violet-500/10',
-    border: 'border-violet-500/20',
+    border: 'border-violet-500/40 dark:border-violet-500/20',
     shadow: 'shadow-violet-500/50',
+    glow: 'inset-shadow-sm inset-shadow-violet-500/30',
   },
   [UrnType.USER]: {
     gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
@@ -85,8 +91,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-emerald-600 dark:text-emerald-400',
     badgeBg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
+    border: 'border-emerald-500/40 dark:border-emerald-500/20',
     shadow: 'shadow-emerald-500/50',
+    glow: 'inset-shadow-[0_2px_4px_rgb(16_185_129_/_0.45)]',
   },
   [UrnType.CALENDAR_EVENT]: {
     gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
@@ -94,8 +101,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-rose-600 dark:text-rose-400',
     badgeBg: 'bg-rose-500/10',
-    border: 'border-rose-500/20',
+    border: 'border-rose-500/40 dark:border-rose-500/20',
     shadow: 'shadow-rose-500/50',
+    glow: 'inset-shadow-sm inset-shadow-rose-500/30',
   },
   [UrnType.PROJECT]: {
     gradient: 'from-orange-500/10 via-orange-500/5 to-transparent',
@@ -103,8 +111,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-orange-600 dark:text-orange-400',
     badgeBg: 'bg-orange-500/10',
-    border: 'border-orange-500/20',
+    border: 'border-orange-500/40 dark:border-orange-500/20',
     shadow: 'shadow-orange-500/50',
+    glow: 'inset-shadow-sm inset-shadow-orange-500/30',
   },
   [UrnType.TASK]: {
     gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
@@ -112,8 +121,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-teal-600 dark:text-teal-400',
     badgeBg: 'bg-teal-500/10',
-    border: 'border-teal-500/20',
+    border: 'border-teal-500/40 dark:border-teal-500/20',
     shadow: 'shadow-teal-500/50',
+    glow: 'inset-shadow-sm inset-shadow-teal-500/30',
   },
   [UrnType.AGENT]: {
     gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent',
@@ -121,8 +131,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-cyan-600 dark:text-cyan-400',
     badgeBg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/20',
+    border: 'border-cyan-500/40 dark:border-cyan-500/20',
     shadow: 'shadow-cyan-500/50',
+    glow: 'inset-shadow-[0_2px_4px_rgb(6_182_212_/_0.45)]',
   },
   [UrnType.PROMPT]: {
     gradient: 'from-purple-500/10 via-purple-500/5 to-transparent',
@@ -130,8 +141,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-purple-600 dark:text-purple-400',
     badgeBg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
+    border: 'border-purple-500/40 dark:border-purple-500/20',
     shadow: 'shadow-purple-500/50',
+    glow: 'inset-shadow-sm inset-shadow-purple-500/30',
   },
   [UrnType.ROOM]: {
     gradient: 'from-sky-500/10 via-sky-500/5 to-transparent',
@@ -139,8 +151,19 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-sky-600 dark:text-sky-400',
     badgeBg: 'bg-sky-500/10',
-    border: 'border-sky-500/20',
+    border: 'border-sky-500/40 dark:border-sky-500/20',
     shadow: 'shadow-sky-500/50',
+    glow: 'inset-shadow-sm inset-shadow-sky-500/30',
+  },
+  [UrnType.AGENT_CHAT]: {
+    gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
+    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
+    accentText: 'text-cyan-600 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/40 dark:border-cyan-500/20',
+    shadow: 'shadow-cyan-500/50',
+    glow: 'inset-shadow-[0_2px_4px_rgb(6_182_212_/_0.45)]',
   },
   [UrnType.CHAT_MESSAGE]: {
     gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
@@ -148,8 +171,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
     accentText: 'text-violet-600 dark:text-violet-400',
     badgeBg: 'bg-violet-500/10',
-    border: 'border-violet-500/20',
+    border: 'border-violet-500/40 dark:border-violet-500/20',
     shadow: 'shadow-violet-500/50',
+    glow: 'inset-shadow-sm inset-shadow-violet-500/30',
   },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
@@ -157,8 +181,9 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     iconBoxAccent: 'border border-muted-foreground/40 bg-muted text-muted-foreground',
     accentText: 'text-muted-foreground',
     badgeBg: 'bg-gray-500/10',
-    border: 'border-gray-500/20',
+    border: 'border-gray-500/40 dark:border-gray-500/20',
     shadow: 'shadow-gray-500/50',
+    glow: 'inset-shadow-sm inset-shadow-gray-500/20',
   },
 };
 
@@ -192,6 +217,7 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.USER, label: 'Users', hexColor: URN_TYPE_HEX_COLORS[UrnType.USER], tailwindBg: 'bg-emerald-500' },
   { type: UrnType.FILE, label: 'Files', hexColor: URN_TYPE_HEX_COLORS[UrnType.FILE], tailwindBg: 'bg-blue-500' },
   { type: UrnType.CHAT, label: 'Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.CHAT], tailwindBg: 'bg-violet-500' },
+  { type: UrnType.AGENT_CHAT, label: 'Agent Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT_CHAT], tailwindBg: 'bg-cyan-500' },
   { type: UrnType.CALENDAR_EVENT, label: 'Events', hexColor: URN_TYPE_HEX_COLORS[UrnType.CALENDAR_EVENT], tailwindBg: 'bg-rose-500' },
   { type: UrnType.PROJECT, label: 'Projects', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROJECT], tailwindBg: 'bg-orange-500' },
   { type: UrnType.TASK, label: 'Tasks', hexColor: URN_TYPE_HEX_COLORS[UrnType.TASK], tailwindBg: 'bg-teal-500' },

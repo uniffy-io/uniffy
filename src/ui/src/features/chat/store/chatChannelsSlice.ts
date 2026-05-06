@@ -178,8 +178,15 @@ export const selectPrivateChannels = (state: RootState): ChatChannel[] =>
 
 export const selectDirectMessages = (state: RootState): ChatChannel[] =>
   state.chatChannels.channels
-    .filter((c) => c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM')
+    .filter(
+      (c) =>
+        !c.isAgentDm &&
+        (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'),
+    )
     .sort(sortByLastActivity);
+
+export const selectAgentChats = (state: RootState): ChatChannel[] =>
+  state.chatChannels.channels.filter((c) => c.isAgentDm).sort(sortByLastActivity);
 
 export const selectChannelMembers = (
   state: RootState,

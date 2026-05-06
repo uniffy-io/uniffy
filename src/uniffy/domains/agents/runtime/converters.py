@@ -313,6 +313,7 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         total_runs=totals["total_runs"],
         total_input_tokens=totals["total_input_tokens"],
         total_output_tokens=totals["total_output_tokens"],
+        total_cache_read_input_tokens=totals["total_cache_read_input_tokens"],
         total_sessions=totals["total_sessions"],
         avg_duration_ms=totals["avg_duration_ms"],
         daily_usage=[
@@ -321,6 +322,7 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 runs=d["runs"],
                 input_tokens=d["input_tokens"],
                 output_tokens=d["output_tokens"],
+                cache_read_input_tokens=d["cache_read_input_tokens"],
             )
             for d in stats["daily_usage"]
         ],

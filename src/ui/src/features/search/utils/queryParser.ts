@@ -62,6 +62,10 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'events': SearchResultType.CALENDAR_EVENT,
     'chat': SearchResultType.CHAT,
     'chats': SearchResultType.CHAT,
+    'agentchat': SearchResultType.AGENT_CHAT,
+    'agentchats': SearchResultType.AGENT_CHAT,
+    'agent-chat': SearchResultType.AGENT_CHAT,
+    'agent-chats': SearchResultType.AGENT_CHAT,
     'chatmessage': SearchResultType.CHAT_MESSAGE,
     'message': SearchResultType.CHAT_MESSAGE,
     'msg': SearchResultType.CHAT_MESSAGE,
@@ -84,6 +88,7 @@ const FILTER_PREFIXES = [
     // Type filters
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
+    'agentchat', 'agentchats', 'agent-chat', 'agent-chats',
     'chatmessage', 'message', 'msg',
     'project', 'projects', 'task', 'tasks',
     'agent', 'agents',
@@ -275,6 +280,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'calendar';
         case SearchResultType.CHAT:
             return 'chat';
+        case SearchResultType.AGENT_CHAT:
+            return 'agentchat';
         case SearchResultType.PROJECT:
             return 'project';
         case SearchResultType.TASK:

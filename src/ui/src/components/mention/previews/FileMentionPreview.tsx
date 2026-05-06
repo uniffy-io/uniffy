@@ -24,6 +24,7 @@ import { FileProcessingIndicator } from '@/components/mention/LiveIndicators';
 import { parseUrn } from '@/shared/utils/urn';
 import { useAppSelector } from '@/app/hooks';
 import { buildThumbnailUrl } from '@/shared/utils/fileUrls';
+import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
 import type { MentionLiveState } from '@/components/mention/types';
 
 interface FileMentionPreviewProps {
@@ -54,6 +55,7 @@ function getMediaLabel(mime?: string): string | null {
 export function FileMentionPreview({
   urn,
   title,
+  description,
   liveState,
   onCopyLink,
   onEmbed,
@@ -76,7 +78,7 @@ export function FileMentionPreview({
   const typeLabel = mime?.split('/')[1]?.toUpperCase() || 'File';
   const sizeLabel = liveState.fileSize ? formatFileSize(liveState.fileSize) : null;
   const isProcessing = liveState.fileProcessingStatus === 'processing' || liveState.fileProcessingStatus === 'pending';
-  const hasVisualPreview = !isProcessing && !thumbFailed && organizationId && fileId && (mime?.startsWith('image/') || mime?.startsWith('video/'));
+  const hasVisualPreview = !isProcessing && !thumbFailed && organizationId && fileId && (mime?.startsWith('image/') || mime?.startsWith('video/') || mime === 'application/pdf');
   const thumbnailUrl = organizationId && fileId ? buildThumbnailUrl(organizationId, fileId) : null;
 
   return (
@@ -112,11 +114,17 @@ export function FileMentionPreview({
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
-            <span className="flex items-center gap-1.5 mt-0.5">
+            <span className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              {liveState.parentLabel && (
+                <>
+                  <ParentBadge label={liveState.parentLabel} />
+                  <MetaSeparator />
+                </>
+              )}
               <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{typeLabel}</span>
               {sizeLabel && (
                 <>
-                  <span className="text-muted-foreground/40">.</span>
+                  <MetaSeparator />
                   <span className="text-xs text-muted-foreground">{sizeLabel}</span>
                 </>
               )}
@@ -124,6 +132,15 @@ export function FileMentionPreview({
           </span>
         </span>
       </span>
+
+      {/* Extracted text snippet (or user description) */}
+      {description && !isProcessing && (
+        <span className="block px-4 pb-2 pl-[3.875rem]">
+          <span className="block text-xs text-muted-foreground/80 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words font-mono">
+            {description}
+          </span>
+        </span>
+      )}
 
       {/* Processing status */}
       {isProcessing && liveState.fileProcessingStatus && (

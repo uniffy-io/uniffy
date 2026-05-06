@@ -9,6 +9,9 @@ from loguru import logger
 from uniffy_proto.attachments.v1.attachments_pb2 import (
     AttachFileRequest,
     AttachFileResponse,
+    BatchListAttachmentsGroup,
+    BatchListAttachmentsRequest,
+    BatchListAttachmentsResponse,
     DetachFileRequest,
     DetachFileResponse,
     GetAttachmentsFolderRequest,
@@ -170,6 +173,56 @@ class AttachmentsHandlers:
             raise
         except Exception as e:
             logger.error(f"Error listing attachments: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def batch_list_attachments(
+        self,
+        request: BatchListAttachmentsRequest,
+        ctx: RequestContext,
+    ) -> BatchListAttachmentsResponse:
+        """List attachments for many content rows in one call."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        content_type = content_type_from_proto(request.content_type)
+        if not content_type:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
+
+        if not request.content_ids:
+            return BatchListAttachmentsResponse(groups=[])
+
+        try:
+            content_ids = [UUID(cid) for cid in request.content_ids]
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid content_id: {e}")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                grouped = await ops.batch_list_attachments(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_ids=content_ids,
+                )
+
+                groups = [
+                    BatchListAttachmentsGroup(
+                        content_id=str(cid),
+                        attachments=[attachment_to_proto(a, f, o) for a, f, o in rows],
+                    )
+                    for cid, rows in grouped.items()
+                ]
+                return BatchListAttachmentsResponse(groups=groups)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error batch-listing attachments: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_shared_attachments(

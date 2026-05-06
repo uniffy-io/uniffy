@@ -22,6 +22,7 @@ const (
 	AttachmentsService_AttachFile_FullMethodName            = "/attachments.v1.AttachmentsService/AttachFile"
 	AttachmentsService_DetachFile_FullMethodName            = "/attachments.v1.AttachmentsService/DetachFile"
 	AttachmentsService_ListAttachments_FullMethodName       = "/attachments.v1.AttachmentsService/ListAttachments"
+	AttachmentsService_BatchListAttachments_FullMethodName  = "/attachments.v1.AttachmentsService/BatchListAttachments"
 	AttachmentsService_ListSharedAttachments_FullMethodName = "/attachments.v1.AttachmentsService/ListSharedAttachments"
 	AttachmentsService_GetAttachmentsFolder_FullMethodName  = "/attachments.v1.AttachmentsService/GetAttachmentsFolder"
 )
@@ -43,6 +44,10 @@ type AttachmentsServiceClient interface {
 	DetachFile(ctx context.Context, in *DetachFileRequest, opts ...grpc.CallOption) (*DetachFileResponse, error)
 	// List all attachments for a piece of content.
 	ListAttachments(ctx context.Context, in *ListAttachmentsRequest, opts ...grpc.CallOption) (*ListAttachmentsResponse, error)
+	// Batch-list attachments for many content rows of the same type.
+	// Used by chat to hydrate attachments for an entire page of messages
+	// in one round-trip (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(ctx context.Context, in *BatchListAttachmentsRequest, opts ...grpc.CallOption) (*BatchListAttachmentsResponse, error)
 	// List attachments from content shared with the user.
 	ListSharedAttachments(ctx context.Context, in *ListSharedAttachmentsRequest, opts ...grpc.CallOption) (*ListSharedAttachmentsResponse, error)
 	// Get the user's Attachments folder ID.
@@ -88,6 +93,16 @@ func (c *attachmentsServiceClient) ListAttachments(ctx context.Context, in *List
 	return out, nil
 }
 
+func (c *attachmentsServiceClient) BatchListAttachments(ctx context.Context, in *BatchListAttachmentsRequest, opts ...grpc.CallOption) (*BatchListAttachmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchListAttachmentsResponse)
+	err := c.cc.Invoke(ctx, AttachmentsService_BatchListAttachments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *attachmentsServiceClient) ListSharedAttachments(ctx context.Context, in *ListSharedAttachmentsRequest, opts ...grpc.CallOption) (*ListSharedAttachmentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSharedAttachmentsResponse)
@@ -125,6 +140,10 @@ type AttachmentsServiceServer interface {
 	DetachFile(context.Context, *DetachFileRequest) (*DetachFileResponse, error)
 	// List all attachments for a piece of content.
 	ListAttachments(context.Context, *ListAttachmentsRequest) (*ListAttachmentsResponse, error)
+	// Batch-list attachments for many content rows of the same type.
+	// Used by chat to hydrate attachments for an entire page of messages
+	// in one round-trip (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *BatchListAttachmentsRequest) (*BatchListAttachmentsResponse, error)
 	// List attachments from content shared with the user.
 	ListSharedAttachments(context.Context, *ListSharedAttachmentsRequest) (*ListSharedAttachmentsResponse, error)
 	// Get the user's Attachments folder ID.
@@ -148,6 +167,9 @@ func (UnimplementedAttachmentsServiceServer) DetachFile(context.Context, *Detach
 }
 func (UnimplementedAttachmentsServiceServer) ListAttachments(context.Context, *ListAttachmentsRequest) (*ListAttachmentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAttachments not implemented")
+}
+func (UnimplementedAttachmentsServiceServer) BatchListAttachments(context.Context, *BatchListAttachmentsRequest) (*BatchListAttachmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchListAttachments not implemented")
 }
 func (UnimplementedAttachmentsServiceServer) ListSharedAttachments(context.Context, *ListSharedAttachmentsRequest) (*ListSharedAttachmentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSharedAttachments not implemented")
@@ -230,6 +252,24 @@ func _AttachmentsService_ListAttachments_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AttachmentsService_BatchListAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchListAttachmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttachmentsServiceServer).BatchListAttachments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AttachmentsService_BatchListAttachments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttachmentsServiceServer).BatchListAttachments(ctx, req.(*BatchListAttachmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AttachmentsService_ListSharedAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSharedAttachmentsRequest)
 	if err := dec(in); err != nil {
@@ -284,6 +324,10 @@ var AttachmentsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAttachments",
 			Handler:    _AttachmentsService_ListAttachments_Handler,
+		},
+		{
+			MethodName: "BatchListAttachments",
+			Handler:    _AttachmentsService_BatchListAttachments_Handler,
 		},
 		{
 			MethodName: "ListSharedAttachments",

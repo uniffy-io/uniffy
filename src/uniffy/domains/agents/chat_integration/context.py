@@ -89,21 +89,6 @@ def _format_chat_entry(
     return (f"[{name}]", content)
 
 
-def _estimate_chat_tokens(rows: list[ChatMessage]) -> int:
-    """~4 chars per token heuristic + role overhead. Mirrors session estimator."""
-    total = 0
-    for m in rows:
-        chars = len(m.content or "") + 20
-        meta = m.message_metadata or {}
-        if meta.get("tool_args"):
-            try:
-                chars += len(str(meta.get("tool_args")))
-            except Exception:
-                chars += 100
-        total += max(1, chars // 4)
-    return total
-
-
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.streaming.events import (
     MESSAGE_CREATED,
@@ -121,6 +106,9 @@ class ContextStats:
     compacted_messages: int
     summary_count: int
     active_tokens: int
+    last_input_tokens: int
+    last_output_tokens: int
+    last_cache_read_tokens: int
     token_budget: int
     tokens_until_compaction: int
     context_window_tokens: int
@@ -300,6 +288,8 @@ class ChatAgentContextOperations:
 
         binding.manual_reset_at = now
         binding.last_active_token_estimate = 0
+        binding.last_output_token_estimate = 0
+        binding.last_cache_read_token_estimate = 0
         await self._session.commit()
         await self._session.refresh(divider)
         await self._session.refresh(binding)
@@ -411,7 +401,6 @@ class ChatAgentContextOperations:
             )
 
         to_compact = active_rows[:-CHAT_COMPACTION_MIN_KEEP]
-        keep = active_rows[-CHAT_COMPACTION_MIN_KEEP:]
         if not to_compact:
             return CompactResult(
                 compacted=False,
@@ -425,7 +414,9 @@ class ChatAgentContextOperations:
 
         senders_meta = await self._resolve_sender_names(to_compact)
         entries = [_format_chat_entry(m, senders_meta, agent_id) for m in to_compact]
-        tokens_before = _estimate_chat_tokens(active_rows)
+        # Provider-reported size of the prompt at the last agent turn.
+        # The next agent turn will overwrite this with a fresh value.
+        tokens_before = int(binding.last_active_token_estimate or 0)
 
         summary = await summarise_conversation(
             provider=provider,
@@ -466,7 +457,12 @@ class ChatAgentContextOperations:
         new_compacted.extend(m.id for m in to_compact)
         binding.compaction_summary_msg_ids = new_compacted
         binding.last_compacted_at = now
-        binding.last_active_token_estimate = _estimate_chat_tokens([summary_msg, *keep])
+        # Reset the cached prompt size; the next live turn will repopulate
+        # from the provider's input_tokens / output_tokens / cache_read.
+        # No estimator.
+        binding.last_active_token_estimate = 0
+        binding.last_output_token_estimate = 0
+        binding.last_cache_read_token_estimate = 0
         await self._session.commit()
         await self._session.refresh(summary_msg)
         await self._session.refresh(binding)
@@ -474,13 +470,12 @@ class ChatAgentContextOperations:
         await self._publish_summary(channel_id, agent.name, summary_msg, now)
 
         stats = await self._build_stats(channel_id, agent_id, binding, context_window)
-        tokens_after = binding.last_active_token_estimate
         return CompactResult(
             compacted=True,
             messages_compacted=len(to_compact),
             tokens_before=tokens_before,
-            tokens_after=tokens_after,
-            tokens_saved=max(0, tokens_before - tokens_after),
+            tokens_after=0,
+            tokens_saved=tokens_before,
             summary_message_id=summary_msg.id,
             stats=stats,
         )
@@ -730,7 +725,10 @@ class ChatAgentContextOperations:
         compacted_messages = len(binding.compaction_summary_msg_ids or [])
         active_messages = max(total_messages - compacted_messages, 0)
 
-        active_tokens = max(int(binding.last_active_token_estimate or 0), 0)
+        last_input_tokens = max(int(binding.last_active_token_estimate or 0), 0)
+        last_output_tokens = max(int(binding.last_output_token_estimate or 0), 0)
+        last_cache_read_tokens = max(int(binding.last_cache_read_token_estimate or 0), 0)
+        active_tokens = last_input_tokens + last_output_tokens
         token_budget = int(context_window_tokens * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
         tokens_until_compaction = max(token_budget - active_tokens, 0)
 
@@ -740,6 +738,9 @@ class ChatAgentContextOperations:
             compacted_messages=int(compacted_messages),
             summary_count=int(summary_count),
             active_tokens=active_tokens,
+            last_input_tokens=last_input_tokens,
+            last_output_tokens=last_output_tokens,
+            last_cache_read_tokens=last_cache_read_tokens,
             token_budget=token_budget,
             tokens_until_compaction=tokens_until_compaction,
             context_window_tokens=int(context_window_tokens),

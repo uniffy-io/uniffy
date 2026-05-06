@@ -27,12 +27,14 @@ from uniffy.core.errors import (
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
+from uniffy.core.models.chat.channel_category import ChatChannelCategory
 from uniffy.core.models.chat.channel_member import (
     ChannelRole,
     ChatChannelMember,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.types import AccessMode, ContentType, SubjectType, slugify
+from uniffy.core.types import AccessMode, ContentType, SubjectType, generate_id, slugify
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     fetch_channel_members,
@@ -92,10 +94,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     # Abstract method implementations (required by BaseContentOperations)
 
     def _build_search_keywords(self, model: ChatChannel) -> str:
+        # Include both the auto-generated name and any custom override so renamed
+        # agent chats remain findable by either label.
+        if model.custom_name:
+            return f"{model.custom_name} {model.name} {model.description}"
         return f"{model.name} {model.description}"
 
     def _get_search_title(self, model: ChatChannel) -> str:
-        return model.name
+        return model.effective_name
 
     def _get_url_path(self, model: ChatChannel) -> str:
         return f"/chat/{model.id}"
@@ -155,13 +161,28 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         Public channels index as ``OPEN_TO_ORG``. Private channels index
         as ``EXPLICIT_MEMBERS`` with the channel member list attached.
-        DMs and group DMs are excluded from search entirely.
+        Group DMs and user-user DMs are excluded entirely (privacy).
+        Named agent DMs are indexed as ``EXPLICIT_MEMBERS`` scoped to the
+        single human owner so the user can search and ``@`` mention their
+        renamed agent chats.
+
+        Live-state fields (``channel_type``, ``member_count``) are written
+        into the search document metadata so ``resolve_urns`` can serve
+        mention chips with no database round-trip. Callers that change
+        membership must re-invoke this method so the cached count stays
+        truthful.
         """
         del skip_member_lookup  # membership is always the source of truth
-        if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
+
+        if model.channel_type == ChannelType.GROUP_DM:
+            return
+        if model.channel_type == ChannelType.DIRECT and not model.is_agent_dm:
             return
 
-        if model.channel_type == ChannelType.PUBLIC:
+        if model.is_agent_dm:
+            access_mode = AccessMode.EXPLICIT_MEMBERS.value
+            shared_user_ids = [model.owner_id]
+        elif model.channel_type == ChannelType.PUBLIC:
             access_mode = AccessMode.OPEN_TO_ORG.value
             shared_user_ids = None
         else:
@@ -169,11 +190,40 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             member_ids = await self._get_all_member_ids(model.id)
             shared_user_ids = member_ids if member_ids else None
 
+        stats_result = await self.session.execute(
+            select(ChatChannelStats.member_count).where(
+                ChatChannelStats.channel_id == model.id
+            )
+        )
+        member_count = stats_result.scalar_one_or_none() or 0
+
+        category_name = ""
+        if model.category_id:
+            cat_result = await self.session.execute(
+                select(ChatChannelCategory.name).where(
+                    ChatChannelCategory.id == model.category_id
+                )
+            )
+            category_name = cat_result.scalar_one_or_none() or ""
+
+        # Agent DMs surface as their own content type so the search UI can
+        # filter / icon / colour them distinctly from regular channels.
+        urn_type = ContentType.AGENT_CHAT if model.is_agent_dm else ContentType.CHAT
+        entity_type = urn_type.value
+
+        metadata = {
+            "channel_type": model.channel_type.value,
+            "member_count": str(member_count),
+            "parent_label": category_name,
+        }
+        if model.is_agent_dm and model.agent_id is not None:
+            metadata["agent_id"] = str(model.agent_id)
+
         await self.search_indexer.index(
-            urn=f"urn:uniffy:content:CHAT:{model.id}",
+            urn=f"urn:uniffy:content:{urn_type.value}:{model.id}",
             organization_id=model.organization_id,
             title=self._get_search_title(model),
-            entity_type=self.content_type.value,
+            entity_type=entity_type,
             url_path=self._get_url_path(model),
             access_mode=access_mode,
             baseline_role=None,
@@ -181,7 +231,59 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
             shared_user_ids=shared_user_ids,
+            metadata=metadata,
         )
+
+    async def _refresh_channel_live_state(self, channel: ChatChannel) -> None:
+        """Re-index the channel and broadcast a mention-state change.
+
+        Called from every mutation path (rename, description edit,
+        join, leave, batch member add/remove) so the search document
+        and visible mention chips reflect the new state without a
+        page refresh. Publishes the full set of denormalized fields
+        rather than diffing inputs -- the payload is small and
+        diffing across all callers is fragile.
+        """
+        if channel.channel_type == ChannelType.GROUP_DM:
+            return
+        if channel.channel_type == ChannelType.DIRECT and not channel.is_agent_dm:
+            return
+        try:
+            await self._index_for_search(channel)
+        except Exception:
+            logger.warning(f"Failed to re-index channel {channel.id} live state")
+            return
+        try:
+            stats_result = await self.session.execute(
+                select(ChatChannelStats.member_count).where(
+                    ChatChannelStats.channel_id == channel.id
+                )
+            )
+            member_count = stats_result.scalar_one_or_none() or 0
+
+            category_name = ""
+            if channel.category_id:
+                cat_result = await self.session.execute(
+                    select(ChatChannelCategory.name).where(
+                        ChatChannelCategory.id == channel.category_id
+                    )
+                )
+                category_name = cat_result.scalar_one_or_none() or ""
+
+            urn_type = ContentType.AGENT_CHAT if channel.is_agent_dm else ContentType.CHAT
+            await publish_mention_state(
+                organization_id=channel.organization_id,
+                urn=f"urn:uniffy:content:{urn_type.value}:{channel.id}",
+                changes={
+                    "title": channel.effective_name,
+                    "description": channel.description or "",
+                    "member_count": str(member_count),
+                    "channel_type": channel.channel_type.value,
+                    "parent_label": category_name,
+                },
+            )
+        except Exception:
+            logger.warning(f"Failed to publish mention state for channel {channel.id}")
 
     # Channel CRUD
 
@@ -504,11 +606,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await invalidate_cached_channel(channel.id)
 
-        if channel.channel_type != ChannelType.PUBLIC:
-            try:
-                await self._index_for_search(channel)
-            except Exception:
-                logger.warning(f"Failed to re-index channel {channel.id}")
+        # Re-index every channel type (including PUBLIC) so the search
+        # document reflects the new name / description / icon, then
+        # broadcast a mention-state change so visible chips update
+        # without a refresh.
+        await self._refresh_channel_live_state(channel)
 
         return channel
 
@@ -564,6 +666,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             indexer = SearchIndexer(self.session)
             urn = f"urn:uniffy:content:CHAT:{channel.id}"
             await indexer.remove(urn)
+            # Cascade: drop every chat_message indexed under this channel
+            # so global search stops returning content from a deleted
+            # channel. ``metadata.channel_id`` is filterable.
+            await indexer.remove_by_filter(
+                f'entity_type = "chat_message" AND metadata.channel_id = "{channel.id}"'
+            )
         except Exception:
             logger.warning(f"Search remove failed for channel {channel.id}")
 
@@ -634,6 +742,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         # Post a system message announcing the join
         await self._post_join_system_message(user_id, organization_id, channel)
+
+        # Refresh search-index member_count and notify visible mention chips
+        await self._refresh_channel_live_state(channel)
 
         return channel
 
@@ -710,6 +821,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         # Publish MEMBER_LEFT event to remaining members
         await self._publish_member_event(channel_id, user_id, joined=False)
 
+        # Refresh search-index member_count and notify visible mention chips
+        await self._refresh_channel_live_state(channel)
+
     async def add_members(
         self,
         user_id: UUID,
@@ -771,11 +885,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=True,
             )
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                try:
-                    await self._index_for_search(channel)
-                except Exception:
-                    logger.warning(f"Failed to re-index channel {channel_id}")
+            await self._refresh_channel_live_state(channel)
 
         return added
 
@@ -825,11 +935,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 channel_id, removable_ids, added=False
             )
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                try:
-                    await self._index_for_search(channel)
-                except Exception:
-                    logger.warning(f"Failed to re-index channel {channel_id}")
+            await self._refresh_channel_live_state(channel)
 
     async def get_members(
         self,
@@ -1331,6 +1437,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if existing.scalar_one_or_none():
             slug = f"{slug}-{str(UUID(int=0))[:8]}"
 
+        agent_subjects = [s for s in participants if s.subject_type == SubjectType.AGENT]
+        is_agent_dm = is_direct and len(agent_subjects) == 1
+        bound_agent_id = agent_subjects[0].subject_id if is_agent_dm else None
+
         channel = ChatChannel(
             organization_id=organization_id,
             owner_id=user_id,
@@ -1338,6 +1448,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             slug=slug,
             description="",
             channel_type=channel_type,
+            is_agent_dm=is_agent_dm,
+            agent_id=bound_agent_id,
         )
         self.session.add(channel)
         await self.session.flush()
@@ -1357,6 +1469,236 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         await self.session.refresh(channel)
         return channel
+
+    async def create_agent_chat(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        agent_id: UUID,
+        custom_name: str | None = None,
+    ) -> ChatChannel:
+        """Create a new named chat between the user and an agent.
+
+        Always creates a new channel; multiple chats per (user, agent) pair
+        are allowed. The actor is recorded as the channel OWNER, the agent is
+        added as a MEMBER, and an ``AgentChannelBinding`` row is created so
+        the runtime context-window pipeline can attach to the channel.
+
+        ``custom_name`` is optional. When unset the channel uses the agent's
+        display name; if the user already has chats with this agent, the
+        default name is suffixed with " (N)" so it remains scannable in the
+        sidebar.
+        """
+        await self._require_agent_usable(user_id, organization_id, agent_id)
+
+        agent_subject = ChatSubject.agent(agent_id)
+        actor_subject = ChatSubject.user(user_id)
+        participants = [actor_subject, agent_subject]
+
+        base_name = await self._build_dm_name_from_subjects([agent_subject])
+        existing_count_result = await self.session.execute(
+            select(func.count())
+            .select_from(ChatChannel)
+            .join(
+                ChatChannelMember,
+                (ChatChannelMember.channel_id == ChatChannel.id)
+                & (ChatChannelMember.user_id == user_id),
+            )
+            .where(
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.is_agent_dm == True,  # noqa: E712
+                ChatChannel.agent_id == agent_id,
+                ChatChannel.is_deleted == False,  # noqa: E712
+            )
+        )
+        existing_count = existing_count_result.scalar_one() or 0
+        default_name = base_name if existing_count == 0 else f"{base_name} ({existing_count + 1})"
+
+        slug = f"{slugify(default_name)}-{str(generate_id())[:8]}"
+
+        normalized_custom = (custom_name or "").strip() or None
+        if normalized_custom and len(normalized_custom) > 200:
+            raise ValidationError("custom_name", "Name must be 200 characters or fewer")
+
+        channel = ChatChannel(
+            organization_id=organization_id,
+            owner_id=user_id,
+            name=default_name,
+            slug=slug,
+            description="",
+            channel_type=ChannelType.DIRECT,
+            is_agent_dm=True,
+            agent_id=agent_id,
+            custom_name=normalized_custom,
+        )
+        self.session.add(channel)
+        await self.session.flush()
+
+        self.session.add(ChatChannelStats(channel_id=channel.id, member_count=len(participants)))
+
+        for s in participants:
+            role = ChannelRole.OWNER if s == actor_subject else ChannelRole.MEMBER
+            self.session.add(self._build_member_row(channel.id, s, role))
+
+        await self._ensure_agent_bindings(
+            channel.id,
+            [agent_id],
+            actor_user_id=user_id,
+        )
+
+        await self.session.commit()
+        await self.session.refresh(channel)
+
+        try:
+            await self._index_for_search(channel)
+        except Exception:
+            logger.warning(f"Failed to index agent chat {channel.id}")
+
+        return channel
+
+    async def rename_agent_chat(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        custom_name: str | None,
+    ) -> ChatChannel:
+        """Set or clear the user's custom display name for an agent chat.
+
+        Only the human member of the chat can rename it -- domain admins do
+        not bypass this gate, since the name is a personal label on a
+        personal conversation. ``custom_name`` may be ``None`` or whitespace
+        only to clear the override; the auto-generated ``name`` stays
+        untouched in either direction so resetting always restores the
+        original label.
+        """
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+        if not channel.is_agent_dm:
+            raise ValidationError("channel_id", "Channel is not an agent chat")
+
+        membership = await self.access.get_membership(channel_id, user_id)
+        if membership is None:
+            raise PermissionDeniedError("rename", "agent chat")
+
+        normalized = (custom_name or "").strip() or None
+        if normalized is not None and len(normalized) > 200:
+            raise ValidationError("custom_name", "Name must be 200 characters or fewer")
+
+        channel.custom_name = normalized
+        channel.updated_at = datetime.now(UTC)
+        await self.session.commit()
+        await self.session.refresh(channel)
+
+        await invalidate_cached_channel(channel.id)
+
+        await self._refresh_channel_live_state(channel)
+
+        return channel
+
+    async def backfill_agent_chat_search_index(
+        self,
+        organization_id: UUID,
+    ) -> int:
+        """Re-index every active agent chat in an organization.
+
+        One-shot helper for backfilling the search index after the named-agent-
+        chat feature shipped. Drops any legacy ``urn:uniffy:content:CHAT:{id}``
+        entry the chat used to share with regular channels before re-indexing
+        under the new ``AGENT_CHAT`` URN namespace, so the index doesn't carry
+        duplicate documents pointing at the same chat.
+
+        Idempotent -- safe to run repeatedly. Returns the number of channels
+        indexed.
+        """
+        result = await self.session.execute(
+            select(ChatChannel).where(
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.is_agent_dm == True,  # noqa: E712
+                ChatChannel.is_deleted == False,  # noqa: E712
+            )
+        )
+        channels = list(result.scalars().all())
+        for channel in channels:
+            try:
+                await self.search_indexer.remove(
+                    urn=f"urn:uniffy:content:CHAT:{channel.id}",
+                    organization_id=channel.organization_id,
+                )
+            except Exception:
+                logger.warning(f"Failed to drop legacy CHAT urn for {channel.id}")
+            try:
+                await self._index_for_search(channel)
+            except Exception:
+                logger.warning(f"Failed to backfill search index for chat {channel.id}")
+        return len(channels)
+
+    async def list_agent_chats(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        *,
+        agent_id: UUID | None = None,
+        cursor: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+    ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
+        """List the user's agent chats, optionally filtered by ``agent_id``.
+
+        Same keyset shape as ``list_user_channels`` (sorted by last activity
+        DESC, channel id ASC) but restricted to channels where the caller is
+        the human member AND ``is_agent_dm`` is true.
+        """
+        epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
+        sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
+
+        base_query = (
+            select(ChatChannel, ChatChannelStats)
+            .join(
+                ChatChannelStats,
+                ChatChannelStats.channel_id == ChatChannel.id,
+            )
+            .join(
+                ChatChannelMember,
+                (ChatChannelMember.channel_id == ChatChannel.id)
+                & (ChatChannelMember.user_id == user_id),
+            )
+            .where(
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.is_agent_dm == True,  # noqa: E712
+                ChatChannel.is_deleted == False,  # noqa: E712
+                ChatChannel.is_archived == False,  # noqa: E712,
+            )
+            .order_by(sort_ts.desc(), ChatChannel.id.asc())
+        )
+
+        if agent_id is not None:
+            base_query = base_query.where(ChatChannel.agent_id == agent_id)
+
+        if cursor:
+            payload = _decode_cursor(cursor)
+            try:
+                cursor_ts = datetime.fromisoformat(payload["sort_ts"])
+                cursor_cid = UUID(payload["channel_id"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValidationError("cursor", "Invalid pagination cursor") from exc
+            base_query = base_query.where(
+                or_(
+                    sort_ts < cursor_ts,
+                    and_(sort_ts == cursor_ts, ChatChannel.id > cursor_cid),
+                )
+            )
+
+        page_size = _clamp_page_size(limit)
+        result = await self.session.execute(base_query.limit(page_size + 1))
+        rows = list(result.all())
+        next_cursor: str | None = None
+        if len(rows) > page_size:
+            rows = rows[:page_size]
+            last_channel, last_stats = rows[-1]
+            last_ts = last_stats.last_root_message_at or epoch_ts
+            next_cursor = _encode_cursor(
+                {"sort_ts": last_ts.isoformat(), "channel_id": str(last_channel.id)}
+            )
+        return rows, next_cursor
 
     async def add_members_with_subjects(
         self,
@@ -1432,11 +1774,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=True,
             )
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                try:
-                    await self._index_for_search(channel)
-                except Exception:
-                    logger.warning(f"Failed to re-index channel {channel_id}")
+            await self._refresh_channel_live_state(channel)
 
         return added
 
@@ -1494,11 +1832,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=False,
             )
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                try:
-                    await self._index_for_search(channel)
-                except Exception:
-                    logger.warning(f"Failed to re-index channel {channel_id}")
+            await self._refresh_channel_live_state(channel)
 
     async def _post_join_system_message(
         self,

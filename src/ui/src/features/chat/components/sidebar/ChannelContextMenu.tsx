@@ -6,10 +6,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { SquareSplitHorizontal, SpeakerSlash, SpeakerHigh, CaretRight } from '@phosphor-icons/react';
+import { SquareSplitHorizontal, SpeakerSlash, SpeakerHigh, CaretRight, PencilSimple } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setSplitChannel } from '@/features/chat/store/chatChannelsSlice';
-import { activateSplit } from '@/features/chat/store/chatUiSlice';
+import { setSplitChannel, selectChannelById } from '@/features/chat/store/chatChannelsSlice';
+import { activateSplit, openRenameAgentChatDialog } from '@/features/chat/store/chatUiSlice';
 import { selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
 import { ChannelNotificationMenu } from '@/features/chat/components/sidebar/ChannelNotificationMenu';
 
@@ -27,7 +27,14 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
   const members = useAppSelector((state) => state.chatChannels.channelMembers[channelId]);
   const memberMuted = members?.find((m) => m.userId === currentUserId)?.isMuted ?? false;
   const isMuted = prefs[channelId]?.isMuted ?? memberMuted;
+  const channel = useAppSelector((state) => selectChannelById(state, channelId));
+  const isAgentDm = !!channel?.isAgentDm;
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+
+  const handleRename = useCallback(() => {
+    dispatch(openRenameAgentChatDialog(channelId));
+    onClose();
+  }, [dispatch, channelId, onClose]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -80,6 +87,21 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
         <SquareSplitHorizontal size={16} className="text-muted-foreground" />
         <span>Open in Split View</span>
       </button>
+
+      {isAgentDm && (
+        <>
+          <div className="my-1 h-px bg-border mx-2" />
+          <button
+            type="button"
+            onClick={handleRename}
+            className={btnClass}
+            data-testid="chat-channel-context-menu-rename"
+          >
+            <PencilSimple size={16} className="text-muted-foreground" />
+            <span>Rename chat</span>
+          </button>
+        </>
+      )}
 
       <div className="my-1 h-px bg-border mx-2" />
 

@@ -27,7 +27,8 @@ interface PdfViewerProps {
 
 export function PdfViewer({ file }: PdfViewerProps) {
     const dispatch = useAppDispatch();
-    const { currentPage, pdfZoom } = useAppSelector((state) => state.fileViewer);
+    const currentPage = useAppSelector((state) => state.fileViewer.currentPage);
+    const pdfZoom = useAppSelector((state) => state.fileViewer.pdfZoom);
     const { url: pdfUrl, loading: downloadLoading, error: downloadError } = useFileDownload(file.id);
 
     const [error, setError] = useState<string | null>(null);

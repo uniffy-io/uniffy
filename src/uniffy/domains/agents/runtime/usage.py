@@ -117,6 +117,9 @@ class UsageOperations:
                 func.count(AgentRunLog.id).label("total_runs"),
                 func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("total_input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("total_output_tokens"),
+                func.coalesce(
+                    func.sum(AgentRunLog.cache_read_input_tokens), 0
+                ).label("total_cache_read_input_tokens"),
                 func.count(func.distinct(AgentRunLog.session_id)).label("total_sessions"),
                 func.coalesce(func.avg(AgentRunLog.duration_ms), 0).label("avg_duration_ms"),
             ).where(*base_filter)
@@ -126,6 +129,7 @@ class UsageOperations:
             "total_runs": row.total_runs,
             "total_input_tokens": row.total_input_tokens,
             "total_output_tokens": row.total_output_tokens,
+            "total_cache_read_input_tokens": row.total_cache_read_input_tokens,
             "total_sessions": row.total_sessions,
             "avg_duration_ms": int(row.avg_duration_ms),
         }
@@ -167,6 +171,9 @@ class UsageOperations:
                 func.count(AgentRunLog.id).label("runs"),
                 func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(
+                    func.sum(AgentRunLog.cache_read_input_tokens), 0
+                ).label("cache_read_input_tokens"),
             )
             .where(*base_filter)
             .group_by(bucket)
@@ -180,6 +187,7 @@ class UsageOperations:
                     "runs": row.runs,
                     "input_tokens": row.input_tokens,
                     "output_tokens": row.output_tokens,
+                    "cache_read_input_tokens": row.cache_read_input_tokens,
                 }
                 for row in result.all()
             ]
@@ -190,6 +198,7 @@ class UsageOperations:
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cache_read_input_tokens": row.cache_read_input_tokens,
             }
             for row in result.all()
         ]

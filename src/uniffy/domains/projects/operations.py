@@ -222,6 +222,12 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self.search_indexer.remove(
             build_content_urn(self.content_type, project_id), organization_id
         )
+        # Cascade: drop every task indexed under this project so global
+        # search stops surfacing them. ``metadata.project_id`` is
+        # filterable; populated by ``TaskOperations._get_search_metadata``.
+        await self.search_indexer.remove_by_filter(
+            f'entity_type = "task" AND metadata.project_id = "{project_id}"'
+        )
         return True
 
     async def list_projects(
@@ -522,6 +528,13 @@ class TaskOperations(BaseContentOperations[Task]):
         if model.description:
             return model.description[:200]
         return None
+
+    def _get_search_metadata(self, model: Task) -> dict[str, str] | None:
+        """Index ``project_id`` so deleting a project can cascade-remove
+        every task it owned from the search index in a single filter
+        call.
+        """
+        return {"project_id": str(model.project_id)}
 
     async def _resolve_role(
         self,

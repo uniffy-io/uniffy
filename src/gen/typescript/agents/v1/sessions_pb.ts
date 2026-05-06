@@ -1117,7 +1117,9 @@ export class GetSessionContextStatsResponse extends Message<GetSessionContextSta
   summaryCount = 0;
 
   /**
-   * Estimated tokens used by active messages
+   * Provider-reported prompt + completion size of the most recent
+   * assistant turn (last_input_tokens + last_output_tokens). Zero
+   * before the first reply.
    *
    * @generated from field: int32 active_tokens = 5;
    */
@@ -1131,7 +1133,7 @@ export class GetSessionContextStatsResponse extends Message<GetSessionContextSta
   tokenBudget = 0;
 
   /**
-   * Estimated tokens remaining before compaction triggers
+   * Tokens remaining before compaction triggers
    *
    * @generated from field: int32 tokens_until_compaction = 7;
    */
@@ -1143,6 +1145,31 @@ export class GetSessionContextStatsResponse extends Message<GetSessionContextSta
    * @generated from field: int32 context_window_tokens = 8;
    */
   contextWindowTokens = 0;
+
+  /**
+   * Full prompt size of the most recent assistant turn -- uncached
+   * input plus tokens served from the prompt cache. Zero pre-first-turn.
+   *
+   * @generated from field: int32 last_input_tokens = 9;
+   */
+  lastInputTokens = 0;
+
+  /**
+   * Provider-reported output_tokens of the most recent assistant turn
+   * (the assistant's reply). Zero pre-first-turn.
+   *
+   * @generated from field: int32 last_output_tokens = 10;
+   */
+  lastOutputTokens = 0;
+
+  /**
+   * Tokens served from Anthropic's prompt cache on the last turn
+   * (`cache_read_input_tokens`). Counted toward last_input_tokens but
+   * billed at ~10% of the base input price -- the savings signal.
+   *
+   * @generated from field: int32 last_cache_read_tokens = 11;
+   */
+  lastCacheReadTokens = 0;
 
   constructor(data?: PartialMessage<GetSessionContextStatsResponse>) {
     super();
@@ -1160,6 +1187,9 @@ export class GetSessionContextStatsResponse extends Message<GetSessionContextSta
     { no: 6, name: "token_budget", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 7, name: "tokens_until_compaction", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "context_window_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "last_input_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "last_output_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 11, name: "last_cache_read_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSessionContextStatsResponse {

@@ -18,7 +18,7 @@ class GetUsageStatsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., days: _Optional[int] = ..., interval: _Optional[str] = ...) -> None: ...
 
 class GetUsageStatsResponse(_message.Message):
-    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens")
+    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens", "total_cache_read_input_tokens")
     TOTAL_RUNS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -35,6 +35,7 @@ class GetUsageStatsResponse(_message.Message):
     CRON_TOTAL_FAILURES_FIELD_NUMBER: _ClassVar[int]
     CRON_TOTAL_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     CRON_TOTAL_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     total_runs: int
     total_input_tokens: int
     total_output_tokens: int
@@ -51,19 +52,22 @@ class GetUsageStatsResponse(_message.Message):
     cron_total_failures: int
     cron_total_input_tokens: int
     cron_total_output_tokens: int
-    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ...) -> None: ...
+    total_cache_read_input_tokens: int
+    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ..., total_cache_read_input_tokens: _Optional[int] = ...) -> None: ...
 
 class DailyUsage(_message.Message):
-    __slots__ = ("date", "runs", "input_tokens", "output_tokens")
+    __slots__ = ("date", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens")
     DATE_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     date: str
     runs: int
     input_tokens: int
     output_tokens: int
-    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
+    cache_read_input_tokens: int
+    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ...) -> None: ...
 
 class ModelUsage(_message.Message):
     __slots__ = ("model", "runs", "input_tokens", "output_tokens")

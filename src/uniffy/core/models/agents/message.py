@@ -46,9 +46,6 @@ class AgentMessage(SQLModel, table=True):
         Whether this is a thinking/reasoning message.
     is_compacted : bool
         Whether this message was replaced by a summary.
-    token_estimate : int
-        Computed at INSERT time so read-side context budgeting can sum
-        a precomputed column instead of re-estimating per row.
     created_at : datetime
         When the message was created.
 
@@ -74,6 +71,7 @@ class AgentMessage(SQLModel, table=True):
     )
     input_tokens: int = Field(default=0, nullable=False)
     output_tokens: int = Field(default=0, nullable=False)
+    cache_read_input_tokens: int = Field(default=0, nullable=False)
     model: str | None = Field(
         default=None,
         sa_column=Column(String(100), nullable=True),
@@ -100,7 +98,6 @@ class AgentMessage(SQLModel, table=True):
     )
     is_thinking: bool = Field(default=False, nullable=False)
     is_compacted: bool = Field(default=False, nullable=False)
-    token_estimate: int = Field(default=0, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

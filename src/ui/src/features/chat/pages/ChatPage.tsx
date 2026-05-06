@@ -35,6 +35,9 @@ import { CreateCategoryModal } from '@/features/chat/components/modals/CreateCat
 import { BrowseChannelsModal } from '@/features/chat/components/modals/BrowseChannelsModal';
 import { NewDmModal } from '@/features/chat/components/modals/NewDmModal';
 import { ChannelSettingsModal } from '@/features/chat/components/modals/ChannelSettingsModal';
+import { AgentChatPickerModal } from '@/features/chat/components/modals/AgentChatPickerModal';
+import { RenameAgentChatDialog } from '@/features/chat/components/modals/RenameAgentChatDialog';
+import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 import '@/features/chat/styles/chat.css';
 
 export function ChatPage() {
@@ -57,12 +60,14 @@ export function ChatPage() {
   const browseChannelsOpen = useAppSelector((state) => state.chatUi.browseChannelsModalOpen);
   const newDmOpen = useAppSelector((state) => state.chatUi.newDmModalOpen);
   const channelSettingsOpen = useAppSelector((state) => state.chatUi.channelSettingsModalOpen);
+  const agentChatPickerOpen = useAppSelector((state) => state.chatUi.agentChatPickerOpen);
+  const renameAgentChatChannelId = useAppSelector((state) => state.chatUi.renameAgentChatChannelId);
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const isThreadsInboxRoute = !channelId && currentPath === '/chat/threads';
   const isUnreadsRoute = !channelId && currentPath === '/chat/unreads';
 
-  const pageTitle = activeChannel?.name
-    ? `#${activeChannel.name}`
+  const pageTitle = activeChannel
+    ? `#${getChannelDisplayName(activeChannel)}`
     : isThreadsInboxRoute
       ? 'Threads'
       : isUnreadsRoute
@@ -181,6 +186,8 @@ export function ChatPage() {
       {browseChannelsOpen && <BrowseChannelsModal />}
       {newDmOpen && <NewDmModal />}
       {channelSettingsOpen && <ChannelSettingsModal />}
+      {agentChatPickerOpen && <AgentChatPickerModal />}
+      {renameAgentChatChannelId && <RenameAgentChatDialog />}
     </>
   );
 }

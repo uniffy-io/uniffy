@@ -118,6 +118,9 @@ export interface SessionContextStats {
     compactedMessages: number;
     summaryCount: number;
     activeTokens: number;
+    lastInputTokens: number;
+    lastOutputTokens: number;
+    lastCacheReadTokens: number;
     tokenBudget: number;
     tokensUntilCompaction: number;
     contextWindowTokens: number;
@@ -140,6 +143,9 @@ export const fetchSessionContextStats = createAsyncThunk<
             compactedMessages: response.compactedMessages,
             summaryCount: response.summaryCount,
             activeTokens: response.activeTokens,
+            lastInputTokens: response.lastInputTokens,
+            lastOutputTokens: response.lastOutputTokens,
+            lastCacheReadTokens: response.lastCacheReadTokens,
             tokenBudget: response.tokenBudget,
             tokensUntilCompaction: response.tokensUntilCompaction,
             contextWindowTokens: response.contextWindowTokens,
@@ -179,6 +185,9 @@ export const compactSession = createAsyncThunk<
                 compactedMessages: stats?.compactedMessages ?? 0,
                 summaryCount: stats?.summaryCount ?? 0,
                 activeTokens: stats?.activeTokens ?? 0,
+                lastInputTokens: stats?.lastInputTokens ?? 0,
+                lastOutputTokens: stats?.lastOutputTokens ?? 0,
+                lastCacheReadTokens: stats?.lastCacheReadTokens ?? 0,
                 tokenBudget: stats?.tokenBudget ?? 0,
                 tokensUntilCompaction: stats?.tokensUntilCompaction ?? 0,
                 contextWindowTokens: stats?.contextWindowTokens ?? 200000,

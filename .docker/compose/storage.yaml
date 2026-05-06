@@ -1,0 +1,39 @@
+# Object storage - rustfs (S3-compatible).
+# Used by Files domain. Run standalone: docker compose -f .docker/compose/storage.yaml up
+
+x-defaults: &defaults
+  restart: unless-stopped
+  networks: [uniffy-network]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  rustfs:
+    <<: *defaults
+    image: rustfs/rustfs:latest
+    container_name: uniffy-rustfs
+    environment:
+      RUSTFS_ROOT_USER: rustfsadmin
+      RUSTFS_ROOT_PASSWORD: rustfsadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rustfs_data:
+  rustfs_logs:
+
+networks:
+  uniffy-network:
+    driver: bridge

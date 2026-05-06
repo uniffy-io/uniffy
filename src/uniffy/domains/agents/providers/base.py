@@ -71,9 +71,18 @@ class CompletionResult:
     model : str
         Model identifier that generated the response.
     input_tokens : int
-        Number of input tokens consumed.
+        Uncached input tokens (the only tokens charged at full input
+        price). Total prompt size = ``input_tokens +
+        cache_creation_input_tokens + cache_read_input_tokens``.
     output_tokens : int
         Number of output tokens generated.
+    cache_creation_input_tokens : int
+        Tokens written to the prompt cache this turn (Anthropic charges
+        ~1.25x the base input price for these). Zero on providers that
+        don't support caching.
+    cache_read_input_tokens : int
+        Tokens served from the prompt cache (~0.1x the base input
+        price). The win signal for caching -- non-zero means hit.
     tool_calls : list[ToolCall]
         Tool calls requested by the model.
     stop_reason : str
@@ -85,8 +94,19 @@ class CompletionResult:
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
     tool_calls: list[ToolCall] = field(default_factory=list)
     stop_reason: str = "end_turn"
+
+    @property
+    def total_prompt_tokens(self) -> int:
+        """Real prompt size (sum of cached + uncached input)."""
+        return (
+            int(self.input_tokens or 0)
+            + int(self.cache_creation_input_tokens or 0)
+            + int(self.cache_read_input_tokens or 0)
+        )
 
 
 # Stream event hierarchy
@@ -258,6 +278,7 @@ class LLMProvider(ABC):
         system: str | None = None,
         tools: list[dict] | None = None,
         stream: bool = False,
+        cache_key: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request.
 
@@ -273,6 +294,12 @@ class LLMProvider(ABC):
             Tool definitions for tool use.
         stream : bool
             Whether to return a streaming iterator.
+        cache_key : str | None
+            Stable identifier (typically agent_id) used by providers
+            that support cache-affinity routing -- OpenAI maps it to
+            ``prompt_cache_key`` so requests sharing the same prefix
+            land on the same machine and hit the cache. Anthropic and
+            Google cache transparently and ignore this value.
 
         Returns
         -------

@@ -10,6 +10,9 @@ import type {
   ArchiveChannelRequest,
   DeleteChannelRequest,
   ListChannelsRequest,
+  CreateAgentChatRequest,
+  RenameAgentChatRequest,
+  ListAgentChatsRequest,
   JoinChannelRequest,
   LeaveChannelRequest,
   AddMembersRequest,
@@ -70,6 +73,14 @@ export const chatApi = {
     chatClient.deleteChannel(req),
   listChannels: (req: PartialMessage<ListChannelsRequest>) =>
     chatClient.listChannels(req),
+
+  // Named agent chats
+  createAgentChat: (req: PartialMessage<CreateAgentChatRequest>) =>
+    chatClient.createAgentChat(req),
+  renameAgentChat: (req: PartialMessage<RenameAgentChatRequest>) =>
+    chatClient.renameAgentChat(req),
+  listAgentChats: (req: PartialMessage<ListAgentChatsRequest>) =>
+    chatClient.listAgentChats(req),
 
   // Membership
   joinChannel: (req: PartialMessage<JoinChannelRequest>) =>

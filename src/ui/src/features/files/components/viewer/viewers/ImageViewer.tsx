@@ -19,7 +19,11 @@ interface ImageViewerProps {
 
 export function ImageViewer({ file }: ImageViewerProps) {
     const dispatch = useAppDispatch();
-    const { zoom, panX, panY, rotation, loading } = useAppSelector((state) => state.fileViewer);
+    const zoom = useAppSelector((state) => state.fileViewer.zoom);
+    const panX = useAppSelector((state) => state.fileViewer.panX);
+    const panY = useAppSelector((state) => state.fileViewer.panY);
+    const rotation = useAppSelector((state) => state.fileViewer.rotation);
+    const loading = useAppSelector((state) => state.fileViewer.loading);
     const { url: imageUrl, loading: downloadLoading, error: downloadError } = useFileDownload(file.id);
 
     const [isDragging, setIsDragging] = useState(false);

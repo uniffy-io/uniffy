@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions import ContentAccessQuery
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
@@ -270,9 +269,13 @@ class SearchOperations:
         """
         Resolve metadata for a batch of URNs.
 
-        Fetches documents from Meilisearch for the given URNs,
-        then enriches with live state from the database (task status,
-        file processing status, project task counts, etc.).
+        Fetches documents from Meilisearch for the given URNs and
+        enriches with live state. URNs absent from the search index
+        (deleted, never indexed, or hidden by permissions) are returned
+        as tombstone results with ``urn_status='DELETED'`` so chips can
+        render a "no longer available" state instead of a generic
+        fallback. Missing entries are never silently dropped -- the
+        caller asked for these URNs and is owed an answer for each.
 
         Parameters
         ----------
@@ -286,8 +289,7 @@ class SearchOperations:
         Returns
         -------
         dict[str, SearchResult]
-            Mapping of URN -> SearchResult for accessible items.
-            Missing or inaccessible URNs are omitted from the result.
+            Mapping of URN -> SearchResult, one entry per input URN.
 
         """
         if not urns:
@@ -307,6 +309,14 @@ class SearchOperations:
 
         # Enrich with live state from the database
         await self._enrich_live_state(accessible, organization_id)
+
+        # Mark surviving entries as OK and synthesize tombstones for the rest
+        for sr in accessible.values():
+            sr.urn_status = "OK"
+        for urn in urns:
+            if urn in accessible:
+                continue
+            accessible[urn] = _build_tombstone(urn, organization_id)
 
         return accessible
 
@@ -369,7 +379,7 @@ class SearchOperations:
                     agent_ids.append(content_id)
                 elif et == "user":
                     user_ids.append(content_id)
-            except ValueError, IndexError:
+            except (ValueError, IndexError):
                 continue
 
         if task_ids:
@@ -751,26 +761,12 @@ class SearchOperations:
         channel_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """Enrich chat channel results with channel type and member count."""
-        try:
-            stmt = select(
-                ChatChannel.id,
-                ChatChannel.channel_type,
-            ).where(
-                and_(
-                    ChatChannel.id.in_(channel_ids),
-                    ChatChannel.is_deleted == False,  # noqa: E712
-                )
-            )
-            result = await self.session.execute(stmt)
-            id_to_urn = {v: k for k, v in urn_to_id.items()}
-            for row in result.all():
-                urn = id_to_urn.get(row.id)
-                if not urn or urn not in results:
-                    continue
-                results[urn].channel_type = row.channel_type.value if row.channel_type else None
-        except Exception:
-            logger.warning("Failed to enrich channel live state", exc_info=True)
+        """Chat channel live state is denormalized into the search index at
+        write time (see ``ChatChannelOperations._index_for_search``). No
+        database call needed at resolve time -- the Meilisearch document
+        already carries ``channel_type`` and ``member_count`` in metadata.
+        """
+        del results, channel_ids, urn_to_id
 
     async def _enrich_agents(
         self,
@@ -831,3 +827,34 @@ class SearchOperations:
             )
         )
         return [row[0] for row in result.all()]
+
+
+def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:
+    """Build a placeholder ``SearchResult`` for a URN missing from the
+    search index.
+
+    The chip renders this as a "deleted / no longer available" state. We
+    deliberately do not hit the database to distinguish DELETED vs
+    NOT_FOUND vs FORBIDDEN -- "missing from index" is treated uniformly
+    as DELETED, which is the only state that makes user-facing sense
+    for a previously-typed mention.
+    """
+    parts = urn.split(":")
+    entity_type = parts[3].lower() if len(parts) >= 5 else ""
+    return SearchResult(
+        urn=urn,
+        organization_id=organization_id,
+        title="",
+        description=None,
+        entity_type=entity_type,
+        url_path="",
+        access_mode=AccessMode.OWNER_ONLY.value,
+        baseline_role=None,
+        owner_id=organization_id,
+        tags=None,
+        metadata=None,
+        updated_at=None,
+        rank_score=0.0,
+        search_score=None,
+        urn_status="DELETED",
+    )

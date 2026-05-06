@@ -14,10 +14,13 @@ import Markdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Copy, Check } from '@phosphor-icons/react';
-import { MentionChip } from '@/components/mention';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
+import { MentionChip, MentionChipCompact } from '@/components/mention';
+import { getMentionUrl } from '@/components/mention/mentionStateEmitter';
+import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { cn } from '@/shared/utils/cn';
+import { useAppDispatch } from '@/app/hooks';
+import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
 
 // Mention preprocessing
 
@@ -96,27 +99,62 @@ function convertEmoticons(text: string): string {
 
 // Custom markdown renderers
 
+function MentionLink({ href, children, compact }: { href: string; children: ReactNode; compact: boolean }) {
+  const dispatch = useAppDispatch();
+  const label = String(children ?? '').replace(/^@/, '');
+  const parsed = parseUrn(href);
+
+  const handleClick = useCallback((e?: React.MouseEvent) => {
+    if (!parsed.isValid) return;
+    // FILE mentions open the viewer modal in place. Avoids navigating to
+    // /files/:id which would mount FilesPage in the background and strand
+    // the user there after closing the modal.
+    if (parsed.type === UrnType.FILE && parsed.id && !e?.metaKey && !e?.ctrlKey) {
+      dispatch(openViewerWithFetch({ fileId: parsed.id }));
+      return;
+    }
+    // Prefer the resolved URL from the search index -- it carries
+    // type-specific routing the local ``urnToPath`` shortcut cannot
+    // reconstruct (e.g. chat messages need ``/chat/{channel}#{msg}``,
+    // and the channel id is not derivable from the message URN).
+    const resolved = getMentionUrl(href);
+    const path = resolved || urnToPath(href);
+    if (!path || path === '#') return;
+    if (e?.metaKey || e?.ctrlKey) {
+      openInNewTab(path);
+    } else {
+      navigateTo(path);
+    }
+  }, [dispatch, href, parsed.isValid, parsed.id, parsed.type]);
+
+  const Chip = compact ? MentionChipCompact : MentionChip;
+  return <Chip urn={href} label={label} onClick={handleClick} />;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MarkdownLink(props: any) {
   const { href, children } = props;
   if (href?.startsWith('urn:uniffy:content:')) {
-    const label = String(children ?? '').replace(/^@/, '');
-    const parsed = parseUrn(href);
-
-    const handleClick = (e?: React.MouseEvent) => {
-      if (!parsed.isValid) return;
-      const path = urnToPath(href);
-      if (path === '#') return;
-      if (e?.metaKey || e?.ctrlKey) {
-        openInNewTab(path);
-      } else {
-        navigateTo(path);
-      }
-    };
-
-    return <MentionChip urn={href} label={label} onClick={handleClick} />;
+    return <MentionLink href={href} compact={false}>{children}</MentionLink>;
   }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+    >
+      {children}
+    </a>
+  );
+}
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function MarkdownLinkCompact(props: any) {
+  const { href, children } = props;
+  if (href?.startsWith('urn:uniffy:content:')) {
+    return <MentionLink href={href} compact>{children}</MentionLink>;
+  }
   return (
     <a
       href={href}
@@ -246,6 +284,13 @@ const markdownComponents = {
   p: EmojiParagraph,
 };
 
+const markdownComponentsCompact = {
+  a: MarkdownLinkCompact,
+  pre: CodeBlockPre,
+  code: InlineCode,
+  p: EmojiParagraph,
+};
+
 // react-markdown v10 strips non-http URLs by default.
 // Allow urn: protocol so URN mention links pass through to our custom <a>.
 function urlTransform(url: string): string {
@@ -276,9 +321,15 @@ function isEmojiOnly(text: string): boolean {
 interface MessageContentProps {
   content: string;
   className?: string;
+  /**
+   * Force mention chips to render as compact pills regardless of the user's
+   * `mentionDisplay` setting. Used in dense contexts (reply previews, thread
+   * previews) where an expanded card would dominate the surrounding line.
+   */
+  compactMentions?: boolean;
 }
 
-function MessageContentInner({ content, className }: MessageContentProps) {
+function MessageContentInner({ content, className, compactMentions = false }: MessageContentProps) {
   const withEmoticons = convertEmoticons(content ?? '');
   const jumbo = useMemo(() => isEmojiOnly(withEmoticons), [withEmoticons]);
 
@@ -295,14 +346,26 @@ function MessageContentInner({ content, className }: MessageContentProps) {
 
   return (
     <div
+      style={{
+        fontFamily:
+          '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+      }}
       className={cn(
         'prose prose-sm dark:prose-invert max-w-none',
-        'text-foreground/90 text-sm leading-[1.625]',
+        // Recommended chat-message body typography:
+        // mobile  -> 15px / 1.45 (a touch larger + airier for thumb reading)
+        // desktop -> 14px / 1.40 (denser, doc-grade)
+        'text-foreground/90 font-[450] text-[15px] leading-[1.45] md:text-sm md:leading-[1.4]',
         // `my-2` gives blank-line paragraph breaks visible breathing
         // room. With my-0.5 (2px) the stanza separators in long agent
         // replies collapsed to nothing and the prose looked like one
         // wall of text, even though `\n\n` was preserved in the source.
         'prose-p:my-2 prose-pre:my-0 prose-ul:my-1 prose-ol:my-1',
+        // Strip the leading and trailing prose margin on the outermost paragraphs
+        // so the message container's own padding controls between-message
+        // spacing. Without this, every single-line reply leaks 8px above and
+        // below into the gap between consecutive messages from the same sender.
+        '[&>p:first-child]:mt-0 [&>p:last-child]:mb-0',
         'prose-headings:my-2 prose-headings:text-foreground',
         'prose-code:before:content-none prose-code:after:content-none',
         'prose-blockquote:border-l-primary/40 prose-blockquote:text-muted-foreground',
@@ -315,7 +378,7 @@ function MessageContentInner({ content, className }: MessageContentProps) {
       <Markdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
-        components={markdownComponents}
+        components={compactMentions ? markdownComponentsCompact : markdownComponents}
         urlTransform={urlTransform}
       >
         {processed}

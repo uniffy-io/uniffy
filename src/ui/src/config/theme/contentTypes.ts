@@ -22,6 +22,7 @@ import {
   Notebook,
   Door,
   Question,
+  Robot,
 } from '@phosphor-icons/react';
 import { UrnType } from '@/shared/utils/urnTypes';
 import { getUrnTypeTheme, getUrnTypeHexColor, type UrnTypeTheme } from '@/config/theme/urnColors';
@@ -130,6 +131,15 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'agents/prompts',
     theme: getUrnTypeTheme(UrnType.PROMPT),
     hexColor: getUrnTypeHexColor(UrnType.PROMPT),
+  },
+  [UrnType.AGENT_CHAT]: {
+    type: UrnType.AGENT_CHAT,
+    icon: Robot,
+    label: 'Agent Chat',
+    labelPlural: 'Agent Chats',
+    route: 'chat',
+    theme: getUrnTypeTheme(UrnType.AGENT_CHAT),
+    hexColor: getUrnTypeHexColor(UrnType.AGENT_CHAT),
   },
   [UrnType.CHAT_MESSAGE]: {
     type: UrnType.CHAT_MESSAGE,

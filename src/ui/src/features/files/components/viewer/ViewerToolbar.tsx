@@ -20,7 +20,6 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useFormattedKeybinding } from '@/features/settings';
 import {
-    closeViewer,
     toggleFullscreen,
     setZoom,
     setRotation,
@@ -33,16 +32,22 @@ import { formatFileSize } from '@/features/files/components/list/utils';
 
 interface ViewerToolbarProps {
     file: SerializedFile;
+    onClose: () => void;
     onDownload: () => void;
     onEdit?: () => void;
     isEditing?: boolean;
 }
 
-export function ViewerToolbar({ file, onDownload, onEdit, isEditing }: ViewerToolbarProps) {
+export function ViewerToolbar({ file, onClose, onDownload, onEdit, isEditing }: ViewerToolbarProps) {
     const dispatch = useAppDispatch();
-    const { isFullscreen, zoom, rotation, currentPage, totalPages, pdfZoom } = useAppSelector(
-        (state) => state.fileViewer
-    );
+    // Per-field subscriptions -- whole-slice selector re-rendered the
+    // toolbar on every video timeupdate dispatch. See FileViewerModal.
+    const isFullscreen = useAppSelector((state) => state.fileViewer.isFullscreen);
+    const zoom = useAppSelector((state) => state.fileViewer.zoom);
+    const rotation = useAppSelector((state) => state.fileViewer.rotation);
+    const currentPage = useAppSelector((state) => state.fileViewer.currentPage);
+    const totalPages = useAppSelector((state) => state.fileViewer.totalPages);
+    const pdfZoom = useAppSelector((state) => state.fileViewer.pdfZoom);
 
     // Zoom percentage (100% = fit to screen)
     const zoomPercent = Math.round(zoom * 100);
@@ -73,7 +78,7 @@ export function ViewerToolbar({ file, onDownload, onEdit, isEditing }: ViewerToo
             {/* Left: Close button + File info */}
             <div className="flex items-center gap-3 min-w-0">
                 <button
-                    onClick={() => dispatch(closeViewer())}
+                    onClick={onClose}
                     className="viewer-btn p-2"
                     title={`Close (${closeShortcut})`}
                 >

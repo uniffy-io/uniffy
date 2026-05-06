@@ -41,6 +41,11 @@ class SearchResult:
     rank_score: float
     search_score: float | None  # Meilisearch ranking score
 
+    # Tombstone flag: "OK" / "DELETED". Not in Meilisearch -- set by
+    # ``SearchOperations.resolve_urns`` so the converter can pass the
+    # state through to mention chips.
+    urn_status: str | None = None
+
     # Live state fields for mention enrichment
     status: str | None = None
     due_date: str | None = None

@@ -181,7 +181,7 @@ def extract_all_outgoing_references_from_canvas(
 
         try:
             data = _json.loads(canvas_data)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return []
     else:
         data = canvas_data
@@ -332,6 +332,23 @@ def strip_mentions_to_labels(content: str) -> str:
     if not content:
         return ""
     return MENTION_PATTERN.sub(lambda m: m.group(1), content)
+
+
+def is_mention_only_content(content: str) -> bool:
+    """True when the content is just one or more URN mentions and
+    nothing else of substance (whitespace ignored).
+
+    Used to suppress search indexing for messages that carry no
+    user-typed text -- e.g. a chat message whose entire body is
+    ``[[[fucu|urn:uniffy:content:CHAT:...]]]``. Indexing such a
+    message would surface it under a search for the *referenced*
+    item's name, which is misleading: the message itself contains
+    no searchable content of its own.
+    """
+    if not content:
+        return True
+    without_mentions = MENTION_PATTERN.sub("", content)
+    return not without_mentions.strip()
 
 
 def replace_mention_label(content: str, target_urn: str, new_label: str) -> str:

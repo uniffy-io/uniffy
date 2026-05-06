@@ -23,6 +23,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import AccessMode, ContentRole, SubjectType
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
@@ -462,6 +463,29 @@ class ChatMessageOperations:
         if channel.is_encrypted:
             return
 
+        # Skip indexing messages whose only content is a URN mention.
+        # The mention chip already lets the reader navigate to the
+        # referenced item; indexing the message body would surface it
+        # under a search for the *referenced* item's name, which is
+        # misleading -- the message itself has no searchable content.
+        # On edit, drop any prior index entry so a "now empty" message
+        # is also removed from search.
+        from uniffy.core.content.references import (
+            is_mention_only_content,
+            strip_mentions_to_labels,
+        )
+
+        if is_mention_only_content(message.content):
+            try:
+                from uniffy.core.search.indexer import SearchIndexer
+
+                indexer = SearchIndexer(self.session)
+                urn = f"urn:uniffy:content:CHAT_MESSAGE:{message.id}"
+                await indexer.remove(urn)
+            except Exception:
+                logger.warning(f"Search remove failed for mention-only message {message.id}")
+            return
+
         try:
             from uniffy.core.search.indexer import SearchIndexer
 
@@ -478,8 +502,6 @@ class ChatMessageOperations:
                 sender_name = info.display_name
 
             # Strip URN mentions to plain labels for search
-            from uniffy.core.content.references import strip_mentions_to_labels
-
             plain = strip_mentions_to_labels(message.content)
 
             if channel.channel_type == ChannelType.PUBLIC:
@@ -497,11 +519,12 @@ class ChatMessageOperations:
                 organization_id=channel.organization_id,
                 title=plain[:120],
                 entity_type="chat_message",
-                url_path=f"/chat/{channel.id}",
+                url_path=f"/chat/{channel.id}#{message.id}",
                 access_mode=access_mode,
                 baseline_role=baseline_role,
                 owner_id=message.sender_id,
                 keywords=plain,
+                description=plain[:300],
                 shared_user_ids=shared_user_ids,
                 metadata={
                     "channel_id": str(channel.id),
@@ -509,8 +532,28 @@ class ChatMessageOperations:
                     "channel_type": channel.channel_type.value,
                     "sender_id": str(message.sender_id),
                     "sender_name": sender_name,
+                    # Generic breadcrumb so the shared <ParentBadge> renders
+                    # the parent channel exactly like for files/notes.
+                    "parent_label": f"#{channel.name}",
                 },
             )
+
+            # Live-update visible chips on edit. Safe on first index too --
+            # there are no listeners for a brand-new URN.
+            try:
+                await publish_mention_state(
+                    organization_id=channel.organization_id,
+                    urn=urn,
+                    changes={
+                        "title": plain[:120],
+                        "description": plain[:300],
+                        "parent_label": f"#{channel.name}",
+                        "sender_name": sender_name,
+                        "channel_type": channel.channel_type.value,
+                    },
+                )
+            except Exception:
+                logger.warning(f"Failed to publish mention state for message {message.id}")
         except Exception:
             logger.warning(f"Meilisearch index failed for message {message.id}")
 

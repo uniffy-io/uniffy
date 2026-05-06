@@ -24,6 +24,7 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "prompt": SearchResultType.SEARCH_RESULT_TYPE_PROMPT,
     "chat_message": SearchResultType.SEARCH_RESULT_TYPE_CHAT_MESSAGE,
     "room": SearchResultType.SEARCH_RESULT_TYPE_ROOM,
+    "agent_chat": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CHAT,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}
@@ -135,6 +136,11 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
     """
     # Start with existing metadata from Meilisearch
     metadata = dict(item.metadata) if item.metadata else {}
+
+    # Tombstone marker -- present when resolve_urns synthesized a
+    # placeholder for a URN missing from the search index.
+    if item.urn_status:
+        metadata["urn_status"] = item.urn_status
 
     # Include updated_at for "Updated X ago" display
     if item.updated_at:

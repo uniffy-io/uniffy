@@ -97,7 +97,7 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
         if not isinstance(value, (int, float)):
             try:
                 float(value)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 return "must be a numeric value"
 
     elif field_type == "single_select":

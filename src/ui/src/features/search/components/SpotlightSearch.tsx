@@ -21,6 +21,8 @@ import { FilterHints } from '@/features/search/components/FilterHints';
 import { useShortcutHandler, useFormattedKeybinding } from '@/features/settings';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
+import { createChannel } from '@/features/chat/store/chatThunks';
+import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
@@ -125,7 +127,7 @@ export function SpotlightSearch() {
         clearResults();
     }, [clearResults]);
 
-    const handleResultSelect = useCallback((result: SearchResultItem) => {
+    const handleResultSelect = useCallback(async (result: SearchResultItem) => {
         // For FILE results, open the viewer modal instead of navigating
         // This keeps the user on their current page
         if (result.type === SearchResultType.FILE) {
@@ -134,9 +136,34 @@ export function SpotlightSearch() {
             if (fileId) {
                 dispatch(openViewerWithFetch({ fileId }));
             }
-        } else {
-            navigate(result.url);
+            handleClose();
+            return;
         }
+
+        // For USER results, open (or create) the 1:1 DM with that user instead
+        // of routing to the user profile page. The backend create_dm path is
+        // idempotent for 1:1 pairs so an existing chat is reused.
+        if (result.type === SearchResultType.USER) {
+            const userId = result.urn.split(':').pop();
+            if (userId) {
+                try {
+                    const channel = await dispatch(
+                        createChannel({
+                            name: '',
+                            channelType: ChannelType.DIRECT,
+                            memberIds: [userId],
+                        }),
+                    ).unwrap();
+                    navigate(`/chat/${channel.id}`);
+                    handleClose();
+                    return;
+                } catch {
+                    // Fall through to default navigation if DM open failed.
+                }
+            }
+        }
+
+        navigate(result.url);
         handleClose();
     }, [navigate, dispatch, handleClose]);
 

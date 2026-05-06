@@ -51,6 +51,18 @@ export function setMentionState(urn: string, state: MentionLiveState): void {
 }
 
 /**
+ * Set + broadcast in one call. Use this from non-React resolution
+ * paths (e.g. the global batch resolver) so chips listening via the
+ * module-level emitter wake up with the new state -- ``setMentionState``
+ * alone is silent and would leave outside-context chips stuck on a
+ * stale snapshot.
+ */
+export function publishMentionState(urn: string, state: MentionLiveState): void {
+  mentionStates.set(urn, state);
+  listeners.forEach((listener) => listener(urn, state));
+}
+
+/**
  * Clear all stored states. Called on navigation/unmount.
  */
 export function clearMentionStates(): void {

@@ -64,6 +64,10 @@ message GetUsageStatsResponse {
   int64 cron_total_failures = 14;
   int64 cron_total_input_tokens = 15;
   int64 cron_total_output_tokens = 16;
+  // Tokens served from Anthropic's prompt cache across all runs in
+  // the period. Counted toward total_input_tokens (the prompt was that
+  // big from the model's POV) but billed at ~10% of base input price.
+  int64 total_cache_read_input_tokens = 17;
 }
 
 message DailyUsage {
@@ -71,6 +75,8 @@ message DailyUsage {
   int64 runs = 2;
   int64 input_tokens = 3;
   int64 output_tokens = 4;
+  // Cache reads in this bucket; subset of input_tokens.
+  int64 cache_read_input_tokens = 5;
 }
 
 message ModelUsage {

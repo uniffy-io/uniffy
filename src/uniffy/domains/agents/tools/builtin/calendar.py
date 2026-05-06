@@ -42,7 +42,7 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
     # Interpret as user's local time, then convert to UTC
     try:
         local_tz = ZoneInfo(user_timezone)
-    except KeyError, ValueError:
+    except (KeyError, ValueError):
         # Invalid timezone name, fall back to UTC
         return dt.replace(tzinfo=UTC)
 

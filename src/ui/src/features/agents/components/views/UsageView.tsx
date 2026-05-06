@@ -14,6 +14,7 @@ import {
     Wrench,
     Timer,
     CheckCircle,
+    Database,
 } from "@phosphor-icons/react";
 import {
     AreaChart,
@@ -210,6 +211,7 @@ function DailyUsageChart({
                 date: formatChartTimestamp(d.date, interval),
                 "Input Tokens": d.inputTokens,
                 "Output Tokens": d.outputTokens,
+                "Cache Reads": d.cacheReadInputTokens,
             })),
         [data, interval]
     );
@@ -246,6 +248,10 @@ function DailyUsageChart({
                     <linearGradient id="gradOutput" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={CHART_PALETTE[1]} stopOpacity={0.2} />
                         <stop offset="100%" stopColor={CHART_PALETTE[1]} stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradCache" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
                     </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -291,6 +297,17 @@ function DailyUsageChart({
                     activeDot={{ r: 5, fill: CHART_PALETTE[1], strokeWidth: 2, stroke: "#fff" }}
                     animationDuration={800}
                     animationBegin={200}
+                />
+                <Area
+                    type="monotone"
+                    dataKey="Cache Reads"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    fill="url(#gradCache)"
+                    dot={showDots ? { r: 3, fill: "#10b981", strokeWidth: 0 } : false}
+                    activeDot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
+                    animationDuration={800}
+                    animationBegin={400}
                 />
             </AreaChart>
         </ResponsiveContainer>
@@ -912,7 +929,7 @@ export function UsageView() {
                 </div>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
                         label="Total Runs"
                         value={formatNumber(stats.totalRuns)}
@@ -926,6 +943,17 @@ export function UsageView() {
                         icon={ChartBar}
                         subtitle={`${formatNumber(stats.totalInputTokens)} in / ${formatNumber(stats.totalOutputTokens)} out`}
                         accentColor={CHART_PALETTE[1]}
+                    />
+                    <StatCard
+                        label="Cache Reads"
+                        value={formatNumber(stats.totalCacheReadInputTokens)}
+                        icon={Database}
+                        subtitle={
+                            stats.totalInputTokens > 0
+                                ? `${Math.round((stats.totalCacheReadInputTokens / stats.totalInputTokens) * 100)}% of input cached`
+                                : "no input yet"
+                        }
+                        accentColor="#10b981"
                     />
                     <StatCard
                         label="Avg Duration"

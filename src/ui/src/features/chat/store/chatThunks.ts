@@ -143,6 +143,53 @@ export const createChannel = createAsyncThunk<
   }
 });
 
+export const createAgentChat = createAsyncThunk<
+  ChatChannel,
+  { agentId: string; customName?: string },
+  { state: RootState; rejectValue: string }
+>('chat/createAgentChat', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.createAgentChat({
+      organizationId,
+      agentId: params.agentId,
+      customName: params.customName,
+    });
+    if (!response.channel) {
+      return rejectWithValue('Failed to create agent chat');
+    }
+    const plain = channelToPlain(response.channel);
+    dispatch(addChannel(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to create agent chat');
+  }
+});
+
+export const renameAgentChat = createAsyncThunk<
+  ChatChannel,
+  { channelId: string; customName: string | null },
+  { state: RootState; rejectValue: string }
+>('chat/renameAgentChat', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.renameAgentChat({
+      organizationId,
+      channelId: params.channelId,
+      // Empty string clears the override on the server.
+      customName: params.customName ?? '',
+    });
+    if (!response.channel) {
+      return rejectWithValue('Failed to rename agent chat');
+    }
+    const plain = channelToPlain(response.channel);
+    dispatch(updateChannel(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to rename agent chat');
+  }
+});
+
 export const joinChannel = createAsyncThunk<
   ChatChannel,
   string,
@@ -234,29 +281,36 @@ export const fetchMessages = createAsyncThunk<
     });
     const messages = response.messages.map(messageToPlain);
 
-    // Batch-fetch attachments for all messages in parallel
-    const attachmentResults = await Promise.allSettled(
-      messages.map((msg) =>
-        attachmentsApi.listAttachments({
+    // Single batched RPC instead of N parallel ListAttachments calls
+    // (a 50-message channel used to fan out 50 round-trips on open).
+    if (messages.length > 0) {
+      try {
+        const batch = await attachmentsApi.batchListAttachments({
           organizationId,
           contentType: ContentType.CHAT_MESSAGE,
-          contentId: msg.id,
-        })
-      )
-    );
-    for (let i = 0; i < messages.length; i++) {
-      const result = attachmentResults[i];
-      if (result.status === 'fulfilled' && result.value.attachments.length > 0) {
-        messages[i] = {
-          ...messages[i],
-          attachments: result.value.attachments.map((a) => ({
-            id: a.id,
-            fileId: a.fileId,
-            filename: a.filename,
-            mimeType: a.mimeType,
-            sizeBytes: Number(a.sizeBytes),
-          })),
-        };
+          contentIds: messages.map((m) => m.id),
+        });
+        const byId = new Map<string, typeof messages[number]['attachments']>();
+        for (const group of batch.groups) {
+          byId.set(
+            group.contentId,
+            group.attachments.map((a) => ({
+              id: a.id,
+              fileId: a.fileId,
+              filename: a.filename,
+              mimeType: a.mimeType,
+              sizeBytes: Number(a.sizeBytes),
+            })),
+          );
+        }
+        for (let i = 0; i < messages.length; i++) {
+          const attachments = byId.get(messages[i].id);
+          if (attachments && attachments.length > 0) {
+            messages[i] = { ...messages[i], attachments };
+          }
+        }
+      } catch {
+        // Non-fatal: messages render without their attachment metadata.
       }
     }
 

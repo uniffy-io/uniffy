@@ -1,0 +1,82 @@
+# Core data services - postgres, valkey (cache + LiveKit registry), meilisearch.
+# Always-on. Run standalone: docker compose -f .docker/compose/core.yaml up
+
+x-defaults: &defaults
+  restart: unless-stopped
+  networks: [uniffy-network]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-healthcheck-defaults: &hc-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+services:
+  postgres:
+    <<: *defaults
+    image: postgres:18-alpine
+    container_name: uniffy-postgres
+    environment:
+      POSTGRES_USER: uniffy
+      POSTGRES_PASSWORD: uniffy
+      POSTGRES_DB: uniffy
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "pg_isready -U uniffy -d uniffy"]
+
+  valkey:
+    <<: *defaults
+    image: valkey/valkey:9-alpine
+    container_name: uniffy-valkey
+    environment:
+      VALKEY_PASSWORD: uniffy-valkey-dev
+    ports:
+      - "6380:6379"
+    volumes:
+      - valkey_data:/data
+    command: valkey-server --appendonly yes --requirepass uniffy-valkey-dev
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "valkey-cli", "-a", "uniffy-valkey-dev", "ping"]
+
+  meilisearch:
+    <<: *defaults
+    image: getmeili/meilisearch:v1.33
+    container_name: uniffy-meilisearch
+    environment:
+      MEILI_MASTER_KEY: uniffy-dev-master-key
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data/data.ms
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      MEILI_NO_ANALYTICS: true
+      MEILI_MAX_INDEXING_MEMORY: 3GiB
+      MEILI_MAX_INDEXING_THREADS: 4
+      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 104857600
+      MEILI_LOG_LEVEL: INFO
+      MEILI_EXPERIMENTAL_LOGS_MODE: human
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+
+volumes:
+  postgres_data:
+  valkey_data:
+  meilisearch_data:
+
+networks:
+  uniffy-network:
+    driver: bridge

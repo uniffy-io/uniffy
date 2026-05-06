@@ -130,6 +130,7 @@ class OpenAIProvider(LLMProvider):
         system: str | None = None,
         tools: list[dict] | None = None,
         stream: bool = False,
+        cache_key: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the OpenAI API.
 
@@ -148,6 +149,12 @@ class OpenAIProvider(LLMProvider):
             Tool definitions in Anthropic format.
         stream : bool
             Whether to stream the response.
+        cache_key : str | None
+            Forwarded as ``prompt_cache_key`` so requests sharing the
+            same prefix land on the same OpenAI machine and reliably
+            hit the prompt cache. Without it, sustained traffic above
+            ~15 RPM for the same prefix gets scattered across machines
+            and cache hit rate degrades.
 
         Returns
         -------
@@ -160,6 +167,7 @@ class OpenAIProvider(LLMProvider):
             model=model,
             system=system,
             tools=tools,
+            cache_key=cache_key,
         )
 
         if stream:
@@ -247,6 +255,7 @@ class OpenAIProvider(LLMProvider):
         model: str,
         system: str | None,
         tools: list[dict] | None,
+        cache_key: str | None = None,
     ) -> dict:
         """Build the kwargs dict for the chat.completions.create() call.
 
@@ -260,6 +269,10 @@ class OpenAIProvider(LLMProvider):
             System prompt.
         tools : list[dict] | None
             Tool definitions in Anthropic format.
+        cache_key : str | None
+            Stable identifier (typically agent_id) sent as
+            ``prompt_cache_key`` to bias OpenAI's request routing
+            toward the machine that already cached this prefix.
 
         Returns
         -------
@@ -276,6 +289,9 @@ class OpenAIProvider(LLMProvider):
 
         if tools:
             kwargs["tools"] = convert_tools_to_openai(tools)
+
+        if cache_key:
+            kwargs["prompt_cache_key"] = cache_key
 
         return kwargs
 
@@ -305,7 +321,7 @@ class OpenAIProvider(LLMProvider):
             for tc in message.tool_calls:
                 try:
                     args = json.loads(tc.function.arguments)
-                except json.JSONDecodeError, TypeError:
+                except (json.JSONDecodeError, TypeError):
                     args = {}
                 tool_calls.append(
                     ToolCall(
@@ -317,15 +333,14 @@ class OpenAIProvider(LLMProvider):
 
         stop_reason = map_finish_reason(choice.finish_reason)
 
-        usage = response.usage
-        input_tokens = usage.prompt_tokens if usage else 0
-        output_tokens = usage.completion_tokens if usage else 0
+        prompt_tokens, cached_tokens, output_tokens = _split_openai_usage(response.usage)
 
         return CompletionResult(
             content=content,
             model=response.model,
-            input_tokens=input_tokens,
+            input_tokens=prompt_tokens - cached_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cached_tokens,
             tool_calls=tool_calls,
             stop_reason=stop_reason,
         )
@@ -357,13 +372,15 @@ class OpenAIProvider(LLMProvider):
             tool_calls: list[ToolCall] = []
             model_name = kwargs.get("model", "")
             finish_reason: str | None = None
-            input_tokens = 0
+            prompt_tokens = 0
+            cached_tokens = 0
             output_tokens = 0
 
             async for chunk in stream:
                 if chunk.usage:
-                    input_tokens = chunk.usage.prompt_tokens
-                    output_tokens = chunk.usage.completion_tokens
+                    prompt_tokens, cached_tokens, output_tokens = _split_openai_usage(
+                        chunk.usage
+                    )
 
                 if not chunk.choices:
                     continue
@@ -403,7 +420,7 @@ class OpenAIProvider(LLMProvider):
             for _idx, pending in sorted(pending_tool_calls.items()):
                 try:
                     args = json.loads(pending["arguments"])
-                except json.JSONDecodeError, TypeError:
+                except (json.JSONDecodeError, TypeError):
                     args = {}
                 tc = ToolCall(
                     id=pending["id"],
@@ -419,8 +436,9 @@ class OpenAIProvider(LLMProvider):
                 result=CompletionResult(
                     content=accumulated_content,
                     model=model_name,
-                    input_tokens=input_tokens,
+                    input_tokens=prompt_tokens - cached_tokens,
                     output_tokens=output_tokens,
+                    cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
                     stop_reason=stop_reason,
                 )
@@ -428,3 +446,27 @@ class OpenAIProvider(LLMProvider):
         except Exception as e:
             logger.error(f"OpenAI streaming error: {e}")
             yield ErrorEvent(error=str(e))
+
+
+def _split_openai_usage(usage) -> tuple[int, int, int]:
+    """Return ``(prompt_tokens, cached_tokens, completion_tokens)``.
+
+    OpenAI's ``usage.prompt_tokens`` is the *full* prompt; the cached
+    portion lives under ``prompt_tokens_details.cached_tokens`` and is
+    a subset of it. We surface the two separately so the rest of the
+    runtime can store ``cache_read_input_tokens`` and an "uncached
+    input" delta in the same shape Anthropic's ``input_tokens`` /
+    ``cache_read_input_tokens`` fields use.
+
+    Both fields tolerate the older API shapes where
+    ``prompt_tokens_details`` is missing -- pre-cached models simply
+    report 0 cached tokens.
+    """
+    if usage is None:
+        return 0, 0, 0
+    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    details = getattr(usage, "prompt_tokens_details", None)
+    cached_tokens = int(getattr(details, "cached_tokens", 0) or 0) if details else 0
+    cached_tokens = min(cached_tokens, prompt_tokens)
+    return prompt_tokens, cached_tokens, completion_tokens

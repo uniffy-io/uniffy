@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, CompactChannelAgentContextRequest, CompactChannelAgentContextResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, GetChannelAgentContextStatsBatchRequest, GetChannelAgentContextStatsBatchResponse, GetChannelAgentContextStatsRequest, GetChannelAgentContextStatsResponse, GetChannelPendingApprovalsRequest, GetChannelPendingApprovalsResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, ResetChannelAgentContextRequest, ResetChannelAgentContextResponse, RespondToAgentConfirmationRequest, RespondToAgentConfirmationResponse, SendMessageRequest, SendMessageResponse, SetTypingRequest, SetTypingResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelMemberRequest, UpdateChannelMemberResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateMessageRequest, UpdateMessageResponse } from "./chat_pb.js";
+import { AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, CompactChannelAgentContextRequest, CompactChannelAgentContextResponse, CreateAgentChatRequest, CreateAgentChatResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, GetChannelAgentContextStatsBatchRequest, GetChannelAgentContextStatsBatchResponse, GetChannelAgentContextStatsRequest, GetChannelAgentContextStatsResponse, GetChannelPendingApprovalsRequest, GetChannelPendingApprovalsResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListAgentChatsRequest, ListAgentChatsResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, RenameAgentChatRequest, RenameAgentChatResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, ResetChannelAgentContextRequest, ResetChannelAgentContextResponse, RespondToAgentConfirmationRequest, RespondToAgentConfirmationResponse, SendMessageRequest, SendMessageResponse, SetTypingRequest, SetTypingResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelMemberRequest, UpdateChannelMemberResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateMessageRequest, UpdateMessageResponse } from "./chat_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -314,6 +314,35 @@ export const ChatService = {
       name: "GetChannelResources",
       I: GetChannelResourcesRequest,
       O: GetChannelResourcesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Named agent chats - multiple chats per (user, agent) pair, each renamable.
+     *
+     * @generated from rpc chat.v1.ChatService.CreateAgentChat
+     */
+    createAgentChat: {
+      name: "CreateAgentChat",
+      I: CreateAgentChatRequest,
+      O: CreateAgentChatResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc chat.v1.ChatService.RenameAgentChat
+     */
+    renameAgentChat: {
+      name: "RenameAgentChat",
+      I: RenameAgentChatRequest,
+      O: RenameAgentChatResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc chat.v1.ChatService.ListAgentChats
+     */
+    listAgentChats: {
+      name: "ListAgentChats",
+      I: ListAgentChatsRequest,
+      O: ListAgentChatsResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -258,7 +258,7 @@ class GetSessionContextStatsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
 
 class GetSessionContextStatsResponse(_message.Message):
-    __slots__ = ("total_messages", "active_messages", "compacted_messages", "summary_count", "active_tokens", "token_budget", "tokens_until_compaction", "context_window_tokens")
+    __slots__ = ("total_messages", "active_messages", "compacted_messages", "summary_count", "active_tokens", "token_budget", "tokens_until_compaction", "context_window_tokens", "last_input_tokens", "last_output_tokens", "last_cache_read_tokens")
     TOTAL_MESSAGES_FIELD_NUMBER: _ClassVar[int]
     ACTIVE_MESSAGES_FIELD_NUMBER: _ClassVar[int]
     COMPACTED_MESSAGES_FIELD_NUMBER: _ClassVar[int]
@@ -267,6 +267,9 @@ class GetSessionContextStatsResponse(_message.Message):
     TOKEN_BUDGET_FIELD_NUMBER: _ClassVar[int]
     TOKENS_UNTIL_COMPACTION_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    LAST_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    LAST_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    LAST_CACHE_READ_TOKENS_FIELD_NUMBER: _ClassVar[int]
     total_messages: int
     active_messages: int
     compacted_messages: int
@@ -275,7 +278,10 @@ class GetSessionContextStatsResponse(_message.Message):
     token_budget: int
     tokens_until_compaction: int
     context_window_tokens: int
-    def __init__(self, total_messages: _Optional[int] = ..., active_messages: _Optional[int] = ..., compacted_messages: _Optional[int] = ..., summary_count: _Optional[int] = ..., active_tokens: _Optional[int] = ..., token_budget: _Optional[int] = ..., tokens_until_compaction: _Optional[int] = ..., context_window_tokens: _Optional[int] = ...) -> None: ...
+    last_input_tokens: int
+    last_output_tokens: int
+    last_cache_read_tokens: int
+    def __init__(self, total_messages: _Optional[int] = ..., active_messages: _Optional[int] = ..., compacted_messages: _Optional[int] = ..., summary_count: _Optional[int] = ..., active_tokens: _Optional[int] = ..., token_budget: _Optional[int] = ..., tokens_until_compaction: _Optional[int] = ..., context_window_tokens: _Optional[int] = ..., last_input_tokens: _Optional[int] = ..., last_output_tokens: _Optional[int] = ..., last_cache_read_tokens: _Optional[int] = ...) -> None: ...
 
 class CompactSessionRequest(_message.Message):
     __slots__ = ("organization_id", "session_id")

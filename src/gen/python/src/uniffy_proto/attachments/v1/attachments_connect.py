@@ -25,6 +25,9 @@ class AttachmentsService(Protocol):
     async def list_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.ListAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.ListAttachmentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def batch_list_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_shared_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.ListSharedAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.ListSharedAttachmentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -66,6 +69,16 @@ class AttachmentsServiceASGIApplication(ConnectASGIApplication[AttachmentsServic
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_attachments,
+                ),
+                "/attachments.v1.AttachmentsService/BatchListAttachments": Endpoint.unary(
+                    method=MethodInfo(
+                        name="BatchListAttachments",
+                        service_name="attachments.v1.AttachmentsService",
+                        input=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+                        output=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.batch_list_attachments,
                 ),
                 "/attachments.v1.AttachmentsService/ListSharedAttachments": Endpoint.unary(
                     method=MethodInfo(
@@ -159,6 +172,26 @@ class AttachmentsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def batch_list_attachments(
+        self,
+        request: attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BatchListAttachments",
+                service_name="attachments.v1.AttachmentsService",
+                input=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+                output=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_shared_attachments(
         self,
         request: attachments_dot_v1_dot_attachments__pb2.ListSharedAttachmentsRequest,
@@ -207,6 +240,8 @@ class AttachmentsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.ListAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.ListAttachmentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def batch_list_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_shared_attachments(self, request: attachments_dot_v1_dot_attachments__pb2.ListSharedAttachmentsRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.ListSharedAttachmentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_attachments_folder(self, request: attachments_dot_v1_dot_attachments__pb2.GetAttachmentsFolderRequest, ctx: RequestContext) -> attachments_dot_v1_dot_attachments__pb2.GetAttachmentsFolderResponse:
@@ -246,6 +281,16 @@ class AttachmentsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_attachments,
+                ),
+                "/attachments.v1.AttachmentsService/BatchListAttachments": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="BatchListAttachments",
+                        service_name="attachments.v1.AttachmentsService",
+                        input=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+                        output=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.batch_list_attachments,
                 ),
                 "/attachments.v1.AttachmentsService/ListSharedAttachments": EndpointSync.unary(
                     method=MethodInfo(
@@ -333,6 +378,26 @@ class AttachmentsServiceClientSync(ConnectClientSync):
                 service_name="attachments.v1.AttachmentsService",
                 input=attachments_dot_v1_dot_attachments__pb2.ListAttachmentsRequest,
                 output=attachments_dot_v1_dot_attachments__pb2.ListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def batch_list_attachments(
+        self,
+        request: attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BatchListAttachments",
+                service_name="attachments.v1.AttachmentsService",
+                input=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsRequest,
+                output=attachments_dot_v1_dot_attachments__pb2.BatchListAttachmentsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

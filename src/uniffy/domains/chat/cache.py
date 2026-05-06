@@ -82,6 +82,9 @@ def _serialize_channel(channel: ChatChannel) -> dict[str, Any]:
         "is_deleted": channel.is_deleted,
         "icon": channel.icon,
         "category_id": str(channel.category_id) if channel.category_id else None,
+        "is_agent_dm": channel.is_agent_dm,
+        "custom_name": channel.custom_name,
+        "agent_id": str(channel.agent_id) if channel.agent_id else None,
         "created_at": channel.created_at.isoformat() if channel.created_at else None,
         "updated_at": channel.updated_at.isoformat() if channel.updated_at else None,
         "deleted_at": channel.deleted_at.isoformat() if channel.deleted_at else None,
@@ -110,6 +113,11 @@ def _deserialize_channel(payload: dict[str, Any]) -> ChatChannel:
         icon=payload["icon"],
         category_id=(
             UUID(payload["category_id"]) if payload.get("category_id") else None
+        ),
+        is_agent_dm=payload.get("is_agent_dm", False),
+        custom_name=payload.get("custom_name"),
+        agent_id=(
+            UUID(payload["agent_id"]) if payload.get("agent_id") else None
         ),
         created_at=(
             datetime.fromisoformat(payload["created_at"])

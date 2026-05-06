@@ -19,6 +19,7 @@ import {
   UsersThree,
 } from '@phosphor-icons/react';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
+import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
 import type { MentionLiveState } from '@/components/mention/types';
 
 interface ChatMentionPreviewProps {
@@ -79,11 +80,17 @@ export function ChatMentionPreview({
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
-            <span className="flex items-center gap-1.5 mt-0.5">
+            <span className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              {liveState.parentLabel && (
+                <>
+                  <ParentBadge label={liveState.parentLabel} />
+                  <MetaSeparator />
+                </>
+              )}
               <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{typeLabel}</span>
               {(liveState.memberCount ?? 0) > 0 && (
                 <>
-                  <span className="text-muted-foreground/40">.</span>
+                  <MetaSeparator />
                   <span className="text-xs text-muted-foreground">
                     {liveState.memberCount} {liveState.memberCount === 1 ? 'member' : 'members'}
                   </span>
