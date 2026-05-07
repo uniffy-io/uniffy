@@ -82,13 +82,17 @@ export function NotesPage() {
   // Check if notes are already loaded
   const notesLoading = notesState?.loading ?? false;
   const notesCount = Object.keys(notesState?.notes ?? {}).length;
+  const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
 
-  // Load notes on mount only if not already loaded
+  // Load notes on mount only if the tree hasn't been hydrated yet.
+  // Gating on tree state (not notesCount) prevents fetchNote / searchNotes
+  // from masking an empty tree, which used to leave the sidebar blank until
+  // the user hit the refresh button.
   useEffect(() => {
-    if (!organizationId || notesCount > 0) return;
+    if (!organizationId || treeLoaded) return;
 
     dispatch(initializeNotesData());
-  }, [dispatch, organizationId, notesCount]);
+  }, [dispatch, organizationId, treeLoaded]);
 
   // Select note from URL parameter and fetch full content (or clear if viewing dashboard).
   // Always refetch when the route's noteId changes OR the page remounts, even when

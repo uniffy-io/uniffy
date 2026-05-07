@@ -85,6 +85,12 @@ interface NotesTreeState {
     // Loading state
     loading: boolean;
     error: string | null;
+
+    // True once the tree has been populated from initializeNotesData (or its
+    // background refresh). Used as the source of truth for "is the tree
+    // hydrated?" so callers don't conflate it with state.notes.notes count,
+    // which fetchNote / searchNotes can populate without ever loading the tree.
+    treeLoaded: boolean;
 }
 
 /**
@@ -171,6 +177,7 @@ const initialState: NotesTreeState = {
     isTreeCollapsed: false,
     loading: false,
     error: null,
+    treeLoaded: false,
 };
 
 export const notesTreeSlice = createSlice({
@@ -346,6 +353,7 @@ export const notesTreeSlice = createSlice({
             state.expandedNodes = ['personal'];
             state.selectedNodeId = null;
             state.error = null;
+            state.treeLoaded = false;
         },
     },
     extraReducers: (builder) => {
@@ -357,6 +365,7 @@ export const notesTreeSlice = createSlice({
             .addCase(fetchNotesTree.fulfilled, (state, action) => {
                 state.loading = false;
                 state.tree = action.payload;
+                state.treeLoaded = true;
             })
             .addCase(fetchNotesTree.rejected, (state, action) => {
                 state.loading = false;
@@ -420,6 +429,7 @@ export const notesTreeSlice = createSlice({
             .addCase(initializeNotesData.fulfilled, (state, action) => {
                 state.loading = false;
                 state.tree = action.payload.tree;
+                state.treeLoaded = true;
             })
             .addCase(initializeNotesData.rejected, (state, action) => {
                 state.loading = false;
@@ -579,6 +589,7 @@ export const notesTreeSlice = createSlice({
                 (state, action) => {
                     // Update tree silently (no loading state change)
                     state.tree = action.payload.tree;
+                    state.treeLoaded = true;
                 }
             )
             // Handle restore expanded nodes from localStorage

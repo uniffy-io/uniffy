@@ -435,19 +435,20 @@ export function NotesTagsPage() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const isSidebarOpen = useAppSelector((state) => state.editor?.isSidebarOpen ?? true);
-  const notesCount = useAppSelector((state) => Object.keys(state.notes?.notes ?? {}).length);
+  const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
 
   useDocumentTitle('Tags');
 
   // Sync notes to IndexedDB cache for instant load on next visit
   useNotesCacheSync();
 
-  // Load notes on mount only if not already loaded
-  // Skip fetch if notes are already in store (e.g., navigated from NotesPage)
+  // Load notes on mount only if the tree hasn't been hydrated yet.
+  // Gating on tree state (not notesCount) prevents fetchNote / searchNotes
+  // from masking an empty tree.
   useEffect(() => {
-    if (!organizationId || notesCount > 0) return;
+    if (!organizationId || treeLoaded) return;
     dispatch(initializeNotesData());
-  }, [dispatch, organizationId, notesCount]);
+  }, [dispatch, organizationId, treeLoaded]);
 
   return (
     <>

@@ -620,16 +620,16 @@ export const initializeNotesData = createAsyncThunk<
 
         const forceRefresh = params?.forceRefresh ?? false;
 
-        // Check if we already have notes loaded (prevent unnecessary fetches)
-        const existingNotesCount = Object.keys(state.notes.notes).length;
-        if (existingNotesCount > 0 && !forceRefresh) {
-            // Notes already loaded, just reorganize tree if needed
+        // Skip the fetch only if the tree itself has been hydrated.
+        // notesCount > 0 is unreliable here: fetchNote / searchNotes can populate
+        // state.notes.notes without ever loading the tree, which would otherwise
+        // cause this thunk to short-circuit with a partial tree.
+        if (state.notesTree.treeLoaded && !forceRefresh) {
             const existingNotes = Object.values(state.notes.notes);
-            const tree = organizeNotesBySection(existingNotes, currentUserId);
             return {
                 notes: existingNotes,
-                tree,
-                totalCount: existingNotesCount,
+                tree: state.notesTree.tree,
+                totalCount: state.notes.pagination.totalCount,
                 fromCache: true,
             };
         }
