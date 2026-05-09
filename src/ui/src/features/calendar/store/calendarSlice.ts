@@ -106,7 +106,7 @@ const initialState: CalendarState = {
   filters: {
     calendarIds: [],
     categoryIds: [],
-    tags: [],
+    tagIds: [],
     searchQuery: '',
     focusTimeOnly: false,
   },
@@ -207,13 +207,13 @@ const calendarSlice = createSlice({
     },
 
     toggleTagFilter: (state, action: PayloadAction<string>) => {
-      const tag = action.payload;
-      const index = state.filters.tags.indexOf(tag);
+      const tagId = action.payload;
+      const index = state.filters.tagIds.indexOf(tagId);
 
       if (index === -1) {
-        state.filters.tags.push(tag);
+        state.filters.tagIds.push(tagId);
       } else {
-        state.filters.tags.splice(index, 1);
+        state.filters.tagIds.splice(index, 1);
       }
     },
 

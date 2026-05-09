@@ -16,7 +16,12 @@
 
 import { useContext, useEffect, useState } from 'react';
 import { useAppSelector } from '@/app/hooks';
-import { MentionStateContext, MENTION_NOOP, type MentionDisplayMode } from '@/components/mention/MentionStateProvider';
+import {
+  MentionStateContext,
+  MENTION_NOOP,
+  streamChangesToLiveState,
+  type MentionDisplayMode,
+} from '@/components/mention/MentionStateProvider';
 import {
   getMentionState,
   onMentionStateChange,
@@ -71,13 +76,25 @@ export function useMentionState(urn: string): MentionLiveState | null {
     });
   }, [urn, hasProvider, organizationId]);
 
-  // For outside-context usage: listen to emitter directly
+  // For outside-context usage: listen to emitter directly. The emitter
+  // is shared across two callers: the notification stream (raw
+  // snake_case ``Record<string, string>``) and the local batch
+  // resolver (already-typed ``Partial<MentionLiveState>``). Spread
+  // both shapes -- snake_case keys that don't match are harmless
+  // because nothing reads them -- and overlay the translated
+  // camelCase patch so stream deltas land on the right fields.
   useEffect(() => {
     if (hasProvider || !urn) return;
 
     return onMentionStateChange((changedUrn, changes) => {
       if (changedUrn !== urn) return;
-      setFallbackState((prev) => ({ ...prev, urn, ...changes }));
+      setFallbackState((prev) => {
+        if (!prev) return prev;
+        const patch = streamChangesToLiveState(
+          changes as Record<string, string>,
+        );
+        return { ...prev, ...changes, ...patch };
+      });
     });
   }, [urn, hasProvider]);
 

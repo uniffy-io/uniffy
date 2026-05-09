@@ -42,6 +42,7 @@ from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplica
 from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
 from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
+from uniffy_proto.tags.v1.tags_connect import TagsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.llm_providers import (
@@ -91,6 +92,7 @@ from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
+from uniffy.domains.tags.service import TagsServiceImpl
 from uniffy.domains.users.http_routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
 from uniffy.observability import ObservabilityConfig, setup_observability
@@ -118,6 +120,46 @@ class HttpVersionMiddleware:
         if scope["type"] == "http":
             http_version_var.set(scope.get("http_version", "unknown"))
         await self.app(scope, receive, send)
+
+
+class SecurityHeadersMiddleware:
+    """
+    Pure ASGI middleware that adds standard security response headers.
+
+    Raw ASGI (not BaseHTTPMiddleware) so it composes safely with the long-lived
+    streaming responses used by chat / notifications / agents.
+    """
+
+    _STATIC_HEADERS: tuple[tuple[bytes, bytes], ...] = (
+        (b"strict-transport-security", b"max-age=63072000; includeSubDomains; preload"),
+        (b"x-content-type-options", b"nosniff"),
+        (b"x-frame-options", b"SAMEORIGIN"),
+        (b"content-security-policy", b"frame-ancestors 'self'"),
+        (b"cross-origin-opener-policy", b"same-origin"),
+        (b"cross-origin-resource-policy", b"same-origin"),
+        (b"referrer-policy", b"no-referrer"),
+        (b"server", b"uniffy"),
+    )
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_wrapper(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                existing = {name.lower() for name, _ in headers}
+                for name, value in self._STATIC_HEADERS:
+                    if name not in existing:
+                        headers.append((name, value))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
 
 
 class ConnectRPCDispatcher:
@@ -325,6 +367,7 @@ def create_app() -> FastAPI:
         expose_headers=["*"],
     )
     app.add_middleware(HttpVersionMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     api_dispatcher = _create_api_dispatcher()
     app.mount("/api", api_dispatcher)
@@ -368,6 +411,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/bookmarks.v1.BookmarksService",
         BookmarksServiceASGIApplication(BookmarksServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/tags.v1.TagsService",
+        TagsServiceASGIApplication(TagsServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/chat.v1.ChatService",

@@ -45,6 +45,9 @@ import { SkillsTab } from "@/features/agents/components/views/AgentsView/SkillsT
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
 import { MemoriesTab } from "@/features/agents/components/views/AgentsView/MemoriesTab";
+import { TagChip } from "@/features/tags";
+
+const SIDEBAR_AGENT_TAG_LIMIT = 2;
 
 const PANEL_TABS: { key: AgentsPanel; label: string }[] = [
     { key: "overview", label: "Overview" },
@@ -106,6 +109,7 @@ export function AgentsView() {
     const agentsMap = useAppSelector(selectAllAgents);
     const loading = useAppSelector(selectAgentsLoading);
     const currentUserId = useAppSelector((state) => state.auth.user?.id);
+    const tagsById = useAppSelector((state) => state.tags.byId);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newAgentName, setNewAgentName] = useState("");
     const [newAgentAccessMode, setNewAgentAccessMode] = useState<number>(AccessMode.OWNER_ONLY);
@@ -330,6 +334,11 @@ export function AgentsView() {
                                 {!isCollapsed && sectionAgents.map((agent) => {
                                     const isSelected = agent.id === selectedAgentId;
                                     const VisIcon = accessModeIcon(agent.accessMode);
+                                    const visibleTags = (agent.tagIds ?? [])
+                                        .map((id) => tagsById[id])
+                                        .filter((t): t is NonNullable<typeof t> => Boolean(t))
+                                        .slice(0, SIDEBAR_AGENT_TAG_LIMIT);
+                                    const tagOverflow = (agent.tagIds?.length ?? 0) - visibleTags.length;
                                     return (
                                         <button
                                             key={agent.id}
@@ -358,6 +367,26 @@ export function AgentsView() {
                                                 <span className="text-xs text-muted-foreground font-mono truncate">
                                                     {agent.primaryModel || "No model"}
                                                 </span>
+                                                {visibleTags.length > 0 && (
+                                                    <span
+                                                        className="mt-1 flex items-center gap-1 flex-wrap"
+                                                        data-testid={`agents-list-row-tags-${agent.id}`}
+                                                    >
+                                                        {visibleTags.map((tag) => (
+                                                            <TagChip
+                                                                key={tag.id}
+                                                                tag={tag}
+                                                                nonInteractive
+                                                                className="text-[10px] px-1.5 py-0 max-w-[100px] truncate"
+                                                            />
+                                                        ))}
+                                                        {tagOverflow > 0 && (
+                                                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                                                                +{tagOverflow}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
                                                 {agent.isDefault && (

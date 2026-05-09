@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.tags import TagOperations
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
 _ACCESS_MODE_VALUES = ("OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG")
@@ -71,8 +72,17 @@ def _parse_uuid_list(
     return uuids, None
 
 
-def _format_event_result(prefix: str, event) -> str:
-    """Format a calendar event into a readable tool result."""
+async def _format_event_result(
+    prefix: str,
+    event,
+    *,
+    ctx: ToolContext | None = None,
+) -> str:
+    """Format a calendar event into a readable tool result.
+
+    When ``ctx`` is supplied, hydrates unified-tag slugs from
+    ``TagOperations`` and emits them as ``Tags: a, b, c``.
+    """
     urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
     start = event.start_time.strftime("%Y-%m-%d %H:%M") if event.start_time else "?"
     end = event.end_time.strftime("%Y-%m-%d %H:%M") if event.end_time else "?"
@@ -98,8 +108,20 @@ def _format_event_result(prefix: str, event) -> str:
         fields.append("Focus time: yes")
     if event.recurrence_pattern and event.recurrence_pattern.value != "NONE":
         fields.append(f"Recurrence: {event.recurrence_pattern.value}")
-    if event.tags:
-        fields.append(f"Tags: {', '.join(event.tags)}")
+    if ctx is not None:
+        master_id = event.id
+        raw = str(master_id)
+        if "__occurrence__" in raw:
+            master_id = UUID(raw.split("__occurrence__")[0])
+        urn = f"urn:uniffy:content:CALENDAR_EVENT:{master_id}"
+        tag_ops = TagOperations(ctx.session)
+        tags_by_urn = await tag_ops.get_for_urns(
+            organization_id=ctx.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in tags_by_urn.get(urn, [])})
+        if slugs:
+            fields.append(f"Tags: {', '.join(slugs)}")
     if event.category_id:
         fields.append(f"Category: {event.category_id}")
     if event.reminders:
@@ -207,7 +229,7 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
         event_id=event_id,  # type: ignore[arg-type]
     )
 
-    result = _format_event_result("Event", event)
+    result = await _format_event_result("Event", event, ctx=ctx)
 
     if event.description:
         result += f"\nDescription: {event.description}"
@@ -297,8 +319,11 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
         kwargs["meeting_url"] = args["meeting_url"]
     if "is_focus_time" in args:
         kwargs["is_focus_time"] = bool(args["is_focus_time"])
-    if "tags" in args and isinstance(args["tags"], list):
-        kwargs["tags"] = args["tags"]
+    if "tag_ids" in args and isinstance(args["tag_ids"], list):
+        tag_ids, tag_err = _parse_uuid_list(args["tag_ids"], "tag_ids")
+        if tag_err:
+            return ToolResult(success=False, data="", error=tag_err)
+        kwargs["tag_ids"] = tag_ids
     if "reminders" in args and isinstance(args["reminders"], list):
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
@@ -376,7 +401,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     return ToolResult(
         success=True,
-        data=_format_event_result("Event created", event),
+        data=await _format_event_result("Event created", event, ctx=ctx),
     )
 
 
@@ -417,9 +442,12 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
         if field in args:
             kwargs[field] = bool(args[field])
 
-    # Tags
-    if "tags" in args and isinstance(args["tags"], list):
-        kwargs["tags"] = args["tags"]
+    # Tags - replacement set of unified-tag ids (UUID strings).
+    if "tag_ids" in args and isinstance(args["tag_ids"], list):
+        tag_ids, tag_err = _parse_uuid_list(args["tag_ids"], "tag_ids")
+        if tag_err:
+            return ToolResult(success=False, data="", error=tag_err)
+        kwargs["tag_ids"] = tag_ids
 
     # Reminders
     if "reminders" in args and isinstance(args["reminders"], list):
@@ -480,7 +508,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     return ToolResult(
         success=True,
-        data=_format_event_result("Event updated", event),
+        data=await _format_event_result("Event updated", event, ctx=ctx),
     )
 
 
@@ -701,10 +729,13 @@ _ACCESS_MODE_SCHEMA = {
     ),
 }
 
-_TAGS_SCHEMA = {
+_TAG_IDS_SCHEMA = {
     "type": "array",
     "items": {"type": "string"},
-    "description": "Tags for categorization.",
+    "description": (
+        "Replacement set of unified-tag UUIDs to attach to the event. "
+        "Use the tags service to resolve names / slugs to ids first."
+    ),
 }
 
 _REMINDERS_SCHEMA = {
@@ -834,7 +865,7 @@ create_event = ToolDefinition(
                 "type": "boolean",
                 "description": "Mark as focus/deep work time.",
             },
-            "tags": _TAGS_SCHEMA,
+            "tag_ids": _TAG_IDS_SCHEMA,
             "access_mode": _ACCESS_MODE_SCHEMA,
             "reminders": _REMINDERS_SCHEMA,
         },
@@ -896,7 +927,7 @@ update_event = ToolDefinition(
                 "type": "boolean",
                 "description": "Mark as focus/deep work time.",
             },
-            "tags": _TAGS_SCHEMA,
+            "tag_ids": _TAG_IDS_SCHEMA,
             "access_mode": _ACCESS_MODE_SCHEMA,
             "reminders": _REMINDERS_SCHEMA,
         },

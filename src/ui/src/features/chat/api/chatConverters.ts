@@ -84,6 +84,7 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     isAgentDm: proto.isAgentDm,
     customName: proto.customName ?? undefined,
     agentId: proto.agentId ?? undefined,
+    tagIds: proto.tags.map((t) => t.id),
   };
 }
 

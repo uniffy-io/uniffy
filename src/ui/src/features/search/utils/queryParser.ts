@@ -79,6 +79,26 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'prompts': SearchResultType.PROMPT,
     'room': SearchResultType.ROOM,
     'rooms': SearchResultType.ROOM,
+    // Tag entity (a tag itself, not content tagged with a tag).
+    'tagentity': SearchResultType.TAG,
+    'tagentities': SearchResultType.TAG,
+};
+
+// Map for the `type:` meta prefix (e.g. `type:tag`).
+const TYPE_META_MAP: Record<string, SearchResultType> = {
+    'tag': SearchResultType.TAG,
+    'note': SearchResultType.NOTE,
+    'file': SearchResultType.FILE,
+    'user': SearchResultType.USER,
+    'event': SearchResultType.CALENDAR_EVENT,
+    'calendar': SearchResultType.CALENDAR_EVENT,
+    'project': SearchResultType.PROJECT,
+    'task': SearchResultType.TASK,
+    'agent': SearchResultType.AGENT,
+    'chat': SearchResultType.CHAT,
+    'message': SearchResultType.CHAT_MESSAGE,
+    'prompt': SearchResultType.PROMPT,
+    'room': SearchResultType.ROOM,
 };
 
 /**
@@ -94,6 +114,9 @@ const FILTER_PREFIXES = [
     'agent', 'agents',
     'prompt', 'prompts',
     'room', 'rooms',
+    'tagentity', 'tagentities',
+    // Meta type filter: `type:tag` -> filter results to tag entities.
+    'type',
     // Metadata filters
     'tag',
     // Ownership filters
@@ -168,6 +191,15 @@ export function parseSearchQuery(query: string): ParsedQuery {
             }
             // If there's a value after the type filter, it becomes search text
             // The value is already part of remainingText if not consumed
+            continue;
+        }
+
+        // Meta `type:` prefix (e.g. `type:tag`).
+        if (keyword === 'type') {
+            const meta = TYPE_META_MAP[value.toLowerCase()];
+            if (meta !== undefined && !filters.types.includes(meta)) {
+                filters.types.push(meta);
+            }
             continue;
         }
 
@@ -260,6 +292,8 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Agents';
         case SearchResultType.PROMPT:
             return 'Prompts';
+        case SearchResultType.TAG:
+            return 'Tags';
         default:
             return 'Unknown';
     }
@@ -290,6 +324,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'agent';
         case SearchResultType.PROMPT:
             return 'prompt';
+        case SearchResultType.TAG:
+            return 'tagentity';
         default:
             return '';
     }

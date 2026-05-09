@@ -24,6 +24,7 @@ import {
     clearSavedFilters,
 } from "@/features/files";
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
+import { clearTags } from '@/features/tags/store/tagsSlice';
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
@@ -188,6 +189,7 @@ export function OrganizationPicker() {
     dispatch(clearChatMessages());
     dispatch(clearChatThreads());
     dispatch(clearChatUi());
+    dispatch(clearTags());
     // Clear file blob cache
     clearBlobCache();
     // Navigate to auth page

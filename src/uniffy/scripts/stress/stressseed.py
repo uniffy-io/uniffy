@@ -383,7 +383,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                     node_type=NodeType.FOLDER,
                     title="Stress Test Data",
                     slug="stress-root",
-                    tags=["stress-test", "generated"],
                 )
                 session.add(stress_root)
                 await session.flush()
@@ -417,7 +416,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                             node_type=NodeType.FOLDER,
                             title=generate_folder_name(folder_idx),
                             slug=f"stress-folder-{folder_idx}",
-                            tags=random.sample(available_tags, random.randint(0, 3)),
                         )
                         session.add(folder)
                         folders.append(folder)
@@ -442,12 +440,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                 for i in range(config.note_count):
                     parent = random.choice(folders)
 
-                    # Generate tags
-                    note_tags = (
-                        random.sample(available_tags, random.randint(1, 5))
-                        if random.random() > 0.2
-                        else None
-                    )
                     inline_tag_list = (
                         random.sample(available_tags, random.randint(0, 3))
                         if random.random() > 0.4
@@ -467,8 +459,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                         title=title,
                         content=content,
                         slug=generate_slug(title, i),
-                        tags=note_tags,
-                        inline_tags=inline_tag_list,
                     )
                     session.add(note)
                     notes.append(note)
@@ -543,7 +533,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                             item.baseline_role.value if item.baseline_role is not None else None
                         ),
                         owner_id=admin.id,
-                        keywords=" ".join([item.title] + (item.tags or [])),
+                        keywords=item.title,
                         description=item.content[:200] if item.content else None,
                     )
 

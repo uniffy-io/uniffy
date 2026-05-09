@@ -49,6 +49,15 @@ from uniffy.core.auth.permissions.roles import (
     role_can_view,
     role_is_higher_than,
 )
+from uniffy.core.auth.permissions.visible_sets import (
+    compute_visible_content_ids_by_type,
+    compute_visible_tag_ids,
+    get_visible_content_ids_by_type,
+    get_visible_tag_ids,
+    invalidate_visible_sets_for_org,
+    invalidate_visible_sets_for_user,
+    invalidate_visible_sets_for_user_global,
+)
 
 __all__ = [
     "ContentAccessQuery",
@@ -60,6 +69,13 @@ __all__ = [
     "MIN_FOR_VIEW",
     "PermissionChecker",
     "ROLE_ORDINAL",
+    "compute_visible_content_ids_by_type",
+    "compute_visible_tag_ids",
+    "get_visible_content_ids_by_type",
+    "get_visible_tag_ids",
+    "invalidate_visible_sets_for_org",
+    "invalidate_visible_sets_for_user",
+    "invalidate_visible_sets_for_user_global",
     "max_role",
     "record_access_mode_changed",
     "record_baseline_role_changed",

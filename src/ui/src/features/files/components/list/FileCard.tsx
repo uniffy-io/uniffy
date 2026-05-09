@@ -4,18 +4,19 @@
  * Displays a file in grid or list view with actions.
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     BookmarkSimple,
     CheckSquare,
+    Plus,
     Square,
-    Hash,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { TagInput } from '@/components/tag-input';
+import { TagChip, TagPicker } from '@/features/tags';
+import { useTagsByIds } from '@/features/tags/store/selectors';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { ICON_SIZE_CONFIG } from '@/features/files/components/list/constants';
 import { renderFileIcon, formatFileSize, formatDate, supportsThumbnail } from '@/features/files/components/list/utils';
@@ -33,7 +34,7 @@ export interface FileCardProps {
     onDownload: (id: string) => void;
     onShare: (id: string, filename: string) => void;
     onRename: (id: string, newName: string) => void;
-    onUpdateTags: (id: string, tags: string[]) => void;
+    onUpdateTags: (id: string, tagIds: string[]) => void;
     onMove: (id: string) => void;
     viewMode: 'grid' | 'list';
     viewScope?: 'all' | 'personal' | 'shared' | 'organization';
@@ -69,19 +70,38 @@ export function FileCard({
     onRestore,
     canRestore = true,
 }: FileCardProps) {
-    const navigate = useNavigate();
     const { isMobile } = useBreakpoint();
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
     const [isRenaming, setIsRenaming] = useState(false);
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [tagsAnchor, setTagsAnchor] = useState<{ top: number; left: number } | null>(null);
     const tagsPopoverRef = useRef<HTMLDivElement>(null);
+    const cardRef = useRef<HTMLDivElement>(null);
     const hasThumbnail = supportsThumbnail(file.mimeType);
     const config = sizeConfig || { cardMinWidth: 140, iconSize: 48, gap: 16, showDetails: true };
+
+    // Lock the popover to its anchor for the lifetime of the editing session.
+    // Portal coords are computed once on open from the card's bounding rect so
+    // the popover escapes the grid's overflow-y-auto wrapper.
+    useLayoutEffect(() => {
+        if (!isEditingTags || !cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        const POPOVER_WIDTH = 280;
+        const POPOVER_HEIGHT_GUESS = 80;
+        const margin = 8;
+        const fitsBelow = rect.bottom + POPOVER_HEIGHT_GUESS + margin < window.innerHeight;
+        const top = fitsBelow ? rect.bottom + margin : Math.max(margin, rect.top - POPOVER_HEIGHT_GUESS - margin);
+        const maxLeft = Math.max(margin, window.innerWidth - POPOVER_WIDTH - margin);
+        const left = Math.min(rect.left, maxLeft);
+        setTagsAnchor({ top, left });
+    }, [isEditingTags]);
 
     // Bookmark state
     const fileUrn = `urn:uniffy:content:FILE:${file.id}`;
     const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(fileUrn);
+
+    const fileTags = useTagsByIds(file.tagIds);
 
     // Close tags popover on outside click
     useEffect(() => {
@@ -107,12 +127,8 @@ export function FileCard({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isEditingTags]);
 
-    const handleTagsChange = (newTags: string[]) => {
-        onUpdateTags(file.id, newTags);
-    };
-
-    const handleTagClick = (tag: string) => {
-        navigate(`/files/tags?tag=${encodeURIComponent(tag)}`);
+    const handleTagsChange = (newTagIds: string[]) => {
+        onUpdateTags(file.id, newTagIds);
     };
 
     const handleEditTagsClick = () => {
@@ -166,9 +182,32 @@ export function FileCard({
         setIsRenaming(false);
     };
 
+    // Portal-rendered tag editor: escapes the grid's overflow-y-auto wrapper
+    // and the card's own clipping context. Coords are computed in the layout
+    // effect above from the card's bounding rect.
+    const tagsPopover =
+        isEditingTags && tagsAnchor
+            ? createPortal(
+                  <div
+                      ref={tagsPopoverRef}
+                      className="fixed z-50 p-3 bg-card border border-border rounded-lg shadow-lg w-[280px]"
+                      style={{ top: tagsAnchor.top, left: tagsAnchor.left }}
+                      onClick={(e) => e.stopPropagation()}
+                  >
+                      <TagPicker
+                          selectedTagIds={file.tagIds}
+                          onChange={handleTagsChange}
+                          autoFocus
+                      />
+                  </div>,
+                  document.body,
+              )
+            : null;
+
     if (viewMode === 'list') {
         return (
             <div
+                ref={cardRef}
                 className={cn(
                     "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
                     isSelected && !isSelectMode && "bg-accent",
@@ -229,47 +268,46 @@ export function FileCard({
                 )}
 
                 {/* Tags - hidden on mobile/tablet */}
-                <div className="hidden lg:block w-36 relative">
-                    {isEditingTags ? (
-                        <div
-                            ref={tagsPopoverRef}
-                            className="absolute z-50 top-0 right-0 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <TagInput
-                                tags={file.tags || []}
-                                onTagsChange={handleTagsChange}
-                                onTagClick={handleTagClick}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1 overflow-hidden">
-                            {file.tags && file.tags.length > 0 ? (
-                                <>
-                                    {file.tags.slice(0, 2).map((tag) => (
-                                        <span
-                                            key={tag}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleTagClick(tag);
-                                            }}
-                                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors truncate max-w-[60px]"
-                                            title={tag}
-                                        >
-                                            <Hash size={10} weight="bold" />
-                                            <span className="truncate">{tag}</span>
-                                        </span>
-                                    ))}
-                                    {file.tags.length > 2 && (
-                                        <span className="text-xs text-muted-foreground">
-                                            +{file.tags.length - 2}
-                                        </span>
-                                    )}
-                                </>
-                            ) : (
-                                <span className="text-xs text-muted-foreground">--</span>
+                <div
+                    className="group/tags hidden lg:flex w-36 items-center gap-1 overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {fileTags.length > 0 ? (
+                        <>
+                            {fileTags.slice(0, 2).map((tag) => (
+                                <TagChip key={tag.id} tag={tag} />
+                            ))}
+                            {fileTags.length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                    +{fileTags.length - 2}
+                                </span>
                             )}
-                        </div>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTagsClick();
+                                }}
+                                className="ml-0.5 rounded-full p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/tags:opacity-100"
+                                title="Edit tags"
+                                aria-label="Edit tags"
+                            >
+                                <Plus size={12} weight="bold" />
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditTagsClick();
+                            }}
+                            className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            title="Add tag"
+                            aria-label="Add tag"
+                        >
+                            <Plus size={14} weight="bold" />
+                        </button>
                     )}
                 </div>
 
@@ -330,6 +368,8 @@ export function FileCard({
                         canRestore={canRestore}
                     />
                 )}
+
+                {tagsPopover}
             </div>
         );
     }
@@ -337,6 +377,7 @@ export function FileCard({
     // Grid view
     return (
         <div
+            ref={cardRef}
             className={cn(
                 "group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all cursor-pointer",
                 isSelected && !isSelectMode && "ring-2 ring-primary border-primary",
@@ -425,25 +466,17 @@ export function FileCard({
                             </span>
                         </div>
                         {/* Tags display */}
-                        {file.tags && file.tags.length > 0 && (
-                            <div className="flex items-center gap-1 mt-2 flex-wrap">
-                                {file.tags.slice(0, 3).map((tag) => (
-                                    <span
-                                        key={tag}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleTagClick(tag);
-                                        }}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors"
-                                        title={tag}
-                                    >
-                                        <Hash size={8} weight="bold" />
-                                        <span className="truncate max-w-[50px]">{tag}</span>
-                                    </span>
+                        {fileTags.length > 0 && (
+                            <div
+                                className="flex items-center gap-1 mt-2 flex-wrap"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {fileTags.slice(0, 3).map((tag) => (
+                                    <TagChip key={tag.id} tag={tag} />
                                 ))}
-                                {file.tags.length > 3 && (
+                                {fileTags.length > 3 && (
                                     <span className="text-[10px] text-muted-foreground">
-                                        +{file.tags.length - 3}
+                                        +{fileTags.length - 3}
                                     </span>
                                 )}
                             </div>
@@ -452,20 +485,7 @@ export function FileCard({
                 )}
             </div>
 
-            {/* Tags Edit Popover (Grid view) */}
-            {isEditingTags && (
-                <div
-                    ref={tagsPopoverRef}
-                    className="absolute z-50 bottom-full left-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <TagInput
-                        tags={file.tags || []}
-                        onTagsChange={handleTagsChange}
-                        onTagClick={handleTagClick}
-                    />
-                </div>
-            )}
+            {tagsPopover}
 
             {/* Context Menu */}
             {contextMenu && (

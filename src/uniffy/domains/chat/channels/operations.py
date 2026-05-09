@@ -13,11 +13,15 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import String, and_, cast, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import PermissionChecker, role_can_view
+from uniffy.core.auth.permissions import (
+    PermissionChecker,
+    invalidate_visible_sets_for_user,
+    role_can_view,
+)
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.errors import (
     NotFoundError,
@@ -33,6 +37,7 @@ from uniffy.core.models.chat.channel_member import (
     ChatChannelMember,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, SubjectType, generate_id, slugify
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -44,6 +49,7 @@ from uniffy.domains.chat.cache import (
 )
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
+from uniffy.domains.tags import TagAssignment, TagOperations
 
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500
@@ -108,6 +114,65 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
     def _get_search_description(self, model: ChatChannel) -> str | None:
         return model.description[:200] if model.description else None
+
+    async def _get_search_tags_async(self, model: ChatChannel) -> list[str] | None:
+        """Return the slug list assigned to this channel via the unified store.
+
+        DM and agent-DM channels do not carry tags, so the lookup is
+        skipped to avoid pointless round-trips against ``tag_assignments``.
+        """
+        if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
+            return None
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: channel ids that carry every tag id in ``tag_ids``.
+
+        Logical AND across the tag set via GROUP BY + HAVING
+        COUNT(DISTINCT). Mirrors the notes / files / calendar shape so
+        the explorer's filter rail composes uniformly.
+        """
+        urn_prefix = "urn:uniffy:content:CHAT:"
+        urn_expr = func.concat(urn_prefix, cast(ChatChannel.id, String))
+        return (
+            select(ChatChannel.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(ChatChannel.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        )
+
+    async def _sync_channel_tags(
+        self,
+        *,
+        actor_id: UUID,
+        channel: ChatChannel,
+        tag_ids: list[UUID] | None,
+    ) -> None:
+        """Reconcile manual tag assignments after a channel write.
+
+        ``tag_ids=None`` leaves manual assignments untouched (used by
+        partial updates that did not ship tags). DMs are silently
+        skipped -- they do not participate in the unified-tag namespace.
+        """
+        if tag_ids is None:
+            return
+        if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
+            return
+        tag_ops = TagOperations(self.session)
+        await tag_ops.replace_manual_tags(
+            actor_id=actor_id,
+            organization_id=channel.organization_id,
+            content_urn=build_content_urn(self.content_type, channel.id),
+            tag_ids=tag_ids,
+        )
 
     # Permission override - membership-based access
 
@@ -298,6 +363,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         is_default: bool = False,
         category_id: UUID | None = None,
         member_ids: list[UUID] | None = None,
+        tag_ids: list[UUID] | None = None,
     ) -> ChatChannel:
         """Create a channel with stats row and initial membership."""
         slug = slugify(name)
@@ -360,6 +426,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         await self.session.refresh(channel)
 
+        await self._sync_channel_tags(
+            actor_id=user_id,
+            channel=channel,
+            tag_ids=tag_ids,
+        )
+
         # Index for search (post-commit)
         try:
             await self._index_for_search(channel)
@@ -415,6 +487,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         *,
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
+        tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole]], str | None]:
         """List channels the user is a member of (sidebar query).
 
@@ -446,6 +519,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             .order_by(sort_ts.desc(), ChatChannel.id.asc())
         )
+
+        if tag_ids:
+            base_query = base_query.where(
+                ChatChannel.id.in_(self._tag_filter_subquery(tag_ids))
+            )
 
         if cursor:
             payload = _decode_cursor(cursor)
@@ -507,6 +585,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         *,
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
+        tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
         """List all public channels for browse view.
 
@@ -526,6 +605,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             .order_by(ChatChannelStats.member_count.desc(), ChatChannel.id.asc())
         )
+
+        if tag_ids:
+            base_query = base_query.where(
+                ChatChannel.id.in_(self._tag_filter_subquery(tag_ids))
+            )
 
         if cursor:
             payload = _decode_cursor(cursor)
@@ -569,6 +653,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         description: str | None = None,
         icon: str | None = None,
         is_default: bool | None = None,
+        tag_ids: list[UUID] | None = None,
     ) -> ChatChannel:
         """Update channel metadata. Requires elevated channel permission.
 
@@ -603,6 +688,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(channel)
+
+        await self._sync_channel_tags(
+            actor_id=user_id,
+            channel=channel,
+            tag_ids=tag_ids,
+        )
 
         await invalidate_cached_channel(channel.id)
 
@@ -736,6 +827,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
         await invalidate_cached_member_ids(channel_id)
+        await invalidate_visible_sets_for_user(organization_id, user_id)
 
         # Publish MEMBER_JOINED event to existing members
         await self._publish_member_event(channel_id, user_id, joined=True)
@@ -817,6 +909,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
         await invalidate_cached_member_ids(channel_id)
+        await invalidate_visible_sets_for_user(organization_id, user_id)
 
         # Publish MEMBER_LEFT event to remaining members
         await self._publish_member_event(channel_id, user_id, joined=False)
@@ -879,6 +972,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             await invalidate_cached_member_ids(channel_id)
 
+            for member in added:
+                if member.user_id is not None:
+                    await invalidate_visible_sets_for_user(
+                        organization_id, member.user_id
+                    )
+
             await self._publish_members_changed(
                 channel_id,
                 [m.user_id for m in added if m.user_id is not None],
@@ -930,6 +1029,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)
+
+            for removed_id in removable_ids:
+                if removed_id is not None:
+                    await invalidate_visible_sets_for_user(
+                        organization_id, removed_id
+                    )
 
             await self._publish_members_changed(
                 channel_id, removable_ids, added=False

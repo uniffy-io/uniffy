@@ -12,6 +12,7 @@ import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
+  TagFilterMode as ProtoTagFilterMode,
   TypeFieldSchema as ProtoTypeFieldSchema,
 } from '@uniffy/proto/projects/v1/projects_pb';
 import type {
@@ -156,6 +157,7 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
         },
       ])
     ),
+    tagIds: proto.tags.map((t) => t.id),
   };
 }
 
@@ -207,6 +209,7 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     subtaskCompleted: proto.subtaskCompleted,
     estimatedMinutes: proto.estimatedMinutes ?? null,
     timeSpentMinutes: proto.timeSpentMinutes ?? null,
+    tagIds: proto.tags.map((t) => t.id),
   };
 }
 
@@ -351,25 +354,32 @@ export const projectsApi = {
   /**
    * List all projects for the current organization
    */
-  listProjects: async (organizationId: string): Promise<{ projects: Project[] }> => {
+  listProjects: async (
+    organizationId: string,
+  ): Promise<{ projects: Project[]; protoProjects: ProtoProject[] }> => {
     const response = await projectsClient.listProjects({
       organizationId,
     });
     return {
       projects: response.projects.map(protoProjectToFrontend),
+      protoProjects: response.projects,
     };
   },
 
   /**
    * Get a single project by ID
    */
-  getProject: async (id: string, organizationId: string): Promise<{ project: Project | null }> => {
+  getProject: async (
+    id: string,
+    organizationId: string,
+  ): Promise<{ project: Project | null; protoProject: ProtoProject | null }> => {
     const response = await projectsClient.getProject({
       organizationId,
       projectId: id,
     });
     return {
       project: response.project ? protoProjectToFrontend(response.project) : null,
+      protoProject: response.project ?? null,
     };
   },
 
@@ -379,7 +389,7 @@ export const projectsApi = {
   createProject: async (
     data: FrontendCreateProjectRequest,
     organizationId: string
-  ): Promise<{ project: Project }> => {
+  ): Promise<{ project: Project; protoProject: ProtoProject }> => {
     const response = await projectsClient.createProject({
       organizationId,
       name: data.name,
@@ -389,9 +399,11 @@ export const projectsApi = {
       ...(data.accessMode !== undefined ? { accessMode: data.accessMode } : {}),
       ...(data.baselineRole !== undefined && data.baselineRole !== null ? { baselineRole: data.baselineRole } : {}),
       ...(data.slug ? { slug: data.slug } : {}),
+      ...(data.tagIds ? { tagIds: data.tagIds } : {}),
     });
     return {
       project: protoProjectToFrontend(response.project!),
+      protoProject: response.project!,
     };
   },
 
@@ -401,7 +413,7 @@ export const projectsApi = {
   updateProject: async (
     data: FrontendUpdateProjectRequest,
     organizationId: string
-  ): Promise<{ project: Project }> => {
+  ): Promise<{ project: Project; protoProject: ProtoProject }> => {
     // Convert type field schemas to proto format
     const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
     if (data.typeFieldSchemas) {
@@ -421,9 +433,11 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
+      ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),
     });
     return {
       project: protoProjectToFrontend(response.project!),
+      protoProject: response.project!,
     };
   },
 
@@ -446,26 +460,47 @@ export const projectsApi = {
   /**
    * List all tasks for a project
    */
-  listTasks: async (projectId: string, organizationId: string): Promise<{ tasks: Task[] }> => {
+  listTasks: async (
+    projectId: string,
+    organizationId: string,
+    options: {
+      tagIds?: string[];
+      tagFilterMode?: 'all' | 'any' | 'none';
+    } = {},
+  ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
+    const tagFilterMode =
+      options.tagFilterMode === 'any'
+        ? ProtoTagFilterMode.ANY
+        : options.tagFilterMode === 'none'
+          ? ProtoTagFilterMode.NONE
+          : ProtoTagFilterMode.ALL;
     const response = await projectsClient.listTasks({
       organizationId,
       projectId,
+      ...(options.tagIds && options.tagIds.length
+        ? { tagIds: options.tagIds, tagFilterMode }
+        : {}),
     });
     return {
       tasks: response.tasks.map(protoTaskToFrontend),
+      protoTasks: response.tasks,
     };
   },
 
   /**
    * Get a single task by ID
    */
-  getTask: async (id: string, organizationId: string): Promise<{ task: Task | null }> => {
+  getTask: async (
+    id: string,
+    organizationId: string,
+  ): Promise<{ task: Task | null; protoTask: ProtoTask | null }> => {
     const response = await projectsClient.getTask({
       organizationId,
       taskId: id,
     });
     return {
       task: response.task ? protoTaskToFrontend(response.task) : null,
+      protoTask: response.task ?? null,
     };
   },
 
@@ -475,7 +510,12 @@ export const projectsApi = {
   createTask: async (
     data: FrontendCreateTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task; updatedParent?: Task }> => {
+  ): Promise<{
+    task: Task;
+    updatedParent?: Task;
+    protoTask: ProtoTask;
+    protoUpdatedParent?: ProtoTask;
+  }> => {
     const response = await projectsClient.createTask({
       organizationId,
       projectId: data.projectId,
@@ -492,10 +532,13 @@ export const projectsApi = {
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
       ...(data.blockedByTaskIds ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
       ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
+      ...(data.tagIds ? { tagIds: data.tagIds } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
       updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      protoTask: response.task!,
+      protoUpdatedParent: response.updatedParent,
     };
   },
 
@@ -505,7 +548,14 @@ export const projectsApi = {
   updateTask: async (
     data: FrontendUpdateTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
+  ): Promise<{
+    task: Task;
+    updatedParent?: Task;
+    spawnedTask?: Task;
+    protoTask: ProtoTask;
+    protoUpdatedParent?: ProtoTask;
+    protoSpawnedTask?: ProtoTask;
+  }> => {
     const response = await projectsClient.updateTask({
       organizationId,
       taskId: data.id,
@@ -525,11 +575,15 @@ export const projectsApi = {
       ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes ?? 0 } : {}),
       ...(data.timeSpentMinutes !== undefined ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 } : {}),
       ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
+      ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
       updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
       spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
+      protoTask: response.task!,
+      protoUpdatedParent: response.updatedParent,
+      protoSpawnedTask: response.spawnedTask,
     };
   },
 
@@ -540,7 +594,14 @@ export const projectsApi = {
   moveTask: async (
     data: FrontendMoveTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
+  ): Promise<{
+    task: Task;
+    updatedParent?: Task;
+    spawnedTask?: Task;
+    protoTask: ProtoTask;
+    protoUpdatedParent?: ProtoTask;
+    protoSpawnedTask?: ProtoTask;
+  }> => {
     const response = await projectsClient.moveTask({
       organizationId,
       taskId: data.id,
@@ -551,6 +612,9 @@ export const projectsApi = {
       task: protoTaskToFrontend(response.task!),
       updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
       spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
+      protoTask: response.task!,
+      protoUpdatedParent: response.updatedParent,
+      protoSpawnedTask: response.spawnedTask,
     };
   },
 
@@ -590,7 +654,7 @@ export const projectsApi = {
     taskIds: string[],
     updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null },
     organizationId: string
-  ): Promise<{ tasks: Task[]; updatedCount: number }> => {
+  ): Promise<{ tasks: Task[]; updatedCount: number; protoTasks: ProtoTask[] }> => {
     const response = await projectsClient.bulkUpdateTasks({
       organizationId,
       taskIds,
@@ -602,6 +666,7 @@ export const projectsApi = {
     return {
       tasks: response.tasks.map(protoTaskToFrontend),
       updatedCount: response.updatedCount,
+      protoTasks: response.tasks,
     };
   },
 

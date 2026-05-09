@@ -11,8 +11,32 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, X, CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { TagPicker } from "@/features/tags";
 import type { FieldDefinition } from "@/features/projects/types";
 import type { FilterCondition, FilterConfig, FilterOperator } from "@/features/projects/types/views";
+import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
+
+const TAGS_PSEUDO_FIELD: FieldDefinition = {
+  id: TAGS_FILTER_FIELD_ID,
+  projectId: "",
+  name: "Tags",
+  type: "text",
+  isRequired: false,
+  isSystem: true,
+  sortOrder: 999,
+  config: {},
+  createdAt: "",
+  updatedAt: "",
+};
+
+const TAG_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "equals", label: "is" },
+  { value: "not_equals", label: "is not" },
+  { value: "contains", label: "is one of" },
+  { value: "not_contains", label: "is none of" },
+  { value: "is_empty", label: "is empty" },
+  { value: "is_not_empty", label: "is not empty" },
+];
 
 interface FilterBuilderProps {
   fields: FieldDefinition[];
@@ -61,8 +85,9 @@ const PERSON_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "is_not_empty", label: "is not empty" },
 ];
 
-function getOperatorsForFieldType(type: string): { value: FilterOperator; label: string }[] {
-  switch (type) {
+function getOperatorsForField(field: FieldDefinition): { value: FilterOperator; label: string }[] {
+  if (field.id === TAGS_FILTER_FIELD_ID) return TAG_OPERATORS;
+  switch (field.type) {
     case "single_select":
     case "multi_select":
       return SELECT_OPERATORS;
@@ -81,8 +106,11 @@ function needsValueInput(operator: FilterOperator): boolean {
   return operator !== "is_empty" && operator !== "is_not_empty";
 }
 
-export function FilterBuilder({ fields, filterConfig, onApply, onClose }: FilterBuilderProps) {
+export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClose }: FilterBuilderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // The unified-tags filter is exposed as a pseudo-field so it slots into
+  // the existing condition row UI without parallel infrastructure.
+  const fields = [...rawFields, TAGS_PSEUDO_FIELD];
   const [conditions, setConditions] = useState<FilterCondition[]>(
     filterConfig?.conditions ?? []
   );
@@ -102,7 +130,7 @@ export function FilterBuilder({ fields, filterConfig, onApply, onClose }: Filter
   const addCondition = () => {
     const firstField = fields[0];
     if (!firstField) return;
-    const operators = getOperatorsForFieldType(firstField.type);
+    const operators = getOperatorsForField(firstField);
     setConditions([
       ...conditions,
       {
@@ -126,7 +154,7 @@ export function FilterBuilder({ fields, filterConfig, onApply, onClose }: Filter
 
   const handleFieldChange = (conditionId: string, fieldId: string) => {
     const field = fields.find((f) => f.id === fieldId);
-    const operators = getOperatorsForFieldType(field?.type ?? "text");
+    const operators = field ? getOperatorsForField(field) : TEXT_OPERATORS;
     updateCondition(conditionId, {
       fieldId,
       operator: operators[0].value,
@@ -166,7 +194,7 @@ export function FilterBuilder({ fields, filterConfig, onApply, onClose }: Filter
 
         {conditions.map((condition, index) => {
           const field = fields.find((f) => f.id === condition.fieldId);
-          const operators = getOperatorsForFieldType(field?.type ?? "text");
+          const operators = field ? getOperatorsForField(field) : TEXT_OPERATORS;
 
           return (
             <div key={condition.id} className="flex items-center gap-2">
@@ -373,6 +401,23 @@ function ConditionValueInput({ field, value, onChange }: {
   value: string | number | string[] | null;
   onChange: (value: string | number | string[] | null) => void;
 }) {
+  if (field?.id === TAGS_FILTER_FIELD_ID) {
+    const selectedIds = Array.isArray(value)
+      ? (value as string[])
+      : value
+        ? [String(value)]
+        : [];
+    return (
+      <div className="flex-1 min-w-[160px]">
+        <TagPicker
+          selectedTagIds={selectedIds}
+          onChange={(next) => onChange(next.length ? next : null)}
+          placeholder="Pick tags"
+        />
+      </div>
+    );
+  }
+
   if (!field) {
     return (
       <input

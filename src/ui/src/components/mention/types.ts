@@ -91,6 +91,32 @@ export interface MentionLiveState {
   userAvatarUrl?: string;
   userEmail?: string;
 
+  // TAG
+  /** Hex / palette slug used for the tag chip swatch (already stored on tag). */
+  tagColor?: string;
+  /** Tag slug, used for the "Open in /tags" deep link. */
+  tagSlug?: string;
+  /** Org-wide assignment count denormalized at index time. */
+  tagUsageCount?: number;
+  /** Per-domain breakdown -- ContentType.value -> count. */
+  tagUsageByDomain?: Record<string, number>;
+  /** Top recent assignment URNs (capped at 5 server-side, newest first). */
+  tagRecentAssignmentUrns?: string[];
+  /** Parallel to tagRecentAssignmentUrns -- ISO timestamps. */
+  tagRecentAssignmentAt?: string[];
+  /** "You tagged N of these" -- per-user, computed at resolve time. */
+  tagUserAssignmentCount?: number;
+
+  /**
+   * Transient delta for content URN events. Carries the tag IDs that
+   * were just added / removed on a piece of content via the realtime
+   * stream. Subscribers (the tags slice realtime hook) read these to
+   * patch ``state.tags.assignmentsByUrn``; nothing reads them on the
+   * chip preview side. Not denormalized, never persisted in the index.
+   */
+  tagAssignmentsAdded?: string[];
+  tagAssignmentsRemoved?: string[];
+
   // Shared
   contentTags?: string[];
 }

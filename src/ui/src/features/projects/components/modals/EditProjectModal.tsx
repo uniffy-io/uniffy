@@ -16,6 +16,7 @@ import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
 import type { TypeFieldSchema } from "@/features/projects/types/project";
 import { TypeFieldSchemasSection } from "@/features/projects/components/settings/TypeFieldSchemasSection";
+import { TagPicker } from "@/features/tags";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -40,6 +41,8 @@ export function EditProjectModal() {
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
   const [typeFieldSchemas, setTypeFieldSchemas] = useState<Record<string, TypeFieldSchema>>({});
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [tagsDirty, setTagsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +53,8 @@ export function EditProjectModal() {
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);
       setTypeFieldSchemas(project.typeFieldSchemas || {});
+      setTagIds(project.tagIds ?? []);
+      setTagsDirty(false);
     }
   }, [project]);
 
@@ -80,6 +85,7 @@ export function EditProjectModal() {
           description: description.trim(),
           icon,
           typeFieldSchemas,
+          ...(tagsDirty ? { tagIds } : {}),
         })
       ).unwrap();
       handleClose();
@@ -141,6 +147,25 @@ export function EditProjectModal() {
                 disabled={isSubmitting}
                 rows={2}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Tags
+                <span className="text-muted-foreground font-normal ml-1">
+                  (optional)
+                </span>
+              </label>
+              <TagPicker
+                selectedTagIds={tagIds}
+                onChange={(next) => {
+                  setTagIds(next);
+                  setTagsDirty(true);
+                }}
+                disabled={isSubmitting}
+                placeholder="Add a tag"
               />
             </div>
 

@@ -1,7 +1,9 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import type { Dispatch } from '@reduxjs/toolkit';
 import { agentsApi } from '@/features/agents/api/agentsApi';
 import type { RootState } from '@/app/store';
 import type { AgentInfo } from '@uniffy/proto/agents/v1/agents_pb';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -38,9 +40,17 @@ export const agentToPlain = (agent: AgentInfo) => ({
     promptId: agent.promptId || "",
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
+    tagIds: agent.tags.map((t) => t.id),
     createdAt: timestampToPlain(agent.createdAt),
     updatedAt: timestampToPlain(agent.updatedAt),
 });
+
+const hydrateAgentTags = (dispatch: Dispatch, agents: AgentInfo[]): void => {
+    const tags = agents.flatMap((a) => a.tags.map(tagToPlain));
+    if (tags.length) {
+        dispatch(bulkUpsertTags(tags));
+    }
+};
 
 export type SerializedAgent = ReturnType<typeof agentToPlain>;
 
@@ -48,7 +58,7 @@ export const fetchAgents = createAsyncThunk<
     SerializedAgent[],
     { accessMode?: number; personalOnly?: boolean; groupId?: string } | void,
     { state: RootState; rejectValue: string }
->('agents/fetchAgents', async (params, { getState, rejectWithValue }) => {
+>('agents/fetchAgents', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await agentsApi.listAgents({
@@ -57,6 +67,7 @@ export const fetchAgents = createAsyncThunk<
             personalOnly: params?.personalOnly,
             groupId: params?.groupId,
         });
+        hydrateAgentTags(dispatch, response.agents);
         return response.agents.map(agentToPlain);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch agents');
@@ -76,9 +87,10 @@ export const createAgent = createAsyncThunk<
         primaryProviderKeyId?: string;
         imageProviderKeyId?: string;
         promptId?: string;
+        tagIds?: string[];
     },
     { state: RootState; rejectValue: string }
->('agents/createAgent', async (params, { getState, rejectWithValue }) => {
+>('agents/createAgent', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await agentsApi.createAgent({
@@ -93,8 +105,10 @@ export const createAgent = createAsyncThunk<
             primaryProviderKeyId: params.primaryProviderKeyId,
             imageProviderKeyId: params.imageProviderKeyId,
             promptId: params.promptId,
+            tagIds: params.tagIds ?? [],
         });
         if (!response.agent) throw new Error('No agent in response');
+        hydrateAgentTags(dispatch, [response.agent]);
         return agentToPlain(response.agent);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to create agent');
@@ -121,13 +135,16 @@ export const updateAgent = createAsyncThunk<
         imageProviderKeyId?: string;
         promptId?: string;
         clearPrompt?: boolean;
+        // When set, replaces the agent's manual tag set on the server.
+        // Empty array clears all manual tags. Omit to leave tags untouched.
+        tagIds?: string[];
     },
     { state: RootState; rejectValue: string }
->('agents/updateAgent', async (params, { getState, rejectWithValue }) => {
+>('agents/updateAgent', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = getOrganizationId(state);
-        const { agentId, ...fields } = params;
+        const { agentId, tagIds, ...fields } = params;
         // Proto3 repeated fields cannot distinguish "sent empty" from "not
         // sent" (both deserialise to []). To let the backend always apply the
         // correct value, we send the current Redux value for every repeated
@@ -140,8 +157,10 @@ export const updateAgent = createAsyncThunk<
             enabledTools: fields.enabledTools ?? current?.enabledTools ?? [],
             enabledSkills: fields.enabledSkills ?? current?.enabledSkills ?? [],
             fallbackModels: fields.fallbackModels ?? current?.fallbackModels ?? [],
+            tagIds: tagIds !== undefined ? { ids: tagIds } : undefined,
         });
         if (!response.agent) throw new Error('No agent in response');
+        hydrateAgentTags(dispatch, [response.agent]);
         return agentToPlain(response.agent);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update agent');

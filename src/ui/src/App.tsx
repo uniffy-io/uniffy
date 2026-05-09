@@ -48,11 +48,9 @@ const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'
 
 // Content pages
 const NotesPage = lazyImport(() => import('@/features/notes/pages/NotesPage'), 'NotesPage');
-const NotesTagsPage = lazyImport(() => import('@/features/notes/pages/NotesTagsPage'), 'NotesTagsPage');
 const CalendarPage = lazyImport(() => import('@/features/calendar/pages/CalendarPage'), 'CalendarPage');
 const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), 'FilesPage');
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
-const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsPage'), 'FilesTagsPage');
 const FilesTrashPage = lazyImport(() => import('@/features/files/pages/FilesTrashPage'), 'FilesTrashPage');
 const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
@@ -63,6 +61,7 @@ const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage')
 const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'ChatPage');
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
 const NotificationsPage = lazyImport(() => import('@/features/notifications/pages/NotificationsPage'), 'NotificationsPage');
+const TagsExplorerPage = lazyImport(() => import('@/features/tags/pages/TagsExplorerPage'), 'TagsExplorerPage');
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -302,11 +301,7 @@ export function App() {
 
                         <Route
                             path="/notes/tags"
-                            element={
-                                <ProtectedRoute>
-                                    <LazyRoute><NotesTagsPage /></LazyRoute>
-                                </ProtectedRoute>
-                            }
+                            element={<Navigate to="/tags?domain=note" replace />}
                         />
 
                         <Route
@@ -346,13 +341,10 @@ export function App() {
                             }
                         />
 
+                        {/* Phase 3 redirect; unified /tags explorer ships in Phase 5. */}
                         <Route
                             path="/files/tags"
-                            element={
-                                <ProtectedRoute>
-                                    <LazyRoute><FilesTagsPage /></LazyRoute>
-                                </ProtectedRoute>
-                            }
+                            element={<Navigate to="/tags?domain=file" replace />}
                         />
 
                         <Route
@@ -495,6 +487,24 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><NotificationsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Unified tags explorer */}
+                        <Route
+                            path="/tags"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><TagsExplorerPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/tags/:slug"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><TagsExplorerPage /></LazyRoute>
                                 </ProtectedRoute>
                             }
                         />

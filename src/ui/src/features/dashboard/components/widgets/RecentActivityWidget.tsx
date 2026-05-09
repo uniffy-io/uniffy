@@ -157,6 +157,8 @@ export function RecentActivityWidget() {
     const projects = useAppSelector((state) => state.projects?.projects ?? {});
     const projectsLoading = useAppSelector((state) => state.projects?.loading?.projects ?? false);
 
+    const tagsById = useAppSelector((state) => state.tags?.byId ?? {});
+
     const isLoading = notesLoading || filesLoading || eventsLoading || tasksLoading || projectsLoading;
     const showType = activeFilter === 'all';
 
@@ -173,7 +175,7 @@ export function RecentActivityWidget() {
                     updatedAt: timestampToString(note.updatedAt),
                     href: `/notes/${note.id}`,
                     meta: wordCount > 0 ? `${wordCount} words` : 'Empty',
-                    extra: note.tags?.length ? note.tags.slice(0, 3).join(', ') : undefined,
+                    extra: undefined,
                 });
             }
         });
@@ -187,7 +189,13 @@ export function RecentActivityWidget() {
                     updatedAt: timestampToString(file.updatedAt),
                     href: `/files?file=${file.id}`,
                     meta: `${mimeToLabel(file.mimeType)} \u00b7 ${formatFileSize(file.sizeBytes)}`,
-                    extra: file.tags?.length ? file.tags.slice(0, 3).join(', ') : undefined,
+                    extra: file.tagIds?.length
+                        ? file.tagIds
+                              .slice(0, 3)
+                              .map((id) => tagsById[id]?.slug)
+                              .filter(Boolean)
+                              .join(', ') || undefined
+                        : undefined,
                 });
             }
         });
@@ -246,7 +254,7 @@ export function RecentActivityWidget() {
         return items.sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
         );
-    }, [notes, files, events, tasks, projects]);
+    }, [notes, files, events, tasks, projects, tagsById]);
 
     const tabCounts = useMemo(() => {
         const counts: Record<FilterTab, number> = { all: 0, notes: 0, files: 0, tasks: 0, events: 0, projects: 0 };

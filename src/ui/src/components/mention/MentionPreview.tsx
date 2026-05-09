@@ -45,6 +45,7 @@ import {
   UserMentionPreview,
   ChatMentionPreview,
   AgentMentionPreview,
+  TagMentionPreview,
 } from '@/components/mention/previews';
 import type { Icon } from '@phosphor-icons/react';
 
@@ -87,7 +88,7 @@ function getTypeTheme(type: UrnType): TypeTheme {
 /** Known types that have dedicated preview components */
 const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
   UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE,
-  UrnType.NOTE, UrnType.USER, UrnType.CHAT, UrnType.AGENT,
+  UrnType.NOTE, UrnType.USER, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
 ]);
 
 export function MentionPreview({
@@ -269,6 +270,16 @@ export function MentionPreview({
         )}
         {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.AGENT && (
           <AgentMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.TAG && (
+          <TagMentionPreview
             urn={preview.urn}
             title={preview.title}
             description={preview.description ? stripMarkdown(preview.description) : undefined}

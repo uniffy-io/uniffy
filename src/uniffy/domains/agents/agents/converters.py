@@ -10,11 +10,14 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import ContentRole
+from uniffy.domains.tags import Tag
+from uniffy.domains.tags.converters import tag_to_proto
 
 
 def agent_to_proto(
     agent: Agent,
     user_role: ContentRole | None = None,
+    tags: list[Tag] | None = None,
 ) -> AgentInfo:
     """Convert an :class:`Agent` row to its proto representation.
 
@@ -65,5 +68,8 @@ def agent_to_proto(
         proto.baseline_role = content_role_to_proto(agent.baseline_role)
     if user_role is not None:
         proto.user_role = content_role_to_proto(user_role)
+
+    if tags:
+        proto.tags.extend(tag_to_proto(t) for t in tags)
 
     return proto

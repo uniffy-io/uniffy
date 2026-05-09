@@ -64,7 +64,8 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
-from uniffy.core.types import SubjectType
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import ContentType, SubjectType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -80,6 +81,8 @@ from uniffy.domains.chat.channels.converters import (
 )
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.subjects import ChatSubject
+from uniffy.domains.notifications.operations import NotificationOperations
+from uniffy.domains.tags import Tag, TagOperations
 
 
 def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSubject]:
@@ -119,6 +122,47 @@ def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSu
             out.append(ChatSubject.user(uid))
 
     return out
+
+
+def _parse_tag_ids(raw_ids: list[str]) -> list[UUID]:
+    """Parse a repeated string proto field into a list of UUIDs.
+
+    Empty input returns an empty list. Invalid UUIDs raise
+    ``INVALID_ARGUMENT`` so the client gets actionable feedback before
+    the operation runs.
+    """
+    out: list[UUID] = []
+    for raw in raw_ids or ():
+        try:
+            out.append(UUID(raw))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid tag_id") from exc
+    return out
+
+
+async def _hydrate_channel_tags(
+    session: AsyncSession,
+    organization_id: UUID,
+    channel_ids: list[UUID],
+) -> dict[UUID, list[Tag]]:
+    """Bulk-fetch unified-tag rows for a batch of channel ids.
+
+    Single ``TagOperations.get_for_urns`` round-trip per request batch
+    (no N+1). Returns a mapping keyed on channel id with an empty list
+    for channels that have no tags. DM channels are filtered out by
+    callers before hydration since they do not carry tags.
+    """
+    if not channel_ids:
+        return {}
+    urn_to_id = {
+        build_content_urn(ContentType.CHAT, cid): cid for cid in channel_ids
+    }
+    tag_ops = TagOperations(session)
+    bulk = await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=list(urn_to_id),
+    )
+    return {cid: bulk.get(urn, []) for urn, cid in urn_to_id.items()}
 
 
 def _handle_error(e: Exception) -> None:
@@ -163,6 +207,8 @@ class ChannelHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid category_id")
 
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
+
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
@@ -190,6 +236,7 @@ class ChannelHandlers:
                         is_default=request.is_default if request.HasField("is_default") else False,
                         category_id=category_id,
                         member_ids=user_member_ids or None,
+                        tag_ids=tag_ids or None,
                     )
                     agent_subjects = [s for s in subjects if s.subject_type == SubjectType.AGENT]
                     if agent_subjects:
@@ -210,7 +257,13 @@ class ChannelHandlers:
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return CreateChannelResponse(channel=channel_to_proto(channel, stats))
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+
+                return CreateChannelResponse(
+                    channel=channel_to_proto(
+                        channel, stats, tags=tags_by_id.get(channel.id)
+                    )
+                )
         except (NotFoundError, PermissionDeniedError, ValidationError, ConflictError) as e:
             _handle_error(e)
 
@@ -264,6 +317,8 @@ class ChannelHandlers:
                         ]
                         await set_cached_dm_peers(channel_id, dm_ids)
 
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+
                 return GetChannelResponse(
                     channel=channel_to_proto(
                         channel,
@@ -271,6 +326,7 @@ class ChannelHandlers:
                         current_user_role=role,
                         is_member=membership is not None,
                         dm_member_ids=dm_ids,
+                        tags=tags_by_id.get(channel.id),
                     )
                 )
         except (NotFoundError, PermissionDeniedError) as e:
@@ -298,6 +354,8 @@ class ChannelHandlers:
             updates["icon"] = request.icon
         if request.HasField("is_default"):
             updates["is_default"] = request.is_default
+        if request.HasField("tag_ids"):
+            updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
             async with open_session() as session:
@@ -313,7 +371,13 @@ class ChannelHandlers:
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return UpdateChannelResponse(channel=channel_to_proto(channel, stats))
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+
+                return UpdateChannelResponse(
+                    channel=channel_to_proto(
+                        channel, stats, tags=tags_by_id.get(channel.id)
+                    )
+                )
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
@@ -528,6 +592,7 @@ class ChannelHandlers:
         page_size = (
             request.page_size if request.HasField("page_size") and request.page_size > 0 else None
         )
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
 
         try:
             async with open_session() as session:
@@ -538,14 +603,32 @@ class ChannelHandlers:
                         org_id,
                         cursor=cursor,
                         limit=page_size,
+                        tag_ids=tag_ids or None,
                     )
-                    channels = [channel_to_proto(ch, stats, is_member=False) for ch, stats in rows]
+                    public_channel_ids = [
+                        ch.id
+                        for ch, _ in rows
+                        if ch.channel_type not in (ChannelType.DIRECT, ChannelType.GROUP_DM)
+                    ]
+                    public_tags = await _hydrate_channel_tags(
+                        session, org_id, public_channel_ids
+                    )
+                    channels = [
+                        channel_to_proto(
+                            ch,
+                            stats,
+                            is_member=False,
+                            tags=public_tags.get(ch.id),
+                        )
+                        for ch, stats in rows
+                    ]
                 else:
                     rows, next_cursor = await ops.list_user_channels(
                         user_id,
                         org_id,
                         cursor=cursor,
                         limit=page_size,
+                        tag_ids=tag_ids or None,
                     )
 
                     # Batch-fetch member IDs for DM channels via the
@@ -585,6 +668,14 @@ class ChannelHandlers:
                                 dm_members_map[str(cid)] = peers
                                 await set_cached_dm_peers(cid, peers)
 
+                    user_channel_ids = [
+                        ch.id
+                        for ch, _, _ in rows
+                        if ch.channel_type not in (ChannelType.DIRECT, ChannelType.GROUP_DM)
+                    ]
+                    user_tags = await _hydrate_channel_tags(
+                        session, org_id, user_channel_ids
+                    )
                     channels = [
                         channel_to_proto(
                             ch,
@@ -592,6 +683,7 @@ class ChannelHandlers:
                             current_user_role=role,
                             is_member=True,
                             dm_member_ids=dm_members_map.get(str(ch.id)),
+                            tags=user_tags.get(ch.id),
                         )
                         for ch, stats, role in rows
                     ]
@@ -630,7 +722,16 @@ class ChannelHandlers:
                 )
                 stats = stats_result.scalar_one_or_none()
 
-                return JoinChannelResponse(channel=channel_to_proto(channel, stats, is_member=True))
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+
+                return JoinChannelResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        stats,
+                        is_member=True,
+                        tags=tags_by_id.get(channel.id),
+                    )
+                )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -862,7 +963,7 @@ class ChannelHandlers:
         """Mark a channel as read up to a message."""
         user_id = get_user_id_from_context(ctx)
         try:
-            UUID(request.organization_id)  # validate format
+            org_id = UUID(request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.last_read_message_id)
         except ValueError:
@@ -873,6 +974,18 @@ class ChannelHandlers:
 
             ops = ChatReadStateOperations(session)
             await ops.mark_channel_read(user_id, channel_id, message_id)
+
+            # Cascade to in-app notifications: every notification emitted
+            # for this channel (mention, DM, thread reply) carries
+            # source_urn == channel_urn, so reading the channel must
+            # clear the matching unread bell entries in one shot.
+            channel_urn = f"urn:uniffy:content:CHAT:{channel_id}"
+            await NotificationOperations(session).mark_read_by_source_urn(
+                user_id=user_id,
+                organization_id=org_id,
+                source_urn=channel_urn,
+            )
+
             return MarkChannelReadResponse()
 
     async def mark_thread_read(

@@ -14,6 +14,7 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.login.group_member import GroupMember
@@ -178,6 +179,16 @@ class OrganizationOperations:
         from uniffy.domains.files.filters.presets import create_default_presets
 
         await create_default_presets(self._session, org.id, owner_user_id)
+        await self._session.commit()
+
+        # Seed default tag explorer filter presets
+        from uniffy.domains.tags.filters.presets import (
+            create_default_tag_filter_presets,
+        )
+
+        await create_default_tag_filter_presets(
+            self._session, org.id, owner_user_id
+        )
         await self._session.commit()
 
         # Create default #general chat channel
@@ -959,6 +970,8 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(da)
 
+        await invalidate_visible_sets_for_user(org_id, target_user_id)
+
         # Notify target user to refresh permissions
         from uniffy.core.valkey.pubsub import publish_notification
 
@@ -1015,6 +1028,8 @@ class OrganizationOperations:
 
         await self._session.delete(da)
         await self._session.commit()
+
+        await invalidate_visible_sets_for_user(org_id, target_user_id)
 
         # Notify target user to refresh permissions
         from uniffy.core.valkey.pubsub import publish_notification

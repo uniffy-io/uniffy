@@ -33,6 +33,8 @@ from uniffy.core.models.chat.channel_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.types import SubjectType
+from uniffy.domains.tags import Tag
+from uniffy.domains.tags.converters import tag_to_proto
 
 _SUBJECT_TYPE_TO_PROTO = {
     SubjectType.USER: ProtoSubjectType.SUBJECT_TYPE_USER,
@@ -92,6 +94,7 @@ def channel_to_proto(
     current_user_role: ChannelRole | None = None,
     is_member: bool | None = None,
     dm_member_ids: list[str] | None = None,
+    tags: list[Tag] | None = None,
 ) -> ProtoChatChannel:
     """Convert ChatChannel + stats to proto ChatChannel."""
     proto = ProtoChatChannel(
@@ -143,6 +146,9 @@ def channel_to_proto(
 
     if dm_member_ids:
         proto.dm_member_ids[:] = dm_member_ids
+
+    if tags:
+        proto.tags.extend(tag_to_proto(t) for t in tags)
 
     return proto
 

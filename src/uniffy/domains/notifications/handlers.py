@@ -65,6 +65,7 @@ from uniffy.domains.notifications.operations import (
     NotificationOperations,
     PushSubscriptionOperations,
 )
+from uniffy.domains.notifications.tag_relay import TagEventRelay
 
 
 class NotificationsHandlers:
@@ -755,12 +756,16 @@ class NotificationsHandlers:
         heartbeat_interval = 30  # seconds
         disconnect = get_disconnect_event()
 
+        organization_uuid = UUID(request.organization_id)
+        tag_relay = TagEventRelay(user_id, organization_uuid)
+
         try:
             async with aclosing(
                 subscribe_channels(
                     f"notifications:{user_id}",
                     f"presence:{request.organization_id}",
                     f"mentions:{request.organization_id}",
+                    f"tags:{request.organization_id}",
                 )
             ) as subscriber:
                 last_send = time.monotonic()
@@ -843,6 +848,25 @@ class NotificationsHandlers:
                             mention_state_changed=mention_payload,
                         )
                         last_send = now
+                        continue
+
+                    # Tag events (from tags:{org_id} channel) -- per-recipient
+                    # filter then re-emit as MENTION_STATE_CHANGED so the
+                    # existing chip-state pipeline picks them up unchanged.
+                    if payload.get("_type", "").startswith("tag."):
+                        relayed = await tag_relay.project(payload)
+                        for changes in relayed:
+                            urn = changes.pop("urn", "")
+                            if not urn:
+                                continue
+                            yield StreamNotificationEvent(
+                                event_type=StreamNotificationEvent.EVENT_TYPE_MENTION_STATE_CHANGED,
+                                mention_state_changed=MentionStateChangedPayload(
+                                    urn=urn,
+                                    changes=changes,
+                                ),
+                            )
+                            last_send = now
                         continue
 
                     # Real notification payload

@@ -36,6 +36,7 @@ import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
 import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/utils/mentionUtils";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { TagPicker } from "@/features/tags";
 import { SubtasksList } from "./SubtasksList";
 import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
@@ -209,6 +210,22 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               )}
             </div>
           )}
+
+          {/* Tags - autosave on selection (Jira behavior) */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tags
+            </h3>
+            <TagPicker
+              selectedTagIds={task.tagIds}
+              onChange={(nextTagIds) => {
+                dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+              }}
+              disabled={!canEdit}
+              placeholder="Add a tag"
+            />
+          </div>
 
           {/* Description (in modal mode, edited inline - no secondary modal) */}
           {variant === "modal" && (

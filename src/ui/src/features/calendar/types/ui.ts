@@ -64,8 +64,8 @@ export interface EventModalPrefill {
   location?: string;
   /** Pre-filled meeting URL */
   meetingUrl?: string;
-  /** Pre-filled tags */
-  tags?: string[];
+  /** Pre-filled unified-tag ids */
+  tagIds?: string[];
   /** Duration in minutes */
   durationMinutes?: number;
   /** Event ID to edit (for edit mode) */
@@ -187,8 +187,8 @@ export interface EventFilters {
   calendarIds: string[];
   /** Filter by category IDs (empty = all) */
   categoryIds: string[];
-  /** Filter by tags (empty = all) */
-  tags: string[];
+  /** Filter by unified-tag ids (empty = all) */
+  tagIds: string[];
   /** Search query */
   searchQuery: string;
   /** Show only focus time events */

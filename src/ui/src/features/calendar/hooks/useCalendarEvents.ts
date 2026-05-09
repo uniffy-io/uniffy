@@ -78,12 +78,14 @@ export function useCalendarEvents() {
         return false;
       }
 
-      // Filter by tags
-      if (filters.tags.length > 0) {
-        const hasMatchingTag = filters.tags.some((tag) =>
-          event.tags.includes(tag)
+      // Filter by tags - logical AND across the selected tag id set so the
+      // sidebar tag cloud composes the same way the server-side `tag_ids[]`
+      // filter does on `ListEventsRequest`.
+      if (filters.tagIds.length > 0) {
+        const hasAllTags = filters.tagIds.every((tagId) =>
+          event.tagIds.includes(tagId)
         );
-        if (!hasMatchingTag) {
+        if (!hasAllTags) {
           return false;
         }
       }
@@ -158,14 +160,15 @@ export function useCalendarEvents() {
   }, [events, selectedEventId]);
 
   /**
-   * Get all unique tags from visible events
+   * Get all unique tag ids from visible events. The sidebar TagCloud
+   * resolves these to display rows via the unified tags-slice cache.
    */
-  const allTags = useMemo(() => {
+  const allTagIds = useMemo(() => {
     const tagSet = new Set<string>();
     visibleEvents.forEach((event) => {
-      event.tags.forEach((tag) => tagSet.add(tag));
+      event.tagIds.forEach((tagId) => tagSet.add(tagId));
     });
-    return Array.from(tagSet).sort();
+    return Array.from(tagSet);
   }, [visibleEvents]);
 
   // Action handlers
@@ -221,7 +224,7 @@ export function useCalendarEvents() {
     visibleEvents,
     selectedEvent,
     selectedEventId,
-    allTags,
+    allTagIds,
 
     // Modal state
     isEventModalOpen,

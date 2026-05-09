@@ -26,6 +26,7 @@ function buildChannel(overrides: Partial<ChatChannel> = {}): ChatChannel {
     memberCount: 2,
     dmMemberIds: [],
     isAgentDm: true,
+    tagIds: [],
     ...overrides,
   };
 }

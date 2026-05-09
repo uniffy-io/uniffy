@@ -40,7 +40,9 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import ContentRole
+from uniffy.domains.tags.converters import tag_to_proto
 
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
 # across every domain so they live in ``core.converters.common_proto``.
@@ -109,6 +111,7 @@ def project_to_proto(
     fields: list[FieldDefinition],
     views: list[ViewConfig],
     user_role: ContentRole | None = None,
+    tags: list[Tag] | None = None,
 ) -> ProtoProject:
     """Convert a :class:`Project` row to its proto representation.
 
@@ -148,6 +151,7 @@ def project_to_proto(
         updated_at=datetime_to_timestamp(project.updated_at),
         urn=project.urn,
         type_field_schemas=type_schemas_proto,
+        tags=[tag_to_proto(tag) for tag in (tags or [])],
     )
 
     if project.baseline_role is not None:
@@ -166,6 +170,7 @@ def task_to_proto(
     user_role: ContentRole | None = None,
     subtask_total: int = 0,
     subtask_completed: int = 0,
+    tags: list[Tag] | None = None,
 ) -> ProtoTask:
     """Convert a :class:`Task` row to its proto representation."""
     field_values_map: dict[str, str] = {}
@@ -197,6 +202,7 @@ def task_to_proto(
         urn=task.urn,
         subtask_total=subtask_total,
         subtask_completed=subtask_completed,
+        tags=[tag_to_proto(tag) for tag in (tags or [])],
     )
 
     if task.start_date:

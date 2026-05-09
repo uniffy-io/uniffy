@@ -28,6 +28,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.PROMPT]: '#a855f7',         // purple-500
   [UrnType.ROOM]: '#0ea5e9',           // sky-500
   [UrnType.CHAT_MESSAGE]: '#8b5cf6',   // violet-500 (same as chat)
+  [UrnType.TAG]: '#64748b',            // slate-500 (per-tag color overrides at chip level)
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
@@ -175,6 +176,16 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     shadow: 'shadow-violet-500/50',
     glow: 'inset-shadow-sm inset-shadow-violet-500/30',
   },
+  [UrnType.TAG]: {
+    gradient: 'from-primary/10 via-primary/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-slate-400 to-slate-500',
+    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
+    accentText: 'text-primary',
+    badgeBg: 'bg-primary/10',
+    border: 'border-primary/40 dark:border-primary/20',
+    shadow: 'shadow-primary/40',
+    glow: 'inset-shadow-sm inset-shadow-primary/30',
+  },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
     iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
@@ -224,4 +235,5 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.AGENT, label: 'Agents', hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT], tailwindBg: 'bg-cyan-500' },
   { type: UrnType.PROMPT, label: 'Prompts', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROMPT], tailwindBg: 'bg-purple-500' },
   { type: UrnType.ROOM, label: 'Rooms', hexColor: URN_TYPE_HEX_COLORS[UrnType.ROOM], tailwindBg: 'bg-sky-500' },
+  { type: UrnType.TAG, label: 'Tags', hexColor: URN_TYPE_HEX_COLORS[UrnType.TAG], tailwindBg: 'bg-slate-500' },
 ];

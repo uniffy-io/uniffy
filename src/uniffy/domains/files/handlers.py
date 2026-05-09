@@ -66,6 +66,7 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import ContentType
@@ -80,6 +81,38 @@ from uniffy.domains.files.converters import (
     upload_to_proto_status,
 )
 from uniffy.domains.files.operations import FileOperations, FolderOperations
+from uniffy.domains.tags import TagOperations
+
+
+def _file_urn(file_id: str | UUID) -> str:
+    """Build the URN string for a file id (mirrors File.urn)."""
+    return f"urn:uniffy:content:FILE:{file_id}"
+
+
+def _parse_tag_id_list(values: list[str]) -> list[UUID]:
+    """Parse a list of tag id strings, raising ``INVALID_ARGUMENT`` on any miss."""
+    parsed: list[UUID] = []
+    for value in values:
+        try:
+            parsed.append(UUID(value))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid tag_id: {exc}") from exc
+    return parsed
+
+
+async def _hydrate_file_tags(
+    session,
+    organization_id: UUID,
+    files: list[File],
+) -> dict[str, list]:
+    """Bulk-fetch unified tags for a batch of files."""
+    if not files:
+        return {}
+    tag_ops = TagOperations(session)
+    return await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=[_file_urn(f.id) for f in files],
+    )
 
 
 class FilesHandlers:
@@ -223,6 +256,8 @@ class FilesHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
+        tag_ids = _parse_tag_id_list(list(request.tag_ids)) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
@@ -231,11 +266,15 @@ class FilesHandlers:
                 file = await ops.complete_upload(
                     upload_id=upload_id,
                     user_id=user_id,
+                    tag_ids=tag_ids,
                 )
 
                 logger.info(f"[Upload] Completed file id={file.id} folder_id={file.folder_id}")
 
-                return UploadChunksResponse(file=file_to_proto(file))
+                tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
+                return UploadChunksResponse(
+                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Upload not found")
@@ -309,7 +348,15 @@ class FilesHandlers:
                             upload_id=upload_id,
                             user_id=user_id,
                         )
-                        return UploadChunksResponse(file=file_to_proto(file))
+                        tags_by_urn = await _hydrate_file_tags(
+                            session, file.organization_id, [file]
+                        )
+                        return UploadChunksResponse(
+                            file=file_to_proto(
+                                file,
+                                tags=tags_by_urn.get(_file_urn(file.id), []),
+                            )
+                        )
 
                 # If we get here without is_last, something went wrong
                 raise ConnectError(Code.INVALID_ARGUMENT, "Upload stream ended without is_last")
@@ -539,7 +586,10 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
-                return FileResponse(file=file_to_proto(file))
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                return FileResponse(
+                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "File not found")
@@ -598,16 +648,23 @@ class FilesHandlers:
                         new_baseline_role=new_baseline_role,
                     )
 
+                tag_ids: list[UUID] | None = None
+                if request.HasField("tag_ids"):
+                    tag_ids = _parse_tag_id_list(list(request.tag_ids.ids))
+
                 file = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     file_id=file_id,
                     filename=request.filename if request.HasField("filename") else None,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     description=request.description if request.HasField("description") else None,
                 )
 
-                return FileResponse(file=file_to_proto(file))
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                return FileResponse(
+                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "File not found")
@@ -680,7 +737,10 @@ class FilesHandlers:
                     organization_id=organization_id,
                     file_id=file_id,
                 )
-                return FileResponse(file=file_to_proto(file))
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                return FileResponse(
+                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "File not found")
@@ -728,6 +788,8 @@ class FilesHandlers:
         if request.access_mode:
             access_mode_filter = access_mode_from_proto(request.access_mode)
 
+        tag_ids = _parse_tag_id_list(list(request.tag_ids)) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
@@ -740,7 +802,7 @@ class FilesHandlers:
                     personal_only=request.personal_only,
                     shared_only=request.shared_only,
                     include_deleted=request.include_deleted,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     page=max(1, request.page or 1),
                     page_size=min(100, max(1, request.page_size or 50)),
                     sort_by=request.sort_by or "updated_at",
@@ -761,12 +823,18 @@ class FilesHandlers:
                             "email": row.email,
                         }
 
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, files)
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
                 return ListFilesResponse(
                     files=[
-                        file_to_proto(f, owner_info=owner_info_map.get(f.owner_id)) for f in files
+                        file_to_proto(
+                            f,
+                            owner_info=owner_info_map.get(f.owner_id),
+                            tags=tags_by_urn.get(_file_urn(f.id), []),
+                        )
+                        for f in files
                     ],
                     total_count=total,
                     page=request.page or 1,
@@ -1102,8 +1170,12 @@ class FilesHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                 )
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, files)
                 return ListTrashResponse(
-                    files=[file_to_proto(f) for f in files],
+                    files=[
+                        file_to_proto(f, tags=tags_by_urn.get(_file_urn(f.id), []))
+                        for f in files
+                    ],
                     folders=[folder_to_proto(f) for f in folders],
                 )
 

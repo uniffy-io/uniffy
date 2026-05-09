@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { SubjectType } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * @generated from enum chat.v1.ChannelType
@@ -368,6 +369,16 @@ export class ChatChannel extends Message<ChatChannel> {
    */
   agentId?: string;
 
+  /**
+   * Hydrated unified-tag rows assigned to this channel. Server-populated
+   * via ``TagOperations.get_for_urns``; clients should treat as read-only.
+   * Only meaningful for non-DM channels (PUBLIC / PRIVATE); DM channels
+   * do not carry tags.
+   *
+   * @generated from field: repeated tags.v1.Tag tags = 36;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<ChatChannel>) {
     super();
     proto3.util.initPartial(data, this);
@@ -401,6 +412,7 @@ export class ChatChannel extends Message<ChatChannel> {
     { no: 33, name: "is_agent_dm", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 34, name: "custom_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 35, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 36, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatChannel {
@@ -1196,6 +1208,14 @@ export class CreateChannelRequest extends Message<CreateChannelRequest> {
    */
   members: ChatSubject[] = [];
 
+  /**
+   * Optional unified-tag ids to assign on create. Ignored for DM /
+   * GROUP_DM channels (DMs do not carry tags).
+   *
+   * @generated from field: repeated string tag_ids = 12;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateChannelRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1213,6 +1233,7 @@ export class CreateChannelRequest extends Message<CreateChannelRequest> {
     { no: 7, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 11, name: "members", kind: "message", T: ChatSubject, repeated: true },
+    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateChannelRequest {
@@ -1383,6 +1404,16 @@ export class UpdateChannelRequest extends Message<UpdateChannelRequest> {
    */
   isDefault?: boolean;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual
+   * tags; field unset (HasField=false) leaves them untouched. Mirrors
+   * the NoteTagIds / FileTagIds / EventTagIds wrapper pattern. Ignored
+   * for DM / GROUP_DM channels.
+   *
+   * @generated from field: optional chat.v1.ChannelTagIds tag_ids = 7;
+   */
+  tagIds?: ChannelTagIds;
+
   constructor(data?: PartialMessage<UpdateChannelRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1397,6 +1428,7 @@ export class UpdateChannelRequest extends Message<UpdateChannelRequest> {
     { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "icon", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "tag_ids", kind: "message", T: ChannelTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateChannelRequest {
@@ -1413,6 +1445,46 @@ export class UpdateChannelRequest extends Message<UpdateChannelRequest> {
 
   static equals(a: UpdateChannelRequest | PlainMessage<UpdateChannelRequest> | undefined, b: UpdateChannelRequest | PlainMessage<UpdateChannelRequest> | undefined): boolean {
     return proto3.util.equals(UpdateChannelRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so callers can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+ *
+ * @generated from message chat.v1.ChannelTagIds
+ */
+export class ChannelTagIds extends Message<ChannelTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<ChannelTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ChannelTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelTagIds {
+    return new ChannelTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelTagIds {
+    return new ChannelTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelTagIds {
+    return new ChannelTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChannelTagIds | PlainMessage<ChannelTagIds> | undefined, b: ChannelTagIds | PlainMessage<ChannelTagIds> | undefined): boolean {
+    return proto3.util.equals(ChannelTagIds, a, b);
   }
 }
 
@@ -1635,6 +1707,15 @@ export class ListChannelsRequest extends Message<ListChannelsRequest> {
    */
   pageSize?: number;
 
+  /**
+   * Filter channels that carry every tag id in this list (logical AND).
+   * Empty = no tag filter. Mirrors ``ListNotesRequest`` / ``ListFilesRequest``
+   * / ``ListEventsRequest``.
+   *
+   * @generated from field: repeated string tag_ids = 5;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<ListChannelsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1647,6 +1728,7 @@ export class ListChannelsRequest extends Message<ListChannelsRequest> {
     { no: 2, name: "browse_public", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 5, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListChannelsRequest {

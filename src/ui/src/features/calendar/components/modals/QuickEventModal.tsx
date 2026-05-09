@@ -32,6 +32,7 @@ import { RecurrenceSelector } from '@/features/calendar/components/modals/Recurr
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
+import { TagPicker } from '@/features/tags';
 import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
@@ -99,6 +100,7 @@ export function QuickEventModal({
   const [visibility, setVisibility] = useState<EventVisibility>('private');
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -155,6 +157,7 @@ export function QuickEventModal({
       setEndHour(initialEndHour);
       setVisibility('private');
       setRecurrence(undefined);
+      setTagIds([]);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -241,6 +244,7 @@ export function QuickEventModal({
         visibility,
         recurrence,
         roomId: selectedRoomId || undefined,
+        tagIds,
       })
     );
 
@@ -514,6 +518,19 @@ export function QuickEventModal({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Tag size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Tags</span>
+                </div>
+                <TagPicker
+                  selectedTagIds={tagIds}
+                  onChange={setTagIds}
+                  placeholder="Add tags..."
+                />
               </div>
 
               {/* Description */}

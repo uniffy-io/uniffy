@@ -28,6 +28,8 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import ContentRole, NodeType
+from uniffy.domains.tags import Tag
+from uniffy.domains.tags.converters import tag_to_proto
 
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
 # across every domain so they live in ``core.converters.common_proto``.
@@ -58,6 +60,7 @@ def note_to_proto(
     exclude_content: bool = False,
     owner_info: dict | None = None,
     shared_with: list[dict] | None = None,
+    tags: list[Tag] | None = None,
 ) -> ProtoNote:
     """Convert a :class:`Note` row to its proto representation.
 
@@ -77,6 +80,10 @@ def note_to_proto(
     shared_with : list[dict] | None
         Pre-built share-target dicts for notes the requester owns. See
         ``NoteOperations._build_shared_with`` for the canonical shape.
+    tags : list[Tag] | None
+        Hydrated unified tags assigned to this note (manual + inline
+        sources merged). Pass ``None`` to omit; pass ``[]`` for "the
+        caller fetched and confirmed there are none".
     """
     proto_note = ProtoNote(
         id=str(note.id),
@@ -89,12 +96,11 @@ def note_to_proto(
         slug=note.slug,
         is_deleted=note.is_deleted,
         version=note.version,
-        tags=note.tags or [],
-        inline_tags=note.inline_tags or [],
         metadata=_build_metadata_dict(note),
         created_at=datetime_to_timestamp(note.created_at),
         updated_at=datetime_to_timestamp(note.updated_at),
         outgoing_references=note.outgoing_references or [],
+        tags=[tag_to_proto(t) for t in tags] if tags else [],
     )
 
     if note.baseline_role is not None:

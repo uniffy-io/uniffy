@@ -22,6 +22,7 @@ import {
   Gauge,
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { useTagsByIds } from '@/features/tags/store/selectors';
 import {
   selectActiveChannel,
 } from '@/features/chat/store/chatChannelsSlice';
@@ -41,6 +42,7 @@ import { openResourcePanel, selectResourcePanelOpen } from '@/features/chat/stor
 import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 import { AgentContextBar } from '@/features/chat/components/channel/AgentContextBar';
 import { ChannelAgentsPopover } from '@/features/chat/components/channel/ChannelAgentsPopover';
+import { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
 import { cn } from '@/shared/utils/cn';
 import { formatDateFull } from '@/shared/utils/dateFormatting';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -51,6 +53,7 @@ import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
 import { Input } from '@/components/ui/input';
 import { renameAgentChat } from '@/features/chat/store/chatThunks';
 import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
+import { TagChip } from '@/features/tags';
 
 const headerButtonClass = cn(
   'group/btn relative flex items-center justify-center h-7 w-7 rounded-md',
@@ -124,6 +127,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   }, [dispatch]);
 
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const pinnedCount = useAppSelector((state) =>
     activeChannel ? selectPinnedCountForChannel(state, activeChannel.id) : 0,
   );
@@ -131,6 +135,18 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const isDm = activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM';
   const isOneOnOneDm = activeChannel?.channelType === 'DIRECT';
   const isAgentDm = !!activeChannel?.isAgentDm;
+
+  const dmPeerUserId = useMemo(() => {
+    if (!activeChannel || !isOneOnOneDm || isAgentDm) return '';
+    const peer = (activeChannel.dmMemberIds ?? []).find(
+      (id) => !!id && id !== currentUserId,
+    );
+    if (peer) return peer;
+    if (activeChannel.ownerId && activeChannel.ownerId !== currentUserId) {
+      return activeChannel.ownerId;
+    }
+    return '';
+  }, [activeChannel, isOneOnOneDm, isAgentDm, currentUserId]);
 
   const agent = useAppSelector((state) =>
     isAgentDm && activeChannel?.agentId
@@ -209,6 +225,8 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     [submitNameDraft],
   );
 
+  const channelTags = useTagsByIds(activeChannel?.tagIds ?? []);
+
   if (!activeChannel) return null;
 
   const isPrivate = activeChannel.channelType === 'PRIVATE';
@@ -260,6 +278,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             title={isAgentDm ? 'Click to rename' : undefined}
           >
             <span>{headerName}</span>
+            {dmPeerUserId && (
+              <CustomStatusDisplay userId={dmPeerUserId} className="text-sm" compact />
+            )}
             {!isDm && (
               isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />
             )}
@@ -447,16 +468,26 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
         <div
           className={cn(
             'overflow-hidden transition-[max-height,opacity] duration-200 ease-out',
-            isExpanded ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0',
+            isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0',
           )}
         >
-          <div className="px-4 py-2 border-t border-border/50">
+          <div className="px-4 py-2 border-t border-border/50 space-y-1.5">
             {activeChannel.description && (
               <p className="text-sm text-muted-foreground">
                 {activeChannel.description}
               </p>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            {channelTags.length > 0 && (
+              <div
+                className="flex flex-wrap items-center gap-1"
+                data-testid="chat-channel-header-tags"
+              >
+                {channelTags.map((tag) => (
+                  <TagChip key={tag.id} tag={tag} className="text-[11px] px-2 py-0.5" />
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
               Created on {createdDate}
             </p>
           </div>

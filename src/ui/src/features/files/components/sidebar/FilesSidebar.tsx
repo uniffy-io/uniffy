@@ -83,7 +83,7 @@ interface FilesNavItem {
 
 const filesNavItems: FilesNavItem[] = [
     { name: 'All Files', path: '/files', icon: SquaresFour },
-    { name: 'Tags', path: '/files/tags', icon: Tag },
+    { name: 'Tags', path: '/tags?domain=file', icon: Tag },
     { name: 'Filters', path: '/files/filters', icon: Funnel },
 ];
 

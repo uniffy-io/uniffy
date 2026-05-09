@@ -25,6 +25,7 @@ import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/task
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
 import { MultiSelectField } from "@/features/projects/utils/multiSelectUtils";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
+import { TagPicker } from "@/features/tags";
 
 export function CreateTaskModal() {
   const dispatch = useAppDispatch();
@@ -39,6 +40,7 @@ export function CreateTaskModal() {
   const [dueDate, setDueDate] = useState("");
   const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>({});
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState("task");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
@@ -86,6 +88,7 @@ export function CreateTaskModal() {
     setStartDate("");
     setDueDate("");
     setTaskType("task");
+    setTagIds([]);
     pendingFileIdsRef.current = [];
     dispatch(closeCreateTaskModal());
   }, [dispatch]);
@@ -152,6 +155,7 @@ export function CreateTaskModal() {
           taskType,
           recurrenceRule: recurrenceRule || null,
           fieldValues: Object.keys(submittableFieldValues).length > 0 ? submittableFieldValues : undefined,
+          tagIds: tagIds.length ? tagIds : undefined,
         })
       ).unwrap();
 
@@ -375,6 +379,22 @@ export function CreateTaskModal() {
                   disabled={isSubmitting}
                 />
               </div>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Tags
+                <span className="text-muted-foreground font-normal ml-1">
+                  (optional)
+                </span>
+              </label>
+              <TagPicker
+                selectedTagIds={tagIds}
+                onChange={setTagIds}
+                disabled={isSubmitting}
+                placeholder="Add a tag"
+              />
             </div>
 
             {/* Recurrence */}

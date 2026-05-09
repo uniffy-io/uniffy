@@ -214,6 +214,45 @@ class SearchIndexer:
             owner_id=owner_id,
         )
 
+    async def update_tags_for_urn(
+        self,
+        urn: str,
+        organization_id: UUID,
+        tags: list[str],
+    ) -> None:
+        """Partial update of the ``tags`` array on an indexed document.
+
+        Used by the tag reindex worker after a rename / merge changes
+        which slugs apply to a content URN. No-op when the document is
+        not present in the index.
+        """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        await client.update_document_tags(
+            urn=urn,
+            organization_id=organization_id,
+            tags=tags,
+        )
+
+    async def update_tags_bulk(
+        self,
+        organization_id: UUID,
+        items: list[tuple[str, list[str]]],
+    ) -> None:
+        """Bulk partial-update of ``tags`` arrays on many documents.
+
+        Issues one Meilisearch ``update_documents`` HTTP call for the
+        whole batch. ``items`` is a list of ``(urn, tags)`` tuples.
+        """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        await client.update_document_tags_bulk(
+            organization_id=organization_id,
+            items=items,
+        )
+
     async def remove(
         self,
         urn: str,

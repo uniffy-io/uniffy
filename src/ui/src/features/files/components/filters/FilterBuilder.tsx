@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { IconPicker, renderIcon, type IconValue } from '@/components/icon-picker';
 import { cn } from '@/shared/utils/cn';
+import { TagPicker } from '@/features/tags';
 import type { SerializedFilterCriteria, SerializedSavedFilter, SerializedIconValue } from '@/features/files/store/savedFiltersSlice';
 
 interface FilterBuilderProps {
@@ -85,8 +86,7 @@ export function FilterBuilder({
         initialFilter?.criteria.extensions ?? []
     );
     const [extensionInput, setExtensionInput] = useState('');
-    const [tags, setTags] = useState<string[]>(initialFilter?.criteria.tags ?? []);
-    const [tagInput, setTagInput] = useState('');
+    const [tagIds, setTagIds] = useState<string[]>(initialFilter?.criteria.tagIds ?? []);
     const [sizeMin, setSizeMin] = useState<number | undefined>(
         initialFilter?.criteria.sizeMinBytes
     );
@@ -126,20 +126,6 @@ export function FilterBuilder({
         setExtensions((prev) => prev.filter((e) => e !== ext));
     }, []);
 
-    // Handle tag add
-    const handleAddTag = useCallback(() => {
-        const tag = tagInput.trim();
-        if (tag && !tags.includes(tag)) {
-            setTags((prev) => [...prev, tag]);
-            setTagInput('');
-        }
-    }, [tagInput, tags]);
-
-    // Handle tag remove
-    const handleRemoveTag = useCallback((tag: string) => {
-        setTags((prev) => prev.filter((t) => t !== tag));
-    }, []);
-
     // Handle size preset selection
     const handleSizePreset = useCallback((min: number | undefined, max: number | undefined) => {
         setSizeMin(min);
@@ -174,8 +160,8 @@ export function FilterBuilder({
         if (extensions.length > 0) {
             criteria.extensions = extensions;
         }
-        if (tags.length > 0) {
-            criteria.tags = tags;
+        if (tagIds.length > 0) {
+            criteria.tagIds = tagIds;
         }
         if (sizeMin !== undefined) {
             criteria.sizeMinBytes = sizeMin;
@@ -196,7 +182,7 @@ export function FilterBuilder({
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save filter');
         }
-    }, [name, description, icon, selectedCategories, extensions, tags, sizeMin, sizeMax, sortBy, sortOrder, onSave]);
+    }, [name, description, icon, selectedCategories, extensions, tagIds, sizeMin, sizeMax, sortBy, sortOrder, onSave]);
 
     // Handle category toggle - also clear error
     const handleCategoryToggleWithClear = useCallback((categoryId: string) => {
@@ -389,38 +375,11 @@ export function FilterBuilder({
                     <label className="block text-sm font-medium mb-2">
                         Tags
                     </label>
-                    <div className="flex gap-2 mb-2">
-                        <input
-                            type="text"
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                            placeholder="Enter a tag"
-                            className="flex-1 px-3 py-1.5 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                        <Button variant="outline" size="sm" onClick={handleAddTag}>
-                            <Plus size={14} weight="bold" />
-                        </Button>
-                    </div>
-
-                    {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                            {tags.map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs"
-                                >
-                                    {tag}
-                                    <button
-                                        onClick={() => handleRemoveTag(tag)}
-                                        className="hover:text-destructive"
-                                    >
-                                        <X size={12} weight="bold" />
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-                    )}
+                    <TagPicker
+                        selectedTagIds={tagIds}
+                        onChange={setTagIds}
+                        placeholder="Add tag..."
+                    />
                 </div>
 
                 {/* File Size */}

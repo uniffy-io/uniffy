@@ -7,6 +7,7 @@ import {
     Sun,
     Desktop,
     UserCircle,
+    Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { logout } from '@/features/auth/store/authSlice';
@@ -24,6 +25,7 @@ import { clearBlobCache } from '@/features/files';
 import { clearComments } from '@/features/comments';
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
 import { clearAgentMessages } from '@/features/agents/store/agentMessagesSlice';
+import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -98,6 +100,7 @@ export function UserMenu() {
         dispatch(clearChatThreads());
         dispatch(clearChatUi());
         dispatch(clearAgentMessages());
+        dispatch(clearTags());
         // Clear IndexedDB cache (async, fire and forget)
         clearNotesCache().catch(console.error);
         // Clear file blob cache
@@ -209,6 +212,18 @@ export function UserMenu() {
 
                     {/* Quick actions */}
                     <div className="py-1.5 px-1.5">
+                        <button
+                            onClick={() => {
+                                navigate('/tags');
+                                setIsOpen(false);
+                            }}
+                            className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+                        >
+                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                            <TagIcon size={16} weight="duotone" className="text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                            <span>Tags</span>
+                        </button>
+
                         <button
                             onClick={() => {
                                 navigate('/settings');

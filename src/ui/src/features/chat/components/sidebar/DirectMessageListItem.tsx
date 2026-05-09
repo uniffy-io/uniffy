@@ -17,6 +17,7 @@ import { SubjectAvatar, SubjectAvatarById } from '@/components/subject';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
+import { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
 
 interface DirectMessageListItemProps {
   channel: ChatChannel;
@@ -144,6 +145,14 @@ export function DirectMessageListItem({
           >
             {displayName}
           </span>
+
+          {!isGroupDm && !isAgentDm && otherUserId && (
+            <CustomStatusDisplay
+              userId={otherUserId}
+              className="text-sm"
+              compact
+            />
+          )}
 
           {isMuted && (
             <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />

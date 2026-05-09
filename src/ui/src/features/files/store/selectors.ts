@@ -44,13 +44,10 @@ function matchesFilterCriteria(file: SerializedFile, criteria: SerializedFilterC
         }
     }
 
-    // Check tags
-    if (criteria.tags && criteria.tags.length > 0) {
-        const fileTags = file.tags.map(t => t.toLowerCase());
-        const matchesTags = criteria.tags.some(tag =>
-            fileTags.includes(tag.toLowerCase())
-        );
-        if (!matchesTags) {
+    // Check tag ids: file must carry every requested id (logical AND, mirrors backend filter).
+    if (criteria.tagIds && criteria.tagIds.length > 0) {
+        const fileTagIdSet = new Set(file.tagIds);
+        if (!criteria.tagIds.every((tagId) => fileTagIdSet.has(tagId))) {
             return false;
         }
     }

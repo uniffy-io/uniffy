@@ -222,7 +222,6 @@ async def _seed_initial_data_locked() -> None:
                 title="About",
                 content="",  # Placeholder, will be updated
                 slug="about",
-                tags=["documentation", "getting-started"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(about_note)
@@ -238,7 +237,6 @@ async def _seed_initial_data_locked() -> None:
                 title="Plans",
                 content="",
                 slug="plans",
-                tags=["documentation", "pricing"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(plans_note)
@@ -254,7 +252,6 @@ async def _seed_initial_data_locked() -> None:
                 title="Transparency",
                 content="",
                 slug="transparency",
-                tags=["documentation", "license", "privacy"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(transparency_note)
@@ -270,7 +267,6 @@ async def _seed_initial_data_locked() -> None:
                 title="Licenses",
                 content="",
                 slug="licenses",
-                tags=["documentation", "license", "legal", "open-source"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(licenses_note)
@@ -286,7 +282,6 @@ async def _seed_initial_data_locked() -> None:
                 title="Searching",
                 content="",
                 slug="searching",
-                tags=["documentation", "search", "help"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(searching_note)
@@ -302,7 +297,6 @@ async def _seed_initial_data_locked() -> None:
                 title="Sharing",
                 content="",
                 slug="sharing",
-                tags=["documentation", "sharing", "permissions", "help"],
                 note_metadata={"system_generated": "true"},
             )
             session.add(sharing_note)
@@ -395,7 +389,7 @@ async def _seed_initial_data_locked() -> None:
                     else None
                 ),
                 owner_id=admin_user.id,
-                keywords=" ".join([uniffy_folder.title] + (uniffy_folder.tags or [])),
+                keywords=uniffy_folder.title,
                 description=uniffy_folder.content[:200] if uniffy_folder.content else None,
             )
 
@@ -413,7 +407,7 @@ async def _seed_initial_data_locked() -> None:
                     else None
                 ),
                 owner_id=admin_user.id,
-                keywords=" ".join([docs_folder.title] + (docs_folder.tags or [])),
+                keywords=docs_folder.title,
                 description=docs_folder.content[:200] if docs_folder.content else None,
             )
 
@@ -430,7 +424,7 @@ async def _seed_initial_data_locked() -> None:
                         note.baseline_role.value if note.baseline_role is not None else None
                     ),
                     owner_id=admin_user.id,
-                    keywords=" ".join([note.title] + (note.tags or []) + [note.content[:1000]]),
+                    keywords=" ".join([note.title, note.content[:1000]]),
                     description=note.content[:200] if note.content else None,
                 )
 
@@ -681,7 +675,6 @@ async def _seed_welcome_canvas(
                 storage_key=f"{org.id}/assets/uniffy-logo.png",
                 storage_bucket=s3.config.bucket_name,
                 folder_id=None,
-                tags=["branding", "system"],
                 description="Official Uniffy logo (512x512).",
                 extraction_status=ExtractionStatus.SKIPPED,
             )
@@ -702,7 +695,7 @@ async def _seed_welcome_canvas(
                 owner_id=admin_user.id,
                 access_mode=logo_file.access_mode.value,
                 baseline_role=logo_file.baseline_role.value,
-                keywords=" ".join([logo_file.filename] + (logo_file.tags or [])),
+                keywords=logo_file.filename,
                 description=logo_file.description,
             )
             logger.info(f"Seeded organization logo file ({len(logo_bytes)} bytes)")
@@ -728,7 +721,6 @@ async def _seed_welcome_canvas(
         content="",
         canvas_content=canvas_content,
         slug="welcome-canvas",
-        tags=["welcome", "overview", "canvas"],
         note_metadata={"system_generated": "true"},
         outgoing_references=(
             extract_all_outgoing_references_from_canvas(canvas_content, org.id) or None
@@ -748,7 +740,7 @@ async def _seed_welcome_canvas(
         baseline_role=canvas_note.baseline_role.value,
         owner_id=admin_user.id,
         keywords=" ".join(
-            [canvas_note.title, "canvas", "overview", "workspace"] + (canvas_note.tags or [])
+            [canvas_note.title, "canvas", "overview", "workspace"]
         ),
         description=(
             "Visual tour of Uniffy - notes, files, chat, calendar, "

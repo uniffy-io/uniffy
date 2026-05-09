@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * @generated from enum projects.v1.FieldType
@@ -93,6 +94,36 @@ proto3.util.setEnumType(ViewType, "projects.v1.ViewType", [
   { no: 1, name: "VIEW_TYPE_TABLE" },
   { no: 2, name: "VIEW_TYPE_BOARD" },
   { no: 3, name: "VIEW_TYPE_ROADMAP" },
+]);
+
+/**
+ * Filter mode for tag list-tasks queries. ALL = task carries every tag id
+ * in the request (intersection); ANY = task carries at least one
+ * (union); NONE = task carries none (anti-join). Mirrors Jira labels.
+ *
+ * @generated from enum projects.v1.TagFilterMode
+ */
+export enum TagFilterMode {
+  /**
+   * @generated from enum value: TAG_FILTER_MODE_ALL = 0;
+   */
+  ALL = 0,
+
+  /**
+   * @generated from enum value: TAG_FILTER_MODE_ANY = 1;
+   */
+  ANY = 1,
+
+  /**
+   * @generated from enum value: TAG_FILTER_MODE_NONE = 2;
+   */
+  NONE = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(TagFilterMode)
+proto3.util.setEnumType(TagFilterMode, "projects.v1.TagFilterMode", [
+  { no: 0, name: "TAG_FILTER_MODE_ALL" },
+  { no: 1, name: "TAG_FILTER_MODE_ANY" },
+  { no: 2, name: "TAG_FILTER_MODE_NONE" },
 ]);
 
 /**
@@ -262,6 +293,11 @@ export class Project extends Message<Project> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * @generated from field: repeated tags.v1.Tag tags = 21;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<Project>) {
     super();
     proto3.util.initPartial(data, this);
@@ -289,6 +325,7 @@ export class Project extends Message<Project> {
     { no: 18, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 19, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
     { no: 20, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 21, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
@@ -467,6 +504,11 @@ export class Task extends Message<Task> {
    */
   timeSpentMinutes?: number;
 
+  /**
+   * @generated from field: repeated tags.v1.Tag tags = 32;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<Task>) {
     super();
     proto3.util.initPartial(data, this);
@@ -506,6 +548,7 @@ export class Task extends Message<Task> {
     { no: 29, name: "subtask_completed", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 30, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 31, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 32, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Task {
@@ -1025,6 +1068,13 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Optional unified-tag ids to assign on create.
+   *
+   * @generated from field: repeated string tag_ids = 9;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1041,6 +1091,7 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
     { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 7, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 9, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProjectRequest {
@@ -1162,6 +1213,15 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual
+   * tags; field unset (HasField=false) leaves them untouched. Mirrors
+   * the NoteTagIds / FileTagIds / EventTagIds wrapper pattern.
+   *
+   * @generated from field: optional projects.v1.ProjectTagIds tag_ids = 13;
+   */
+  tagIds?: ProjectTagIds;
+
   constructor(data?: PartialMessage<UpdateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1181,6 +1241,7 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
     { no: 10, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
     { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 13, name: "tag_ids", kind: "message", T: ProjectTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProjectRequest {
@@ -1197,6 +1258,46 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
 
   static equals(a: UpdateProjectRequest | PlainMessage<UpdateProjectRequest> | undefined, b: UpdateProjectRequest | PlainMessage<UpdateProjectRequest> | undefined): boolean {
     return proto3.util.equals(UpdateProjectRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so callers can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+ *
+ * @generated from message projects.v1.ProjectTagIds
+ */
+export class ProjectTagIds extends Message<ProjectTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<ProjectTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ProjectTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProjectTagIds {
+    return new ProjectTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProjectTagIds {
+    return new ProjectTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProjectTagIds {
+    return new ProjectTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProjectTagIds | PlainMessage<ProjectTagIds> | undefined, b: ProjectTagIds | PlainMessage<ProjectTagIds> | undefined): boolean {
+    return proto3.util.equals(ProjectTagIds, a, b);
   }
 }
 
@@ -1521,6 +1622,13 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
    */
   timeSpentMinutes?: number;
 
+  /**
+   * Optional unified-tag ids to assign on create.
+   *
+   * @generated from field: repeated string tag_ids = 19;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1547,6 +1655,7 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
     { no: 16, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 17, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 18, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 19, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateTaskRequest {
@@ -1708,6 +1817,14 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
    */
   timeSpentMinutes?: number;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual
+   * tags; field unset (HasField=false) leaves them untouched.
+   *
+   * @generated from field: optional projects.v1.TaskTagIds tag_ids = 20;
+   */
+  tagIds?: TaskTagIds;
+
   constructor(data?: PartialMessage<UpdateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1735,6 +1852,7 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
     { no: 17, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 18, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 19, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 20, name: "tag_ids", kind: "message", T: TaskTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateTaskRequest {
@@ -1751,6 +1869,46 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
 
   static equals(a: UpdateTaskRequest | PlainMessage<UpdateTaskRequest> | undefined, b: UpdateTaskRequest | PlainMessage<UpdateTaskRequest> | undefined): boolean {
     return proto3.util.equals(UpdateTaskRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so callers can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+ *
+ * @generated from message projects.v1.TaskTagIds
+ */
+export class TaskTagIds extends Message<TaskTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<TaskTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.TaskTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TaskTagIds {
+    return new TaskTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TaskTagIds {
+    return new TaskTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TaskTagIds {
+    return new TaskTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TaskTagIds | PlainMessage<TaskTagIds> | undefined, b: TaskTagIds | PlainMessage<TaskTagIds> | undefined): boolean {
+    return proto3.util.equals(TaskTagIds, a, b);
   }
 }
 
@@ -2013,6 +2171,19 @@ export class ListTasksRequest extends Message<ListTasksRequest> {
    */
   backlogOnly?: boolean;
 
+  /**
+   * Filter tasks by unified-tag ids. Combined with ``tag_filter_mode``
+   * for ALL / ANY / NONE semantics. Empty = no tag filter.
+   *
+   * @generated from field: repeated string tag_ids = 8;
+   */
+  tagIds: string[] = [];
+
+  /**
+   * @generated from field: optional projects.v1.TagFilterMode tag_filter_mode = 9;
+   */
+  tagFilterMode?: TagFilterMode;
+
   constructor(data?: PartialMessage<ListTasksRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2028,6 +2199,8 @@ export class ListTasksRequest extends Message<ListTasksRequest> {
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "backlog_only", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 8, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "tag_filter_mode", kind: "enum", T: proto3.getEnumType(TagFilterMode), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTasksRequest {

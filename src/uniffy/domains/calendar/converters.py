@@ -48,12 +48,14 @@ from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import (
     AttendeeRole,
     AttendeeStatus,
     RecurrencePattern,
     ResourceType,
 )
+from uniffy.domains.tags.converters import tag_to_proto
 
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
 # across every domain so they live in ``core.converters.common_proto``.
@@ -165,6 +167,8 @@ def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.Value
 def event_to_proto(
     event: CalendarEvent,
     attendees: list[tuple[EventAttendee, dict]] | None = None,
+    *,
+    tags: list[Tag] | None = None,
     room_id: str | None = None,
     room_name: str | None = None,
     room_location: str | None = None,
@@ -179,6 +183,10 @@ def event_to_proto(
         Event row.
     attendees : list[tuple[EventAttendee, dict]] | None
         List of (EventAttendee, user_info) tuples for attendee details.
+    tags : list[Tag] | None
+        Hydrated unified tags assigned to this event. Recurring instances
+        share their parent's tag set; the handler resolves the master URN
+        before calling.
     room_id, room_name, room_location, room_capacity, room_amenities
         Optional room booking info for the event.
     """
@@ -203,7 +211,7 @@ def event_to_proto(
         is_focus_time=event.is_focus_time,
         access_mode=access_mode_to_proto(event.access_mode),
         is_deleted=event.is_deleted,
-        tags=event.tags or [],
+        tags=[tag_to_proto(t) for t in tags] if tags else [],
         outgoing_references=event.outgoing_references or [],
         created_at=datetime_to_timestamp(event.created_at),
         updated_at=datetime_to_timestamp(event.updated_at),

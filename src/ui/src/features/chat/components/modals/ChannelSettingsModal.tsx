@@ -53,6 +53,7 @@ import {
 import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 import { formatDateFull } from '@/shared/utils/dateFormatting';
 import type { ChatChannelMember } from '@/features/chat/types';
+import { TagPicker } from '@/features/tags';
 
 type SettingsTab = 'overview' | 'members';
 
@@ -90,6 +91,7 @@ export function ChannelSettingsModal() {
   const [name, setName] = useState(activeChannel?.name ?? '');
   const [description, setDescription] = useState(activeChannel?.description ?? '');
   const [categoryId, setCategoryId] = useState<string | undefined>(activeChannel?.categoryId ?? undefined);
+  const [tagIds, setTagIds] = useState<string[]>(activeChannel?.tagIds ?? []);
 
   // Action states
   const [isSaving, setIsSaving] = useState(false);
@@ -129,12 +131,15 @@ export function ChannelSettingsModal() {
   // Dirty detection for overview form
   const isDirty = useMemo(() => {
     if (!activeChannel) return false;
+    const sortedNew = [...tagIds].sort().join(',');
+    const sortedOld = [...(activeChannel.tagIds ?? [])].sort().join(',');
     return (
       name !== activeChannel.name ||
       description !== (activeChannel.description ?? '') ||
-      (categoryId ?? '') !== (activeChannel.categoryId ?? '')
+      (categoryId ?? '') !== (activeChannel.categoryId ?? '') ||
+      sortedNew !== sortedOld
     );
-  }, [name, description, categoryId, activeChannel]);
+  }, [name, description, categoryId, tagIds, activeChannel]);
 
   // Fetch members on mount
   useEffect(() => {
@@ -204,6 +209,7 @@ export function ChannelSettingsModal() {
           description: description.trim(),
           categoryId: categoryId || undefined,
           originalCategoryId: activeChannel.categoryId ?? undefined,
+          tagIds,
         }),
       ).unwrap();
     } finally {
@@ -415,6 +421,23 @@ export function ChannelSettingsModal() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     This will be displayed when browsing for channels.
+                  </p>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Tags
+                    <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                  </label>
+                  <TagPicker
+                    selectedTagIds={tagIds}
+                    onChange={setTagIds}
+                    disabled={!canEdit || isSaving}
+                    placeholder="Add a tag"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Group related channels with shared tags. Visible from the unified Tags dashboard.
                   </p>
                 </div>
 

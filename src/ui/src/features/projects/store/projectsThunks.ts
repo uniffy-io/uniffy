@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import type { RootState } from "@/app/store";
+import type { AppDispatch, RootState } from "@/app/store";
 import { projectsApi } from "../api/projectsApi";
 import type {
   Project,
@@ -13,19 +13,53 @@ import type {
 import type { FieldDefinition } from "../types/fields";
 import type { ViewConfig } from "../types/views";
 import type { TaskActivity } from "../types/activity";
+import type {
+  Project as ProtoProject,
+  Task as ProtoTask,
+} from "@uniffy/proto/projects/v1/projects_pb";
+import { bulkUpsertTags, tagToPlain } from "@/features/tags";
+
+const hydrateProjectTags = (
+  dispatch: AppDispatch,
+  protos: (ProtoProject | undefined)[],
+): void => {
+  const tags = protos
+    .filter((p): p is ProtoProject => Boolean(p))
+    .flatMap((p) => p.tags.map(tagToPlain));
+  if (tags.length) {
+    dispatch(bulkUpsertTags(tags));
+  }
+};
+
+const hydrateTaskTags = (
+  dispatch: AppDispatch,
+  protos: (ProtoTask | undefined)[],
+): void => {
+  const tags = protos
+    .filter((p): p is ProtoTask => Boolean(p))
+    .flatMap((p) => p.tags.map(tagToPlain));
+  if (tags.length) {
+    dispatch(bulkUpsertTags(tags));
+  }
+};
 
 /**
  * Fetch all projects for the current organization
  */
-export const fetchProjects = createAsyncThunk<Project[], void, { rejectValue: string }>(
+export const fetchProjects = createAsyncThunk<
+  Project[],
+  void,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/fetchProjects",
-  async (_, { getState, rejectWithValue }) => {
+  async (_, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.listProjects(orgId);
+      hydrateProjectTags(dispatch, response.protoProjects);
       return response.projects;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch projects");
@@ -36,15 +70,20 @@ export const fetchProjects = createAsyncThunk<Project[], void, { rejectValue: st
 /**
  * Fetch a single project by ID
  */
-export const fetchProject = createAsyncThunk<Project | null, string, { rejectValue: string }>(
+export const fetchProject = createAsyncThunk<
+  Project | null,
+  string,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/fetchProject",
-  async (projectId, { getState, rejectWithValue }) => {
+  async (projectId, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.getProject(projectId, orgId);
+      hydrateProjectTags(dispatch, [response.protoProject ?? undefined]);
       return response.project;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch project");
@@ -55,15 +94,24 @@ export const fetchProject = createAsyncThunk<Project | null, string, { rejectVal
 /**
  * Fetch all tasks for a project
  */
-export const fetchProjectTasks = createAsyncThunk<Task[], string, { rejectValue: string }>(
+export const fetchProjectTasks = createAsyncThunk<
+  Task[],
+  string | { projectId: string; tagIds?: string[]; tagFilterMode?: 'all' | 'any' | 'none' },
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/fetchProjectTasks",
-  async (projectId, { getState, rejectWithValue }) => {
+  async (arg, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
-      const response = await projectsApi.listTasks(projectId, orgId);
+      const params = typeof arg === "string" ? { projectId: arg } : arg;
+      const response = await projectsApi.listTasks(params.projectId, orgId, {
+        tagIds: params.tagIds,
+        tagFilterMode: params.tagFilterMode,
+      });
+      hydrateTaskTags(dispatch, response.protoTasks);
       return response.tasks;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch tasks");
@@ -74,15 +122,20 @@ export const fetchProjectTasks = createAsyncThunk<Task[], string, { rejectValue:
 /**
  * Create a new project
  */
-export const createProject = createAsyncThunk<Project, CreateProjectRequest, { rejectValue: string }>(
+export const createProject = createAsyncThunk<
+  Project,
+  CreateProjectRequest,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/createProject",
-  async (data, { getState, rejectWithValue }) => {
+  async (data, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.createProject(data, orgId);
+      hydrateProjectTags(dispatch, [response.protoProject]);
       return response.project;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to create project");
@@ -93,15 +146,20 @@ export const createProject = createAsyncThunk<Project, CreateProjectRequest, { r
 /**
  * Update an existing project
  */
-export const updateProject = createAsyncThunk<Project, UpdateProjectRequest, { rejectValue: string }>(
+export const updateProject = createAsyncThunk<
+  Project,
+  UpdateProjectRequest,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/updateProject",
-  async (data, { getState, rejectWithValue }) => {
+  async (data, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.updateProject(data, orgId);
+      hydrateProjectTags(dispatch, [response.protoProject]);
       return response.project;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update project");
@@ -130,15 +188,20 @@ export const deleteProject = createAsyncThunk<void, string, { rejectValue: strin
 /**
  * Create a new task
  */
-export const createTask = createAsyncThunk<{ task: Task; updatedParent?: Task }, CreateTaskRequest, { rejectValue: string }>(
+export const createTask = createAsyncThunk<
+  { task: Task; updatedParent?: Task },
+  CreateTaskRequest,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/createTask",
-  async (data, { getState, rejectWithValue }) => {
+  async (data, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.createTask(data, orgId);
+      hydrateTaskTags(dispatch, [response.protoTask, response.protoUpdatedParent]);
       return { task: response.task, updatedParent: response.updatedParent };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to create task");
@@ -149,15 +212,24 @@ export const createTask = createAsyncThunk<{ task: Task; updatedParent?: Task },
 /**
  * Update an existing task
  */
-export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, UpdateTaskRequest, { rejectValue: string }>(
+export const updateTask = createAsyncThunk<
+  { task: Task; updatedParent?: Task; spawnedTask?: Task },
+  UpdateTaskRequest,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/updateTask",
-  async (data, { getState, rejectWithValue }) => {
+  async (data, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.updateTask(data, orgId);
+      hydrateTaskTags(dispatch, [
+        response.protoTask,
+        response.protoUpdatedParent,
+        response.protoSpawnedTask,
+      ]);
       return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update task");
@@ -169,15 +241,24 @@ export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task; s
  * Move a task to a different status/position
  * Used for drag-and-drop operations
  */
-export const moveTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, MoveTaskRequest, { rejectValue: string }>(
+export const moveTask = createAsyncThunk<
+  { task: Task; updatedParent?: Task; spawnedTask?: Task },
+  MoveTaskRequest,
+  { dispatch: AppDispatch; rejectValue: string }
+>(
   "projects/moveTask",
-  async (data, { getState, rejectWithValue }) => {
+  async (data, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.moveTask(data, orgId);
+      hydrateTaskTags(dispatch, [
+        response.protoTask,
+        response.protoUpdatedParent,
+        response.protoSpawnedTask,
+      ]);
       return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to move task");
@@ -372,16 +453,17 @@ export const deleteViewThunk = createAsyncThunk<
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],
   { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null } },
-  { rejectValue: string }
+  { dispatch: AppDispatch; rejectValue: string }
 >(
   "projects/bulkUpdateTasks",
-  async ({ taskIds, updates }, { getState, rejectWithValue }) => {
+  async ({ taskIds, updates }, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.bulkUpdateTasks(taskIds, updates, orgId);
+      hydrateTaskTags(dispatch, response.protoTasks);
       return response.tasks;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to bulk update tasks");

@@ -19,7 +19,6 @@ export { NotesGraphDashboard } from '@/features/notes/components/dashboard/Notes
 
 // Pages
 export { NotesPage } from '@/features/notes/pages/NotesPage';
-export { NotesTagsPage } from '@/features/notes/pages/NotesTagsPage';
 
 // Store - Slices
 export { notesReducer } from '@/features/notes/store/notesSlice';

@@ -54,6 +54,10 @@ export interface ChatChannel {
   isAgentDm: boolean;
   customName?: string;
   agentId?: string;
+  // Hydrated unified-tag ids assigned to this channel. Server populates the
+  // `tags` proto field on every read; the slice mirrors them as ids and the
+  // UI renders chips by looking up `state.tags.byId`. Empty for DM/GROUP_DM.
+  tagIds: string[];
   // Unread tracking (populated from GetUnreadCounts)
   unreadCount?: number;
   mentionCount?: number;

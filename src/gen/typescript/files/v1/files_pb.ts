@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * Upload status for tracking multipart uploads.
@@ -338,6 +339,13 @@ export class CompleteUploadRequest extends Message<CompleteUploadRequest> {
    */
   uploadId = "";
 
+  /**
+   * Optional unified-tag ids to assign on upload completion (manual source).
+   *
+   * @generated from field: repeated string tag_ids = 2;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CompleteUploadRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -347,6 +355,7 @@ export class CompleteUploadRequest extends Message<CompleteUploadRequest> {
   static readonly typeName = "files.v1.CompleteUploadRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "upload_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteUploadRequest {
@@ -912,11 +921,6 @@ export class File extends Message<File> {
   folderId?: string;
 
   /**
-   * @generated from field: repeated string tags = 11;
-   */
-  tags: string[] = [];
-
-  /**
    * @generated from field: optional string description = 12;
    */
   description?: string;
@@ -982,6 +986,13 @@ export class File extends Message<File> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Unified tags assigned to this file (manual source, hydrated server-side).
+   *
+   * @generated from field: repeated tags.v1.Tag tags = 24;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<File>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1000,7 +1011,6 @@ export class File extends Message<File> {
     { no: 8, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "size_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 10, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 11, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 12, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 14, name: "extraction_status", kind: "enum", T: proto3.getEnumType(ExtractionStatus) },
@@ -1013,6 +1023,7 @@ export class File extends Message<File> {
     { no: 21, name: "owner_info", kind: "message", T: FileOwner, opt: true },
     { no: 22, name: "metadata", kind: "message", T: FileMetadata, opt: true },
     { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 24, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): File {
@@ -1029,6 +1040,46 @@ export class File extends Message<File> {
 
   static equals(a: File | PlainMessage<File> | undefined, b: File | PlainMessage<File> | undefined): boolean {
     return proto3.util.equals(File, a, b);
+  }
+}
+
+/**
+ * Wrapper so the caller can distinguish "leave tags alone" from
+ * "clear all tags" on partial updates. Mirrors NoteTagIds.
+ *
+ * @generated from message files.v1.FileTagIds
+ */
+export class FileTagIds extends Message<FileTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<FileTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.FileTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileTagIds {
+    return new FileTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FileTagIds {
+    return new FileTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FileTagIds {
+    return new FileTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FileTagIds | PlainMessage<FileTagIds> | undefined, b: FileTagIds | PlainMessage<FileTagIds> | undefined): boolean {
+    return proto3.util.equals(FileTagIds, a, b);
   }
 }
 
@@ -1308,11 +1359,6 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
   filename?: string;
 
   /**
-   * @generated from field: repeated string tags = 4;
-   */
-  tags: string[] = [];
-
-  /**
    * @generated from field: optional string description = 5;
    */
   description?: string;
@@ -1327,6 +1373,14 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual tags.
+   * Field unset (HasField=false) leaves manual tags untouched.
+   *
+   * @generated from field: optional files.v1.FileTagIds tag_ids = 8;
+   */
+  tagIds?: FileTagIds;
+
   constructor(data?: PartialMessage<UpdateFileRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1338,10 +1392,10 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
     { no: 1, name: "file_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 7, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 8, name: "tag_ids", kind: "message", T: FileTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFileRequest {
@@ -1513,11 +1567,6 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
   folderId?: string;
 
   /**
-   * @generated from field: repeated string tags = 3;
-   */
-  tags: string[] = [];
-
-  /**
    * @generated from field: bool include_deleted = 4;
    */
   includeDeleted = false;
@@ -1568,6 +1617,14 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
    */
   sharedOnly = false;
 
+  /**
+   * Filter to files carrying every tag id in this list (logical AND).
+   * Empty = no tag filter.
+   *
+   * @generated from field: repeated string tag_ids = 13;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<ListFilesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1578,7 +1635,6 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
@@ -1588,6 +1644,7 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
     { no: 10, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "shared_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListFilesRequest {
@@ -3035,13 +3092,6 @@ export class FilterCriteria extends Message<FilterCriteria> {
   accessMode?: AccessMode;
 
   /**
-   * Filter by tags
-   *
-   * @generated from field: repeated string tags = 5;
-   */
-  tags: string[] = [];
-
-  /**
    * Minimum file size
    *
    * @generated from field: optional int64 size_min_bytes = 6;
@@ -3069,6 +3119,13 @@ export class FilterCriteria extends Message<FilterCriteria> {
    */
   createdBefore?: Timestamp;
 
+  /**
+   * Filter to files carrying every tag id in this list (logical AND).
+   *
+   * @generated from field: repeated string tag_ids = 10;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<FilterCriteria>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3081,11 +3138,11 @@ export class FilterCriteria extends Message<FilterCriteria> {
     { no: 2, name: "mime_categories", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "owner_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 5, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 6, name: "size_min_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "size_max_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "created_after", kind: "message", T: Timestamp, opt: true },
     { no: 9, name: "created_before", kind: "message", T: Timestamp, opt: true },
+    { no: 10, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FilterCriteria {

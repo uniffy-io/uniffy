@@ -50,20 +50,21 @@ cp .env.example .env
 
 - first time run
 
-```bash
-docker compose up -d # Start the infra (postgres, valkey, meilisearch, rustfs, livekit, admin UIs)
-docker compose --profile dev up -d # Start the dev stack (backend + workers + ui + landing, all in containers, all hot-reload)
-####### !! ############
-docker compose logs -f backend worker-core worker-egress ui landing # start watching the logs of all Uniffy services
-####### Usually here it takes 5 minutes on the first run while dependencies install ###########
-```
+    ```bash
+    # Start the infra (postgres, valkey, meilisearch, rustfs, livekit, admin UIs)
+    docker compose up -d
+    # Start the dev stack (backend + workers + ui + landing, all in containers, all hot-reload)
+    docker compose --profile dev up -d
+    # start watching the logs of all Uniffy services
+    docker compose logs -f backend worker-core worker-egress ui landing 
+    ```
 
 - Stop
 
-```bash
-docker compose --profile dev down              # stops dev services + infra
-docker compose --profile dev stop backend ui   # stop a subset, keep the rest
-```
+    ```bash
+    docker compose --profile dev down              # stops dev services + infra
+    docker compose --profile dev stop backend ui   # stop a subset, keep the rest
+    ```
 
 - Endpoints
 
@@ -82,27 +83,27 @@ docker compose --profile dev stop backend ui   # stop a subset, keep the rest
 
 - Reset the data services without killing the dev stack. Wipes Postgres, Valkey, Meilisearch, and RustFS volumes; restarts backend + workers so they re-run migrations against the empty Postgres. UI / landing keep running.
 
-```bash
-./run.sh data-reset    # one-shot helper with confirmation prompt
+    ```bash
+    ./run.sh data-reset    # one-shot helper with confirmation prompt
 
-# or step-by-step manually:
-docker compose stop postgres valkey meilisearch rustfs
-docker compose rm -f postgres valkey meilisearch rustfs
-docker volume rm \
-  uniffy-local_postgres_data \
-  uniffy-local_valkey_data \
-  uniffy-local_meilisearch_data \
-  uniffy-local_rustfs_data \
-  uniffy-local_rustfs_logs
-docker compose up -d postgres valkey meilisearch rustfs
-docker compose restart backend worker-core worker-egress
-```
+    # or step-by-step manually:
+    docker compose stop postgres valkey meilisearch rustfs
+    docker compose rm -f postgres valkey meilisearch rustfs
+    docker volume rm \
+      uniffy-local_postgres_data \
+      uniffy-local_valkey_data \
+      uniffy-local_meilisearch_data \
+      uniffy-local_rustfs_data \
+      uniffy-local_rustfs_logs
+    docker compose up -d postgres valkey meilisearch rustfs
+    docker compose restart backend worker-core worker-egress
+    ```
 
 - Rebuild dev images after a Dockerfile change
 
-```bash
-docker compose --profile dev build --no-cache backend ui
-```
+    ```bash
+    docker compose --profile dev build --no-cache backend ui
+    ```
 
 #### Compose Layout
 
@@ -193,12 +194,10 @@ uniffy/
                  | h2c          | /livekit/*   |
                  v              v              |
            +-----------+   +-----------+       v
-           |  Backend  |<--| LiveKit   |  :7882/udp (media, direct)
+           |  Backend  |<--| LiveKit   | <-7882/udp (media, direct)
            |  FastAPI  |   |    SFU    |
            +-----+-----+   +-----+-----+
-                 |               |
-                 |               +-- WebRTC media (UDP 7882, direct from clients)
-                 |               +-- coturn :3478/udp (opt-in TURN relay)
+                 |               
                  |
    +-------------+----+-----------+----------+
    |                  |           |          |

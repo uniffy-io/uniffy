@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * Node type for notes hierarchy
@@ -97,13 +98,6 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
   parentId?: string;
 
   /**
-   * Optional tags
-   *
-   * @generated from field: repeated string tags = 6;
-   */
-  tags: string[] = [];
-
-  /**
    * Optional metadata
    *
    * @generated from field: map<string, string> metadata = 7;
@@ -145,6 +139,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Optional unified-tag ids to assign on create
+   *
+   * @generated from field: repeated string tag_ids = 13;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -158,13 +159,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
     { no: 11, name: "icon", kind: "message", T: NoteIcon, opt: true },
     { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 13, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -282,13 +283,6 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
   parentId?: string;
 
   /**
-   * Updated tags (optional, replaces existing tags)
-   *
-   * @generated from field: repeated string tags = 7;
-   */
-  tags: string[] = [];
-
-  /**
    * Updated metadata (optional, merges with existing)
    *
    * @generated from field: map<string, string> metadata = 8;
@@ -301,6 +295,14 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
    * @generated from field: optional notes.v1.NoteIcon icon = 9;
    */
   icon?: NoteIcon;
+
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual tags.
+   * Field is unset (HasField=false) to leave manual tags untouched.
+   *
+   * @generated from field: optional notes.v1.NoteTagIds tag_ids = 10;
+   */
+  tagIds?: NoteTagIds;
 
   constructor(data?: PartialMessage<UpdateNoteRequest>) {
     super();
@@ -316,9 +318,9 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
     { no: 4, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 8, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 9, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 10, name: "tag_ids", kind: "message", T: NoteTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNoteRequest {
@@ -335,6 +337,47 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
 
   static equals(a: UpdateNoteRequest | PlainMessage<UpdateNoteRequest> | undefined, b: UpdateNoteRequest | PlainMessage<UpdateNoteRequest> | undefined): boolean {
     return proto3.util.equals(UpdateNoteRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so the caller can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell an empty repeated apart from
+ * an unset one).
+ *
+ * @generated from message notes.v1.NoteTagIds
+ */
+export class NoteTagIds extends Message<NoteTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<NoteTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.NoteTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteTagIds {
+    return new NoteTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteTagIds {
+    return new NoteTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteTagIds {
+    return new NoteTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteTagIds | PlainMessage<NoteTagIds> | undefined, b: NoteTagIds | PlainMessage<NoteTagIds> | undefined): boolean {
+    return proto3.util.equals(NoteTagIds, a, b);
   }
 }
 
@@ -506,13 +549,6 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   parentId?: string;
 
   /**
-   * Optional tag filter
-   *
-   * @generated from field: repeated string tags = 3;
-   */
-  tags: string[] = [];
-
-  /**
    * Include deleted notes
    *
    * @generated from field: bool include_deleted = 4;
@@ -575,6 +611,14 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
    */
   excludeContent = false;
 
+  /**
+   * Filter notes that carry every tag id in this list (logical AND).
+   * Empty = no tag filter.
+   *
+   * @generated from field: repeated string tag_ids = 14;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<ListNotesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -585,7 +629,6 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 7, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -595,6 +638,7 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
     { no: 11, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "exclude_content", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNotesRequest {
@@ -708,13 +752,6 @@ export class SearchNotesRequest extends Message<SearchNotesRequest> {
   query = "";
 
   /**
-   * Optional tag filter
-   *
-   * @generated from field: repeated string tags = 3;
-   */
-  tags: string[] = [];
-
-  /**
    * Include deleted notes
    *
    * @generated from field: bool include_deleted = 4;
@@ -745,7 +782,6 @@ export class SearchNotesRequest extends Message<SearchNotesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 6, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -1350,20 +1386,6 @@ export class Note extends Message<Note> {
   parentId?: string;
 
   /**
-   * Tags (whole-note tags set explicitly by user)
-   *
-   * @generated from field: repeated string tags = 13;
-   */
-  tags: string[] = [];
-
-  /**
-   * Inline tags extracted from note content (e.g., #tagname in markdown)
-   *
-   * @generated from field: repeated string inline_tags = 24;
-   */
-  inlineTags: string[] = [];
-
-  /**
    * Metadata
    *
    * @generated from field: map<string, string> metadata = 14;
@@ -1440,6 +1462,13 @@ export class Note extends Message<Note> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Unified tags assigned to this note (manual + inline sources hydrated server-side).
+   *
+   * @generated from field: repeated tags.v1.Tag tags = 26;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<Note>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1459,8 +1488,6 @@ export class Note extends Message<Note> {
     { no: 9, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 11, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 12, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 13, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 24, name: "inline_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 14, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 15, name: "created_at", kind: "message", T: Timestamp },
     { no: 16, name: "updated_at", kind: "message", T: Timestamp },
@@ -1472,6 +1499,7 @@ export class Note extends Message<Note> {
     { no: 22, name: "owner_info", kind: "message", T: NoteOwner, opt: true },
     { no: 23, name: "shared_with", kind: "message", T: NoteShareTarget, repeated: true },
     { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 26, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {

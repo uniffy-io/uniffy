@@ -170,6 +170,11 @@ class CategoryHandlers:
 
                 ch_ops = ChatChannelOperations(session)
                 channel = await ch_ops.get_by_id(user_id, org_id, channel_id)
-                return MoveChannelToCategoryResponse(channel=channel_to_proto(channel))
+                from uniffy.domains.chat.channels.handlers import _hydrate_channel_tags
+
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+                return MoveChannelToCategoryResponse(
+                    channel=channel_to_proto(channel, tags=tags_by_id.get(channel.id))
+                )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)

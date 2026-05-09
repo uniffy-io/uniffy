@@ -6,6 +6,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1";
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 // Enums
 
@@ -197,8 +198,7 @@ message CalendarEvent {
   optional RecurrenceConfig recurrence = 15;
   // Whether this event is marked as focus/deep work time
   bool is_focus_time = 16;
-  // Tags for categorization
-  repeated string tags = 17;
+  reserved 17;
   // Linked resources (notes, files, chats)
   repeated LinkedResource linked_resources = 18;
   // Access mode
@@ -229,6 +229,8 @@ message CalendarEvent {
   repeated string room_amenities = 33;
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 34;
+  // Hydrated tags applied to this event (server-side from TagOperations).
+  repeated tags.v1.Tag tags = 35;
 }
 
 // Event attendee
@@ -309,8 +311,8 @@ message CreateEventRequest {
   optional RecurrenceConfig recurrence = 13;
   // Whether this event is focus time
   bool is_focus_time = 14;
-  // Tags
-  repeated string tags = 15;
+  reserved 15;
+  reserved "tags";
   // Linked resource URNs
   repeated string linked_resource_urns = 16;
   // Access mode (defaults to OWNER_ONLY)
@@ -321,6 +323,8 @@ message CreateEventRequest {
   optional string room_id = 19;
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 20;
+  // Optional unified-tag ids to assign on create
+  repeated string tag_ids = 21;
 }
 
 // Request to get an event
@@ -361,8 +365,8 @@ message UpdateEventRequest {
   optional RecurrenceConfig recurrence = 13;
   // Updated focus time flag
   optional bool is_focus_time = 14;
-  // Updated tags (replaces existing)
-  repeated string tags = 15;
+  reserved 15;
+  reserved "tags";
   // Updated linked resource URNs (replaces existing)
   repeated string linked_resource_urns = 16;
   // Updated access mode
@@ -379,6 +383,16 @@ message UpdateEventRequest {
   optional string room_id = 22;
   // Updated baseline role granted by access mode
   optional common.v1.ContentRole baseline_role = 23;
+  // Replacement set of unified-tag ids. Empty list clears all manual tags.
+  // Field is unset (HasField=false) to leave manual tags untouched.
+  optional EventTagIds tag_ids = 24;
+}
+
+// Wrapper so the caller can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell an empty repeated apart from
+// an unset one). Mirrors NoteTagIds / FileTagIds.
+message EventTagIds {
+  repeated string ids = 1;
 }
 
 // Request to delete an event
@@ -420,8 +434,8 @@ message ListEventsRequest {
   optional google.protobuf.Timestamp end_date = 5;
   // Include deleted events
   bool include_deleted = 6;
-  // Tag filter
-  repeated string tags = 7;
+  reserved 7;
+  reserved "tags";
   // Pagination: page number (1-indexed)
   int32 page = 8;
   // Pagination: page size (default: 50, max: 100)
@@ -430,6 +444,8 @@ message ListEventsRequest {
   string sort_by = 10;
   // Sort order (asc, desc)
   string sort_order = 11;
+  // Filter events that have ALL of the provided tag ids (logical AND).
+  repeated string tag_ids = 12;
 }
 
 // Response for listing events

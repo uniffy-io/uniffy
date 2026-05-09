@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * Agent configuration info returned to clients
@@ -139,6 +140,14 @@ export class AgentInfo extends Message<AgentInfo> {
    */
   userRole?: ContentRole;
 
+  /**
+   * Hydrated unified-tag rows assigned to this agent. Server-populated
+   * via ``TagOperations.get_for_urns``; clients should treat as read-only.
+   *
+   * @generated from field: repeated tags.v1.Tag tags = 27;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<AgentInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -169,6 +178,7 @@ export class AgentInfo extends Message<AgentInfo> {
     { no: 24, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
     { no: 26, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 27, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentInfo {
@@ -280,6 +290,13 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Optional unified-tag ids to assign on create.
+   *
+   * @generated from field: repeated string tag_ids = 22;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateAgentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -304,6 +321,7 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
     { no: 19, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 20, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 21, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 22, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentRequest {
@@ -432,6 +450,14 @@ export class ListAgentsRequest extends Message<ListAgentsRequest> {
    */
   groupId?: string;
 
+  /**
+   * Filter agents that carry every tag id in this list (logical AND).
+   * Empty = no tag filter.
+   *
+   * @generated from field: repeated string tag_ids = 6;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<ListAgentsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -445,6 +471,7 @@ export class ListAgentsRequest extends Message<ListAgentsRequest> {
     { no: 3, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 4, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAgentsRequest {
@@ -616,6 +643,16 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual
+   * tags; field unset (HasField=false) leaves them untouched. Mirrors
+   * the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
+   * pattern.
+   *
+   * @generated from field: optional agents.v1.AgentTagIds tag_ids = 24;
+   */
+  tagIds?: AgentTagIds;
+
   constructor(data?: PartialMessage<UpdateAgentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -643,6 +680,7 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
     { no: 21, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 22, name: "clear_prompt", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 24, name: "tag_ids", kind: "message", T: AgentTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAgentRequest {
@@ -659,6 +697,46 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
 
   static equals(a: UpdateAgentRequest | PlainMessage<UpdateAgentRequest> | undefined, b: UpdateAgentRequest | PlainMessage<UpdateAgentRequest> | undefined): boolean {
     return proto3.util.equals(UpdateAgentRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so callers can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+ *
+ * @generated from message agents.v1.AgentTagIds
+ */
+export class AgentTagIds extends Message<AgentTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<AgentTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.AgentTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentTagIds {
+    return new AgentTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentTagIds {
+    return new AgentTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentTagIds {
+    return new AgentTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AgentTagIds | PlainMessage<AgentTagIds> | undefined, b: AgentTagIds | PlainMessage<AgentTagIds> | undefined): boolean {
+    return proto3.util.equals(AgentTagIds, a, b);
   }
 }
 

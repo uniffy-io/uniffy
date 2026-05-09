@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -107,7 +108,7 @@ RECURRENCE_EDIT_SCOPE_ALL_EVENTS: RecurrenceEditScope
 RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: RecurrenceEditScope
 
 class CalendarEvent(_message.Message):
-    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "tags", "linked_resources", "access_mode", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date", "room_id", "room_name", "room_location", "room_capacity", "room_amenities", "baseline_role")
+    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "linked_resources", "access_mode", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date", "room_id", "room_name", "room_location", "room_capacity", "room_amenities", "baseline_role", "tags")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -124,7 +125,6 @@ class CalendarEvent(_message.Message):
     ORGANIZER_ID_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_FIELD_NUMBER: _ClassVar[int]
     IS_FOCUS_TIME_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     LINKED_RESOURCES_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     IS_DELETED_FIELD_NUMBER: _ClassVar[int]
@@ -142,6 +142,7 @@ class CalendarEvent(_message.Message):
     ROOM_CAPACITY_FIELD_NUMBER: _ClassVar[int]
     ROOM_AMENITIES_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     title: str
@@ -158,7 +159,6 @@ class CalendarEvent(_message.Message):
     organizer_id: str
     recurrence: RecurrenceConfig
     is_focus_time: bool
-    tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resources: _containers.RepeatedCompositeFieldContainer[LinkedResource]
     access_mode: _common_pb2.AccessMode
     is_deleted: bool
@@ -176,7 +176,8 @@ class CalendarEvent(_message.Message):
     room_capacity: int
     room_amenities: _containers.RepeatedScalarFieldContainer[str]
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., room_name: _Optional[str] = ..., room_location: _Optional[str] = ..., room_capacity: _Optional[int] = ..., room_amenities: _Optional[_Iterable[str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., room_name: _Optional[str] = ..., room_location: _Optional[str] = ..., room_capacity: _Optional[int] = ..., room_amenities: _Optional[_Iterable[str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ...) -> None: ...
 
 class Attendee(_message.Message):
     __slots__ = ("id", "name", "email", "avatar_url", "initials", "status", "role", "timezone")
@@ -227,7 +228,7 @@ class LinkedResource(_message.Message):
     def __init__(self, id: _Optional[str] = ..., type: _Optional[_Union[ResourceType, str]] = ..., name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
 
 class CreateEventRequest(_message.Message):
-    __slots__ = ("organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendee_ids", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "access_mode", "reminders", "room_id", "baseline_role")
+    __slots__ = ("organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendee_ids", "recurrence", "is_focus_time", "linked_resource_urns", "access_mode", "reminders", "room_id", "baseline_role", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -242,12 +243,12 @@ class CreateEventRequest(_message.Message):
     ATTENDEE_IDS_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_FIELD_NUMBER: _ClassVar[int]
     IS_FOCUS_TIME_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     LINKED_RESOURCE_URNS_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     REMINDERS_FIELD_NUMBER: _ClassVar[int]
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     title: str
     description: str
@@ -262,13 +263,13 @@ class CreateEventRequest(_message.Message):
     attendee_ids: _containers.RepeatedScalarFieldContainer[str]
     recurrence: RecurrenceConfig
     is_focus_time: bool
-    tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
     access_mode: _common_pb2.AccessMode
     reminders: _containers.RepeatedScalarFieldContainer[int]
     room_id: str
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., reminders: _Optional[_Iterable[int]] = ..., room_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., reminders: _Optional[_Iterable[int]] = ..., room_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id")
@@ -279,7 +280,7 @@ class GetEventRequest(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateEventRequest(_message.Message):
-    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "access_mode", "attendee_ids", "reminders", "recurrence_edit_scope", "occurrence_date", "room_id", "baseline_role")
+    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "linked_resource_urns", "access_mode", "attendee_ids", "reminders", "recurrence_edit_scope", "occurrence_date", "room_id", "baseline_role", "tag_ids")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -294,7 +295,6 @@ class UpdateEventRequest(_message.Message):
     CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_FIELD_NUMBER: _ClassVar[int]
     IS_FOCUS_TIME_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     LINKED_RESOURCE_URNS_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     ATTENDEE_IDS_FIELD_NUMBER: _ClassVar[int]
@@ -303,6 +303,7 @@ class UpdateEventRequest(_message.Message):
     OCCURRENCE_DATE_FIELD_NUMBER: _ClassVar[int]
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     organization_id: str
     title: str
@@ -317,7 +318,6 @@ class UpdateEventRequest(_message.Message):
     category_id: str
     recurrence: RecurrenceConfig
     is_focus_time: bool
-    tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
     access_mode: _common_pb2.AccessMode
     attendee_ids: _containers.RepeatedScalarFieldContainer[str]
@@ -326,7 +326,14 @@ class UpdateEventRequest(_message.Message):
     occurrence_date: str
     room_id: str
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., reminders: _Optional[_Iterable[int]] = ..., recurrence_edit_scope: _Optional[_Union[RecurrenceEditScope, str]] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tag_ids: EventTagIds
+    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., reminders: _Optional[_Iterable[int]] = ..., recurrence_edit_scope: _Optional[_Union[RecurrenceEditScope, str]] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tag_ids: _Optional[_Union[EventTagIds, _Mapping]] = ...) -> None: ...
+
+class EventTagIds(_message.Message):
+    __slots__ = ("ids",)
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DeleteEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id", "permanent", "recurrence_edit_scope", "occurrence_date")
@@ -357,30 +364,30 @@ class EventResponse(_message.Message):
     def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
 
 class ListEventsRequest(_message.Message):
-    __slots__ = ("organization_id", "calendar_id", "category_id", "start_date", "end_date", "include_deleted", "tags", "page", "page_size", "sort_by", "sort_order")
+    __slots__ = ("organization_id", "calendar_id", "category_id", "start_date", "end_date", "include_deleted", "page", "page_size", "sort_by", "sort_order", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     START_DATE_FIELD_NUMBER: _ClassVar[int]
     END_DATE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     SORT_BY_FIELD_NUMBER: _ClassVar[int]
     SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     calendar_id: str
     category_id: str
     start_date: _timestamp_pb2.Timestamp
     end_date: _timestamp_pb2.Timestamp
     include_deleted: bool
-    tags: _containers.RepeatedScalarFieldContainer[str]
     page: int
     page_size: int
     sort_by: str
     sort_order: str
-    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListEventsResponse(_message.Message):
     __slots__ = ("events", "total_count", "page", "page_size", "total_pages")

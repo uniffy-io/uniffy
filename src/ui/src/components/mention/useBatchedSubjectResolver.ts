@@ -191,8 +191,28 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       state.userAvatarUrl = m['user_avatar_url'] || undefined;
       state.userEmail = m['user_email'] || undefined;
       break;
+    case UrnType.TAG:
+      state.tagColor = m['color'] || undefined;
+      state.tagSlug = m['slug'] || undefined;
+      if (m['usage_count']) state.tagUsageCount = parseInt(m['usage_count'], 10) || 0;
+      if (m['usage_count_by_domain']) state.tagUsageByDomain = parseTagDomainBreakdown(m['usage_count_by_domain']);
+      if (m['recent_assignment_urns']) state.tagRecentAssignmentUrns = m['recent_assignment_urns'].split('|').filter(Boolean);
+      if (m['recent_assignment_at']) state.tagRecentAssignmentAt = m['recent_assignment_at'].split('|');
+      if (m['user_assignment_count']) state.tagUserAssignmentCount = parseInt(m['user_assignment_count'], 10) || 0;
+      break;
   }
   return state;
+}
+
+function parseTagDomainBreakdown(raw: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const pair of raw.split('|')) {
+    const [k, v] = pair.split(':');
+    if (!k) continue;
+    const n = parseInt(v ?? '', 10);
+    if (Number.isFinite(n)) out[k] = n;
+  }
+  return out;
 }
 
 export function resolveUrnBatched(

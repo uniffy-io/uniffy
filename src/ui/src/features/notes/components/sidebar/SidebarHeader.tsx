@@ -25,7 +25,7 @@ interface NotesNavItem {
 
 const notesNavItems: NotesNavItem[] = [
     { name: 'Graph', path: '/notes/graph', icon: Atom },
-    { name: 'Tags', path: '/notes/tags', icon: Tag },
+    { name: 'Tags', path: '/tags?domain=note', icon: Tag },
 ];
 
 /**

@@ -27,6 +27,7 @@ enum ContentType {
   CONTENT_TYPE_ROOM = 17;
   CONTENT_TYPE_AGENT_CRON_TASK = 18;
   CONTENT_TYPE_AGENT_CHAT = 19;
+  CONTENT_TYPE_TAG = 20;
 }
 
 // SubjectType defines who can be granted permissions or participate in

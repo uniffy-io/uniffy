@@ -37,6 +37,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
+import { TagChip } from '@/features/tags';
+import { useTagsByIds } from '@/features/tags/store/selectors';
 
 interface FileDetailsPanelProps {
     file: SerializedFile | null;
@@ -120,6 +122,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
     const { isMobileOrTablet } = useBreakpoint();
     const detailsPanelTab = useAppSelector((state) => state.files.detailsPanelTab);
     const currentUser = useAppSelector((state) => state.auth.user);
+    const fileTags = useTagsByIds(file?.tagIds ?? []);
     const { openFor: openAccessPolicy } = useAccessPolicyDialog();
 
     if (!file) {
@@ -291,17 +294,12 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
             </div>
 
             {/* Tags */}
-            {file.tags && file.tags.length > 0 && (
+            {fileTags.length > 0 && (
                 <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-2">Tags</label>
                     <div className="flex flex-wrap gap-2">
-                        {file.tags.map((tag: string) => (
-                            <span
-                                key={tag}
-                                className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground"
-                            >
-                                #{tag}
-                            </span>
+                        {fileTags.map((tag) => (
+                            <TagChip key={tag.id} tag={tag} />
                         ))}
                     </div>
                 </div>

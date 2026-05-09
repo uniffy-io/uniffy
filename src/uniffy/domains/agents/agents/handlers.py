@@ -30,6 +30,8 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.agents.converters import agent_to_proto
 from uniffy.domains.agents.agents.operations import AgentOperations
@@ -37,7 +39,48 @@ from uniffy.domains.agents.runtime.prompt import build_system_prompt
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
+
+
+def _parse_tag_ids(raw_ids: list[str]) -> list[UUID]:
+    """Parse a repeated string proto field into a list of UUIDs.
+
+    Empty input returns an empty list. Invalid UUIDs raise
+    ``INVALID_ARGUMENT`` so the client gets actionable feedback before
+    the operation runs.
+    """
+    out: list[UUID] = []
+    for raw in raw_ids or ():
+        try:
+            out.append(UUID(raw))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid tag_id") from exc
+    return out
+
+
+async def _hydrate_agent_tags(
+    session: AsyncSession,
+    organization_id: UUID,
+    agent_ids: list[UUID],
+) -> dict[UUID, list[Tag]]:
+    """Bulk-fetch unified-tag rows for a batch of agent ids.
+
+    Single ``TagOperations.get_for_urns`` round-trip per request batch
+    (no N+1). Returns a mapping keyed on agent id with an empty list
+    for agents that have no tags.
+    """
+    if not agent_ids:
+        return {}
+    urn_to_id = {
+        build_content_urn(ContentType.AGENT, aid): aid for aid in agent_ids
+    }
+    tag_ops = TagOperations(session)
+    bulk = await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=list(urn_to_id),
+    )
+    return {aid: bulk.get(urn, []) for urn, aid in urn_to_id.items()}
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -106,6 +149,7 @@ class AgentsHandlers:
             if request.HasField("prompt_id") and request.prompt_id
             else None
         )
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
 
         try:
             async with open_session() as session:
@@ -128,9 +172,15 @@ class AgentsHandlers:
                     primary_provider_key_id=primary_provider_key_id,
                     image_provider_key_id=image_provider_key_id,
                     prompt_id=prompt_id,
+                    tag_ids=tag_ids or None,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
-                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                return AgentResponse(
+                    agent=agent_to_proto(
+                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -151,7 +201,12 @@ class AgentsHandlers:
                 ops = AgentOperations(session)
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 user_role = await ops.resolve_role(user_id, org_id, agent)
-                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                return AgentResponse(
+                    agent=agent_to_proto(
+                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -178,6 +233,8 @@ class AgentsHandlers:
             page = request.pagination.page or 1
             page_size = request.pagination.page_size or 100
 
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
+
         try:
             async with open_session() as session:
                 ops = AgentOperations(session)
@@ -189,12 +246,17 @@ class AgentsHandlers:
                     group_id=group_id,
                     page=page,
                     page_size=page_size,
+                    tag_ids=tag_ids or None,
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
                 roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
+                tags_by_id = await _hydrate_agent_tags(
+                    session, org_id, [a.id for a in agents]
+                )
                 return ListAgentsResponse(
                     agents=[
-                        agent_to_proto(a, user_role=r) for a, r in zip(agents, roles, strict=True)
+                        agent_to_proto(a, user_role=r, tags=tags_by_id.get(a.id))
+                        for a, r in zip(agents, roles, strict=True)
                     ],
                     pagination=PaginationResponse(
                         page=page,
@@ -260,6 +322,10 @@ class AgentsHandlers:
         enabled_skills = list(request.enabled_skills)
         enabled_tools = list(request.enabled_tools)
 
+        tag_ids: list[UUID] | None = None
+        if request.HasField("tag_ids"):
+            tag_ids = _parse_tag_ids(list(request.tag_ids.ids))
+
         try:
             async with open_session() as session:
                 ops = AgentOperations(session)
@@ -283,9 +349,15 @@ class AgentsHandlers:
                     clear_image_provider_key=clear_image_provider_key,
                     prompt_id=prompt_id,
                     clear_prompt=clear_prompt,
+                    tag_ids=tag_ids,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
-                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                return AgentResponse(
+                    agent=agent_to_proto(
+                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -342,7 +414,12 @@ class AgentsHandlers:
                     filename=request.filename,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
-                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                return AgentResponse(
+                    agent=agent_to_proto(
+                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                    )
+                )
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, str(exc)) from exc
         except ConnectError:
@@ -369,7 +446,12 @@ class AgentsHandlers:
                     agent_id=agent_id,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
-                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                return AgentResponse(
+                    agent=agent_to_proto(
+                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:

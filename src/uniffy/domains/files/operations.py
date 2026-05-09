@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -33,6 +33,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.files.quota_operations import QuotaOperations
+from uniffy.domains.tags import TagAssignment, TagOperations
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 # Chunk size constants (in bytes)
@@ -108,12 +109,11 @@ class FileOperations(BaseContentOperations[File]):
     def _build_search_keywords(self, model: File) -> str:
         """Build search keywords from file metadata.
 
-        Includes filename, original filename, tags, description, mime type,
-        and extracted text content.
+        Tag slugs are written into the dedicated ``tags`` array on the
+        search document via :meth:`_get_search_tags_async`, so they are
+        not duplicated into the keyword stream.
         """
         parts = [model.filename, model.original_filename]
-        if model.tags:
-            parts.extend(f"tag:{tag}" for tag in model.tags)
         if model.description:
             parts.append(model.description)
         if model.mime_type:
@@ -142,9 +142,16 @@ class FileOperations(BaseContentOperations[File]):
             return model.media_info.extracted_text[:300].strip() or None
         return None
 
-    def _get_search_tags(self, model: File) -> list[str] | None:
-        """Get tags for search index."""
-        return model.tags if model.tags else None
+    async def _get_search_tags_async(self, model: File) -> list[str] | None:
+        """Return slugs assigned to this file via the unified tag store."""
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
 
     def _get_search_metadata(self, model: File) -> dict[str, str] | None:
         """Sync metadata path -- MIME type and parent folder id.
@@ -361,6 +368,7 @@ class FileOperations(BaseContentOperations[File]):
         upload_id: UUID,
         user_id: UUID,
         group_ids: list[UUID] | None = None,
+        tag_ids: list[UUID] | None = None,
     ) -> File:
         """
         Complete a multipart upload and create the File record.
@@ -460,6 +468,15 @@ class FileOperations(BaseContentOperations[File]):
 
         await self.session.commit()
         await self.session.refresh(file)
+
+        if tag_ids:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.replace_manual_tags(
+                actor_id=user_id,
+                organization_id=file.organization_id,
+                content_urn=build_content_urn(self.content_type, file.id),
+                tag_ids=tag_ids,
+            )
 
         # Increment storage usage tracking
         try:
@@ -595,7 +612,7 @@ class FileOperations(BaseContentOperations[File]):
         organization_id: UUID,
         file_id: UUID,
         filename: str | None = None,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         description: str | None = None,
     ) -> File:
         """
@@ -603,6 +620,10 @@ class FileOperations(BaseContentOperations[File]):
 
         Access policy changes (access mode, baseline role, members) go
         through the MembersService, not this method.
+
+        ``tag_ids=None`` leaves manual tags untouched (partial update);
+        an empty list clears every manual assignment. Inline-source
+        assignments are not exposed for files (no markdown surface).
 
         Parameters
         ----------
@@ -614,8 +635,8 @@ class FileOperations(BaseContentOperations[File]):
             File to update.
         filename : str | None
             New filename.
-        tags : list[str] | None
-            New tags.
+        tag_ids : list[UUID] | None
+            Replacement set of manual tag ids.
         description : str | None
             New description.
 
@@ -636,8 +657,6 @@ class FileOperations(BaseContentOperations[File]):
             if len(filename) > 255:
                 raise ValidationError("Filename must be 255 characters or fewer")
             file.filename = filename
-        if tags is not None:
-            file.tags = tags
         if description is not None:
             file.description = description
 
@@ -646,6 +665,15 @@ class FileOperations(BaseContentOperations[File]):
 
         await self.session.commit()
         await self.session.refresh(file)
+
+        if tag_ids is not None:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.replace_manual_tags(
+                actor_id=user_id,
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, file.id),
+                tag_ids=tag_ids,
+            )
 
         await self._index_for_search(model=file)
         await self.session.commit()
@@ -748,6 +776,13 @@ class FileOperations(BaseContentOperations[File]):
                     exc_info=True,
                 )
 
+        if permanent:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=file_org,
+                content_urn=build_content_urn(self.content_type, file_id),
+            )
+
         # Remove from search index
         await self.search_indexer.remove(build_content_urn(self.content_type, file_id))
         await self.session.commit()
@@ -845,7 +880,7 @@ class FileOperations(BaseContentOperations[File]):
         personal_only: bool = False,
         shared_only: bool = False,
         include_deleted: bool = False,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "updated_at",
@@ -873,8 +908,8 @@ class FileOperations(BaseContentOperations[File]):
             an explicit ContentMember row (any non-blocked role).
         include_deleted : bool
             Include trash.
-        tags : list[str] | None
-            Filter by tags.
+        tag_ids : list[UUID] | None
+            Filter to files carrying every tag id (logical AND).
         page : int
             Page number.
         page_size : int
@@ -988,9 +1023,8 @@ class FileOperations(BaseContentOperations[File]):
         if not include_deleted:
             query = query.where(File.is_deleted == False)  # noqa: E712
 
-        if tags:
-            for tag in tags:
-                query = query.where(File.tags.contains([tag]))
+        if tag_ids:
+            query = query.where(File.id.in_(self._tag_filter_subquery(tag_ids)))
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
@@ -1008,6 +1042,24 @@ class FileOperations(BaseContentOperations[File]):
         files = list(result.scalars().all())
 
         return files, total
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: file ids that carry every tag id in ``tag_ids``.
+
+        Implements logical AND by joining ``tag_assignments`` against
+        the synthesized ``urn:uniffy:content:FILE:{id}`` value, grouping
+        by file id, and requiring the distinct tag count to match the
+        requested set size.
+        """
+        urn_prefix = "urn:uniffy:content:FILE:"
+        urn_expr = func.concat(urn_prefix, cast(File.id, String))
+        return (
+            select(File.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(File.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        )
 
     async def _get_file_versions(self, file_id: UUID) -> list[FileVersion]:
         """Get all versions of a file."""
@@ -1072,9 +1124,14 @@ class FileOperations(BaseContentOperations[File]):
 
         # Delete files from S3 and DB, track sizes for usage decrement
         total_deleted_bytes = 0
+        tag_ops = TagOperations(self.session)
         for file in files:
             total_deleted_bytes += file.size_bytes
             await self.s3.delete_object(file.storage_key)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, file.id),
+            )
             await self.search_indexer.remove(build_content_urn(self.content_type, file.id))
             await self.session.delete(file)
 
@@ -1465,10 +1522,15 @@ class FolderOperations:
         from uniffy.core.search.indexer import SearchIndexer
 
         indexer = SearchIndexer(self.session)
+        tag_ops = TagOperations(self.session)
         for file in files:
             if permanent:
                 s3 = get_s3_client()
                 await s3.delete_object(file.storage_key)
+                await tag_ops.unassign_all_for_urn(
+                    organization_id=organization_id,
+                    content_urn=build_content_urn(ContentType.FILE, file.id),
+                )
                 await self.session.delete(file)
             else:
                 file.is_deleted = True

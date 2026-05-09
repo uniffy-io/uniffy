@@ -23,6 +23,7 @@ import {
   Door,
   Question,
   Robot,
+  Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { UrnType } from '@/shared/utils/urnTypes';
 import { getUrnTypeTheme, getUrnTypeHexColor, type UrnTypeTheme } from '@/config/theme/urnColors';
@@ -158,6 +159,15 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'rooms',
     theme: getUrnTypeTheme(UrnType.ROOM),
     hexColor: getUrnTypeHexColor(UrnType.ROOM),
+  },
+  [UrnType.TAG]: {
+    type: UrnType.TAG,
+    icon: TagIcon,
+    label: 'Tag',
+    labelPlural: 'Tags',
+    route: 'tags',
+    theme: getUrnTypeTheme(UrnType.TAG),
+    hexColor: getUrnTypeHexColor(UrnType.TAG),
   },
   [UrnType.UNKNOWN]: {
     type: UrnType.UNKNOWN,

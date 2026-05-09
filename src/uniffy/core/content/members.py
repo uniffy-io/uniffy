@@ -38,6 +38,10 @@ from uniffy.core.auth.permissions.roles import (
     role_can_manage,
     role_can_transfer,
 )
+from uniffy.core.auth.permissions.visible_sets import (
+    invalidate_visible_sets_for_org,
+    invalidate_visible_sets_for_user,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -135,13 +139,19 @@ class ContentMembersOperations:
         can have thousands of members; BLOCKED affects role resolution
         for any user matched by the subject), so we wipe the whole
         ``content:{ct}:{cid}`` tag.
+
+        Also drops the tag-visibility / content-visibility caches: a
+        member change on a content row can newly grant or revoke
+        visibility on the tags assigned to it.
         """
         if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
             await invalidate_perm_role(
                 organization_id, subject_id, content_type, content_id
             )
+            await invalidate_visible_sets_for_user(organization_id, subject_id)
         else:
             await invalidate_perm_content(content_type, content_id)
+            await invalidate_visible_sets_for_org(organization_id)
 
     async def list_members(
         self,
@@ -558,6 +568,7 @@ class ContentMembersOperations:
         # unbounded user set (every org member when OPEN_TO_ORG flips,
         # every BLOCKED-derived denial when narrowed). Wipe by content tag.
         await invalidate_perm_content(content_type, content_id)
+        await invalidate_visible_sets_for_org(organization_id)
 
         await self._sync_search_access_policy(
             organization_id=organization_id,
@@ -664,6 +675,8 @@ class ContentMembersOperations:
         await invalidate_perm_role(
             organization_id, new_owner_user_id, content_type, content_id
         )
+        await invalidate_visible_sets_for_user(organization_id, previous_owner_id)
+        await invalidate_visible_sets_for_user(organization_id, new_owner_user_id)
 
         await self._sync_search_access_policy(
             organization_id=organization_id,

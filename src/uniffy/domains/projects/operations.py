@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, select, text
+from sqlalchemy import String, and_, cast, delete, func, not_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +45,7 @@ from uniffy.domains.projects.recurrence import (
     serialize_recurrence_config,
 )
 from uniffy.domains.projects.validation import validate_field_values
+from uniffy.domains.tags import TagAssignment, TagOperations
 
 _SLUG_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{1,4}$")
 
@@ -80,6 +81,38 @@ class ProjectOperations(BaseContentOperations[Project]):
             return model.description[:200]
         return None
 
+    async def _get_search_tags_async(self, model: Project) -> list[str] | None:
+        """Return tag slugs for a project from the unified store."""
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
+
+    async def _sync_project_tags(
+        self,
+        *,
+        actor_id: UUID,
+        project: Project,
+        tag_ids: list[UUID] | None,
+    ) -> None:
+        """Reconcile manual tag assignments after a project write.
+
+        ``tag_ids=None`` leaves manual assignments untouched.
+        """
+        if tag_ids is None:
+            return
+        tag_ops = TagOperations(self.session)
+        await tag_ops.replace_manual_tags(
+            actor_id=actor_id,
+            organization_id=project.organization_id,
+            content_urn=build_content_urn(self.content_type, project.id),
+            tag_ids=tag_ids,
+        )
+
     async def create(
         self,
         user_id: UUID,
@@ -92,6 +125,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
         slug: str | None = None,
+        tag_ids: list[UUID] | None = None,
     ) -> Project:
         """Create a project with default fields, views, and the owner as member.
 
@@ -141,6 +175,12 @@ class ProjectOperations(BaseContentOperations[Project]):
                     role=ContentRole.VIEWER,
                 )
 
+        await self._sync_project_tags(
+            actor_id=user_id,
+            project=project,
+            tag_ids=tag_ids,
+        )
+
         await self._index_for_search(project, skip_member_lookup=not group_ids)
         await self.session.commit()
 
@@ -165,6 +205,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         # through MembersService.
         kwargs.pop("access_mode", None)
         kwargs.pop("baseline_role", None)
+        tag_ids = kwargs.pop("tag_ids", None)
 
         name_changed = "name" in kwargs and kwargs["name"] != project.name
 
@@ -177,6 +218,12 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         await self.session.commit()
         await self.session.refresh(project)
+
+        await self._sync_project_tags(
+            actor_id=user_id,
+            project=project,
+            tag_ids=tag_ids,
+        )
 
         await self._index_for_search(project)
         await self.session.commit()
@@ -212,6 +259,20 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self._require_delete(user_id, organization_id, project)
 
         if permanent:
+            tag_ops = TagOperations(self.session)
+            project_urn = build_content_urn(self.content_type, project_id)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=organization_id,
+                content_urn=project_urn,
+            )
+            task_id_rows = await self.session.execute(
+                select(Task.id).where(Task.project_id == project_id)
+            )
+            for (task_id,) in task_id_rows:
+                await tag_ops.unassign_all_for_urn(
+                    organization_id=organization_id,
+                    content_urn=build_content_urn(ContentType.TASK, task_id),
+                )
             await queries.delete_project_cascade(self.session, project_id)
             await self.session.delete(project)
         else:
@@ -536,6 +597,61 @@ class TaskOperations(BaseContentOperations[Task]):
         """
         return {"project_id": str(model.project_id)}
 
+    async def _get_search_tags_async(self, model: Task) -> list[str] | None:
+        """Return tag slugs for a task from the unified store."""
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
+
+    async def _sync_task_tags(
+        self,
+        *,
+        actor_id: UUID,
+        task: Task,
+        tag_ids: list[UUID] | None,
+    ) -> None:
+        """Reconcile manual tag assignments after a task write.
+
+        ``tag_ids=None`` leaves manual assignments untouched.
+        """
+        if tag_ids is None:
+            return
+        tag_ops = TagOperations(self.session)
+        await tag_ops.replace_manual_tags(
+            actor_id=actor_id,
+            organization_id=task.organization_id,
+            content_urn=build_content_urn(self.content_type, task.id),
+            tag_ids=tag_ids,
+        )
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: task ids that carry every tag id in ``tag_ids`` (ALL)."""
+        urn_prefix = "urn:uniffy:content:TASK:"
+        urn_expr = func.concat(urn_prefix, cast(Task.id, String))
+        return (
+            select(Task.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(Task.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        )
+
+    def _tag_any_subquery(self, tag_ids: list[UUID]):
+        """Subquery: task ids that carry at least one tag id in ``tag_ids``."""
+        urn_prefix = "urn:uniffy:content:TASK:"
+        urn_expr = func.concat(urn_prefix, cast(Task.id, String))
+        return (
+            select(Task.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .distinct()
+        )
+
     async def _resolve_role(
         self,
         user_id: UUID,
@@ -616,7 +732,7 @@ class TaskOperations(BaseContentOperations[Task]):
             shared_group_ids=shared_group_ids if shared_group_ids else None,
             blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
-            tags=self._get_search_tags(model),
+            tags=await self._get_search_tags_async(model),
             metadata=self._get_search_metadata(model),
         )
 
@@ -627,6 +743,7 @@ class TaskOperations(BaseContentOperations[Task]):
         project_id: UUID,
         title: str,
         task_type: str = "task",
+        tag_ids: list[UUID] | None = None,
         **kwargs,
     ) -> Task:
         """Create a task (requires EDIT on the parent project)."""
@@ -696,6 +813,8 @@ class TaskOperations(BaseContentOperations[Task]):
         await self.session.commit()
         await self.session.refresh(task)
 
+        await self._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
+
         await self._index_for_search(task)
 
         await self._emit_assignment_notifications(task, user_id, None, task.assignee_ids)
@@ -713,6 +832,8 @@ class TaskOperations(BaseContentOperations[Task]):
         """Update task fields and log relevant activities."""
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_edit(user_id, organization_id, task)
+
+        tag_ids = kwargs.pop("tag_ids", None)
 
         if "status" in kwargs and kwargs["status"] != task.status:
             unresolved = await self._check_blockers_resolved(task, kwargs["status"])
@@ -831,6 +952,8 @@ class TaskOperations(BaseContentOperations[Task]):
 
         await self.session.commit()
         await self.session.refresh(task)
+
+        await self._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 
         await self._index_for_search(task)
 
@@ -1063,6 +1186,11 @@ class TaskOperations(BaseContentOperations[Task]):
         await self._require_delete(user_id, organization_id, task)
 
         if permanent:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, task_id),
+            )
             await self.session.execute(delete(TaskActivity).where(TaskActivity.task_id == task_id))
             await self.session.delete(task)
         else:
@@ -1084,10 +1212,17 @@ class TaskOperations(BaseContentOperations[Task]):
         parent_id: UUID | str | None = None,
         sprint_id: UUID | None = None,
         backlog_only: bool = False,
+        tag_ids: list[UUID] | None = None,
+        tag_filter_mode: str = "all",
         page: int = 1,
         page_size: int = 500,
     ) -> tuple[list[Task], int]:
-        """List tasks for a project."""
+        """List tasks for a project.
+
+        ``tag_ids`` + ``tag_filter_mode`` (``"all"`` / ``"any"`` / ``"none"``)
+        filter against the unified ``tag_assignments`` store via JOIN on
+        the synthesised task URN.
+        """
         project_ops = ProjectOperations(self.session)
         await project_ops.get_by_id(user_id, organization_id, project_id)
 
@@ -1110,6 +1245,15 @@ class TaskOperations(BaseContentOperations[Task]):
             query = query.where(Task.sprint_id == sprint_id)
         elif backlog_only:
             query = query.where(Task.sprint_id.is_(None))
+
+        if tag_ids:
+            mode = (tag_filter_mode or "all").lower()
+            if mode == "any":
+                query = query.where(Task.id.in_(self._tag_any_subquery(tag_ids)))
+            elif mode == "none":
+                query = query.where(not_(Task.id.in_(self._tag_any_subquery(tag_ids))))
+            else:
+                query = query.where(Task.id.in_(self._tag_filter_subquery(tag_ids)))
 
         count_result = await self.session.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()

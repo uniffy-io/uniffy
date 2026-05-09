@@ -7,6 +7,8 @@ import type { RootState } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
 import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
 import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
+import { bulkUpsertTags } from '@/features/tags/store/tagsSlice';
+import { tagToPlain } from '@/features/tags/store/tagsThunks';
 
 // Helper to convert proto Note to PlainMessage
 const noteToPlain = (note: Note) => ({
@@ -23,8 +25,7 @@ const noteToPlain = (note: Note) => ({
     isDeleted: note.isDeleted,
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
-    tags: [...note.tags],
-    inlineTags: [...note.inlineTags],
+    tagIds: note.tags.map((t) => t.id),
     metadata: { ...note.metadata },
     createdAt: note.createdAt ? {
         seconds: typeof note.createdAt.seconds === 'bigint' ? Number(note.createdAt.seconds) : note.createdAt.seconds,
@@ -101,7 +102,7 @@ export const fetchNotesTree = createAsyncThunk<
     NotesTreeState['tree'],
     void,
     { state: RootState; rejectValue: string }
->('notesTree/fetchNotesTree', async (_, { getState, rejectWithValue }) => {
+>('notesTree/fetchNotesTree', async (_, { getState, rejectWithValue, dispatch }) => {
     try {
         const state = getState();
         const organizationId = state.auth.currentOrganizationId;
@@ -146,6 +147,16 @@ export const fetchNotesTree = createAsyncThunk<
             for (const response of pageResponses) {
                 allNotes.push(...response.notes);
             }
+        }
+
+        const seen = new Map<string, ReturnType<typeof tagToPlain>>();
+        for (const note of allNotes) {
+            for (const tag of note.tags) {
+                if (!seen.has(tag.id)) seen.set(tag.id, tagToPlain(tag));
+            }
+        }
+        if (seen.size > 0) {
+            dispatch(bulkUpsertTags(Array.from(seen.values())));
         }
 
         const notes = allNotes.map(noteToPlain);

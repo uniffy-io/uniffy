@@ -4,6 +4,7 @@ package files.v1;
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/files/v1;filesv1";
 
@@ -210,6 +211,8 @@ message UploadChunkResponse {
 
 message CompleteUploadRequest {
   string upload_id = 1;
+  // Optional unified-tag ids to assign on upload completion (manual source).
+  repeated string tag_ids = 2;
 }
 
 message UploadChunksResponse {
@@ -288,7 +291,7 @@ message File {
   string mime_type = 8;
   int64 size_bytes = 9;
   optional string folder_id = 10;
-  repeated string tags = 11;
+  reserved 11;
   optional string description = 12;
   int32 version = 13;
   ExtractionStatus extraction_status = 14;
@@ -307,6 +310,15 @@ message File {
 
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 23;
+
+  // Unified tags assigned to this file (manual source, hydrated server-side).
+  repeated tags.v1.Tag tags = 24;
+}
+
+// Wrapper so the caller can distinguish "leave tags alone" from
+// "clear all tags" on partial updates. Mirrors NoteTagIds.
+message FileTagIds {
+  repeated string ids = 1;
 }
 
 // Metadata extracted from media files (images, videos, PDFs).
@@ -344,10 +356,14 @@ message UpdateFileRequest {
   string file_id = 1;
   string organization_id = 2;
   optional string filename = 3;
-  repeated string tags = 4;
+  reserved 4;
+  reserved "tags";
   optional string description = 5;
   optional common.v1.AccessMode access_mode = 6;
   optional common.v1.ContentRole baseline_role = 7;
+  // Replacement set of unified-tag ids. Empty list clears all manual tags.
+  // Field unset (HasField=false) leaves manual tags untouched.
+  optional FileTagIds tag_ids = 8;
 }
 
 message DeleteFileRequest {
@@ -369,7 +385,8 @@ message RestoreFileRequest {
 message ListFilesRequest {
   string organization_id = 1;
   optional string folder_id = 2;      // null = root, "all" = all files
-  repeated string tags = 3;
+  reserved 3;
+  reserved "tags";
   bool include_deleted = 4;
   bool personal_only = 5;
   optional common.v1.AccessMode access_mode = 6;
@@ -379,6 +396,9 @@ message ListFilesRequest {
   string sort_by = 10;                // created_at, updated_at, filename, size
   string sort_order = 11;             // asc, desc
   bool shared_only = 12;              // Filter for files shared with user (not owned)
+  // Filter to files carrying every tag id in this list (logical AND).
+  // Empty = no tag filter.
+  repeated string tag_ids = 13;
 }
 
 message ListFilesResponse {
@@ -571,11 +591,14 @@ message FilterCriteria {
   repeated string mime_categories = 2;      // document, image, video, audio, archive
   repeated string owner_ids = 3;            // Filter by owner user IDs
   optional common.v1.AccessMode access_mode = 4;  // Filter by access mode
-  repeated string tags = 5;                 // Filter by tags
+  reserved 5;
+  reserved "tags";
   optional int64 size_min_bytes = 6;        // Minimum file size
   optional int64 size_max_bytes = 7;        // Maximum file size
   optional google.protobuf.Timestamp created_after = 8;   // Created after date
   optional google.protobuf.Timestamp created_before = 9;  // Created before date
+  // Filter to files carrying every tag id in this list (logical AND).
+  repeated string tag_ids = 10;
 }
 
 // Icon value for saved filters (Phosphor icon or emoji).

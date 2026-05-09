@@ -1,7 +1,9 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { attachmentsApi } from '@/features/attachments';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import type { ChatChannel as ProtoChatChannel } from '@uniffy/proto/chat/v1/chat_pb';
 import {
   channelToPlain,
   messageToPlain,
@@ -9,6 +11,7 @@ import {
   categoryToPlain,
   threadInboxItemToPlain,
 } from '@/features/chat/api/chatConverters';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import {
   setChannels,
   addChannel,
@@ -44,6 +47,7 @@ import {
   removeReactionFromThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchAgents } from '@/features/agents/store/agentsThunks';
+import { markNotificationsReadBySource } from '@/features/notifications/store/notificationsSlice';
 import type { RootState } from '@/app/store';
 import type { ChatMessage, ChatChannel, ChatChannelMember } from '@/features/chat/types';
 import { ChannelType as ProtoChannelType, ChatNotificationLevel, AgentConfirmationDecision } from '@uniffy/proto/chat/v1/chat_pb';
@@ -55,6 +59,16 @@ const getOrganizationId = (state: RootState): string => {
     throw new Error('No organization selected');
   }
   return orgId;
+};
+
+const hydrateChannelTags = (
+  dispatch: Dispatch<UnknownAction>,
+  channels: ProtoChatChannel[],
+): void => {
+  const tags = channels.flatMap((c) => c.tags.map(tagToPlain));
+  if (tags.length) {
+    dispatch(bulkUpsertTags(tags));
+  }
 };
 
 export const fetchChannels = createAsyncThunk<
@@ -69,6 +83,7 @@ export const fetchChannels = createAsyncThunk<
     let cursor: string | undefined;
     do {
       const response = await chatApi.listChannels({ organizationId, cursor });
+      hydrateChannelTags(dispatch, response.channels);
       collected.push(...response.channels.map(channelToPlain));
       cursor = response.nextCursor || undefined;
     } while (cursor);
@@ -84,7 +99,7 @@ export const fetchPublicChannels = createAsyncThunk<
   ChatChannel[],
   void,
   { state: RootState; rejectValue: string }
->('chat/fetchPublicChannels', async (_, { getState, rejectWithValue }) => {
+>('chat/fetchPublicChannels', async (_, { getState, dispatch, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
     const collected: ChatChannel[] = [];
@@ -95,6 +110,7 @@ export const fetchPublicChannels = createAsyncThunk<
         browsePublic: true,
         cursor,
       });
+      hydrateChannelTags(dispatch, response.channels);
       collected.push(...response.channels.map(channelToPlain));
       cursor = response.nextCursor || undefined;
     } while (cursor);
@@ -114,6 +130,7 @@ export const createChannel = createAsyncThunk<
     categoryId?: string;
     memberIds?: string[];
     subjects?: { type: 'USER' | 'AGENT'; id: string }[];
+    tagIds?: string[];
   },
   { state: RootState; rejectValue: string }
 >('chat/createChannel', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -131,10 +148,12 @@ export const createChannel = createAsyncThunk<
         type: s.type === 'AGENT' ? SubjectType.AGENT : SubjectType.USER,
         id: s.id,
       })),
+      tagIds: params.tagIds ?? [],
     });
     if (!response.channel) {
       return rejectWithValue('Failed to create channel');
     }
+    hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
     dispatch(addChannel(plain));
     return plain;
@@ -158,6 +177,7 @@ export const createAgentChat = createAsyncThunk<
     if (!response.channel) {
       return rejectWithValue('Failed to create agent chat');
     }
+    hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
     dispatch(addChannel(plain));
     return plain;
@@ -182,6 +202,7 @@ export const renameAgentChat = createAsyncThunk<
     if (!response.channel) {
       return rejectWithValue('Failed to rename agent chat');
     }
+    hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
     dispatch(updateChannel(plain));
     return plain;
@@ -201,6 +222,7 @@ export const joinChannel = createAsyncThunk<
     if (!response.channel) {
       return rejectWithValue('Failed to join channel');
     }
+    hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
     // Add to channel list (user wasn't a member before)
     const existing = getState().chatChannels.channels.find(c => c.id === channelId);
@@ -755,7 +777,7 @@ export const markChannelRead = createAsyncThunk<
   void,
   { channelId: string; lastReadMessageId: string },
   { state: RootState; rejectValue: string }
->('chat/markChannelRead', async (params, { getState, rejectWithValue }) => {
+>('chat/markChannelRead', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.markChannelRead({
@@ -763,6 +785,14 @@ export const markChannelRead = createAsyncThunk<
       channelId: params.channelId,
       lastReadMessageId: params.lastReadMessageId,
     });
+    // Backend cascades chat-sourced notifications to read in the same
+    // request. Mirror that locally so the bell panel updates without
+    // waiting for a refetch or stream tick.
+    dispatch(
+      markNotificationsReadBySource(
+        `urn:uniffy:content:CHAT:${params.channelId}`,
+      ),
+    );
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to mark channel read');
   }
@@ -934,7 +964,16 @@ export const fetchMembers = createAsyncThunk<
 
 export const updateChannelThunk = createAsyncThunk<
   ChatChannel,
-  { channelId: string; name?: string; description?: string; categoryId?: string; originalCategoryId?: string },
+  {
+    channelId: string;
+    name?: string;
+    description?: string;
+    categoryId?: string;
+    originalCategoryId?: string;
+    // When set, replaces the channel's manual tag set on the server.
+    // Empty array clears all manual tags. Omit to leave tags untouched.
+    tagIds?: string[];
+  },
   { state: RootState; rejectValue: string }
 >('chat/updateChannelThunk', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -944,6 +983,7 @@ export const updateChannelThunk = createAsyncThunk<
       channelId: params.channelId,
       name: params.name,
       description: params.description,
+      tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
     });
     if (!response.channel) {
       return rejectWithValue('Failed to update channel');
@@ -956,6 +996,7 @@ export const updateChannelThunk = createAsyncThunk<
         categoryId: params.categoryId ?? '',
       });
     }
+    hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
     // Apply categoryId from our params since the updateChannel response may not reflect the move
     if (params.categoryId !== params.originalCategoryId) {

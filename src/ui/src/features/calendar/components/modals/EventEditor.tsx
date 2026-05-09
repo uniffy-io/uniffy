@@ -36,6 +36,7 @@ import { RecurrenceSelector } from '@/features/calendar/components/modals/Recurr
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
+import { TagPicker } from '@/features/tags';
 
 type EventVisibility = 'private' | 'organization';
 
@@ -237,7 +238,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         calendarId: formData.calendarId,
         categoryId: formData.categoryId,
         isFocusTime: formData.isFocusTime,
-        tags: formData.tags,
+        tagIds: formData.tagIds,
         attendeeIds: formData.attendees.map((a) => a.id),
         visibility,
         reminders: formData.reminders,
@@ -542,6 +543,19 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
               {/* Recurrence */}
               <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Tag size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Tags</span>
+                </div>
+                <TagPicker
+                  selectedTagIds={formData.tagIds}
+                  onChange={(ids) => handleChange('tagIds', ids)}
+                  placeholder="Add tags..."
+                />
+              </div>
 
               {/* Description */}
               <div className="space-y-2">

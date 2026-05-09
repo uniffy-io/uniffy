@@ -14,12 +14,14 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle, WarningCircle, ArrowsClockwise, Clock } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { useTagsByIds } from "@/features/tags/store/selectors";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
+import { TagChip } from "@/features/tags";
 
 interface TaskCardProps {
   task: Task;
@@ -60,6 +62,10 @@ export function TaskCard({
   const ticketId = `${projectSlug}-${task.number}`;
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
   const TypeIcon = typeConfig.icon;
+
+  const visibleTags = useTagsByIds(task.tagIds ?? []);
+  const shownTags = visibleTags.slice(0, 3);
+  const overflowTagCount = Math.max(0, visibleTags.length - shownTags.length);
 
   return (
     <div
@@ -217,7 +223,7 @@ export function TaskCard({
 
         {/* Footer with assignees */}
         {(task.assigneeIds.length > 0 || task.outgoingReferences.length > 0) && (
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
           {/* Reference chips */}
           <div className="flex flex-wrap gap-1">
             {task.outgoingReferences?.slice(0, 2).map((urn) => (
@@ -242,6 +248,25 @@ export function TaskCard({
             </div>
           )}
         </div>
+        )}
+
+        {/* Tags row - capped at 3 + overflow */}
+        {shownTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1 pt-2">
+            {shownTags.map((tag) => (
+              <TagChip
+                key={tag.id}
+                tag={tag}
+                nonInteractive
+                className="px-1.5 py-0 text-[10px]"
+              />
+            ))}
+            {overflowTagCount > 0 && (
+              <span className="text-[10px] text-muted-foreground" title={visibleTags.slice(3).map((t) => t.name).join(", ")}>
+                +{overflowTagCount}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>

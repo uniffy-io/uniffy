@@ -21,6 +21,7 @@ from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.types import ContentType
 from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
+from uniffy.domains.tags import TagOperations
 
 _task = "content_extraction"
 
@@ -119,7 +120,7 @@ async def extract_document_content(
             await session.commit()
 
             # Re-index in Meilisearch with extracted text
-            await _reindex_file(file, result.text)
+            await _reindex_file(session, file, result.text)
 
             # Notify frontend
             try:
@@ -171,11 +172,14 @@ async def extract_document_content(
             return {"status": "failed", "error": str(e)}
 
 
-async def _reindex_file(file: File, extracted_text: str) -> None:
+async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
     """Re-index the file in Meilisearch with extracted text content.
 
     Parameters
     ----------
+    session : AsyncSession
+        Active DB session used to hydrate unified-tag slugs for the
+        ``tags`` array on the search document.
     file : File
         The file model to re-index.
     extracted_text : str
@@ -185,8 +189,6 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
     try:
         urn = build_content_urn(ContentType.FILE, file.id)
         parts = [file.filename, file.original_filename]
-        if file.tags:
-            parts.extend(f"tag:{tag}" for tag in file.tags)
         if file.description:
             parts.append(file.description)
         if file.mime_type:
@@ -195,6 +197,13 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
             parts.append(extracted_text)
 
         keywords = " ".join(filter(None, parts))
+
+        tag_ops = TagOperations(session)
+        tags_by_urn = await tag_ops.get_for_urns(
+            organization_id=file.organization_id,
+            content_urns=[urn],
+        )
+        tag_slugs = sorted({t.slug for t in tags_by_urn.get(urn, [])}) or None
 
         # Surface a snippet of the extracted text as the description when the
         # user did not write one. Mention previews render the description, so
@@ -214,6 +223,7 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
             owner_id=file.owner_id,
             keywords=keywords,
             description=description,
+            tags=tag_slugs,
         )
     except Exception:
         logger.warning("Failed to re-index file after extraction", file_id=str(file.id))

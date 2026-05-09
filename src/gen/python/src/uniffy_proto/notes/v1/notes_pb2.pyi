@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -25,7 +26,7 @@ NODE_TYPE_TEMPLATE: NodeType
 NODE_TYPE_CANVAS: NodeType
 
 class CreateNoteRequest(_message.Message):
-    __slots__ = ("organization_id", "title", "content", "slug", "parent_id", "tags", "metadata", "access_mode", "group_ids", "node_type", "icon", "baseline_role")
+    __slots__ = ("organization_id", "title", "content", "slug", "parent_id", "metadata", "access_mode", "group_ids", "node_type", "icon", "baseline_role", "tag_ids")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -38,26 +39,26 @@ class CreateNoteRequest(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     NODE_TYPE_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     title: str
     content: str
     slug: str
     parent_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     metadata: _containers.ScalarMap[str, str]
     access_mode: _common_pb2.AccessMode
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     node_type: NodeType
     icon: NoteIcon
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetNoteRequest(_message.Message):
     __slots__ = ("note_id", "organization_id")
@@ -68,7 +69,7 @@ class GetNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateNoteRequest(_message.Message):
-    __slots__ = ("note_id", "organization_id", "title", "content", "slug", "parent_id", "tags", "metadata", "icon")
+    __slots__ = ("note_id", "organization_id", "title", "content", "slug", "parent_id", "metadata", "icon", "tag_ids")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -82,19 +83,25 @@ class UpdateNoteRequest(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     note_id: str
     organization_id: str
     title: str
     content: str
     slug: str
     parent_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     metadata: _containers.ScalarMap[str, str]
     icon: NoteIcon
-    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ...) -> None: ...
+    tag_ids: NoteTagIds
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., tag_ids: _Optional[_Union[NoteTagIds, _Mapping]] = ...) -> None: ...
+
+class NoteTagIds(_message.Message):
+    __slots__ = ("ids",)
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DeleteNoteRequest(_message.Message):
     __slots__ = ("note_id", "organization_id", "permanent")
@@ -121,10 +128,9 @@ class NoteResponse(_message.Message):
     def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
 
 class ListNotesRequest(_message.Message):
-    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "page", "page_size", "sort_by", "sort_order", "access_mode", "group_id", "personal_only", "exclude_content")
+    __slots__ = ("organization_id", "parent_id", "include_deleted", "page", "page_size", "sort_by", "sort_order", "access_mode", "group_id", "personal_only", "exclude_content", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
@@ -134,9 +140,9 @@ class ListNotesRequest(_message.Message):
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     PERSONAL_ONLY_FIELD_NUMBER: _ClassVar[int]
     EXCLUDE_CONTENT_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     parent_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     include_deleted: bool
     page: int
     page_size: int
@@ -146,7 +152,8 @@ class ListNotesRequest(_message.Message):
     group_id: str
     personal_only: bool
     exclude_content: bool
-    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ..., exclude_content: _Optional[bool] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ..., exclude_content: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListNotesResponse(_message.Message):
     __slots__ = ("notes", "total_count", "page", "page_size", "total_pages")
@@ -163,20 +170,18 @@ class ListNotesResponse(_message.Message):
     def __init__(self, notes: _Optional[_Iterable[_Union[Note, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ...) -> None: ...
 
 class SearchNotesRequest(_message.Message):
-    __slots__ = ("organization_id", "query", "tags", "include_deleted", "page", "page_size")
+    __slots__ = ("organization_id", "query", "include_deleted", "page", "page_size")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     query: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     include_deleted: bool
     page: int
     page_size: int
-    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
 
 class SearchNotesResponse(_message.Message):
     __slots__ = ("notes", "total_count", "page", "page_size")
@@ -265,7 +270,7 @@ class NoteIcon(_message.Message):
     def __init__(self, icon_type: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class Note(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "access_mode", "node_type", "title", "content", "slug", "is_deleted", "version", "parent_id", "tags", "inline_tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "outgoing_references", "icon", "owner_info", "shared_with", "baseline_role")
+    __slots__ = ("id", "organization_id", "owner_id", "access_mode", "node_type", "title", "content", "slug", "is_deleted", "version", "parent_id", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "outgoing_references", "icon", "owner_info", "shared_with", "baseline_role", "tags")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -284,8 +289,6 @@ class Note(_message.Message):
     IS_DELETED_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
-    INLINE_TAGS_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
@@ -297,6 +300,7 @@ class Note(_message.Message):
     OWNER_INFO_FIELD_NUMBER: _ClassVar[int]
     SHARED_WITH_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -308,8 +312,6 @@ class Note(_message.Message):
     is_deleted: bool
     version: int
     parent_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
-    inline_tags: _containers.RepeatedScalarFieldContainer[str]
     metadata: _containers.ScalarMap[str, str]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
@@ -321,7 +323,8 @@ class Note(_message.Message):
     owner_info: NoteOwner
     shared_with: _containers.RepeatedCompositeFieldContainer[NoteShareTarget]
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., inline_tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., owner_info: _Optional[_Union[NoteOwner, _Mapping]] = ..., shared_with: _Optional[_Iterable[_Union[NoteShareTarget, _Mapping]]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., owner_info: _Optional[_Union[NoteOwner, _Mapping]] = ..., shared_with: _Optional[_Iterable[_Union[NoteShareTarget, _Mapping]]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
     __slots__ = ("id", "title", "slug", "owner_id", "updated_at", "access_mode", "node_type", "baseline_role")

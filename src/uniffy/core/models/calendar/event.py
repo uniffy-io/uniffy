@@ -54,8 +54,6 @@ class CalendarEvent(SQLModel, table=True):
         Whether this event is marked as focus/deep work time.
     is_deleted : bool
         Soft delete flag.
-    tags : list[str] | None
-        Tags for categorization.
     linked_resources : list[dict] | None
         Linked resources (URN, type, name, url).
     outgoing_references : list[str] | None
@@ -117,7 +115,6 @@ class CalendarEvent(SQLModel, table=True):
     )
     is_focus_time: bool = Field(default=False, nullable=False)
     is_deleted: bool = Field(default=False, nullable=False)
-    tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     linked_resources: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     recurrence_pattern: RecurrencePattern = Field(

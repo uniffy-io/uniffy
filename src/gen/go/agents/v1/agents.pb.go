@@ -8,6 +8,7 @@ package agentsv1
 
 import (
 	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
+	v11 "github.com/uniffy-io/uniffy-proto-go/tags/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -56,7 +57,10 @@ type AgentInfo struct {
 	// Effective role of the requesting user on this agent (if known).
 	// Set by the server so the UI can render edit/share affordances
 	// without re-resolving permissions client-side.
-	UserRole      *v1.ContentRole `protobuf:"varint,26,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
+	UserRole *v1.ContentRole `protobuf:"varint,26,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
+	// Hydrated unified-tag rows assigned to this agent. Server-populated
+	// via “TagOperations.get_for_urns“; clients should treat as read-only.
+	Tags          []*v11.Tag `protobuf:"bytes,27,rep,name=tags,proto3" json:"tags,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,6 +249,13 @@ func (x *AgentInfo) GetUserRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
+func (x *AgentInfo) GetTags() []*v11.Tag {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
 type CreateAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -265,8 +276,10 @@ type CreateAgentRequest struct {
 	// Provider key ID for the image model
 	ImageProviderKeyId *string `protobuf:"bytes,19,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
 	// Prompt template ID
-	PromptId      *string         `protobuf:"bytes,20,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
-	BaselineRole  *v1.ContentRole `protobuf:"varint,21,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	PromptId     *string         `protobuf:"bytes,20,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
+	BaselineRole *v1.ContentRole `protobuf:"varint,21,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	// Optional unified-tag ids to assign on create.
+	TagIds        []string `protobuf:"bytes,22,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -413,6 +426,13 @@ func (x *CreateAgentRequest) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
+func (x *CreateAgentRequest) GetTagIds() []string {
+	if x != nil {
+		return x.TagIds
+	}
+	return nil
+}
+
 type AgentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Agent         *AgentInfo             `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
@@ -516,8 +536,11 @@ type ListAgentsRequest struct {
 	AccessMode     *v1.AccessMode         `protobuf:"varint,3,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	PersonalOnly   *bool                  `protobuf:"varint,4,opt,name=personal_only,json=personalOnly,proto3,oneof" json:"personal_only,omitempty"`
 	GroupId        *string                `protobuf:"bytes,5,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Filter agents that carry every tag id in this list (logical AND).
+	// Empty = no tag filter.
+	TagIds        []string `protobuf:"bytes,6,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListAgentsRequest) Reset() {
@@ -583,6 +606,13 @@ func (x *ListAgentsRequest) GetGroupId() string {
 		return *x.GroupId
 	}
 	return ""
+}
+
+func (x *ListAgentsRequest) GetTagIds() []string {
+	if x != nil {
+		return x.TagIds
+	}
+	return nil
 }
 
 type ListAgentsResponse struct {
@@ -661,8 +691,13 @@ type UpdateAgentRequest struct {
 	// Prompt template ID
 	PromptId *string `protobuf:"bytes,21,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
 	// Clear the prompt template (set to null)
-	ClearPrompt   *bool           `protobuf:"varint,22,opt,name=clear_prompt,json=clearPrompt,proto3,oneof" json:"clear_prompt,omitempty"`
-	BaselineRole  *v1.ContentRole `protobuf:"varint,23,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	ClearPrompt  *bool           `protobuf:"varint,22,opt,name=clear_prompt,json=clearPrompt,proto3,oneof" json:"clear_prompt,omitempty"`
+	BaselineRole *v1.ContentRole `protobuf:"varint,23,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	// Replacement set of unified-tag ids. Empty list clears all manual
+	// tags; field unset (HasField=false) leaves them untouched. Mirrors
+	// the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
+	// pattern.
+	TagIds        *AgentTagIds `protobuf:"bytes,24,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -830,6 +865,59 @@ func (x *UpdateAgentRequest) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
+func (x *UpdateAgentRequest) GetTagIds() *AgentTagIds {
+	if x != nil {
+		return x.TagIds
+	}
+	return nil
+}
+
+// Wrapper so callers can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+type AgentTagIds struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentTagIds) Reset() {
+	*x = AgentTagIds{}
+	mi := &file_agents_v1_agents_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentTagIds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentTagIds) ProtoMessage() {}
+
+func (x *AgentTagIds) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentTagIds.ProtoReflect.Descriptor instead.
+func (*AgentTagIds) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AgentTagIds) GetIds() []string {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
 type DeleteAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -840,7 +928,7 @@ type DeleteAgentRequest struct {
 
 func (x *DeleteAgentRequest) Reset() {
 	*x = DeleteAgentRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[7]
+	mi := &file_agents_v1_agents_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -852,7 +940,7 @@ func (x *DeleteAgentRequest) String() string {
 func (*DeleteAgentRequest) ProtoMessage() {}
 
 func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[7]
+	mi := &file_agents_v1_agents_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -865,7 +953,7 @@ func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteAgentRequest) GetOrganizationId() string {
@@ -891,7 +979,7 @@ type DeleteAgentResponse struct {
 
 func (x *DeleteAgentResponse) Reset() {
 	*x = DeleteAgentResponse{}
-	mi := &file_agents_v1_agents_proto_msgTypes[8]
+	mi := &file_agents_v1_agents_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +991,7 @@ func (x *DeleteAgentResponse) String() string {
 func (*DeleteAgentResponse) ProtoMessage() {}
 
 func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[8]
+	mi := &file_agents_v1_agents_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -916,7 +1004,7 @@ func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAgentResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{8}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteAgentResponse) GetSuccess() bool {
@@ -938,7 +1026,7 @@ type UploadAgentAvatarRequest struct {
 
 func (x *UploadAgentAvatarRequest) Reset() {
 	*x = UploadAgentAvatarRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[9]
+	mi := &file_agents_v1_agents_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +1038,7 @@ func (x *UploadAgentAvatarRequest) String() string {
 func (*UploadAgentAvatarRequest) ProtoMessage() {}
 
 func (x *UploadAgentAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[9]
+	mi := &file_agents_v1_agents_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1051,7 @@ func (x *UploadAgentAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadAgentAvatarRequest.ProtoReflect.Descriptor instead.
 func (*UploadAgentAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{9}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UploadAgentAvatarRequest) GetOrganizationId() string {
@@ -1004,7 +1092,7 @@ type DeleteAgentAvatarRequest struct {
 
 func (x *DeleteAgentAvatarRequest) Reset() {
 	*x = DeleteAgentAvatarRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[10]
+	mi := &file_agents_v1_agents_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1016,7 +1104,7 @@ func (x *DeleteAgentAvatarRequest) String() string {
 func (*DeleteAgentAvatarRequest) ProtoMessage() {}
 
 func (x *DeleteAgentAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[10]
+	mi := &file_agents_v1_agents_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1029,7 +1117,7 @@ func (x *DeleteAgentAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentAvatarRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{10}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteAgentAvatarRequest) GetOrganizationId() string {
@@ -1056,7 +1144,7 @@ type PreviewSystemPromptRequest struct {
 
 func (x *PreviewSystemPromptRequest) Reset() {
 	*x = PreviewSystemPromptRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[11]
+	mi := &file_agents_v1_agents_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1068,7 +1156,7 @@ func (x *PreviewSystemPromptRequest) String() string {
 func (*PreviewSystemPromptRequest) ProtoMessage() {}
 
 func (x *PreviewSystemPromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[11]
+	mi := &file_agents_v1_agents_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1081,7 +1169,7 @@ func (x *PreviewSystemPromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewSystemPromptRequest.ProtoReflect.Descriptor instead.
 func (*PreviewSystemPromptRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{11}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PreviewSystemPromptRequest) GetOrganizationId() string {
@@ -1107,7 +1195,7 @@ type PreviewSystemPromptResponse struct {
 
 func (x *PreviewSystemPromptResponse) Reset() {
 	*x = PreviewSystemPromptResponse{}
-	mi := &file_agents_v1_agents_proto_msgTypes[12]
+	mi := &file_agents_v1_agents_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1119,7 +1207,7 @@ func (x *PreviewSystemPromptResponse) String() string {
 func (*PreviewSystemPromptResponse) ProtoMessage() {}
 
 func (x *PreviewSystemPromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[12]
+	mi := &file_agents_v1_agents_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1132,7 +1220,7 @@ func (x *PreviewSystemPromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewSystemPromptResponse.ProtoReflect.Descriptor instead.
 func (*PreviewSystemPromptResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{12}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PreviewSystemPromptResponse) GetSystemPrompt() string {
@@ -1146,7 +1234,7 @@ var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xba\a\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\x1a\x12tags/v1/tags.proto\"\xdc\a\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1178,11 +1266,12 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x15image_provider_key_id\x18\x17 \x01(\tR\x12imageProviderKeyId\x12\x1b\n" +
 	"\tprompt_id\x18\x18 \x01(\tR\bpromptId\x12@\n" +
 	"\rbaseline_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x128\n" +
-	"\tuser_role\x18\x1a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01B\x10\n" +
+	"\tuser_role\x18\x1a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01\x12 \n" +
+	"\x04tags\x18\x1b \x03(\v2\f.tags.v1.TagR\x04tagsB\x10\n" +
 	"\x0e_baseline_roleB\f\n" +
 	"\n" +
 	"_user_roleJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
-	"J\x04\b\x12\x10\x13J\x04\b\x14\x10\x15\"\xa1\a\n" +
+	"J\x04\b\x12\x10\x13J\x04\b\x14\x10\x15\"\xba\a\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -1206,7 +1295,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x15image_provider_key_id\x18\x13 \x01(\tH\bR\x12imageProviderKeyId\x88\x01\x01\x12 \n" +
 	"\tprompt_id\x18\x14 \x01(\tH\tR\bpromptId\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x15 \x01(\x0e2\x16.common.v1.ContentRoleH\n" +
-	"R\fbaselineRole\x88\x01\x01B\x0e\n" +
+	"R\fbaselineRole\x88\x01\x01\x12\x17\n" +
+	"\atag_ids\x18\x16 \x03(\tR\x06tagIdsB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
@@ -1223,7 +1313,7 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\"U\n" +
 	"\x0fGetAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xc4\x02\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xdd\x02\n" +
 	"\x11ListAgentsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n" +
 	"\n" +
@@ -1232,7 +1322,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\vaccess_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
 	"accessMode\x88\x01\x01\x12(\n" +
 	"\rpersonal_only\x18\x04 \x01(\bH\x02R\fpersonalOnly\x88\x01\x01\x12\x1e\n" +
-	"\bgroup_id\x18\x05 \x01(\tH\x03R\agroupId\x88\x01\x01B\r\n" +
+	"\bgroup_id\x18\x05 \x01(\tH\x03R\agroupId\x88\x01\x01\x12\x17\n" +
+	"\atag_ids\x18\x06 \x03(\tR\x06tagIdsB\r\n" +
 	"\v_paginationB\x0e\n" +
 	"\f_access_modeB\x10\n" +
 	"\x0e_personal_onlyB\v\n" +
@@ -1241,7 +1332,7 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x06agents\x18\x01 \x03(\v2\x14.agents.v1.AgentInfoR\x06agents\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xa2\b\n" +
+	"pagination\"\xe4\b\n" +
 	"\x12UpdateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
@@ -1268,7 +1359,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\tprompt_id\x18\x15 \x01(\tH\n" +
 	"R\bpromptId\x88\x01\x01\x12&\n" +
 	"\fclear_prompt\x18\x16 \x01(\bH\vR\vclearPrompt\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x17 \x01(\x0e2\x16.common.v1.ContentRoleH\fR\fbaselineRole\x88\x01\x01B\a\n" +
+	"\rbaseline_role\x18\x17 \x01(\x0e2\x16.common.v1.ContentRoleH\fR\fbaselineRole\x88\x01\x01\x124\n" +
+	"\atag_ids\x18\x18 \x01(\v2\x16.agents.v1.AgentTagIdsH\rR\x06tagIds\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
@@ -1282,7 +1374,11 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
 	"_prompt_idB\x0f\n" +
 	"\r_clear_promptB\x10\n" +
-	"\x0e_baseline_roleJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12\"X\n" +
+	"\x0e_baseline_roleB\n" +
+	"\n" +
+	"\b_tag_idsJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12\"\x1f\n" +
+	"\vAgentTagIds\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"X\n" +
 	"\x12DeleteAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"/\n" +
@@ -1325,7 +1421,7 @@ func file_agents_v1_agents_proto_rawDescGZIP() []byte {
 	return file_agents_v1_agents_proto_rawDescData
 }
 
-var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_agents_v1_agents_proto_goTypes = []any{
 	(*AgentInfo)(nil),                   // 0: agents.v1.AgentInfo
 	(*CreateAgentRequest)(nil),          // 1: agents.v1.CreateAgentRequest
@@ -1334,54 +1430,58 @@ var file_agents_v1_agents_proto_goTypes = []any{
 	(*ListAgentsRequest)(nil),           // 4: agents.v1.ListAgentsRequest
 	(*ListAgentsResponse)(nil),          // 5: agents.v1.ListAgentsResponse
 	(*UpdateAgentRequest)(nil),          // 6: agents.v1.UpdateAgentRequest
-	(*DeleteAgentRequest)(nil),          // 7: agents.v1.DeleteAgentRequest
-	(*DeleteAgentResponse)(nil),         // 8: agents.v1.DeleteAgentResponse
-	(*UploadAgentAvatarRequest)(nil),    // 9: agents.v1.UploadAgentAvatarRequest
-	(*DeleteAgentAvatarRequest)(nil),    // 10: agents.v1.DeleteAgentAvatarRequest
-	(*PreviewSystemPromptRequest)(nil),  // 11: agents.v1.PreviewSystemPromptRequest
-	(*PreviewSystemPromptResponse)(nil), // 12: agents.v1.PreviewSystemPromptResponse
-	(*timestamppb.Timestamp)(nil),       // 13: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                  // 14: common.v1.AccessMode
-	(v1.ContentRole)(0),                 // 15: common.v1.ContentRole
-	(*v1.PaginationRequest)(nil),        // 16: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),       // 17: common.v1.PaginationResponse
+	(*AgentTagIds)(nil),                 // 7: agents.v1.AgentTagIds
+	(*DeleteAgentRequest)(nil),          // 8: agents.v1.DeleteAgentRequest
+	(*DeleteAgentResponse)(nil),         // 9: agents.v1.DeleteAgentResponse
+	(*UploadAgentAvatarRequest)(nil),    // 10: agents.v1.UploadAgentAvatarRequest
+	(*DeleteAgentAvatarRequest)(nil),    // 11: agents.v1.DeleteAgentAvatarRequest
+	(*PreviewSystemPromptRequest)(nil),  // 12: agents.v1.PreviewSystemPromptRequest
+	(*PreviewSystemPromptResponse)(nil), // 13: agents.v1.PreviewSystemPromptResponse
+	(*timestamppb.Timestamp)(nil),       // 14: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                  // 15: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 16: common.v1.ContentRole
+	(*v11.Tag)(nil),                     // 17: tags.v1.Tag
+	(*v1.PaginationRequest)(nil),        // 18: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),       // 19: common.v1.PaginationResponse
 }
 var file_agents_v1_agents_proto_depIdxs = []int32{
-	13, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
-	13, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
-	15, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
-	15, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
-	14, // 5: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	15, // 6: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 7: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
-	16, // 8: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
-	14, // 9: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
-	0,  // 10: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
-	17, // 11: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
-	14, // 12: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	15, // 13: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 14: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
-	3,  // 15: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
-	4,  // 16: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
-	6,  // 17: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
-	7,  // 18: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
-	9,  // 19: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
-	10, // 20: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
-	11, // 21: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
-	2,  // 22: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
-	2,  // 23: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
-	5,  // 24: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
-	2,  // 25: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
-	8,  // 26: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
-	2,  // 27: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
-	2,  // 28: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
-	12, // 29: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
-	22, // [22:30] is the sub-list for method output_type
-	14, // [14:22] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	14, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
+	14, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
+	16, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
+	16, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
+	17, // 5: agents.v1.AgentInfo.tags:type_name -> tags.v1.Tag
+	15, // 6: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	16, // 7: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 8: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
+	18, // 9: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
+	15, // 10: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
+	0,  // 11: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
+	19, // 12: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
+	15, // 13: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	16, // 14: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	7,  // 15: agents.v1.UpdateAgentRequest.tag_ids:type_name -> agents.v1.AgentTagIds
+	1,  // 16: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
+	3,  // 17: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
+	4,  // 18: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
+	6,  // 19: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
+	8,  // 20: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
+	10, // 21: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
+	11, // 22: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
+	12, // 23: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
+	2,  // 24: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
+	2,  // 25: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
+	5,  // 26: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
+	2,  // 27: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
+	9,  // 28: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
+	2,  // 29: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
+	2,  // 30: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
+	13, // 31: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
+	24, // [24:32] is the sub-list for method output_type
+	16, // [16:24] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_agents_proto_init() }
@@ -1399,7 +1499,7 @@ func file_agents_v1_agents_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_agents_proto_rawDesc), len(file_agents_v1_agents_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

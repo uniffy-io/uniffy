@@ -96,6 +96,15 @@ class BaseContentOperations[TModel](ABC):
         """Optional tags for search indexing."""
         return None
 
+    async def _get_search_tags_async(self, model: TModel) -> list[str] | None:
+        """Async tags hook called from ``_index_for_search``.
+
+        Default delegates to the sync ``_get_search_tags``. Domains that
+        source tag slugs from the unified tags store override this so
+        the indexer keeps writing the canonical ``tag:{slug}`` keywords.
+        """
+        return self._get_search_tags(model)
+
     def _get_search_metadata(self, model: TModel) -> dict[str, str] | None:
         """Optional extra metadata for search indexing."""
         return None
@@ -322,7 +331,7 @@ class BaseContentOperations[TModel](ABC):
             shared_group_ids=shared_group_ids if shared_group_ids else None,
             blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
-            tags=self._get_search_tags(model),
+            tags=await self._get_search_tags_async(model),
             metadata=await self._get_search_metadata_async(model),
         )
 

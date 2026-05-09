@@ -46,6 +46,7 @@ from uniffy.domains.notes.converters import (
     note_to_reference,
 )
 from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.tags import TagOperations
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -54,6 +55,11 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _parse_tag_id_list(values: list[str]) -> list[UUID]:
+    """Parse a list of tag id strings, raising ``INVALID_ARGUMENT`` on any miss."""
+    return [_parse_uuid(value, "tag_id") for value in values]
 
 
 def _parse_canvas_content(content: str | None) -> dict | None:
@@ -125,6 +131,8 @@ class NotesHandlers:
             if canvas_content is not None:
                 content = ""
 
+        tag_ids = _parse_tag_id_list(list(request.tag_ids)) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = NoteOperations(session)
@@ -139,11 +147,20 @@ class NotesHandlers:
                     baseline_role=baseline_role,
                     node_type=node_type,
                     parent_id=parent_id,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     metadata=metadata if metadata else None,
                     group_ids=group_ids,
                 )
-                return NoteResponse(note=note_to_proto(note))
+                tags_by_urn = await TagOperations(session).get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
+                )
+                return NoteResponse(
+                    note=note_to_proto(
+                        note,
+                        tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -164,11 +181,16 @@ class NotesHandlers:
                 ops = NoteOperations(session)
                 note = await ops.get_by_id(user_id, organization_id, note_id)
                 sharing = (await ops.get_notes_sharing_info([note], user_id)).get(note.id)
+                tags_by_urn = await TagOperations(session).get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
+                )
                 return NoteResponse(
                     note=note_to_proto(
                         note,
                         owner_info=sharing.owner_info if sharing else None,
                         shared_with=sharing.shared_with if sharing else None,
+                        tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                     )
                 )
         except ConnectError:
@@ -203,6 +225,10 @@ class NotesHandlers:
         content = request.content if request.HasField("content") else None
         canvas_content = _parse_canvas_content(content) if content is not None else None
 
+        tag_ids: list[UUID] | None = None
+        if request.HasField("tag_ids"):
+            tag_ids = _parse_tag_id_list(list(request.tag_ids.ids))
+
         try:
             async with open_session() as session:
                 ops = NoteOperations(session)
@@ -215,10 +241,19 @@ class NotesHandlers:
                     canvas_content=canvas_content,
                     slug=request.slug if request.HasField("slug") else None,
                     parent_id=parent_id,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     metadata=metadata,
                 )
-                return NoteResponse(note=note_to_proto(note))
+                tags_by_urn = await TagOperations(session).get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
+                )
+                return NoteResponse(
+                    note=note_to_proto(
+                        note,
+                        tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -264,7 +299,16 @@ class NotesHandlers:
             async with open_session() as session:
                 ops = NoteOperations(session)
                 note = await ops.restore(user_id, organization_id, note_id)
-                return NoteResponse(note=note_to_proto(note))
+                tags_by_urn = await TagOperations(session).get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
+                )
+                return NoteResponse(
+                    note=note_to_proto(
+                        note,
+                        tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -295,6 +339,8 @@ class NotesHandlers:
         page = max(1, request.page or 1)
         page_size = min(500, max(1, request.page_size or 50))
 
+        tag_ids = _parse_tag_id_list(list(request.tag_ids)) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = NoteOperations(session)
@@ -306,7 +352,7 @@ class NotesHandlers:
                     group_id=group_id,
                     personal_only=request.personal_only,
                     include_deleted=request.include_deleted,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     page=page,
                     page_size=page_size,
                     sort_by=request.sort_by or "updated_at",
@@ -314,6 +360,12 @@ class NotesHandlers:
                 )
 
                 sharing = await ops.get_notes_sharing_info(notes, user_id)
+                tag_ops = TagOperations(session)
+                urn_for = lambda n: f"urn:uniffy:content:NOTE:{n.id}"  # noqa: E731
+                tags_by_urn = await tag_ops.get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[urn_for(n) for n in notes],
+                )
                 proto_notes = []
                 for n in notes:
                     info = sharing.get(n.id)
@@ -323,6 +375,7 @@ class NotesHandlers:
                             exclude_content=request.exclude_content,
                             owner_info=info.owner_info if info else None,
                             shared_with=info.shared_with if info else None,
+                            tags=tags_by_urn.get(urn_for(n), []),
                         )
                     )
 
@@ -455,7 +508,16 @@ class NotesHandlers:
                     target_baseline_role=target_baseline_role,
                     target_group_ids=target_group_ids,
                 )
-                return NoteResponse(note=note_to_proto(note))
+                tags_by_urn = await TagOperations(session).get_for_urns(
+                    organization_id=organization_id,
+                    content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
+                )
+                return NoteResponse(
+                    note=note_to_proto(
+                        note,
+                        tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:

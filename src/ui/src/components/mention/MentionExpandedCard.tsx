@@ -24,6 +24,7 @@ import {
   ChatMentionPreview,
   ChatMessageMentionPreview,
   AgentMentionPreview,
+  TagMentionPreview,
 } from '@/components/mention/previews';
 import type { MentionLiveState } from '@/components/mention/types';
 import { cn } from '@/shared/utils/cn';
@@ -88,6 +89,8 @@ export function MentionExpandedCard({
         return <ChatMessageMentionPreview {...previewProps} />;
       case UrnType.AGENT:
         return <AgentMentionPreview {...previewProps} />;
+      case UrnType.TAG:
+        return <TagMentionPreview {...previewProps} />;
       default:
         return null;
     }

@@ -36,6 +36,8 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.types import ContentRole
+from uniffy.domains.tags import Tag
+from uniffy.domains.tags.converters import tag_to_proto
 
 # Extraction status mapping: model -> proto
 EXTRACTION_STATUS_TO_PROTO = {
@@ -60,6 +62,7 @@ def file_to_proto(
     user_role: ContentRole | None = None,
     owner_info: dict | None = None,
     group_ids: list[str] | None = None,
+    tags: list[Tag] | None = None,
 ) -> ProtoFile:
     """Convert :class:`File` to its proto representation.
 
@@ -74,6 +77,9 @@ def file_to_proto(
     group_ids : list[str] | None
         Group ids the file is explicitly shared with (for the legacy
         ``group_ids`` proto field).
+    tags : list[Tag] | None
+        Hydrated unified tags assigned to this file. Pass ``None`` to
+        omit; pass ``[]`` to confirm the file has no assignments.
 
     Returns
     -------
@@ -96,13 +102,13 @@ def file_to_proto(
         original_filename=file.original_filename,
         mime_type=file.mime_type,
         size_bytes=file.size_bytes,
-        tags=file.tags or [],
         version=file.version,
         extraction_status=proto_extraction,
         is_deleted=file.is_deleted,
         created_at=datetime_to_timestamp(file.created_at),
         updated_at=datetime_to_timestamp(file.updated_at),
         group_ids=group_ids or [],
+        tags=[tag_to_proto(t) for t in tags] if tags else [],
     )
 
     if file.baseline_role is not None:

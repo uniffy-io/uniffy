@@ -15,7 +15,7 @@ export interface SerializedFilterCriteria {
     extensions?: string[];
     mimeCategories?: string[];
     ownerIds?: string[];
-    tags?: string[];
+    tagIds?: string[];
     sizeMinBytes?: number;
     sizeMaxBytes?: number;
     createdAfter?: string; // ISO date string
@@ -79,8 +79,8 @@ function serializeSavedFilter(filter: any): SerializedSavedFilter {
         if (filter.criteria.ownerIds?.length) {
             criteria.ownerIds = [...filter.criteria.ownerIds];
         }
-        if (filter.criteria.tags?.length) {
-            criteria.tags = [...filter.criteria.tags];
+        if (filter.criteria.tagIds?.length) {
+            criteria.tagIds = [...filter.criteria.tagIds];
         }
         if (filter.criteria.sizeMinBytes !== undefined) {
             criteria.sizeMinBytes = Number(filter.criteria.sizeMinBytes);
@@ -173,7 +173,7 @@ export const createSavedFilter = createAsyncThunk(
                     extensions: criteria.extensions,
                     mimeCategories: criteria.mimeCategories,
                     ownerIds: criteria.ownerIds,
-                    tags: criteria.tags,
+                    tagIds: criteria.tagIds,
                     sizeMinBytes: criteria.sizeMinBytes ? BigInt(criteria.sizeMinBytes) : undefined,
                     sizeMaxBytes: criteria.sizeMaxBytes ? BigInt(criteria.sizeMaxBytes) : undefined,
                     // Date handling is done in the proto conversion
@@ -223,7 +223,7 @@ export const updateSavedFilter = createAsyncThunk(
                     extensions: criteria.extensions,
                     mimeCategories: criteria.mimeCategories,
                     ownerIds: criteria.ownerIds,
-                    tags: criteria.tags,
+                    tagIds: criteria.tagIds,
                     sizeMinBytes: criteria.sizeMinBytes ? BigInt(criteria.sizeMinBytes) : undefined,
                     sizeMaxBytes: criteria.sizeMaxBytes ? BigInt(criteria.sizeMaxBytes) : undefined,
                 } : undefined,

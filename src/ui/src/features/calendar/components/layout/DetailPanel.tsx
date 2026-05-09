@@ -54,6 +54,8 @@ import type { RecurrenceConfig } from '@/features/calendar/types';
 import { DAY_OF_WEEK_LABELS } from '@/features/calendar/types';
 import { findConflicts } from '@/features/calendar/utils/eventPositioning';
 import { extractMentionsFromMarkdown } from '@/shared/utils/mentionUtils';
+import { TagChip } from '@/features/tags';
+import { useTagsByIds } from '@/features/tags/store/selectors';
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
@@ -108,6 +110,7 @@ export function DetailPanel() {
   );
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const eventTags = useTagsByIds(selectedEvent?.tagIds ?? []);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRecurrenceScopeDialog, setShowRecurrenceScopeDialog] = useState(false);
 
@@ -393,15 +396,10 @@ export function DetailPanel() {
             )}
 
             {/* Tags inline */}
-            {selectedEvent.tags.length > 0 && (
-              <div className="flex items-center gap-2 pt-1">
-                {selectedEvent.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-0.5 text-xs rounded bg-primary/15 text-primary"
-                  >
-                    {tag}
-                  </span>
+            {eventTags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {eventTags.map((tag) => (
+                  <TagChip key={tag.id} tag={tag} />
                 ))}
               </div>
             )}

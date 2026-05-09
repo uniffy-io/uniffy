@@ -6,8 +6,9 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
 import { notesApi } from '@/features/notes/api/notesApi';
-import type { RootState } from '@/app/store';
+import type { RootState, AppDispatch } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import type { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
@@ -17,6 +18,8 @@ import {
     setCachedNotes,
     isIndexedDBAvailable,
 } from '@/features/notes/utils/notesCache';
+import { bulkUpsertTags } from '@/features/tags/store/tagsSlice';
+import { tagToPlain } from '@/features/tags/store/tagsThunks';
 
 // Request deduplication - track in-flight requests
 let initializeRequestPromise: Promise<{
@@ -36,6 +39,8 @@ const getOrganizationId = (state: RootState): string => {
 // Helper to convert proto Note to serializable plain object
 // Note: bigint values are converted to number for Redux serialization
 // Note: Bookmark status is managed separately in the bookmarks store
+// Note: hydrated unified tags travel as ids on the note row; the rich
+// Tag objects live in the tags slice (hydrated once via dispatch).
 const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
@@ -50,8 +55,7 @@ const noteToPlain = (note: Note) => ({
     isDeleted: note.isDeleted,
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
-    tags: [...note.tags],
-    inlineTags: [...note.inlineTags],
+    tagIds: note.tags.map((t) => t.id),
     metadata: { ...note.metadata },
     createdAt: note.createdAt ? {
         seconds: typeof note.createdAt.seconds === 'bigint' ? Number(note.createdAt.seconds) : note.createdAt.seconds,
@@ -71,6 +75,24 @@ const noteToPlain = (note: Note) => ({
         value: note.icon.value,
     } : undefined,
 });
+
+/**
+ * Push hydrated unified Tag rows from a note proto into the tags slice
+ * cache. Domain thunks call this after every API call that returns a
+ * note so chips can render without a follow-up fetch.
+ */
+function hydrateNoteTags(dispatch: Dispatch<UnknownAction>, notes: ReadonlyArray<Note>): void {
+    const seen = new Map<string, ReturnType<typeof tagToPlain>>();
+    for (const note of notes) {
+        for (const tag of note.tags) {
+            if (!seen.has(tag.id)) {
+                seen.set(tag.id, tagToPlain(tag));
+            }
+        }
+    }
+    if (seen.size === 0) return;
+    dispatch(bulkUpsertTags(Array.from(seen.values())));
+}
 
 /** Serialized note type for Redux storage (bigints converted to numbers) */
 export type SerializedNote = ReturnType<typeof noteToPlain>;
@@ -95,15 +117,15 @@ export const fetchNotes = createAsyncThunk<
         personalOnly?: boolean;
         includeDeleted?: boolean;
         groupId?: string;
-        tags?: string[];
+        tagIds?: string[];
         sortBy?: string;
         sortOrder?: string;
         excludeContent?: boolean;
         /** When true, fetches all pages automatically */
         fetchAllPages?: boolean;
     } | void,
-    { state: RootState; rejectValue: string }
->('notes/fetchNotes', async (params, { getState, rejectWithValue }) => {
+    { state: RootState; rejectValue: string; dispatch: AppDispatch }
+>('notes/fetchNotes', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const pageSize = params?.pageSize ?? 100;
@@ -118,7 +140,7 @@ export const fetchNotes = createAsyncThunk<
             personalOnly: params?.personalOnly ?? false,
             includeDeleted: params?.includeDeleted ?? true,
             groupId: params?.groupId,
-            tags: params?.tags ?? [],
+            tagIds: params?.tagIds ?? [],
             sortBy: params?.sortBy ?? 'updated_at',
             sortOrder: params?.sortOrder ?? 'desc',
             excludeContent: params?.excludeContent ?? true,
@@ -126,6 +148,7 @@ export const fetchNotes = createAsyncThunk<
 
         // If not fetching all pages or only one page exists, return first response
         if (!params?.fetchAllPages || firstResponse.totalPages <= 1) {
+            hydrateNoteTags(dispatch, firstResponse.notes);
             return {
                 notes: firstResponse.notes.map(noteToPlain),
                 totalCount: firstResponse.totalCount,
@@ -153,7 +176,7 @@ export const fetchNotes = createAsyncThunk<
                     personalOnly: params?.personalOnly ?? false,
                     includeDeleted: params?.includeDeleted ?? true,
                     groupId: params?.groupId,
-                    tags: params?.tags ?? [],
+                    tagIds: params?.tagIds ?? [],
                     sortBy: params?.sortBy ?? 'updated_at',
                     sortOrder: params?.sortOrder ?? 'desc',
                     excludeContent: params?.excludeContent ?? true,
@@ -165,6 +188,7 @@ export const fetchNotes = createAsyncThunk<
             allNotes.push(...response.notes);
         }
 
+        hydrateNoteTags(dispatch, allNotes);
         return {
             notes: allNotes.map(noteToPlain),
             totalCount: firstResponse.totalCount,
@@ -184,7 +208,7 @@ export const fetchDeletedNotes = createAsyncThunk<
     SerializedNote[],
     void,
     { state: RootState; rejectValue: string }
->('notes/fetchDeletedNotes', async (_, { getState, rejectWithValue }) => {
+>('notes/fetchDeletedNotes', async (_, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.listNotes({
@@ -192,8 +216,9 @@ export const fetchDeletedNotes = createAsyncThunk<
             includeDeleted: true,
             pageSize: 100,
         });
-        // Filter to only deleted notes
-        return response.notes.filter(n => n.isDeleted).map(noteToPlain);
+        const deleted = response.notes.filter((n) => n.isDeleted);
+        hydrateNoteTags(dispatch, deleted);
+        return deleted.map(noteToPlain);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch deleted notes');
     }
@@ -206,7 +231,7 @@ export const fetchNote = createAsyncThunk<
     SerializedNote,
     string,
     { state: RootState; rejectValue: string }
->('notes/fetchNote', async (noteId, { getState, rejectWithValue }) => {
+>('notes/fetchNote', async (noteId, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.getNote({
@@ -216,6 +241,7 @@ export const fetchNote = createAsyncThunk<
         if (!response.note) {
             return rejectWithValue('Note not found');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch note');
@@ -233,11 +259,11 @@ export const createNote = createAsyncThunk<
         accessMode?: AccessMode;
         baselineRole?: ContentRole;
         parentId?: string;
-        tags?: string[];
+        tagIds?: string[];
         nodeType?: NodeType;
     },
-    { state: RootState; rejectValue: string }
->('notes/createNote', async (params, { getState, rejectWithValue }) => {
+    { state: RootState; rejectValue: string; dispatch: AppDispatch }
+>('notes/createNote', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.createNote({
@@ -247,12 +273,13 @@ export const createNote = createAsyncThunk<
             accessMode: params.accessMode,
             baselineRole: params.baselineRole,
             parentId: params.parentId,
-            tags: params.tags ?? [],
+            tagIds: params.tagIds ?? [],
             nodeType: params.nodeType ?? NodeType.NOTE,
         });
         if (!response.note) {
             return rejectWithValue('Failed to create note');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to create note');
@@ -268,11 +295,11 @@ export const updateNote = createAsyncThunk<
         noteId: string;
         title?: string;
         content?: string;
-        tags?: string[];
+        tagIds?: string[];
         parentId?: string;
     },
-    { state: RootState; rejectValue: string }
->('notes/updateNote', async (params, { getState, rejectWithValue }) => {
+    { state: RootState; rejectValue: string; dispatch: AppDispatch }
+>('notes/updateNote', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.updateNote({
@@ -280,12 +307,13 @@ export const updateNote = createAsyncThunk<
             organizationId,
             title: params.title,
             content: params.content,
-            tags: params.tags,
+            tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
             parentId: params.parentId,
         });
         if (!response.note) {
             return rejectWithValue('Failed to update note');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update note');
@@ -403,7 +431,7 @@ export const restoreNote = createAsyncThunk<
     SerializedNote,
     string,
     { state: RootState; rejectValue: string }
->('notes/restoreNote', async (noteId, { getState, rejectWithValue }) => {
+>('notes/restoreNote', async (noteId, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.restoreNote({
@@ -413,6 +441,7 @@ export const restoreNote = createAsyncThunk<
         if (!response.note) {
             return rejectWithValue('Failed to restore note');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore note');
@@ -424,18 +453,18 @@ export const restoreNote = createAsyncThunk<
  */
 export const searchNotes = createAsyncThunk<
     { notes: SerializedNote[]; totalCount: number },
-    { query: string; tags?: string[]; includeDeleted?: boolean },
-    { state: RootState; rejectValue: string }
->('notes/searchNotes', async (params, { getState, rejectWithValue }) => {
+    { query: string; includeDeleted?: boolean },
+    { state: RootState; rejectValue: string; dispatch: AppDispatch }
+>('notes/searchNotes', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.searchNotes({
             organizationId,
             query: params.query,
-            tags: params.tags ?? [],
             includeDeleted: params.includeDeleted ?? false,
             pageSize: 50,
         });
+        hydrateNoteTags(dispatch, response.notes);
         return {
             notes: response.notes.map(noteToPlain),
             totalCount: response.totalCount,
@@ -479,7 +508,7 @@ export const moveNote = createAsyncThunk<
     SerializedNote,
     { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole },
     { state: RootState; rejectValue: string }
->('notes/moveNote', async (params, { getState, rejectWithValue }) => {
+>('notes/moveNote', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.moveNote({
@@ -491,6 +520,7 @@ export const moveNote = createAsyncThunk<
         if (!response.note) {
             return rejectWithValue('Failed to move note');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to move note');
@@ -504,7 +534,7 @@ export const copyNote = createAsyncThunk<
     SerializedNote,
     { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole; title?: string },
     { state: RootState; rejectValue: string }
->('notes/copyNote', async (params, { getState, rejectWithValue }) => {
+>('notes/copyNote', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await notesApi.copyNote({
@@ -517,6 +547,7 @@ export const copyNote = createAsyncThunk<
         if (!response.note) {
             return rejectWithValue('Failed to copy note');
         }
+        hydrateNoteTags(dispatch, [response.note]);
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to copy note');
@@ -530,6 +561,7 @@ export const copyNote = createAsyncThunk<
 async function fetchAllNotesFromAPI(
     organizationId: string,
     currentUserId: string,
+    dispatch: Dispatch<UnknownAction>,
 ): Promise<{
     notes: SerializedNote[];
     tree: OrganizedNotes;
@@ -571,6 +603,8 @@ async function fetchAllNotesFromAPI(
             allNotes.push(...response.notes);
         }
     }
+
+    hydrateNoteTags(dispatch, allNotes);
 
     // Convert to serializable format
     const serializedNotes = allNotes.map(noteToPlain);
@@ -648,7 +682,7 @@ export const initializeNotesData = createAsyncThunk<
             if (cached) {
                 // Start background revalidation (fire and forget)
                 // This runs regardless of cache freshness - ensures shared notes appear quickly
-                fetchAllNotesFromAPI(organizationId, currentUserId)
+                fetchAllNotesFromAPI(organizationId, currentUserId, dispatch)
                     .then((freshData) => {
                         // Update cache
                         setCachedNotes(
@@ -679,7 +713,7 @@ export const initializeNotesData = createAsyncThunk<
         }
 
         // No cache - fetch from API with deduplication
-        initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId);
+        initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId, dispatch);
 
         try {
             const result = await initializeRequestPromise;

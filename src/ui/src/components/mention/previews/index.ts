@@ -7,4 +7,5 @@ export { UserMentionPreview } from '@/components/mention/previews/UserMentionPre
 export { ChatMentionPreview } from '@/components/mention/previews/ChatMentionPreview';
 export { ChatMessageMentionPreview } from '@/components/mention/previews/ChatMessageMentionPreview';
 export { AgentMentionPreview } from '@/components/mention/previews/AgentMentionPreview';
+export { TagMentionPreview } from '@/components/mention/previews/TagMentionPreview';
 export { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';

@@ -6,6 +6,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 // AgentsService manages agent configurations for an organization.
 service AgentsService {
@@ -71,6 +72,9 @@ message AgentInfo {
   // Set by the server so the UI can render edit/share affordances
   // without re-resolving permissions client-side.
   optional common.v1.ContentRole user_role = 26;
+  // Hydrated unified-tag rows assigned to this agent. Server-populated
+  // via ``TagOperations.get_for_urns``; clients should treat as read-only.
+  repeated tags.v1.Tag tags = 27;
 }
 
 // --- Requests and Responses ---
@@ -101,6 +105,8 @@ message CreateAgentRequest {
   // Prompt template ID
   optional string prompt_id = 20;
   optional common.v1.ContentRole baseline_role = 21;
+  // Optional unified-tag ids to assign on create.
+  repeated string tag_ids = 22;
 }
 
 message AgentResponse {
@@ -118,6 +124,9 @@ message ListAgentsRequest {
   optional common.v1.AccessMode access_mode = 3;
   optional bool personal_only = 4;
   optional string group_id = 5;
+  // Filter agents that carry every tag id in this list (logical AND).
+  // Empty = no tag filter.
+  repeated string tag_ids = 6;
 }
 
 message ListAgentsResponse {
@@ -154,6 +163,17 @@ message UpdateAgentRequest {
   // Clear the prompt template (set to null)
   optional bool clear_prompt = 22;
   optional common.v1.ContentRole baseline_role = 23;
+  // Replacement set of unified-tag ids. Empty list clears all manual
+  // tags; field unset (HasField=false) leaves them untouched. Mirrors
+  // the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
+  // pattern.
+  optional AgentTagIds tag_ids = 24;
+}
+
+// Wrapper so callers can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+message AgentTagIds {
+  repeated string ids = 1;
 }
 
 message DeleteAgentRequest {

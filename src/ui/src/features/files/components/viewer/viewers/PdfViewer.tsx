@@ -8,18 +8,17 @@
 
 import { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { Spinner } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setTotalPages, setViewerLoading } from '@/features/files/store/viewerSlice';
 import { useFileDownload } from '@/features/files/components/viewer/hooks/useFileDownload';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
-// Import react-pdf styles
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PdfViewerProps {
     file: SerializedFile;

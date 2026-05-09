@@ -7,6 +7,7 @@ from uuid import UUID
 
 from uniffy.core.extraction import UnsupportedFormatError, can_extract, extract_text
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.tags import TagOperations
 
 # Maximum bytes to download for on-demand extraction (10 MB).
 _MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
@@ -107,6 +108,14 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
     ops = FileOperations(ctx.session)
     file = await ops.get_by_id(ctx.user_id, ctx.organization_id, file_id)
 
+    urn = f"urn:uniffy:content:FILE:{file.id}"
+    tag_ops = TagOperations(ctx.session)
+    tags_by_urn = await tag_ops.get_for_urns(
+        organization_id=ctx.organization_id,
+        content_urns=[urn],
+    )
+    file_tag_slugs = [tag.slug for tag in tags_by_urn.get(urn, [])]
+
     data = json.dumps(
         {
             "id": str(file.id),
@@ -115,7 +124,7 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
             "mime_type": file.mime_type,
             "size": _format_size(file.size_bytes),
             "size_bytes": file.size_bytes,
-            "tags": file.tags or [],
+            "tags": file_tag_slugs,
             "description": file.description,
             "access_mode": (
                 file.access_mode.value

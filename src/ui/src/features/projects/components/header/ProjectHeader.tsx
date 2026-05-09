@@ -51,6 +51,9 @@ import { selectActiveSprint, selectSprintsForProject } from "@/features/projects
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { TagPicker } from "@/features/tags";
+import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
+import type { FilterCondition, FilterConfig } from "@/features/projects/types/views";
 import type { AppDispatch } from "@/app/store";
 
 interface ProjectHeaderProps {
@@ -334,6 +337,15 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           />
         )}
 
+        {/* Tags Quick Filter - hidden on mobile. ANY-mode shortcut for the
+            full filter builder; both write to the same FilterConfig. */}
+        {!isMobile && (
+          <TagsQuickFilter
+            filterConfig={activeFilterConfig}
+            onChange={(config) => dispatch(setFilterConfig(config))}
+          />
+        )}
+
         {/* Manage Statuses Button (Board view only) - hidden on mobile */}
         {viewMode === "board" && !isMobile && (
             <div className="relative">
@@ -424,6 +436,8 @@ function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
 
 // ===== Group By Dropdown =====
 
+export const GROUP_BY_TAGS_KEY = "__tags__";
+
 const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: null, label: "No grouping" },
   { value: SYSTEM_FIELD_IDS.STATUS, label: "Status" },
@@ -431,6 +445,7 @@ const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: SYSTEM_FIELD_IDS.ASSIGNEE, label: "Assignee" },
   { value: "__sprint__", label: "Sprint" },
   { value: "__task_type__", label: "Task Type" },
+  { value: GROUP_BY_TAGS_KEY, label: "Tags" },
 ];
 
 interface GroupByDropdownProps {
@@ -593,6 +608,102 @@ function GroupByDropdown({ activeGroupByFieldId, onSelect, showSprintOption }: G
               </button>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Tags Quick Filter =====
+
+interface TagsQuickFilterProps {
+  filterConfig: FilterConfig | null;
+  onChange: (next: FilterConfig | null) => void;
+}
+
+function TagsQuickFilter({ filterConfig, onChange }: TagsQuickFilterProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const tagCondition = filterConfig?.conditions.find(
+    (c) => c.fieldId === TAGS_FILTER_FIELD_ID
+  );
+  const selectedTagIds: string[] = Array.isArray(tagCondition?.value)
+    ? (tagCondition!.value as string[])
+    : tagCondition?.value
+      ? [String(tagCondition.value)]
+      : [];
+
+  const handleClose = useCallback(() => setIsOpen(false), []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        handleClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, handleClose]);
+
+  const apply = (nextTagIds: string[]) => {
+    const others = (filterConfig?.conditions ?? []).filter(
+      (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
+    );
+    if (nextTagIds.length === 0) {
+      if (others.length === 0) {
+        onChange(null);
+      } else {
+        onChange({ conditions: others, logic: filterConfig?.logic ?? "and" });
+      }
+      return;
+    }
+    const next: FilterCondition = {
+      id: tagCondition?.id ?? crypto.randomUUID(),
+      fieldId: TAGS_FILTER_FIELD_ID,
+      operator: "contains",
+      value: nextTagIds,
+    };
+    onChange({ conditions: [...others, next], logic: filterConfig?.logic ?? "and" });
+  };
+
+  const isFiltered = selectedTagIds.length > 0;
+  const displayLabel = isFiltered ? `Tags (${selectedTagIds.length})` : "Tags";
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors hover:bg-muted",
+          isFiltered ? "text-primary font-medium" : "text-muted-foreground"
+        )}
+      >
+        <span>{displayLabel}</span>
+        <CaretDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 z-50 mt-1.5 w-72 rounded-lg border border-border bg-card shadow-lg p-3 animate-in fade-in-0 zoom-in-95">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            Filter by tag
+          </div>
+          <TagPicker
+            selectedTagIds={selectedTagIds}
+            onChange={apply}
+            placeholder="Pick a tag"
+          />
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={() => apply([])}
+              className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          )}
         </div>
       )}
     </div>

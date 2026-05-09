@@ -6,6 +6,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 // ChatService provides channel, message, thread, reaction, and category management.
 service ChatService {
@@ -181,6 +182,11 @@ message ChatChannel {
   optional string custom_name = 34;
   // Denormalised agent participant for ``is_agent_dm=true`` channels.
   optional string agent_id = 35;
+  // Hydrated unified-tag rows assigned to this channel. Server-populated
+  // via ``TagOperations.get_for_urns``; clients should treat as read-only.
+  // Only meaningful for non-DM channels (PUBLIC / PRIVATE); DM channels
+  // do not carry tags.
+  repeated tags.v1.Tag tags = 36;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -313,6 +319,9 @@ message CreateChannelRequest {
   repeated string member_ids = 10;
   // For DM/GROUP_DM: polymorphic initial members (users + agents). Preferred.
   repeated ChatSubject members = 11;
+  // Optional unified-tag ids to assign on create. Ignored for DM /
+  // GROUP_DM channels (DMs do not carry tags).
+  repeated string tag_ids = 12;
 }
 
 message CreateChannelResponse {
@@ -335,6 +344,17 @@ message UpdateChannelRequest {
   optional string description = 4;
   optional string icon = 5;
   optional bool is_default = 6;
+  // Replacement set of unified-tag ids. Empty list clears all manual
+  // tags; field unset (HasField=false) leaves them untouched. Mirrors
+  // the NoteTagIds / FileTagIds / EventTagIds wrapper pattern. Ignored
+  // for DM / GROUP_DM channels.
+  optional ChannelTagIds tag_ids = 7;
+}
+
+// Wrapper so callers can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+message ChannelTagIds {
+  repeated string ids = 1;
 }
 
 message UpdateChannelResponse {
@@ -367,6 +387,10 @@ message ListChannelsRequest {
   // Max channels to return per page. Server clamps to <= 500. Defaults to 200
   // when unset / zero.
   optional int32 page_size = 4;
+  // Filter channels that carry every tag id in this list (logical AND).
+  // Empty = no tag filter. Mirrors ``ListNotesRequest`` / ``ListFilesRequest``
+  // / ``ListEventsRequest``.
+  repeated string tag_ids = 5;
 }
 
 message ListChannelsResponse {

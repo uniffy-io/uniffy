@@ -782,7 +782,6 @@ class AttachmentOperations:
             storage_key=new_storage_key,
             storage_bucket=source_file.storage_bucket,
             folder_id=target_folder_id,
-            tags=source_file.tags.copy() if source_file.tags else None,
             description=source_file.description,
             extraction_status=extraction_status,
         )

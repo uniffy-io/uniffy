@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -90,10 +91,12 @@ class UploadChunkResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., chunk_number: _Optional[int] = ..., chunks_received: _Optional[int] = ...) -> None: ...
 
 class CompleteUploadRequest(_message.Message):
-    __slots__ = ("upload_id",)
+    __slots__ = ("upload_id", "tag_ids")
     UPLOAD_ID_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     upload_id: str
-    def __init__(self, upload_id: _Optional[str] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, upload_id: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UploadChunksResponse(_message.Message):
     __slots__ = ("file",)
@@ -194,7 +197,7 @@ class StreamFileRangeResponse(_message.Message):
     def __init__(self, data: _Optional[bytes] = ..., total_size: _Optional[int] = ..., range_start: _Optional[int] = ..., range_end: _Optional[int] = ..., mime_type: _Optional[str] = ..., filename: _Optional[str] = ..., is_first_chunk: _Optional[bool] = ...) -> None: ...
 
 class File(_message.Message):
-    __slots__ = ("id", "urn", "organization_id", "owner_id", "access_mode", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "tags", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "owner_info", "metadata", "baseline_role")
+    __slots__ = ("id", "urn", "organization_id", "owner_id", "access_mode", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "owner_info", "metadata", "baseline_role", "tags")
     ID_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -205,7 +208,6 @@ class File(_message.Message):
     MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
     SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
     FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     EXTRACTION_STATUS_FIELD_NUMBER: _ClassVar[int]
@@ -218,6 +220,7 @@ class File(_message.Message):
     OWNER_INFO_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     id: str
     urn: str
     organization_id: str
@@ -228,7 +231,6 @@ class File(_message.Message):
     mime_type: str
     size_bytes: int
     folder_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     description: str
     version: int
     extraction_status: ExtractionStatus
@@ -241,7 +243,14 @@ class File(_message.Message):
     owner_info: FileOwner
     metadata: FileMetadata
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
+    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ...) -> None: ...
+
+class FileTagIds(_message.Message):
+    __slots__ = ("ids",)
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class FileMetadata(_message.Message):
     __slots__ = ("has_thumbnail", "width", "height", "format", "color_mode", "duration_seconds", "page_count", "exif", "error", "bitrate", "sample_rate", "channels")
@@ -303,22 +312,22 @@ class GetFileRequest(_message.Message):
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateFileRequest(_message.Message):
-    __slots__ = ("file_id", "organization_id", "filename", "tags", "description", "access_mode", "baseline_role")
+    __slots__ = ("file_id", "organization_id", "filename", "description", "access_mode", "baseline_role", "tag_ids")
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FILENAME_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     file_id: str
     organization_id: str
     filename: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     description: str
     access_mode: _common_pb2.AccessMode
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., filename: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    tag_ids: FileTagIds
+    def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., filename: _Optional[str] = ..., description: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tag_ids: _Optional[_Union[FileTagIds, _Mapping]] = ...) -> None: ...
 
 class DeleteFileRequest(_message.Message):
     __slots__ = ("file_id", "organization_id", "permanent")
@@ -347,10 +356,9 @@ class RestoreFileRequest(_message.Message):
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class ListFilesRequest(_message.Message):
-    __slots__ = ("organization_id", "folder_id", "tags", "include_deleted", "personal_only", "access_mode", "group_id", "page", "page_size", "sort_by", "sort_order", "shared_only")
+    __slots__ = ("organization_id", "folder_id", "include_deleted", "personal_only", "access_mode", "group_id", "page", "page_size", "sort_by", "sort_order", "shared_only", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     PERSONAL_ONLY_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
@@ -360,9 +368,9 @@ class ListFilesRequest(_message.Message):
     SORT_BY_FIELD_NUMBER: _ClassVar[int]
     SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
     SHARED_ONLY_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     folder_id: str
-    tags: _containers.RepeatedScalarFieldContainer[str]
     include_deleted: bool
     personal_only: bool
     access_mode: _common_pb2.AccessMode
@@ -372,7 +380,8 @@ class ListFilesRequest(_message.Message):
     sort_by: str
     sort_order: str
     shared_only: bool
-    def __init__(self, organization_id: _Optional[str] = ..., folder_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., personal_only: _Optional[bool] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., shared_only: _Optional[bool] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., folder_id: _Optional[str] = ..., include_deleted: _Optional[bool] = ..., personal_only: _Optional[bool] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., shared_only: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListFilesResponse(_message.Message):
     __slots__ = ("files", "total_count", "page", "page_size", "total_pages")
@@ -673,26 +682,26 @@ class RestoreFileVersionRequest(_message.Message):
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., version_id: _Optional[str] = ...) -> None: ...
 
 class FilterCriteria(_message.Message):
-    __slots__ = ("extensions", "mime_categories", "owner_ids", "access_mode", "tags", "size_min_bytes", "size_max_bytes", "created_after", "created_before")
+    __slots__ = ("extensions", "mime_categories", "owner_ids", "access_mode", "size_min_bytes", "size_max_bytes", "created_after", "created_before", "tag_ids")
     EXTENSIONS_FIELD_NUMBER: _ClassVar[int]
     MIME_CATEGORIES_FIELD_NUMBER: _ClassVar[int]
     OWNER_IDS_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
-    TAGS_FIELD_NUMBER: _ClassVar[int]
     SIZE_MIN_BYTES_FIELD_NUMBER: _ClassVar[int]
     SIZE_MAX_BYTES_FIELD_NUMBER: _ClassVar[int]
     CREATED_AFTER_FIELD_NUMBER: _ClassVar[int]
     CREATED_BEFORE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     extensions: _containers.RepeatedScalarFieldContainer[str]
     mime_categories: _containers.RepeatedScalarFieldContainer[str]
     owner_ids: _containers.RepeatedScalarFieldContainer[str]
     access_mode: _common_pb2.AccessMode
-    tags: _containers.RepeatedScalarFieldContainer[str]
     size_min_bytes: int
     size_max_bytes: int
     created_after: _timestamp_pb2.Timestamp
     created_before: _timestamp_pb2.Timestamp
-    def __init__(self, extensions: _Optional[_Iterable[str]] = ..., mime_categories: _Optional[_Iterable[str]] = ..., owner_ids: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., tags: _Optional[_Iterable[str]] = ..., size_min_bytes: _Optional[int] = ..., size_max_bytes: _Optional[int] = ..., created_after: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_before: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, extensions: _Optional[_Iterable[str]] = ..., mime_categories: _Optional[_Iterable[str]] = ..., owner_ids: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., size_min_bytes: _Optional[int] = ..., size_max_bytes: _Optional[int] = ..., created_after: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_before: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class IconValue(_message.Message):
     __slots__ = ("type", "value")

@@ -38,6 +38,7 @@ enum SearchResultType {
   SEARCH_RESULT_TYPE_CHAT_MESSAGE   = 10;
   SEARCH_RESULT_TYPE_ROOM           = 11;
   SEARCH_RESULT_TYPE_AGENT_CHAT     = 12;
+  SEARCH_RESULT_TYPE_TAG            = 13;
 }
 
 message SearchRequest {

@@ -8,6 +8,7 @@ export const EXPANDABLE_URN_TYPES = new Set<string>([
   UrnType.NOTE,
   UrnType.CHAT,
   UrnType.CHAT_MESSAGE,
+  UrnType.TAG,
 ]);
 
 export function hasExpandedCard(type: string): boolean {

@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import String, and_, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -47,6 +47,23 @@ from uniffy.core.types import (
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.recurrence import expand_recurrence
+from uniffy.domains.tags import TagAssignment, TagOperations
+
+
+def _master_event_id(event: CalendarEvent) -> UUID:
+    """Strip ``__occurrence__{date}`` from a synthetic recurring-instance id.
+
+    Tag assignments live on the master event URN. Recurring instances
+    are virtual rows produced by ``_expand_recurring_events``; their id
+    is rewritten to ``{master_uuid}__occurrence__{date}`` so the UI can
+    address an occurrence without minting a new DB row. The tag pipeline
+    must always reach the master row, regardless of which view fed it
+    the event.
+    """
+    raw = str(event.id)
+    if "__occurrence__" in raw:
+        return UUID(raw.split("__occurrence__")[0])
+    return event.id if isinstance(event.id, UUID) else UUID(raw)
 
 
 class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
@@ -60,10 +77,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         super().__init__(session)
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
-        """Aggregate searchable text for an event."""
+        """Aggregate searchable text for an event.
+
+        Tag slugs are written into the dedicated ``tags`` array on the
+        search document via :meth:`_get_search_tags_async`, so they are
+        not duplicated into the keyword stream.
+        """
         parts = [model.title]
-        if model.tags:
-            parts.extend(f"tag:{tag}" for tag in model.tags)
         if model.description:
             parts.append(model.description)
         if model.location:
@@ -84,9 +104,23 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             return model.description[:200]
         return None
 
-    def _get_search_tags(self, model: CalendarEvent) -> list[str] | None:
-        """Return tags for the search index."""
-        return model.tags if model.tags else None
+    async def _get_search_tags_async(self, model: CalendarEvent) -> list[str] | None:
+        """Return slugs assigned to this event via the unified tag store.
+
+        Recurring instances inherit their parent's tag set: instances
+        synthesize an id like ``{master_uuid}__occurrence__{date}`` but
+        carry no per-instance assignments of their own. The lookup runs
+        against the master URN so the indexer keeps emitting consistent
+        ``tag:{slug}`` keywords across the series.
+        """
+        urn = build_content_urn(self.content_type, _master_event_id(model))
+        tag_ops = TagOperations(self.session)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
 
     def _get_search_metadata(self, model: CalendarEvent) -> dict[str, str] | None:
         """Return event details metadata for search."""
@@ -126,7 +160,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         recurrence_pattern: RecurrencePattern = RecurrencePattern.NONE,
         recurrence_config: dict | None = None,
         is_focus_time: bool = False,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         linked_resources: list[dict] | None = None,
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
@@ -175,7 +209,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             is_focus_time=is_focus_time,
             recurrence_pattern=recurrence_pattern,
             recurrence_config=recurrence_config,
-            tags=tags,
             linked_resources=linked_resources,
             outgoing_references=outgoing_refs,
             reminders=reminders,
@@ -229,6 +262,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     subject_id=gid,
                     role=ContentRole.VIEWER,
                 )
+
+        if tag_ids:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.replace_manual_tags(
+                actor_id=user_id,
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, event.id),
+                tag_ids=tag_ids,
+            )
 
         await self._index_for_search(event, skip_member_lookup=not group_ids)
         await self.session.commit()
@@ -296,7 +338,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         category_id: UUID | None = None,
         recurrence_config: dict | None = None,
         is_focus_time: bool | None = None,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         linked_resources: list[dict] | None = None,
         attendee_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
@@ -323,7 +365,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     meeting_url=meeting_url,
                     category_id=category_id,
                     is_focus_time=is_focus_time,
-                    tags=tags,
                 )
                 return await self.edit_single_occurrence(
                     user_id,
@@ -345,7 +386,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     meeting_url=meeting_url,
                     category_id=category_id,
                     is_focus_time=is_focus_time,
-                    tags=tags,
                 )
                 return await self.edit_this_and_following(
                     user_id,
@@ -400,8 +440,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 event.recurrence_pattern = RecurrencePattern(recurrence_config["pattern"])
         if is_focus_time is not None:
             event.is_focus_time = is_focus_time
-        if tags is not None:
-            event.tags = tags
         if linked_resources is not None:
             event.linked_resources = linked_resources
         if reminders is not None:
@@ -461,6 +499,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self.session.commit()
         await self.session.refresh(event)
+
+        if tag_ids is not None:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.replace_manual_tags(
+                actor_id=user_id,
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, event.id),
+                tag_ids=tag_ids,
+            )
 
         await self._index_for_search(event)
         await self.session.commit()
@@ -613,6 +660,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await booking_ops.cancel_booking_for_event(event_id)
 
         if permanent:
+            tag_ops = TagOperations(self.session)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=organization_id,
+                content_urn=build_content_urn(self.content_type, event_id),
+            )
             await queries.permanent_delete_event(self.session, event)
         else:
             await queries.soft_delete_event(self.session, event)
@@ -854,7 +906,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
-            tags=master.tags,
             linked_resources=master.linked_resources,
             recurrence_pattern=RecurrencePattern.NONE,
             recurrence_id=master.id,
@@ -888,6 +939,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 responded_at=att.responded_at,
             )
             self.session.add(new_att)
+
+        await self._copy_tag_assignments(
+            organization_id=organization_id,
+            actor_id=user_id,
+            source_event_id=master.id,
+            target_event_id=override.id,
+        )
 
         await self._index_for_search(override, skip_member_lookup=True)
         await self.session.commit()
@@ -958,7 +1016,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
-            tags=master.tags,
             linked_resources=master.linked_resources,
             recurrence_pattern=master.recurrence_pattern,
             recurrence_config=new_config,
@@ -985,6 +1042,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
             self.session.add(new_att)
 
+        await self._copy_tag_assignments(
+            organization_id=organization_id,
+            actor_id=user_id,
+            source_event_id=master.id,
+            target_event_id=new_event.id,
+        )
+
         await self._index_for_search(new_event, skip_member_lookup=True)
         await self.session.commit()
 
@@ -999,7 +1063,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         include_deleted: bool = False,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "start_time",
@@ -1033,9 +1097,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             query = query.where(CalendarEvent.end_time <= end_date)
         if not include_deleted:
             query = query.where(CalendarEvent.is_deleted == False)  # noqa: E712
-        if tags:
-            for tag in tags:
-                query = query.where(CalendarEvent.tags.contains([tag]))
+        if tag_ids:
+            query = query.where(CalendarEvent.id.in_(self._tag_filter_subquery(tag_ids)))
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
@@ -1241,6 +1304,59 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     scheduled_at=scheduled_at,
                 )
                 self.session.add(reminder)
+
+    async def _copy_tag_assignments(
+        self,
+        *,
+        organization_id: UUID,
+        actor_id: UUID,
+        source_event_id: UUID,
+        target_event_id: UUID,
+    ) -> None:
+        """Copy manual tag assignments from one event URN to another.
+
+        Used when materializing a recurring-series override
+        (``edit_single_occurrence``) or splitting the series
+        (``edit_this_and_following``). Inline assignments are not a
+        concept on calendar events, so only ``source=manual`` rows
+        propagate. The new row gets its own ``tag_assignments`` rows
+        pointing at the same tag ids; if the master is later edited
+        independently, the override / new master keep their snapshot.
+        """
+        tag_ops = TagOperations(self.session)
+        source_urn = build_content_urn(self.content_type, source_event_id)
+        target_urn = build_content_urn(self.content_type, target_event_id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=organization_id,
+            content_urns=[source_urn],
+        )
+        tag_ids = [tag.id for tag in bulk.get(source_urn, [])]
+        if not tag_ids:
+            return
+        await tag_ops.assign(
+            actor_id=actor_id,
+            organization_id=organization_id,
+            content_urn=target_urn,
+            tag_ids=tag_ids,
+        )
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: event ids that carry every tag id in ``tag_ids``.
+
+        Implements logical AND across the tag set via a GROUP BY +
+        HAVING COUNT(DISTINCT) check, mirroring the notes / files
+        filter shape. Joins ``tag_assignments`` against the synthesized
+        ``urn:uniffy:content:CALENDAR_EVENT:{id}`` value.
+        """
+        urn_prefix = "urn:uniffy:content:CALENDAR_EVENT:"
+        urn_expr = func.concat(urn_prefix, cast(CalendarEvent.id, String))
+        return (
+            select(CalendarEvent.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(CalendarEvent.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        )
 
     async def _delete_reminder_rows(
         self,

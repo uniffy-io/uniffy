@@ -74,6 +74,11 @@ export enum SearchResultType {
    * @generated from enum value: SEARCH_RESULT_TYPE_AGENT_CHAT = 12;
    */
   AGENT_CHAT = 12,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_TAG = 13;
+   */
+  TAG = 13,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SearchResultType)
 proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
@@ -90,6 +95,7 @@ proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
   { no: 10, name: "SEARCH_RESULT_TYPE_CHAT_MESSAGE" },
   { no: 11, name: "SEARCH_RESULT_TYPE_ROOM" },
   { no: 12, name: "SEARCH_RESULT_TYPE_AGENT_CHAT" },
+  { no: 13, name: "SEARCH_RESULT_TYPE_TAG" },
 ]);
 
 /**

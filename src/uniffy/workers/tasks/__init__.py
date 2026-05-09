@@ -32,6 +32,7 @@ from uniffy.workers.tasks.notifications import (
 )
 from uniffy.workers.tasks.reminders import check_calendar_reminders
 from uniffy.workers.tasks.storage_recalculation import recalculate_all_storage_usage
+from uniffy.workers.tasks.tags_reindex import reindex_tag_doc, reindex_tag_urns
 from uniffy.workers.tasks.task_reminders import check_task_due_dates
 from uniffy.workers.tasks.thumbnails import (
     generate_image_thumbnail,
@@ -50,6 +51,8 @@ CORE_TASKS = (
     deliver_push_notification,
     deliver_email_notification,
     send_email_digest,
+    reindex_tag_urns,
+    reindex_tag_doc,
 )
 
 EGRESS_TASKS = (
@@ -87,6 +90,8 @@ __all__ = [
     "on_job_start",
     "process_notification_event",
     "recalculate_all_storage_usage",
+    "reindex_tag_doc",
+    "reindex_tag_urns",
     "respond_to_chat_message",
     "run_agent_session",
     "send_email_digest",

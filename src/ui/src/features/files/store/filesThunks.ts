@@ -7,6 +7,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import type { RootState } from '@/app/store';
 import type { File } from '@uniffy/proto/files/v1/files_pb';
 import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
@@ -34,7 +35,7 @@ export const fileToPlain = (file: File) => ({
     mimeType: file.mimeType,
     sizeBytes: typeof file.sizeBytes === 'bigint' ? Number(file.sizeBytes) : file.sizeBytes,
     folderId: file.folderId,
-    tags: [...file.tags],
+    tagIds: file.tags.map((tag) => tag.id),
     description: file.description,
     version: file.version,
     extractionStatus: file.extractionStatus,
@@ -76,6 +77,12 @@ export const fileToPlain = (file: File) => ({
 /** Serialized file type for Redux storage (bigints converted to numbers) */
 export type SerializedFile = ReturnType<typeof fileToPlain>;
 
+/** Dispatch a bulkUpsertTags action for the unified-tag rows hydrated on a file response. */
+export const hydrateFileTags = (file: File, dispatch: (action: unknown) => void): void => {
+    if (!file.tags.length) return;
+    dispatch(bulkUpsertTags(file.tags.map(tagToPlain)));
+};
+
 /**
  * Fetch files with pagination and filters.
  */
@@ -96,12 +103,12 @@ export const fetchFiles = createAsyncThunk<
         sharedOnly?: boolean;
         includeDeleted?: boolean;
         groupId?: string;
-        tags?: string[];
+        tagIds?: string[];
         sortBy?: string;
         sortOrder?: string;
     } | void,
     { state: RootState; rejectValue: string }
->('files/fetchFiles', async (params, { getState, rejectWithValue }) => {
+>('files/fetchFiles', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
 
@@ -115,10 +122,17 @@ export const fetchFiles = createAsyncThunk<
             sharedOnly: params?.sharedOnly ?? false,
             includeDeleted: params?.includeDeleted ?? false,
             groupId: params?.groupId,
-            tags: params?.tags ?? [],
+            tagIds: params?.tagIds ?? [],
             sortBy: params?.sortBy ?? 'updated_at',
             sortOrder: params?.sortOrder ?? 'desc',
         });
+
+        const upserts = response.files
+            .flatMap((file) => file.tags)
+            .map(tagToPlain);
+        if (upserts.length > 0) {
+            dispatch(bulkUpsertTags(upserts));
+        }
 
         return {
             files: response.files.map(fileToPlain),
@@ -139,7 +153,7 @@ export const fetchFile = createAsyncThunk<
     SerializedFile,
     string,
     { state: RootState; rejectValue: string }
->('files/fetchFile', async (fileId, { getState, rejectWithValue }) => {
+>('files/fetchFile', async (fileId, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await filesApi.getFile({
@@ -149,6 +163,7 @@ export const fetchFile = createAsyncThunk<
         if (!response.file) {
             return rejectWithValue('File not found');
         }
+        hydrateFileTags(response.file, dispatch);
         return fileToPlain(response.file);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch file');
@@ -157,29 +172,34 @@ export const fetchFile = createAsyncThunk<
 
 /**
  * Update file metadata.
+ *
+ * ``tagIds`` is the replacement set of manual tag ids. Pass ``undefined``
+ * to leave manual tags untouched; pass ``[]`` to clear every manual
+ * assignment.
  */
 export const updateFile = createAsyncThunk<
     SerializedFile,
     {
         fileId: string;
         filename?: string;
-        tags?: string[];
+        tagIds?: string[];
         description?: string;
     },
     { state: RootState; rejectValue: string }
->('files/updateFile', async (params, { getState, rejectWithValue }) => {
+>('files/updateFile', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await filesApi.updateFile({
             fileId: params.fileId,
             organizationId,
             filename: params.filename,
-            tags: params.tags,
+            tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
             description: params.description,
         });
         if (!response.file) {
             return rejectWithValue('Failed to update file');
         }
+        hydrateFileTags(response.file, dispatch);
         return fileToPlain(response.file);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update file');
@@ -217,7 +237,7 @@ export const restoreFile = createAsyncThunk<
     SerializedFile,
     string,
     { state: RootState; rejectValue: string }
->('files/restoreFile', async (fileId, { getState, rejectWithValue }) => {
+>('files/restoreFile', async (fileId, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await filesApi.restoreFile({
@@ -227,6 +247,7 @@ export const restoreFile = createAsyncThunk<
         if (!response.file) {
             return rejectWithValue('Failed to restore file');
         }
+        hydrateFileTags(response.file, dispatch);
         return fileToPlain(response.file);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore file');
@@ -284,7 +305,7 @@ export const initializeFilesData = createAsyncThunk<
     },
     { forceRefresh?: boolean } | void,
     { state: RootState; rejectValue: string }
->('files/initializeFilesData', async (params, { getState, rejectWithValue }) => {
+>('files/initializeFilesData', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = state.auth.currentOrganizationId;
@@ -338,6 +359,11 @@ export const initializeFilesData = createAsyncThunk<
             for (const response of pageResponses) {
                 allFiles.push(...response.files);
             }
+        }
+
+        const upserts = allFiles.flatMap((file) => file.tags).map(tagToPlain);
+        if (upserts.length > 0) {
+            dispatch(bulkUpsertTags(upserts));
         }
 
         return {

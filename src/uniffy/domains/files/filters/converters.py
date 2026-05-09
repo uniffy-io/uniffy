@@ -123,7 +123,7 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
         extensions=criteria.get("extensions", []),
         mime_categories=criteria.get("mime_categories", []),
         owner_ids=criteria.get("owner_ids", []),
-        tags=criteria.get("tags", []),
+        tag_ids=criteria.get("tag_ids", []),
     )
 
     if "access_mode" in criteria and criteria["access_mode"]:
@@ -178,8 +178,8 @@ def criteria_from_proto(proto: ProtoFilterCriteria) -> dict[str, Any]:
     if proto.owner_ids:
         criteria["owner_ids"] = list(proto.owner_ids)
 
-    if proto.tags:
-        criteria["tags"] = list(proto.tags)
+    if proto.tag_ids:
+        criteria["tag_ids"] = list(proto.tag_ids)
 
     if proto.access_mode:
         mode = access_mode_from_proto(proto.access_mode)

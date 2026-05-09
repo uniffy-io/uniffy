@@ -276,7 +276,7 @@ class TagNodeView implements NodeView {
       e.stopImmediatePropagation();
 
       const { name } = this.node.attrs as { name: string };
-      const path = `/notes/tags?tag=${encodeURIComponent(name)}`;
+      const path = `/tags/${encodeURIComponent(name)}`;
 
       // Cmd/Ctrl + Click opens in new tab
       if (e.metaKey || e.ctrlKey) {

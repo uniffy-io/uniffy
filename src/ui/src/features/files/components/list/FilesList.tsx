@@ -415,8 +415,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     }, [dispatch]);
 
     const handleUpdateFileTags = useCallback(
-        async (fileId: string, tags: string[]) => {
-            await dispatch(updateFile({ fileId, tags }));
+        async (fileId: string, tagIds: string[]) => {
+            await dispatch(updateFile({ fileId, tagIds }));
         },
         [dispatch]
     );

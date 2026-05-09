@@ -30,7 +30,6 @@ export function TemplateList() {
             categoryId: template.categoryId,
             location: template.location,
             meetingUrl: template.meetingUrl,
-            tags: template.tags,
             durationMinutes: template.durationMinutes,
           },
         })

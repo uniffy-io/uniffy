@@ -6,6 +6,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 // ============================================================================
 // Service Definition
@@ -78,6 +79,15 @@ enum ViewType {
   VIEW_TYPE_ROADMAP     = 3;
 }
 
+// Filter mode for tag list-tasks queries. ALL = task carries every tag id
+// in the request (intersection); ANY = task carries at least one
+// (union); NONE = task carries none (anti-join). Mirrors Jira labels.
+enum TagFilterMode {
+  TAG_FILTER_MODE_ALL  = 0;
+  TAG_FILTER_MODE_ANY  = 1;
+  TAG_FILTER_MODE_NONE = 2;
+}
+
 enum ActivityAction {
   ACTIVITY_ACTION_UNSPECIFIED        = 0;
   ACTIVITY_ACTION_CREATED            = 1;
@@ -117,6 +127,7 @@ message Project {
   string                             slug                  = 18;
   map<string, TypeFieldSchema>       type_field_schemas    = 19;
   optional common.v1.ContentRole     baseline_role         = 20;
+  repeated tags.v1.Tag               tags                  = 21;
 }
 
 message Task {
@@ -151,6 +162,7 @@ message Task {
   int32                              subtask_completed     = 29;
   optional int32                     estimated_minutes     = 30;
   optional int32                     time_spent_minutes    = 31;
+  repeated tags.v1.Tag               tags                  = 32;
 }
 
 message FieldDefinition {
@@ -230,6 +242,8 @@ message CreateProjectRequest {
   optional common.v1.AccessMode      access_mode     = 6;
   optional string                    slug            = 7;
   optional common.v1.ContentRole     baseline_role   = 8;
+  // Optional unified-tag ids to assign on create.
+  repeated string                    tag_ids         = 9;
 }
 
 message GetProjectRequest {
@@ -251,6 +265,16 @@ message UpdateProjectRequest {
   optional string                    slug               = 10;
   map<string, TypeFieldSchema>       type_field_schemas  = 11;
   optional common.v1.ContentRole     baseline_role      = 12;
+  // Replacement set of unified-tag ids. Empty list clears all manual
+  // tags; field unset (HasField=false) leaves them untouched. Mirrors
+  // the NoteTagIds / FileTagIds / EventTagIds wrapper pattern.
+  optional ProjectTagIds             tag_ids            = 13;
+}
+
+// Wrapper so callers can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+message ProjectTagIds {
+  repeated string ids = 1;
 }
 
 message DeleteProjectRequest {
@@ -303,6 +327,8 @@ message CreateTaskRequest {
   optional string     sprint_id           = 16;
   optional int32      estimated_minutes   = 17;
   optional int32      time_spent_minutes  = 18;
+  // Optional unified-tag ids to assign on create.
+  repeated string     tag_ids             = 19;
 }
 
 message GetTaskRequest {
@@ -330,6 +356,15 @@ message UpdateTaskRequest {
   optional string     sprint_id           = 17;
   optional int32      estimated_minutes   = 18;
   optional int32      time_spent_minutes  = 19;
+  // Replacement set of unified-tag ids. Empty list clears all manual
+  // tags; field unset (HasField=false) leaves them untouched.
+  optional TaskTagIds tag_ids             = 20;
+}
+
+// Wrapper so callers can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell empty repeated apart from unset).
+message TaskTagIds {
+  repeated string ids = 1;
 }
 
 message MoveTaskRequest {
@@ -368,6 +403,10 @@ message ListTasksRequest {
   optional string                      parent_id       = 5;
   optional string                      sprint_id       = 6;
   optional bool                        backlog_only    = 7;
+  // Filter tasks by unified-tag ids. Combined with ``tag_filter_mode``
+  // for ALL / ANY / NONE semantics. Empty = no tag filter.
+  repeated string                      tag_ids         = 8;
+  optional TagFilterMode               tag_filter_mode = 9;
 }
 
 message TaskResponse {

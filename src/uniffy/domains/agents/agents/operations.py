@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.avatars import delete_avatar as s3_delete_avatar
@@ -16,6 +16,7 @@ from uniffy.core.content.members import (
 )
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
 from uniffy.domains.agents.audit import create_audit_log
@@ -29,6 +30,7 @@ from uniffy.domains.agents.cache import (
     track_agent_skill_refs,
 )
 from uniffy.domains.agents.content_policy import check_admin_content
+from uniffy.domains.tags import TagAssignment, TagOperations
 
 
 def _coerce_uuid_list(values: list | None) -> list[UUID]:
@@ -106,6 +108,56 @@ class AgentOperations(BaseContentOperations[Agent]):
         """Return a description snippet from the soul prompt."""
         return model.soul_prompt[:200] if model.soul_prompt else None
 
+    async def _get_search_tags_async(self, model: Agent) -> list[str] | None:
+        """Return the slug list assigned to this agent via the unified store."""
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: agent ids that carry every tag id in ``tag_ids``.
+
+        Logical AND across the tag set via GROUP BY + HAVING
+        COUNT(DISTINCT). Mirrors the notes / files / calendar / chat
+        shape so the explorer's filter rail composes uniformly.
+        """
+        urn_prefix = "urn:uniffy:content:AGENT:"
+        urn_expr = func.concat(urn_prefix, cast(Agent.id, String))
+        return (
+            select(Agent.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(Agent.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        )
+
+    async def _sync_agent_tags(
+        self,
+        *,
+        actor_id: UUID,
+        agent: Agent,
+        tag_ids: list[UUID] | None,
+    ) -> None:
+        """Reconcile manual tag assignments after an agent write.
+
+        ``tag_ids=None`` leaves manual assignments untouched (used by
+        partial updates that did not ship tags). Empty list clears them.
+        """
+        if tag_ids is None:
+            return
+        tag_ops = TagOperations(self.session)
+        await tag_ops.replace_manual_tags(
+            actor_id=actor_id,
+            organization_id=agent.organization_id,
+            content_urn=build_content_urn(self.content_type, agent.id),
+            tag_ids=tag_ids,
+        )
+
     async def create_agent(
         self,
         *,
@@ -126,6 +178,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         primary_provider_key_id: UUID | None = None,
         image_provider_key_id: UUID | None = None,
         prompt_id: UUID | None = None,
+        tag_ids: list[UUID] | None = None,
     ) -> Agent:
         """Create a new agent configuration."""
         if not name or not name.strip():
@@ -185,6 +238,12 @@ class AgentOperations(BaseContentOperations[Agent]):
                     role=ContentRole.VIEWER,
                 )
 
+        await self._sync_agent_tags(
+            actor_id=user_id,
+            agent=agent,
+            tag_ids=tag_ids,
+        )
+
         await self._index_for_search(agent, skip_member_lookup=not group_ids)
         await self.session.commit()
 
@@ -221,6 +280,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         group_id: UUID | None = None,
         page: int = 1,
         page_size: int = 50,
+        tag_ids: list[UUID] | None = None,
     ) -> tuple[list[Agent], int]:
         """List agents the user can access."""
         from sqlalchemy import or_
@@ -272,6 +332,9 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         if access_mode is not None:
             query = query.where(Agent.access_mode == access_mode)
+
+        if tag_ids:
+            query = query.where(Agent.id.in_(self._tag_filter_subquery(tag_ids)))
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
@@ -346,6 +409,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         clear_image_provider_key: bool = False,
         prompt_id: UUID | None = None,
         clear_prompt: bool = False,
+        tag_ids: list[UUID] | None = None,
     ) -> Agent:
         """Update an agent configuration.
 
@@ -423,6 +487,12 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         await self.session.commit()
         await self.session.refresh(agent)
+
+        await self._sync_agent_tags(
+            actor_id=user_id,
+            agent=agent,
+            tag_ids=tag_ids,
+        )
 
         await self._index_for_search(agent)
         await self.session.commit()

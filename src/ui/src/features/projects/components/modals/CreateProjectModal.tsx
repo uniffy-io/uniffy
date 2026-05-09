@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { closeCreateProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
 import { createProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
+import { TagPicker } from "@/features/tags";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -42,6 +43,7 @@ export function CreateProjectModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [slug, setSlug] = useState("");
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-generate slug from name when not manually edited
@@ -70,6 +72,7 @@ export function CreateProjectModal() {
     setIsOrgScope(projectScope === "organization");
     setIsSlugManuallyEdited(false);
     setSlug("");
+    setTagIds([]);
     dispatch(closeCreateProjectModal());
   }, [dispatch, projectScope]);
 
@@ -88,6 +91,7 @@ export function CreateProjectModal() {
           accessMode: isOrgScope ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY,
           baselineRole: isOrgScope ? ContentRole.EDITOR : null,
           slug: slug || undefined,
+          tagIds: tagIds.length ? tagIds : undefined,
         })
       ).unwrap();
       // Load tasks for the new project and navigate to it
@@ -176,6 +180,22 @@ export function CreateProjectModal() {
                 disabled={isSubmitting}
                 rows={2}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Tags
+                <span className="text-muted-foreground font-normal ml-1">
+                  (optional)
+                </span>
+              </label>
+              <TagPicker
+                selectedTagIds={tagIds}
+                onChange={setTagIds}
+                disabled={isSubmitting}
+                placeholder="Add a tag"
               />
             </div>
 

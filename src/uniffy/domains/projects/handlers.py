@@ -11,6 +11,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 from uniffy_proto.projects.v1.projects_pb2 import (
@@ -71,6 +72,9 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.tags.tag import Tag
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.projects import queries
@@ -90,6 +94,7 @@ from uniffy.domains.projects.operations import (
     TaskOperations,
     WatcherOperations,
 )
+from uniffy.domains.tags import TagOperations
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -98,6 +103,51 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _parse_tag_ids(raw_ids) -> list[UUID]:
+    """Parse a repeated string proto field into a list of UUIDs."""
+    out: list[UUID] = []
+    for raw in raw_ids or ():
+        try:
+            out.append(UUID(raw))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid tag_id") from exc
+    return out
+
+
+async def _hydrate_task_tags(
+    session: AsyncSession,
+    organization_id: UUID,
+    task_ids: list[UUID],
+) -> dict[UUID, list[Tag]]:
+    """Bulk-fetch unified-tag rows for a batch of task ids."""
+    if not task_ids:
+        return {}
+    urn_to_id = {build_content_urn(ContentType.TASK, tid): tid for tid in task_ids}
+    tag_ops = TagOperations(session)
+    bulk = await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=list(urn_to_id),
+    )
+    return {tid: bulk.get(urn, []) for urn, tid in urn_to_id.items()}
+
+
+async def _hydrate_project_tags(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_ids: list[UUID],
+) -> dict[UUID, list[Tag]]:
+    """Bulk-fetch unified-tag rows for a batch of project ids."""
+    if not project_ids:
+        return {}
+    urn_to_id = {build_content_urn(ContentType.PROJECT, pid): pid for pid in project_ids}
+    tag_ops = TagOperations(session)
+    bulk = await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=list(urn_to_id),
+    )
+    return {pid: bulk.get(urn, []) for urn, pid in urn_to_id.items()}
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
@@ -130,6 +180,8 @@ class ProjectsHandlers:
         )
         slug = request.slug if request.HasField("slug") else None
 
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
+
         try:
             async with open_session() as session:
                 ops = ProjectOperations(session)
@@ -143,11 +195,17 @@ class ProjectsHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                     slug=slug,
+                    tag_ids=tag_ids or None,
                 )
                 user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
+                tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
+                return ProjectResponse(
+                    project=project_to_proto(
+                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -171,8 +229,13 @@ class ProjectsHandlers:
 
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
+                tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
 
-                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
+                return ProjectResponse(
+                    project=project_to_proto(
+                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -209,6 +272,8 @@ class ProjectsHandlers:
                 }
                 for type_name, schema in request.type_field_schemas.items()
             }
+        if request.HasField("tag_ids"):
+            updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
             async with open_session() as session:
@@ -224,7 +289,12 @@ class ProjectsHandlers:
                 user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-                return ProjectResponse(project=project_to_proto(project, fields, views, user_role))
+                tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
+                return ProjectResponse(
+                    project=project_to_proto(
+                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -287,13 +357,18 @@ class ProjectsHandlers:
                 project_ids = [p.id for p in projects]
                 fields_map = await queries.get_fields_for_projects(session, project_ids)
                 views_map = await queries.get_views_for_projects(session, project_ids)
+                tags_by_id = await _hydrate_project_tags(session, organization_id, project_ids)
 
                 project_protos = []
                 for project in projects:
                     user_role = await ops._resolve_role(user_id, organization_id, project)
                     fields = fields_map.get(str(project.id), [])
                     views = views_map.get(str(project.id), [])
-                    project_protos.append(project_to_proto(project, fields, views, user_role))
+                    project_protos.append(
+                        project_to_proto(
+                            project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                        )
+                    )
 
                 total_pages = (total + page_size - 1) // page_size
 
@@ -359,6 +434,8 @@ class ProjectsHandlers:
                     field_values[key] = value
             kwargs["field_values"] = field_values
 
+        tag_ids = _parse_tag_ids(list(request.tag_ids))
+
         try:
             async with open_session() as session:
                 ops = TaskOperations(session)
@@ -368,10 +445,16 @@ class ProjectsHandlers:
                     project_id=project_id,
                     title=request.title,
                     task_type=kwargs.pop("task_type", "task"),
+                    tag_ids=tag_ids or None,
                     **kwargs,
                 )
 
                 user_role = await ops._resolve_role(user_id, organization_id, task)
+
+                hydrate_ids = [task.id]
+                if task.parent_id:
+                    hydrate_ids.append(task.parent_id)
+                tags_by_id = await _hydrate_task_tags(session, organization_id, hydrate_ids)
 
                 updated_parent_proto = None
                 if task.parent_id:
@@ -379,11 +462,15 @@ class ProjectsHandlers:
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
+                        parent,
+                        user_role,
+                        subtask_total=p_total,
+                        subtask_completed=p_done,
+                        tags=tags_by_id.get(parent.id),
                     )
 
                 return TaskResponse(
-                    task=task_to_proto(task, user_role),
+                    task=task_to_proto(task, user_role, tags=tags_by_id.get(task.id)),
                     updated_parent=updated_parent_proto,
                 )
         except ConnectError:
@@ -409,8 +496,13 @@ class ProjectsHandlers:
 
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
+                tags_by_id = await _hydrate_task_tags(session, organization_id, [task.id])
 
-                return TaskResponse(task=task_to_proto(task, user_role, st_total, st_done))
+                return TaskResponse(
+                    task=task_to_proto(
+                        task, user_role, st_total, st_done, tags=tags_by_id.get(task.id)
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -469,6 +561,8 @@ class ProjectsHandlers:
                 except (json.JSONDecodeError, ValueError):
                     field_values[key] = value
             updates["field_values"] = field_values
+        if request.HasField("tag_ids"):
+            updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
             async with open_session() as session:
@@ -480,16 +574,31 @@ class ProjectsHandlers:
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
+                hydrate_ids = [task.id]
+                if task.parent_id:
+                    hydrate_ids.append(task.parent_id)
+                if spawned_task:
+                    hydrate_ids.append(spawned_task.id)
+                tags_by_id = await _hydrate_task_tags(session, organization_id, hydrate_ids)
+
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
+                        parent,
+                        user_role,
+                        subtask_total=p_total,
+                        subtask_completed=p_done,
+                        tags=tags_by_id.get(parent.id),
                     )
 
-                spawned_proto = task_to_proto(spawned_task, user_role) if spawned_task else None
+                spawned_proto = (
+                    task_to_proto(spawned_task, user_role, tags=tags_by_id.get(spawned_task.id))
+                    if spawned_task
+                    else None
+                )
 
                 return TaskResponse(
                     task=task_to_proto(
@@ -497,6 +606,7 @@ class ProjectsHandlers:
                         user_role,
                         subtask_total=st_total,
                         subtask_completed=st_done,
+                        tags=tags_by_id.get(task.id),
                     ),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
@@ -532,16 +642,31 @@ class ProjectsHandlers:
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
+                hydrate_ids = [task.id]
+                if task.parent_id:
+                    hydrate_ids.append(task.parent_id)
+                if spawned_task:
+                    hydrate_ids.append(spawned_task.id)
+                tags_by_id = await _hydrate_task_tags(session, organization_id, hydrate_ids)
+
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
                     parent_counts = await queries.get_subtask_counts(session, [parent.id])
                     p_total, p_done = parent_counts.get(parent.id, (0, 0))
                     updated_parent_proto = task_to_proto(
-                        parent, user_role, subtask_total=p_total, subtask_completed=p_done
+                        parent,
+                        user_role,
+                        subtask_total=p_total,
+                        subtask_completed=p_done,
+                        tags=tags_by_id.get(parent.id),
                     )
 
-                spawned_proto = task_to_proto(spawned_task, user_role) if spawned_task else None
+                spawned_proto = (
+                    task_to_proto(spawned_task, user_role, tags=tags_by_id.get(spawned_task.id))
+                    if spawned_task
+                    else None
+                )
 
                 return TaskResponse(
                     task=task_to_proto(
@@ -549,6 +674,7 @@ class ProjectsHandlers:
                         user_role,
                         subtask_total=st_total,
                         subtask_completed=st_done,
+                        tags=tags_by_id.get(task.id),
                     ),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
@@ -593,8 +719,12 @@ class ProjectsHandlers:
                 if tasks:
                     user_role = await ops._resolve_role(user_id, organization_id, tasks[0])
 
+                tags_by_id = await _hydrate_task_tags(
+                    session, organization_id, [t.id for t in tasks]
+                )
+
                 return BulkUpdateTasksResponse(
-                    tasks=[task_to_proto(t, user_role) for t in tasks],
+                    tasks=[task_to_proto(t, user_role, tags=tags_by_id.get(t.id)) for t in tasks],
                     updated_count=len(tasks),
                 )
         except ConnectError:
@@ -681,6 +811,19 @@ class ProjectsHandlers:
             sprint_id_filter = _parse_uuid(request.sprint_id, "sprint_id")
 
         backlog_only = request.backlog_only if request.HasField("backlog_only") else False
+        tag_ids_filter = _parse_tag_ids(list(request.tag_ids))
+
+        from uniffy_proto.projects.v1.projects_pb2 import TagFilterMode as _TagFilterMode
+
+        if request.HasField("tag_filter_mode"):
+            mode_value = request.tag_filter_mode
+        else:
+            mode_value = _TagFilterMode.TAG_FILTER_MODE_ALL
+        tag_filter_mode = {
+            _TagFilterMode.TAG_FILTER_MODE_ALL: "all",
+            _TagFilterMode.TAG_FILTER_MODE_ANY: "any",
+            _TagFilterMode.TAG_FILTER_MODE_NONE: "none",
+        }.get(mode_value, "all")
 
         try:
             async with open_session() as session:
@@ -695,6 +838,8 @@ class ProjectsHandlers:
                     parent_id=parent_id,
                     sprint_id=sprint_id_filter,
                     backlog_only=backlog_only,
+                    tag_ids=tag_ids_filter or None,
+                    tag_filter_mode=tag_filter_mode,
                     page=page,
                     page_size=page_size,
                 )
@@ -707,6 +852,7 @@ class ProjectsHandlers:
 
                 task_ids = [t.id for t in tasks]
                 subtask_counts = await queries.get_subtask_counts(session, task_ids)
+                tags_by_id = await _hydrate_task_tags(session, organization_id, task_ids)
 
                 task_protos = []
                 for t in tasks:
@@ -717,6 +863,7 @@ class ProjectsHandlers:
                             user_role,
                             subtask_total=st_total,
                             subtask_completed=st_done,
+                            tags=tags_by_id.get(t.id),
                         )
                     )
 

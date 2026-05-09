@@ -741,6 +741,57 @@ class MeilisearchClient:
             urn=urn,
         )
 
+    async def update_document_tags(
+        self,
+        urn: str,
+        organization_id: UUID,
+        tags: list[str],
+    ) -> None:
+        """Partial update of the ``tags`` array on an indexed document."""
+        doc_id = build_document_id(urn, organization_id)
+        partial = {"id": doc_id, "tags": tags}
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.update_documents([partial])
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_tags").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="update_tags").observe(elapsed_ms / 1000)
+        logger.info(
+            f"Meilisearch: update_tags count={len(tags)}",
+            ms=f"{elapsed_ms:.1f}",
+            urn=urn,
+        )
+
+    async def update_document_tags_bulk(
+        self,
+        organization_id: UUID,
+        items: list[tuple[str, list[str]]],
+    ) -> None:
+        """Partial update of ``tags`` arrays on many documents in one HTTP call.
+
+        Empty input is a no-op.
+        """
+        if not items:
+            return
+        partials = [
+            {"id": build_document_id(urn, organization_id), "tags": tags}
+            for urn, tags in items
+        ]
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.update_documents(partials)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_tags_bulk").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="update_tags_bulk").observe(
+            elapsed_ms / 1000
+        )
+        logger.info(
+            f"Meilisearch: update_tags_bulk batch={len(partials)}",
+            ms=f"{elapsed_ms:.1f}",
+        )
+
     async def get_document(self, urn: str, organization_id: UUID) -> dict[str, Any] | None:
         """
         Get a single document by URN and organization.

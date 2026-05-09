@@ -25,6 +25,26 @@ import { useNavigate } from 'react-router-dom';
 
 import { getInitials } from '@/components/subject/utils';
 import { MentionChipCompact } from '@/components/mention';
+import { TagChip } from '@/features/tags';
+import { useTagsByIds } from '@/features/tags/store/selectors';
+
+function NoteMetadataTagsList({ tagIds }: { tagIds: ReadonlyArray<string> }) {
+  const tags = useTagsByIds(tagIds);
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground block mb-2">Tags</label>
+      {tags.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <TagChip key={tag.id} tag={tag} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground italic">No tags</p>
+      )}
+    </div>
+  );
+}
 
 /** Parsed mention from content */
 interface ParsedMention {
@@ -356,24 +376,7 @@ export function NotesMetadataPanel() {
         </div>
       </div>
       
-      {/* Tags */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-2">Tags</label>
-        {note.tags && note.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {note.tags.map((tag: string) => (
-              <span
-                key={tag}
-                className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">No tags</p>
-        )}
-      </div>
+      <NoteMetadataTagsList tagIds={note.tagIds ?? []} />
     </div>
   );
 

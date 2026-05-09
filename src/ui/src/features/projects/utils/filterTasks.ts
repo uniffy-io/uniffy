@@ -8,6 +8,8 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types";
 import type { FilterConfig, FilterCondition } from "@/features/projects/types/views";
 
+export const TAGS_FILTER_FIELD_ID = "__tags__";
+
 /**
  * Get a field value from a task for filter evaluation
  */
@@ -30,10 +32,46 @@ function getFieldValue(task: Task, fieldId: string): unknown {
   }
 }
 
+function evaluateTagCondition(task: Task, condition: FilterCondition): boolean {
+  const taskTagSet = new Set(task.tagIds ?? []);
+  const raw = condition.value;
+  const tagIds: string[] = Array.isArray(raw)
+    ? (raw as string[])
+    : raw
+      ? [String(raw)]
+      : [];
+  if (tagIds.length === 0 && condition.operator !== "is_empty" && condition.operator !== "is_not_empty") {
+    return true;
+  }
+  switch (condition.operator) {
+    case "equals":
+      // is (single) - task must carry every selected tag (ALL).
+      return tagIds.every((id) => taskTagSet.has(id));
+    case "not_equals":
+      // is not (single) - task must carry none of the selected tags (NONE).
+      return tagIds.every((id) => !taskTagSet.has(id));
+    case "contains":
+      // is one of - task must carry at least one of the selected tags (ANY).
+      return tagIds.some((id) => taskTagSet.has(id));
+    case "not_contains":
+      // is none of - task must carry none of the selected tags (NONE).
+      return tagIds.every((id) => !taskTagSet.has(id));
+    case "is_empty":
+      return taskTagSet.size === 0;
+    case "is_not_empty":
+      return taskTagSet.size > 0;
+    default:
+      return true;
+  }
+}
+
 /**
  * Evaluate a single filter condition against a task
  */
 function evaluateCondition(task: Task, condition: FilterCondition): boolean {
+  if (condition.fieldId === TAGS_FILTER_FIELD_ID) {
+    return evaluateTagCondition(task, condition);
+  }
   const value = getFieldValue(task, condition.fieldId);
 
   switch (condition.operator) {

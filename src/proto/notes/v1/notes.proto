@@ -6,6 +6,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1";
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "tags/v1/tags.proto";
 
 // Node type for notes hierarchy
 enum NodeType {
@@ -86,8 +87,8 @@ message CreateNoteRequest {
   optional string slug = 4;
   // Optional parent note ID for hierarchy
   optional string parent_id = 5;
-  // Optional tags
-  repeated string tags = 6;
+  reserved 6;
+  reserved "tags";
   // Optional metadata
   map<string, string> metadata = 7;
   // Access mode (defaults to OWNER_ONLY)
@@ -100,6 +101,8 @@ message CreateNoteRequest {
   optional NoteIcon icon = 11;
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 12;
+  // Optional unified-tag ids to assign on create
+  repeated string tag_ids = 13;
 }
 
 // Request to get a note
@@ -124,12 +127,22 @@ message UpdateNoteRequest {
   optional string slug = 5;
   // Updated parent ID (optional, use empty string to remove parent)
   optional string parent_id = 6;
-  // Updated tags (optional, replaces existing tags)
-  repeated string tags = 7;
+  reserved 7;
+  reserved "tags";
   // Updated metadata (optional, merges with existing)
   map<string, string> metadata = 8;
   // Updated icon (optional)
   optional NoteIcon icon = 9;
+  // Replacement set of unified-tag ids. Empty list clears all manual tags.
+  // Field is unset (HasField=false) to leave manual tags untouched.
+  optional NoteTagIds tag_ids = 10;
+}
+
+// Wrapper so the caller can distinguish "leave tags alone" from
+// "clear all tags" (proto3 cannot tell an empty repeated apart from
+// an unset one).
+message NoteTagIds {
+  repeated string ids = 1;
 }
 
 // Request to delete a note
@@ -162,8 +175,8 @@ message ListNotesRequest {
   string organization_id = 1;
   // Optional parent ID filter (null = root notes only)
   optional string parent_id = 2;
-  // Optional tag filter
-  repeated string tags = 3;
+  reserved 3;
+  reserved "tags";
   // Include deleted notes
   bool include_deleted = 4;
   // Reserved: was pinned_only (now use BookmarksService)
@@ -185,6 +198,9 @@ message ListNotesRequest {
   bool personal_only = 12;
   // Exclude content field from response (for tree/list views)
   bool exclude_content = 13;
+  // Filter notes that carry every tag id in this list (logical AND).
+  // Empty = no tag filter.
+  repeated string tag_ids = 14;
 }
 
 // Response for listing notes
@@ -207,8 +223,8 @@ message SearchNotesRequest {
   string organization_id = 1;
   // Search query (full-text search)
   string query = 2;
-  // Optional tag filter
-  repeated string tags = 3;
+  reserved 3;
+  reserved "tags";
   // Include deleted notes
   bool include_deleted = 4;
   // Pagination: page number (1-indexed)
@@ -331,10 +347,8 @@ message Note {
   int64 version = 11;
   // Optional parent note ID
   optional string parent_id = 12;
-  // Tags (whole-note tags set explicitly by user)
-  repeated string tags = 13;
-  // Inline tags extracted from note content (e.g., #tagname in markdown)
-  repeated string inline_tags = 24;
+  reserved 13;
+  reserved 24;
   // Metadata
   map<string, string> metadata = 14;
   // Created timestamp
@@ -360,6 +374,9 @@ message Note {
 
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 25;
+
+  // Unified tags assigned to this note (manual + inline sources hydrated server-side).
+  repeated tags.v1.Tag tags = 26;
 }
 
 // Note reference (lightweight representation for backlinks)

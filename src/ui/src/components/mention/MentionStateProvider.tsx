@@ -143,9 +143,32 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
       state.userAvatarUrl = meta.userAvatarUrl || undefined;
       state.userEmail = meta.userEmail || undefined;
       break;
+
+    case UrnType.TAG:
+      state.tagColor = m.color || undefined;
+      state.tagSlug = m.slug || undefined;
+      if (m.usage_count) state.tagUsageCount = parseInt(m.usage_count, 10) || 0;
+      if (m.usage_count_by_domain) state.tagUsageByDomain = parseTagDomainBreakdown(m.usage_count_by_domain);
+      if (m.recent_assignment_urns) state.tagRecentAssignmentUrns = m.recent_assignment_urns.split('|').filter(Boolean);
+      if (m.recent_assignment_at) state.tagRecentAssignmentAt = m.recent_assignment_at.split('|');
+      if (m.user_assignment_count) state.tagUserAssignmentCount = parseInt(m.user_assignment_count, 10) || 0;
+      break;
   }
 
   return state;
+}
+
+/** Decode the pipe / colon serialised per-domain breakdown the tag entity
+ *  doc carries (e.g. ``NOTE:12|FILE:3``). */
+function parseTagDomainBreakdown(raw: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const pair of raw.split('|')) {
+    const [k, v] = pair.split(':');
+    if (!k) continue;
+    const n = parseInt(v ?? '', 10);
+    if (Number.isFinite(n)) out[k] = n;
+  }
+  return out;
 }
 
 /**
@@ -154,7 +177,7 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
  * mapping in ``metadataToLiveState`` so live updates land on the same
  * camelCase keys the chip components read.
  */
-function streamChangesToLiveState(changes: Record<string, string>): Partial<MentionLiveState> {
+export function streamChangesToLiveState(changes: Record<string, string>): Partial<MentionLiveState> {
   const patch: Partial<MentionLiveState> = {};
   for (const [key, raw] of Object.entries(changes)) {
     const value = raw ?? '';
@@ -246,6 +269,31 @@ function streamChangesToLiveState(changes: Record<string, string>): Partial<Ment
       case 'channel_id':
         patch.chatChannelId = value || undefined; break;
 
+      // TAG
+      case 'slug':
+        patch.tagSlug = value || undefined; break;
+      case 'color':
+        patch.tagColor = value || undefined; break;
+      case 'usage_count':
+        patch.tagUsageCount = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'usage_count_by_domain':
+        patch.tagUsageByDomain = parseTagDomainBreakdown(value);
+        break;
+      case 'recent_assignment_urns':
+        patch.tagRecentAssignmentUrns = value ? value.split('|').filter(Boolean) : [];
+        break;
+      case 'recent_assignment_at':
+        patch.tagRecentAssignmentAt = value ? value.split('|') : [];
+        break;
+      case 'user_assignment_count':
+        patch.tagUserAssignmentCount = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'tag_assignments_added':
+        patch.tagAssignmentsAdded = value ? value.split(',').filter(Boolean) : [];
+        break;
+      case 'tag_assignments_removed':
+        patch.tagAssignmentsRemoved = value ? value.split(',').filter(Boolean) : [];
+        break;
+
       default:
         break;
     }
@@ -311,12 +359,16 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     resolveTimer.current = setTimeout(flushPending, RESOLVE_DEBOUNCE);
   }, [flushPending]);
 
-  // Register a URN for live state tracking
+  // Register a URN for live state tracking. Re-fetch on every fresh
+  // registration so a domain switch / page reload pulls fresh state
+  // from Meili rather than serving the cached state forever. Stream
+  // patches keep the cache fresh between fetches; ``setStates``
+  // discards the prior entry only when a newer one arrives, so the UI
+  // never flickers.
   const register = useCallback((urn: string) => {
     const count = registeredUrns.current.get(urn) ?? 0;
     registeredUrns.current.set(urn, count + 1);
 
-    // Only fetch if this is a new URN (not already resolved)
     if (count === 0) {
       pendingUrns.current.add(urn);
       scheduleBatch();
@@ -334,20 +386,20 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     }
   }, []);
 
-  // Listen for real-time state change events from the notification stream
+  // Listen for real-time state change events from the notification
+  // stream. The emitter is shared with the local batch resolver, so
+  // ``changes`` arrives as either raw snake_case ``Record<string,
+  // string>`` (stream) or a typed camelCase ``Partial<MentionLiveState>``
+  // (local). Spread both shapes -- unmatched keys are harmless -- then
+  // overlay the translated camelCase patch so stream deltas land on
+  // the right fields.
   useEffect(() => {
     const unsubscribe = onMentionStateChange((urn, changes) => {
-      // Only process if this URN is currently registered (visible)
-      if (!registeredUrns.current.has(urn)) return;
-
       setStates((prev) => {
         const existing = prev.get(urn);
-        // Stream payloads are proto map<string,string> with snake_case
-        // keys. Translate to the typed MentionLiveState shape before
-        // merging so consumers (which read camelCase fields) see the
-        // update. Unknown keys are ignored.
+        if (!existing) return prev;
         const patch = streamChangesToLiveState(changes as Record<string, string>);
-        const updated: MentionLiveState = { ...existing, urn, ...patch };
+        const updated: MentionLiveState = { ...existing, ...changes, ...patch };
         const next = new Map(prev);
         next.set(urn, updated);
         setMentionState(urn, updated);

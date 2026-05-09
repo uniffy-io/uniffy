@@ -23,9 +23,12 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.search.queries import SearchResult, execute_search, get_documents_by_urns
+from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.visibility import TagVisibilityFilter
 
 
 class SearchOperations:
@@ -120,6 +123,23 @@ class SearchOperations:
             limit=limit,
             offset=offset,
         )
+
+        # Tag entity rows are indexed OPEN_TO_ORG so Meili lets every org
+        # member resolve them. Spotlight respects the unified-tag privacy
+        # rule by dropping rows whose underlying assignments aren't visible
+        # to the caller. ``total`` is a Meili estimate; the post-filter
+        # only narrows the page so the estimate stays directionally correct.
+        tag_results = [r for r in results if r.entity_type == "tag"]
+        if tag_results:
+            visible_tags = await self._filter_visible_tag_results(
+                user_id, organization_id, tag_results
+            )
+            visible_urns = {r.urn for r in visible_tags}
+            results = [
+                r
+                for r in results
+                if r.entity_type != "tag" or r.urn in visible_urns
+            ]
 
         return results, total
 
@@ -235,11 +255,18 @@ class SearchOperations:
         result = await self.session.execute(query)
         notes = list(result.scalars().all())
 
+        urn_for = lambda n: f"urn:uniffy:content:NOTE:{n.id}"  # noqa: E731
+        tags_by_urn = await TagOperations(self.session).get_for_urns(
+            organization_id=organization_id,
+            content_urns=[urn_for(n) for n in notes],
+        )
+
         search_results: list[SearchResult] = []
         for note in notes:
+            note_tags = [t.slug for t in tags_by_urn.get(urn_for(note), [])]
             search_results.append(
                 SearchResult(
-                    urn=f"urn:uniffy:content:NOTE:{note.id}",
+                    urn=urn_for(note),
                     organization_id=note.organization_id,
                     title=note.title,
                     description=note.content[:200] if note.content else None,
@@ -250,7 +277,7 @@ class SearchOperations:
                         note.baseline_role.value if note.baseline_role is not None else None
                     ),
                     owner_id=note.owner_id,
-                    tags=note.tags,
+                    tags=note_tags or None,
                     metadata=None,
                     updated_at=note.updated_at,
                     rank_score=1.0,
@@ -308,7 +335,7 @@ class SearchOperations:
         )
 
         # Enrich with live state from the database
-        await self._enrich_live_state(accessible, organization_id)
+        await self._enrich_live_state(accessible, organization_id, user_id)
 
         # Mark surviving entries as OK and synthesize tombstones for the rest
         for sr in accessible.values():
@@ -324,6 +351,7 @@ class SearchOperations:
         self,
         results: dict[str, SearchResult],
         organization_id: UUID,
+        user_id: UUID,
     ) -> None:
         """
         Enrich resolved URN results with live state from the database.
@@ -351,6 +379,7 @@ class SearchOperations:
         chat_ids: list[UUID] = []
         agent_ids: list[UUID] = []
         user_ids: list[UUID] = []
+        tag_ids: list[UUID] = []
 
         urn_to_id: dict[str, UUID] = {}
 
@@ -379,6 +408,8 @@ class SearchOperations:
                     agent_ids.append(content_id)
                 elif et == "user":
                     user_ids.append(content_id)
+                elif et == "tag":
+                    tag_ids.append(content_id)
             except (ValueError, IndexError):
                 continue
 
@@ -398,6 +429,10 @@ class SearchOperations:
             await self._enrich_agents(results, agent_ids, urn_to_id)
         if user_ids:
             await self._enrich_users(results, user_ids, urn_to_id)
+        if tag_ids:
+            await self._enrich_tags(
+                results, tag_ids, urn_to_id, user_id, organization_id
+            )
 
     async def _enrich_tasks(
         self,
@@ -732,12 +767,12 @@ class SearchOperations:
         note_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """Enrich note results with node type and tags."""
+        """Enrich note results with node type and unified-tag slugs."""
         try:
             stmt = select(
                 Note.id,
                 Note.node_type,
-                Note.tags,
+                Note.organization_id,
             ).where(
                 and_(
                     Note.id.in_(note_ids),
@@ -746,12 +781,25 @@ class SearchOperations:
             )
             result = await self.session.execute(stmt)
             id_to_urn = {v: k for k, v in urn_to_id.items()}
-            for row in result.all():
+            note_rows = list(result.all())
+            urns = [
+                id_to_urn[row.id]
+                for row in note_rows
+                if id_to_urn.get(row.id) and id_to_urn[row.id] in results
+            ]
+            org_id = note_rows[0].organization_id if note_rows else None
+            tags_by_urn: dict[str, list] = {}
+            if urns and org_id is not None:
+                tags_by_urn = await TagOperations(self.session).get_for_urns(
+                    organization_id=org_id,
+                    content_urns=urns,
+                )
+            for row in note_rows:
                 urn = id_to_urn.get(row.id)
                 if not urn or urn not in results:
                     continue
                 results[urn].note_node_type = row.node_type.value if row.node_type else None
-                results[urn].content_tags = row.tags
+                results[urn].content_tags = [t.slug for t in tags_by_urn.get(urn, [])] or None
         except Exception:
             logger.warning("Failed to enrich note live state", exc_info=True)
 
@@ -827,6 +875,116 @@ class SearchOperations:
             )
         )
         return [row[0] for row in result.all()]
+
+    async def _filter_visible_tag_results(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        tag_results: list[SearchResult],
+    ) -> list[SearchResult]:
+        """Hydrate tag rows from PG and run them through the visibility filter.
+
+        Tag entity docs in Meilisearch only carry name / slug / color and
+        a denormalized usage breakdown -- they intentionally don't carry
+        the per-assignment data needed for the visibility predicate.
+        Hydrate from PG (one batched ``IN`` query) and delegate to
+        :class:`TagVisibilityFilter`.
+        """
+        urn_to_tag_id: dict[str, UUID] = {}
+        for sr in tag_results:
+            parts = sr.urn.split(":")
+            if len(parts) != 5:
+                continue
+            try:
+                urn_to_tag_id[sr.urn] = UUID(parts[4])
+            except ValueError:
+                continue
+
+        if not urn_to_tag_id:
+            return []
+
+        result = await self.session.execute(
+            select(Tag).where(
+                Tag.organization_id == organization_id,
+                Tag.id.in_(urn_to_tag_id.values()),
+            )
+        )
+        tag_by_id = {t.id: t for t in result.scalars().all()}
+
+        candidates = [
+            tag_by_id[tag_id]
+            for tag_id in urn_to_tag_id.values()
+            if tag_id in tag_by_id
+        ]
+        visibility = TagVisibilityFilter(self.session, user_id, organization_id)
+        visible_ids = await visibility.visible_id_set(candidates)
+        return [
+            sr
+            for sr in tag_results
+            if urn_to_tag_id.get(sr.urn) in visible_ids
+        ]
+
+    async def _enrich_tags(
+        self,
+        results: dict[str, SearchResult],
+        tag_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """Drop invisible tag URNs (so they tombstone) and inject the
+        per-user ``user_assignment_count`` for the survivors.
+
+        ``user_assignment_count`` is the only tag field that cannot be
+        denormalized into the Meilisearch doc -- it's per-user and would
+        require fan-out we don't pay for. A single indexed
+        ``COUNT(*) GROUP BY tag_id WHERE assigned_by = :user`` covers
+        the whole batch.
+        """
+        try:
+            stmt = select(Tag).where(
+                Tag.organization_id == organization_id,
+                Tag.id.in_(tag_ids),
+            )
+            tag_rows = (await self.session.execute(stmt)).scalars().all()
+            tag_by_id = {t.id: t for t in tag_rows}
+
+            visibility = TagVisibilityFilter(self.session, user_id, organization_id)
+            candidates = [tag_by_id[tid] for tid in tag_ids if tid in tag_by_id]
+            visible_ids = await visibility.visible_id_set(candidates)
+
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for tag_id in tag_ids:
+                urn = id_to_urn.get(tag_id)
+                if urn is None or urn not in results:
+                    continue
+                if tag_id not in visible_ids:
+                    results.pop(urn, None)
+
+            if not visible_ids:
+                return
+
+            count_stmt = (
+                select(TagAssignment.tag_id, func.count())
+                .where(
+                    TagAssignment.tag_id.in_(visible_ids),
+                    TagAssignment.assigned_by == user_id,
+                )
+                .group_by(TagAssignment.tag_id)
+            )
+            count_rows = (await self.session.execute(count_stmt)).all()
+            counts: dict[UUID, int] = {row[0]: int(row[1]) for row in count_rows}
+
+            for tag_id in visible_ids:
+                urn = id_to_urn.get(tag_id)
+                if urn is None or urn not in results:
+                    continue
+                sr = results[urn]
+                metadata = dict(sr.metadata or {})
+                metadata["user_assignment_count"] = str(counts.get(tag_id, 0))
+                sr.metadata = metadata
+        except Exception:
+            logger.warning("Failed to enrich tag live state", exc_info=True)
 
 
 def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:

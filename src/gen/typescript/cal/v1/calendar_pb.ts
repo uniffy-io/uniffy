@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
+import { Tag } from "../../tags/v1/tags_pb.js";
 
 /**
  * Recurrence patterns for repeating events
@@ -418,13 +419,6 @@ export class CalendarEvent extends Message<CalendarEvent> {
   isFocusTime = false;
 
   /**
-   * Tags for categorization
-   *
-   * @generated from field: repeated string tags = 17;
-   */
-  tags: string[] = [];
-
-  /**
    * Linked resources (notes, files, chats)
    *
    * @generated from field: repeated cal.v1.LinkedResource linked_resources = 18;
@@ -535,6 +529,13 @@ export class CalendarEvent extends Message<CalendarEvent> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Hydrated tags applied to this event (server-side from TagOperations).
+   *
+   * @generated from field: repeated tags.v1.Tag tags = 35;
+   */
+  tags: Tag[] = [];
+
   constructor(data?: PartialMessage<CalendarEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -559,7 +560,6 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 14, name: "organizer_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 15, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 16, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 17, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 18, name: "linked_resources", kind: "message", T: LinkedResource, repeated: true },
     { no: 19, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 20, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -577,6 +577,7 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 32, name: "room_capacity", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 33, name: "room_amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 34, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 35, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -944,13 +945,6 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
   isFocusTime = false;
 
   /**
-   * Tags
-   *
-   * @generated from field: repeated string tags = 15;
-   */
-  tags: string[] = [];
-
-  /**
    * Linked resource URNs
    *
    * @generated from field: repeated string linked_resource_urns = 16;
@@ -985,6 +979,13 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Optional unified-tag ids to assign on create
+   *
+   * @generated from field: repeated string tag_ids = 21;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1007,12 +1008,12 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
     { no: 12, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 13, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 19, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 20, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 21, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
@@ -1186,13 +1187,6 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
   isFocusTime?: boolean;
 
   /**
-   * Updated tags (replaces existing)
-   *
-   * @generated from field: repeated string tags = 15;
-   */
-  tags: string[] = [];
-
-  /**
    * Updated linked resource URNs (replaces existing)
    *
    * @generated from field: repeated string linked_resource_urns = 16;
@@ -1248,6 +1242,14 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Replacement set of unified-tag ids. Empty list clears all manual tags.
+   * Field is unset (HasField=false) to leave manual tags untouched.
+   *
+   * @generated from field: optional cal.v1.EventTagIds tag_ids = 24;
+   */
+  tagIds?: EventTagIds;
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1270,7 +1272,6 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 12, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -1279,6 +1280,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 21, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 22, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 24, name: "tag_ids", kind: "message", T: EventTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {
@@ -1295,6 +1297,47 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
 
   static equals(a: UpdateEventRequest | PlainMessage<UpdateEventRequest> | undefined, b: UpdateEventRequest | PlainMessage<UpdateEventRequest> | undefined): boolean {
     return proto3.util.equals(UpdateEventRequest, a, b);
+  }
+}
+
+/**
+ * Wrapper so the caller can distinguish "leave tags alone" from
+ * "clear all tags" (proto3 cannot tell an empty repeated apart from
+ * an unset one). Mirrors NoteTagIds / FileTagIds.
+ *
+ * @generated from message cal.v1.EventTagIds
+ */
+export class EventTagIds extends Message<EventTagIds> {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[] = [];
+
+  constructor(data?: PartialMessage<EventTagIds>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.EventTagIds";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventTagIds {
+    return new EventTagIds().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventTagIds {
+    return new EventTagIds().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventTagIds {
+    return new EventTagIds().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventTagIds | PlainMessage<EventTagIds> | undefined, b: EventTagIds | PlainMessage<EventTagIds> | undefined): boolean {
+    return proto3.util.equals(EventTagIds, a, b);
   }
 }
 
@@ -1504,13 +1547,6 @@ export class ListEventsRequest extends Message<ListEventsRequest> {
   includeDeleted = false;
 
   /**
-   * Tag filter
-   *
-   * @generated from field: repeated string tags = 7;
-   */
-  tags: string[] = [];
-
-  /**
    * Pagination: page number (1-indexed)
    *
    * @generated from field: int32 page = 8;
@@ -1538,6 +1574,13 @@ export class ListEventsRequest extends Message<ListEventsRequest> {
    */
   sortOrder = "";
 
+  /**
+   * Filter events that have ALL of the provided tag ids (logical AND).
+   *
+   * @generated from field: repeated string tag_ids = 12;
+   */
+  tagIds: string[] = [];
+
   constructor(data?: PartialMessage<ListEventsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1552,11 +1595,11 @@ export class ListEventsRequest extends Message<ListEventsRequest> {
     { no: 4, name: "start_date", kind: "message", T: Timestamp, opt: true },
     { no: 5, name: "end_date", kind: "message", T: Timestamp, opt: true },
     { no: 6, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 8, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 10, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEventsRequest {

@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -77,7 +78,7 @@ class ChatSubject(_message.Message):
     def __init__(self, type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., id: _Optional[str] = ...) -> None: ...
 
 class ChatChannel(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id", "tags")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -103,6 +104,7 @@ class ChatChannel(_message.Message):
     IS_AGENT_DM_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_NAME_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -128,7 +130,8 @@ class ChatChannel(_message.Message):
     is_agent_dm: bool
     custom_name: str
     agent_id: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_encrypted: _Optional[bool] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+    tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_encrypted: _Optional[bool] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ...) -> None: ...
 
 class ThreadInfo(_message.Message):
     __slots__ = ("reply_count", "last_reply_at", "participant_ids", "has_unread")
@@ -308,7 +311,7 @@ class TypingUser(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ...) -> None: ...
 
 class CreateChannelRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "channel_type", "description", "icon", "is_default", "category_id", "member_ids", "members")
+    __slots__ = ("organization_id", "name", "channel_type", "description", "icon", "is_default", "category_id", "member_ids", "members", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -318,6 +321,7 @@ class CreateChannelRequest(_message.Message):
     CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     channel_type: ChannelType
@@ -327,7 +331,8 @@ class CreateChannelRequest(_message.Message):
     category_id: str
     member_ids: _containers.RepeatedScalarFieldContainer[str]
     members: _containers.RepeatedCompositeFieldContainer[ChatSubject]
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ..., category_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[ChatSubject, _Mapping]]] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ..., category_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[ChatSubject, _Mapping]]] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateChannelResponse(_message.Message):
     __slots__ = ("channel",)
@@ -350,20 +355,28 @@ class GetChannelResponse(_message.Message):
     def __init__(self, channel: _Optional[_Union[ChatChannel, _Mapping]] = ...) -> None: ...
 
 class UpdateChannelRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "name", "description", "icon", "is_default")
+    __slots__ = ("organization_id", "channel_id", "name", "description", "icon", "is_default", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     name: str
     description: str
     icon: str
     is_default: bool
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ...) -> None: ...
+    tag_ids: ChannelTagIds
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ..., tag_ids: _Optional[_Union[ChannelTagIds, _Mapping]] = ...) -> None: ...
+
+class ChannelTagIds(_message.Message):
+    __slots__ = ("ids",)
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UpdateChannelResponse(_message.Message):
     __slots__ = ("channel",)
@@ -396,16 +409,18 @@ class DeleteChannelResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class ListChannelsRequest(_message.Message):
-    __slots__ = ("organization_id", "browse_public", "cursor", "page_size")
+    __slots__ = ("organization_id", "browse_public", "cursor", "page_size", "tag_ids")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     BROWSE_PUBLIC_FIELD_NUMBER: _ClassVar[int]
     CURSOR_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     browse_public: bool
     cursor: str
     page_size: int
-    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ...) -> None: ...
+    tag_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListChannelsResponse(_message.Message):
     __slots__ = ("channels", "next_cursor")

@@ -9,6 +9,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import { openViewer, setFileData, setError } from '@/features/files/store/viewerSlice';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import type { RootState, AppDispatch } from '@/app/store';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { File } from '@uniffy/proto/files/v1/files_pb';
@@ -28,7 +29,7 @@ const fileToPlain = (file: File): SerializedFile => ({
     mimeType: file.mimeType,
     sizeBytes: typeof file.sizeBytes === 'bigint' ? Number(file.sizeBytes) : file.sizeBytes,
     folderId: file.folderId,
-    tags: [...file.tags],
+    tagIds: file.tags.map((tag) => tag.id),
     description: file.description,
     version: file.version,
     extractionStatus: file.extractionStatus,
@@ -112,6 +113,9 @@ export const openViewerWithFetch = createAsyncThunk<
             return rejectWithValue('File not found');
         }
 
+        if (response.file.tags.length > 0) {
+            dispatch(bulkUpsertTags(response.file.tags.map(tagToPlain)));
+        }
         const fileData = fileToPlain(response.file);
         dispatch(setFileData(fileData));
     } catch (error) {

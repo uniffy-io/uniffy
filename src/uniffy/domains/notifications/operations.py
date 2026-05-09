@@ -431,6 +431,54 @@ class NotificationOperations:
 
         return (daily_stats, type_stats, total_count, unread_count, read_count)
 
+    async def mark_read_by_source_urn(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        source_urn: str,
+    ) -> int:
+        """
+        Mark all unread notifications matching a source URN as read.
+
+        Used to cascade reads from the originating domain (e.g. when a
+        chat channel is marked read, every notification whose
+        ``source_urn`` points at that channel is cleared in one shot).
+
+        Parameters
+        ----------
+        user_id : UUID
+            The user whose notifications to mark.
+        organization_id : UUID
+            The organization context.
+        source_urn : str
+            The URN identifying the source content. Empty string is a no-op.
+
+        Returns
+        -------
+        int
+            Number of notifications updated.
+
+        """
+        if not source_urn:
+            return 0
+
+        now = datetime.now(UTC)
+        stmt = (
+            update(Notification)
+            .where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.organization_id == organization_id,
+                    Notification.source_urn == source_urn,
+                    Notification.is_read == False,  # noqa: E712
+                )
+            )
+            .values(is_read=True, read_at=now)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return result.rowcount
+
     async def bulk_mark_as_read(
         self,
         user_id: UUID,

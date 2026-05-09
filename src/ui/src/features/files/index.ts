@@ -8,7 +8,6 @@
 // Pages
 export { FilesPage } from '@/features/files/pages/FilesPage';
 export { FiltersPage } from '@/features/files/pages/FiltersPage';
-export { FilesTagsPage } from '@/features/files/pages/FilesTagsPage';
 export { FilesTrashPage } from '@/features/files/pages/FilesTrashPage';
 
 // Trash Store

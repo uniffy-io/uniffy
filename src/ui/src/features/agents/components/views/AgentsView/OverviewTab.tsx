@@ -19,6 +19,8 @@ import { selectProviderKeys, selectModelsForKey } from "@/features/agents/store/
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
 import { updateAgent, uploadAgentAvatar, deleteAgentAvatar } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
+import { Tag as TagIcon } from "@phosphor-icons/react";
+import { TagPicker } from "@/features/tags";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
@@ -266,6 +268,20 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                         </Button>
                                     )}
                                 </div>
+                            </div>
+                            <div>
+                                <FieldLabel>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <TagIcon size={12} weight="bold" />
+                                        Tags
+                                    </span>
+                                </FieldLabel>
+                                <TagPicker
+                                    selectedTagIds={agent.tagIds ?? []}
+                                    onChange={(ids) => handleUpdate({ tagIds: ids })}
+                                    disabled={!canEdit}
+                                    placeholder="Add a tag"
+                                />
                             </div>
                             <div className="flex items-end gap-4">
                                 <div>

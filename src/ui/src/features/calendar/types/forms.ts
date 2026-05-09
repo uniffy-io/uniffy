@@ -40,7 +40,7 @@ export const eventFormBaseSchema = z.object({
     maxOccurrences: z.number().min(1).max(999).optional(),
   }).optional(),
   isFocusTime: z.boolean().default(false),
-  tags: z.array(z.string()).optional(),
+  tagIds: z.array(z.string()).optional(),
   linkedResourceIds: z.array(z.string()).optional(),
 });
 
@@ -85,7 +85,7 @@ export const eventFormDefaults: EventFormData = {
     daysOfWeek: [],
   },
   isFocusTime: false,
-  tags: [],
+  tagIds: [],
   linkedResourceIds: [],
 };
 

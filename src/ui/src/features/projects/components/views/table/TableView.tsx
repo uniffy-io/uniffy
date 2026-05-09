@@ -79,6 +79,8 @@ import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectPicker, SubjectAvatarStack } from "@/components/subject";
+import { TagChip } from "@/features/tags";
+import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
@@ -147,12 +149,15 @@ export function TableView() {
     knownTaskIdsRef.current = currentIds;
   }, [allTasks]);
 
-  // All non-title fields for the column menu (including hidden ones)
+  // All non-title fields for the column menu (including hidden ones).
+  // The unified-tags Tags column is appended as a synthetic field so the
+  // user can hide it via the existing column visibility menu.
   const allNonTitleFields = useMemo(() => {
     if (!project) return [];
-    return project.fieldDefinitions.filter(
+    const real = project.fieldDefinitions.filter(
       (f) => f.id !== SYSTEM_FIELD_IDS.TITLE
     );
+    return [...real, TAGS_VIRTUAL_FIELD];
   }, [project]);
 
   // Get visible fields (system + custom, excluding title and hidden columns)
@@ -161,9 +166,64 @@ export function TableView() {
     return allNonTitleFields.filter((f) => !hiddenSet.has(f.id));
   }, [allNonTitleFields, hiddenSet]);
 
+  // Tag store for tag-grouping (memoised) — shallow read of byId.
+  const tagsById = useAppSelector((state) => state.tags.byId);
+
   // Compute groups
   const groups = useMemo((): TaskGroup[] | null => {
     if (!groupByFieldId || !project) return null;
+
+    // Virtual group: Tags. Each task with N tags appears in N groups
+    // (cross-membership, mirrors Jira labels). Tasks with no tags fall
+    // into a synthetic "Untagged" group rendered last.
+    if (groupByFieldId === TAGS_COLUMN_KEY) {
+      const buckets = new Map<string, { label: string; color?: string; tasks: Task[]; count: number }>();
+      const untagged: Task[] = [];
+      for (const task of filteredTasks) {
+        const taskTagIds = task.tagIds ?? [];
+        if (taskTagIds.length === 0) {
+          untagged.push(task);
+          continue;
+        }
+        for (const id of taskTagIds) {
+          const tag = tagsById[id];
+          if (!tag) continue;
+          const existing = buckets.get(id);
+          if (existing) {
+            existing.tasks.push(task);
+            existing.count = existing.tasks.length;
+          } else {
+            buckets.set(id, {
+              label: tag.name,
+              color: tag.color || undefined,
+              tasks: [task],
+              count: 1,
+            });
+          }
+        }
+      }
+      const tagGroups: TaskGroup[] = Array.from(buckets.entries())
+        .map(([key, bucket]) => ({
+          key,
+          label: bucket.label,
+          color: bucket.color,
+          tasks: bucket.tasks,
+        }))
+        // Order: tag count desc, then alpha. Untagged always last.
+        .sort((a, b) => {
+          const countDiff = (b.tasks.length) - (a.tasks.length);
+          if (countDiff !== 0) return countDiff;
+          return a.label.localeCompare(b.label);
+        });
+      if (untagged.length > 0) {
+        tagGroups.push({
+          key: "__untagged__",
+          label: "Untagged",
+          tasks: untagged,
+        });
+      }
+      return tagGroups;
+    }
 
     // Virtual group: Sprint
     if (groupByFieldId === "__sprint__") {
@@ -252,7 +312,7 @@ export function TableView() {
     }
 
     return result;
-  }, [groupByFieldId, project, filteredTasks, sprints]);
+  }, [groupByFieldId, project, filteredTasks, sprints, tagsById]);
 
   // All tasks for select-all (respects grouping collapsed state)
   const allVisibleTaskIds = useMemo(() => {
@@ -1312,6 +1372,21 @@ function TableRow({
 
       {/* Field Columns */}
       {fields.map((field) => {
+        if (field.id === TAGS_COLUMN_KEY) {
+          return (
+            <div
+              key={field.id}
+              className={cn(
+                "shrink-0 flex items-center px-3 border-r border-border relative overflow-hidden",
+                focusedFieldId === field.id && "ring-2 ring-inset ring-primary"
+              )}
+              style={{ width: resolveColumnWidth(field, columnWidths) }}
+              onClick={(e) => { e.stopPropagation(); onCellClick(field.id); }}
+            >
+              <TagsRowCell task={task} />
+            </div>
+          );
+        }
         const isDropdownOpen = editingFieldId === field.id && (field.type === "single_select" || field.type === "multi_select" || field.type === "date" || field.type === "person");
         return (
         <div
@@ -1967,9 +2042,52 @@ function getFieldValue(task: Task, fieldId: string): unknown {
   }
 }
 
+// Read-only tag chip row for the synthetic Tags column. Editing happens
+// from the task detail panel, mirroring the read-only chip pattern from
+// the files domain's list-view tag column.
+function TagsRowCell({ task }: { task: Task }) {
+  const tags = useTagsByIds(task.tagIds ?? []);
+  if (tags.length === 0) {
+    return <span className="text-xs text-muted-foreground/60">-</span>;
+  }
+  const shown = tags.slice(0, 3);
+  const overflow = tags.length - shown.length;
+  return (
+    <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+      {shown.map((tag) => (
+        <TagChip
+          key={tag.id}
+          tag={tag}
+          nonInteractive
+          className="px-1.5 py-0 text-[10px]"
+        />
+      ))}
+      {overflow > 0 && (
+        <span className="text-[10px] text-muted-foreground" title={tags.slice(3).map((t) => t.name).join(", ")}>
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Special column keys for system columns (id, title) not in fieldDefinitions
 const ID_COLUMN_KEY = "__id__";
 const TITLE_COLUMN_KEY = "__title__";
+export const TAGS_COLUMN_KEY = "__tags__";
+
+const TAGS_VIRTUAL_FIELD: FieldDefinition = {
+  id: TAGS_COLUMN_KEY,
+  projectId: "",
+  name: "Tags",
+  type: "text",
+  isRequired: false,
+  isSystem: true,
+  sortOrder: 1000,
+  config: {},
+  createdAt: "",
+  updatedAt: "",
+};
 
 function getDefaultColumnWidth(field: FieldDefinition): number {
   const defaultWidth = TABLE_COLUMNS.DEFAULT_WIDTHS[field.type];

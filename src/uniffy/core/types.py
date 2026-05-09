@@ -84,6 +84,7 @@ class ContentType(str, Enum):
     CHAT = "CHAT"
     AGENT_CHAT = "AGENT_CHAT"
     ROOM = "ROOM"
+    TAG = "TAG"
 
 
 class SubjectType(str, Enum):

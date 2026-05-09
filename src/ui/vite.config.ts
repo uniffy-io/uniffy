@@ -1,10 +1,58 @@
 /// <reference types="vitest/config" />
-import { defineConfig, searchForWorkspaceRoot } from 'vite'
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs'
 import { buildSync } from 'esbuild'
+
+/**
+ * Inject a Content-Security-Policy meta tag scoped to the build mode.
+ *
+ * Prod: API is on the same origin via reverse proxy, so connect-src 'self' is
+ * enough. Dev defaults to /api proxied by Vite (still 'self'); if VITE_API_URL
+ * points to a different host, that origin and its ws counterpart are added.
+ *
+ * 'unsafe-inline' on script/style is required by Vite HMR injection and
+ * Tailwind/Milkdown style insertion. Tightening to nonce-based CSP would
+ * require a runtime nonce wired through the reverse proxy.
+ */
+function cspMetaPlugin(connectExtras: string[]) {
+  const connectSrc = ["'self'", ...connectExtras].join(' ')
+  const csp = [
+    `default-src 'self'`,
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `worker-src 'self' blob:`,
+    `font-src 'self' data:`,
+    `img-src 'self' data: blob: https:`,
+    `media-src 'self' blob: https:`,
+    `connect-src ${connectSrc}`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+  ].join('; ')
+  const tag = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
+  return {
+    name: 'csp-meta',
+    transformIndexHtml(html: string) {
+      return html.replace('<!--CSP-->', tag)
+    },
+  }
+}
+
+function deriveDevConnectExtras(apiUrl: string | undefined): string[] {
+  if (!apiUrl || apiUrl.startsWith('/')) return []
+  try {
+    const u = new URL(apiUrl)
+    const httpOrigin = `${u.protocol}//${u.host}`
+    const wsScheme = u.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsOrigin = `${wsScheme}//${u.host}`
+    return [httpOrigin, wsOrigin]
+  } catch {
+    return []
+  }
+}
 
 /**
  * Plugin to build the media stream service worker for both dev and prod.
@@ -108,12 +156,16 @@ function mediaStreamWorkerPlugin() {
   };
 }
 
-// https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const connectExtras = command === 'serve' ? deriveDevConnectExtras(env.VITE_API_URL) : []
+
+  return {
   plugins: [
     react(),
     tailwindcss(),
     mediaStreamWorkerPlugin(),
+    cspMetaPlugin(connectExtras),
   ],
   define: {
     // Silence Vue feature flag warnings from 
@@ -220,4 +272,5 @@ export default defineConfig({
     // split without introducing a circular chunk graph, so it sits around 2.6MB.
     chunkSizeWarningLimit: 2700,
   },
+  }
 })

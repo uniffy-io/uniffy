@@ -8,6 +8,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { calendarApi } from '@/features/calendar/api/calendarApi';
 import type { RootState } from '@/app/store';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import type {
     CalendarEvent as ProtoCalendarEvent,
     Category as ProtoCategory,
@@ -232,7 +233,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     attendees: proto.attendees.map(attendeeFromProto),
     recurrence: recurrenceConfigFromProto(proto.recurrence),
     isFocusTime: proto.isFocusTime,
-    tags: [...proto.tags],
+    tagIds: proto.tags.map((tag) => tag.id),
     linkedResources: proto.linkedResources.map(linkedResourceFromProto),
     visibility: accessModeToFrontendVisibility(proto.accessMode),
     createdAt: timestampToIso(proto.createdAt),
@@ -247,6 +248,18 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     roomCapacity: proto.roomCapacity || undefined,
     roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
 });
+
+/**
+ * Push hydrated tag rows into the tags-slice cache so chips render
+ * directly from `state.tags.byId` without a follow-up RPC.
+ */
+const hydrateEventTags = (
+    proto: ProtoCalendarEvent,
+    dispatch: (action: unknown) => void,
+): void => {
+    if (!proto.tags.length) return;
+    dispatch(bulkUpsertTags(proto.tags.map(tagToPlain)));
+};
 
 /**
  * Convert proto category to domain category.
@@ -291,7 +304,7 @@ export const fetchEventsInRange = createAsyncThunk<
     CalendarEvent[],
     { startDate: string; endDate: string; calendarIds?: string[] },
     { state: RootState; rejectValue: string }
->('calendar/fetchEventsInRange', async (params, { getState, rejectWithValue }) => {
+>('calendar/fetchEventsInRange', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await calendarApi.getEventsInRange({
@@ -300,6 +313,10 @@ export const fetchEventsInRange = createAsyncThunk<
             endDate: isoToTimestamp(params.endDate),
             calendarIds: params.calendarIds || [],
         });
+        const upserts = response.events.flatMap((proto) => proto.tags).map(tagToPlain);
+        if (upserts.length > 0) {
+            dispatch(bulkUpsertTags(upserts));
+        }
         return response.events.map(eventFromProto);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch events');
@@ -313,7 +330,7 @@ export const fetchEvent = createAsyncThunk<
     CalendarEvent,
     string,
     { state: RootState; rejectValue: string }
->('calendar/fetchEvent', async (eventId, { getState, rejectWithValue }) => {
+>('calendar/fetchEvent', async (eventId, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await calendarApi.getEvent({
@@ -323,6 +340,7 @@ export const fetchEvent = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Event not found');
         }
+        hydrateEventTags(response.event, dispatch);
         return eventFromProto(response.event);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch event');
@@ -348,7 +366,7 @@ export const createEvent = createAsyncThunk<
         attendeeIds?: string[];
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
-        tags?: string[];
+        tagIds?: string[];
         visibility?: string;
         reminders?: number[];
         roomId?: string;
@@ -388,7 +406,7 @@ export const createEvent = createAsyncThunk<
             attendeeIds: params.attendeeIds || [],
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime || false,
-            tags: params.tags || [],
+            tagIds: params.tagIds || [],
             ...frontendVisibilityToAccessMode((params.visibility as 'private' | 'organization') || 'private'),
             reminders: params.reminders || [],
             roomId: params.roomId || undefined,
@@ -397,6 +415,7 @@ export const createEvent = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Failed to create event');
         }
+        hydrateEventTags(response.event, dispatch);
         const created = eventFromProto(response.event);
 
         // Refetch current range to get expanded occurrences for recurring events
@@ -437,7 +456,7 @@ export const updateEvent = createAsyncThunk<
         attendeeIds?: string[];
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
-        tags?: string[];
+        tagIds?: string[];
         visibility?: string;
         reminders?: number[];
         recurrenceEditScope?: RecurrenceEditScope;
@@ -478,7 +497,7 @@ export const updateEvent = createAsyncThunk<
             attendeeIds: params.attendeeIds,
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime,
-            tags: params.tags,
+            tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
             ...(params.visibility ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization') : {}),
             reminders: params.reminders,
             recurrenceEditScope: params.recurrenceEditScope
@@ -491,6 +510,7 @@ export const updateEvent = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Failed to update event');
         }
+        hydrateEventTags(response.event, dispatch);
         const updated = eventFromProto(response.event);
 
         // Refetch to get updated expanded occurrences
@@ -705,7 +725,7 @@ export const addAttendees = createAsyncThunk<
     CalendarEvent,
     { eventId: string; userIds: string[]; role?: AttendeeRole },
     { state: RootState; rejectValue: string }
->('calendar/addAttendees', async (params, { getState, rejectWithValue }) => {
+>('calendar/addAttendees', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await calendarApi.addAttendees({
@@ -717,6 +737,7 @@ export const addAttendees = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Failed to add attendees');
         }
+        hydrateEventTags(response.event, dispatch);
         return eventFromProto(response.event);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to add attendees');
@@ -730,7 +751,7 @@ export const removeAttendees = createAsyncThunk<
     CalendarEvent,
     { eventId: string; userIds: string[] },
     { state: RootState; rejectValue: string }
->('calendar/removeAttendees', async (params, { getState, rejectWithValue }) => {
+>('calendar/removeAttendees', async (params, { dispatch, getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await calendarApi.removeAttendees({
@@ -741,6 +762,7 @@ export const removeAttendees = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Failed to remove attendees');
         }
+        hydrateEventTags(response.event, dispatch);
         return eventFromProto(response.event);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove attendees');

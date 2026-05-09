@@ -94,8 +94,8 @@ export interface CalendarEvent {
   recurrence?: RecurrenceConfig;
   /** Whether this event is marked as focus/deep work time */
   isFocusTime: boolean;
-  /** Tags for categorization (e.g., '#sprint', '#client') */
-  tags: string[];
+  /** Unified-tag ids assigned to this event (resolved via the tags slice cache) */
+  tagIds: string[];
   /** Linked resources (notes, files, chats) */
   linkedResources: LinkedResource[];
   /** Organization ID */
@@ -148,7 +148,7 @@ export interface CreateEventRequest {
   attendeeIds?: string[];
   recurrence?: RecurrenceConfig;
   isFocusTime?: boolean;
-  tags?: string[];
+  tagIds?: string[];
   linkedResourceIds?: string[];
   reminders?: number[];
 }
@@ -171,7 +171,7 @@ export interface UpdateEventRequest {
   attendeeIds?: string[];
   recurrence?: RecurrenceConfig;
   isFocusTime?: boolean;
-  tags?: string[];
+  tagIds?: string[];
   linkedResourceIds?: string[];
   reminders?: number[];
   recurrenceEditScope?: RecurrenceEditScope;

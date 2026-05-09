@@ -11,6 +11,7 @@ import { ReactionBar } from '@/features/chat/components/reactions/ReactionBar';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { SubjectAvatarById, UserHoverCard } from '@/components/subject';
 import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+import { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { addReaction, removeReaction } from '@/features/chat/store/chatThunks';
@@ -298,6 +299,12 @@ function MessageItemInner({
                   <Robot size={10} />
                   via Agent
                 </span>
+              )}
+              {!isAgent && (
+                <CustomStatusDisplay
+                  userId={message.senderId}
+                  className="!text-[11px] max-w-[160px]"
+                />
               )}
               <span
                 className="text-[11px] text-muted-foreground/60"

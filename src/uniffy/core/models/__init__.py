@@ -76,6 +76,7 @@ from uniffy.core.models.shared import (
     ResourceType,
     SubjectType,
 )
+from uniffy.core.models.tags import Tag, TagAssignment
 
 __all__ = [
     # Application settings
@@ -168,4 +169,7 @@ __all__ = [
     "ChannelRole",
     "ChatNotificationLevel",
     "SenderType",
+    # Tags
+    "Tag",
+    "TagAssignment",
 ]

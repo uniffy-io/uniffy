@@ -25,6 +25,7 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "chat_message": SearchResultType.SEARCH_RESULT_TYPE_CHAT_MESSAGE,
     "room": SearchResultType.SEARCH_RESULT_TYPE_ROOM,
     "agent_chat": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CHAT,
+    "tag": SearchResultType.SEARCH_RESULT_TYPE_TAG,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}

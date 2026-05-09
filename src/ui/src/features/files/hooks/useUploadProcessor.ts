@@ -8,6 +8,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { filesApi } from '@/features/files/api/filesApi';
+import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import { getFile, removeFile as removeStoredFile } from '@/features/files/utils/fileStore';
 import { fileWorkerManager } from '@/features/files/workers';
 import { getAccessToken, refreshAccessToken } from '@/config/api';
@@ -103,6 +104,10 @@ async function processUpload(
     if (response.file) {
         // Convert proto File to serialized format and add to files state
         const protoFile = response.file;
+
+        if (protoFile.tags.length > 0) {
+            dispatch(bulkUpsertTags(protoFile.tags.map(tagToPlain)));
+        }
         console.log('[Upload] Completed file:', {
             id: protoFile.id,
             filename: protoFile.filename,
@@ -131,7 +136,7 @@ async function processUpload(
             mimeType: protoFile.mimeType,
             sizeBytes: toNumber(protoFile.sizeBytes),
             folderId: protoFile.folderId,
-            tags: [...protoFile.tags],
+            tagIds: protoFile.tags.map((tag) => tag.id),
             description: protoFile.description,
             version: protoFile.version,
             extractionStatus: protoFile.extractionStatus,

@@ -73,6 +73,7 @@ export interface Project {
   urn: string;
   slug: string;
   typeFieldSchemas: Record<string, TypeFieldSchema>;
+  tagIds: string[];
 }
 
 /**
@@ -113,6 +114,7 @@ export interface Task {
   subtaskCompleted: number;
   estimatedMinutes: number | null;
   timeSpentMinutes: number | null;
+  tagIds: string[];
 }
 
 /**
@@ -138,6 +140,7 @@ export interface CreateProjectRequest {
   accessMode?: number;
   baselineRole?: number | null;
   slug?: string;
+  tagIds?: string[];
 }
 
 export interface UpdateProjectRequest {
@@ -148,6 +151,7 @@ export interface UpdateProjectRequest {
   color?: string;
   slug?: string;
   typeFieldSchemas?: Record<string, TypeFieldSchema>;
+  tagIds?: string[];
 }
 
 export interface CreateTaskRequest {
@@ -167,6 +171,7 @@ export interface CreateTaskRequest {
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
   recurrenceRule?: string | null;
+  tagIds?: string[];
 }
 
 export interface UpdateTaskRequest {
@@ -187,6 +192,7 @@ export interface UpdateTaskRequest {
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
   recurrenceRule?: string | null;
+  tagIds?: string[];
 }
 
 export interface MoveTaskRequest {

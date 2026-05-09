@@ -6,10 +6,8 @@ Covers the pure-Python pieces that don't require a live DB:
 - ``rename_agent_chat`` validation (length + non-agent-DM rejection)
 - ``ChatChannelOperations.create_agent_chat`` flag wiring (mocked session)
 
-Backend integration tests against a real DB live alongside the existing
-chat-test infrastructure; this file mirrors the AsyncMock-based pattern in
-``test_agents_in_chat_phase1.py`` so it runs with the repo's vanilla pytest
-harness (no pytest-asyncio dependency).
+Live-DB integration coverage runs under the chat-domain harness. Uses
+``asyncio.run`` so it runs without pytest-asyncio.
 """
 
 import asyncio

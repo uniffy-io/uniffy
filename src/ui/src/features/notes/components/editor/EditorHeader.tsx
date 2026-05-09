@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   DotsThree,
   ShareNetwork,
@@ -27,7 +26,7 @@ import { setSidebarOpen } from '@/features/notes/store/editorSlice';
 import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
-import { TagInput } from '@/features/notes/components/editor/TagInput';
+import { TagPicker } from '@/features/tags';
 import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useAccessPolicyDialog } from '@/features/permissions';
@@ -210,7 +209,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
 
 export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false, titleVisible = true }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
   const settings = editorState?.settings;
@@ -268,10 +266,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
     openAccessDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
   };
 
-  const handleTagClick = useCallback((tag: string) => {
-    navigate(`/notes/tags?tag=${encodeURIComponent(tag)}`);
-  }, [navigate]);
-  
   // Only show edit modes if user has edit permission
   const viewModes: Array<{
     mode: EditorMode;
@@ -489,13 +483,12 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
 
               {/* Tags Row */}
               <div className="mt-2">
-                <TagInput
-                  tags={note.tags || []}
-                  onTagsChange={(newTags) => {
-                    dispatch(updateNote({ noteId: note.id, tags: newTags }));
+                <TagPicker
+                  selectedTagIds={note.tagIds ?? []}
+                  onChange={(tagIds) => {
+                    dispatch(updateNote({ noteId: note.id, tagIds }));
                   }}
                   disabled={!canEdit}
-                  onTagClick={handleTagClick}
                 />
               </div>
             </div>

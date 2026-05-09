@@ -42,6 +42,7 @@ import { chatChannelsReducer } from '@/features/chat/store/chatChannelsSlice';
 import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
 import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
 import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
+import { tagsReducer } from '@/features/tags/store/tagsSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -196,6 +197,7 @@ const rootReducer = combineReducers({
   chatMessages: chatMessagesReducer,
   chatThreads: chatThreadsReducer,
   chatUi: chatUiReducer,
+  tags: tagsReducer,
 });
 
 // Migrations to handle state shape changes across versions

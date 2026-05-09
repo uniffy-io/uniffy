@@ -1,0 +1,306 @@
+syntax = "proto3";
+
+package tags.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1";
+
+// TagsService is the unified tag namespace for the organization. Tags
+// are polymorphic: a tag may be assigned to any URN-addressable
+// content. Inline note tags route through the same store via the
+// "inline" source on assignments.
+service TagsService {
+  rpc CreateTag(CreateTagRequest) returns (TagResponse) {}
+  rpc UpdateTag(UpdateTagRequest) returns (TagResponse) {}
+  rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse) {}
+  rpc GetTag(GetTagRequest) returns (TagResponse) {}
+
+  rpc ListTags(ListTagsRequest) returns (ListTagsResponse) {}
+  rpc SuggestTags(SuggestTagsRequest) returns (SuggestTagsResponse) {}
+
+  rpc AssignTags(AssignTagsRequest) returns (AssignTagsResponse) {}
+  rpc UnassignTags(UnassignTagsRequest) returns (UnassignTagsResponse) {}
+
+  rpc GetTagsForUrns(GetTagsForUrnsRequest) returns (GetTagsForUrnsResponse) {}
+  rpc ListContentByTag(ListContentByTagRequest) returns (ListContentByTagResponse) {}
+
+  rpc MergeTags(MergeTagsRequest) returns (TagResponse) {}
+
+  rpc CreateSavedFilter(CreateSavedTagFilterRequest) returns (SavedTagFilterResponse) {}
+  rpc UpdateSavedFilter(UpdateSavedTagFilterRequest) returns (SavedTagFilterResponse) {}
+  rpc DeleteSavedFilter(DeleteSavedTagFilterRequest) returns (DeleteSavedTagFilterResponse) {}
+  rpc ListSavedFilters(ListSavedTagFiltersRequest) returns (ListSavedTagFiltersResponse) {}
+}
+
+message Tag {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string slug = 4;
+  string color = 5;
+  string description = 6;
+  string created_by = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp last_used_at = 10;
+  // Cached count from Redis; may lag up to 60s.
+  int32 usage_count = 11;
+  string urn = 12;
+}
+
+message TagAssignment {
+  string tag_id = 1;
+  string content_urn = 2;
+  string content_type = 3;
+  // Subset of {"manual", "inline"}.
+  repeated string sources = 4;
+  string assigned_by = 5;
+  google.protobuf.Timestamp assigned_at = 6;
+}
+
+enum TagSource {
+  TAG_SOURCE_UNSPECIFIED = 0;
+  TAG_SOURCE_MANUAL = 1;
+  TAG_SOURCE_INLINE = 2;
+}
+
+enum TagSort {
+  TAG_SORT_UNSPECIFIED = 0;
+  TAG_SORT_COUNT_DESC = 1;
+  TAG_SORT_COUNT_ASC = 2;
+  TAG_SORT_ALPHA_ASC = 3;
+  TAG_SORT_ALPHA_DESC = 4;
+  TAG_SORT_RECENT_DESC = 5;
+}
+
+message CreateTagRequest {
+  string organization_id = 1;
+  string name = 2;
+  string color = 3;
+  string description = 4;
+}
+
+message UpdateTagRequest {
+  string organization_id = 1;
+  string tag_id = 2;
+  optional string name = 3;
+  optional string color = 4;
+  optional string description = 5;
+}
+
+message DeleteTagRequest {
+  string organization_id = 1;
+  string tag_id = 2;
+}
+
+message DeleteTagResponse {
+  bool success = 1;
+}
+
+message GetTagRequest {
+  string organization_id = 1;
+  // Either tag id or slug.
+  string tag = 2;
+}
+
+message TagResponse {
+  Tag tag = 1;
+}
+
+message ListTagsRequest {
+  string organization_id = 1;
+  // Filter by content types (empty = all).
+  repeated common.v1.ContentType content_types = 2;
+  // Optional substring search.
+  string query = 3;
+  TagSort sort = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListTagsResponse {
+  repeated Tag tags = 1;
+  string next_page_token = 2;
+}
+
+message SuggestTagsRequest {
+  string organization_id = 1;
+  string prefix = 2;
+  int32 limit = 3;
+}
+
+message SuggestTagsResponse {
+  repeated Tag tags = 1;
+}
+
+message AssignTagsRequest {
+  string organization_id = 1;
+  string content_urn = 2;
+  repeated string tag_ids = 3;
+  TagSource source = 4;
+}
+
+message AssignTagsResponse {
+  repeated TagAssignment assignments = 1;
+}
+
+message UnassignTagsRequest {
+  string organization_id = 1;
+  string content_urn = 2;
+  // If empty, removes all tags from the URN for the given source.
+  repeated string tag_ids = 3;
+  // If unspecified, removes the tag entirely (both sources).
+  TagSource source = 4;
+}
+
+message UnassignTagsResponse {
+  bool success = 1;
+}
+
+message GetTagsForUrnsRequest {
+  string organization_id = 1;
+  repeated string content_urns = 2;
+}
+
+message UrnTags {
+  string content_urn = 1;
+  repeated Tag tags = 2;
+}
+
+message GetTagsForUrnsResponse {
+  repeated UrnTags entries = 1;
+}
+
+message ListContentByTagRequest {
+  string organization_id = 1;
+  // Either tag id or slug. The selected tag is implicitly added to
+  // ``criteria.tag_ids`` by the server so the caller does not need to
+  // duplicate it.
+  string tag = 2;
+  repeated common.v1.ContentType content_types = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+  // Active explorer filter, applied on top of the selected tag.
+  optional TagFilterCriteria criteria = 6;
+}
+
+message TaggedContentItem {
+  string urn = 1;
+  common.v1.ContentType content_type = 2;
+  string title = 3;
+  string snippet = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  google.protobuf.Timestamp assigned_at = 6;
+}
+
+message ListContentByTagResponse {
+  repeated TaggedContentItem results = 1;
+  string next_page_token = 2;
+}
+
+message MergeTagsRequest {
+  string organization_id = 1;
+  string source_tag_id = 2;
+  string target_tag_id = 3;
+}
+
+// Icon descriptor for saved filters. Local to tags.v1 (mirrored from
+// files.v1.IconValue) so a single proto edit ships the unified
+// dashboard without forcing the files domain to adopt a hoisted shared
+// type. ``type`` is "icon" for Phosphor icons or "emoji" for emojis.
+message IconValue {
+  string type = 1;
+  string value = 2;
+}
+
+// Composable filter applied by the unified explorer. Every field is
+// optional; an empty criteria means "no narrowing".
+message TagFilterCriteria {
+  // Logical AND across the set: matched content carries all listed
+  // tags. The selected tag from ``ListContentByTagRequest.tag`` is
+  // appended server-side if not already present.
+  repeated string tag_ids = 1;
+  repeated common.v1.ContentType content_types = 2;
+  // Filter to content created by these subjects. User ids only for
+  // now; group-owned content is captured through membership.
+  repeated string owner_ids = 3;
+  // Subset of {"manual", "inline"}. Empty means both.
+  repeated string sources = 4;
+  optional google.protobuf.Timestamp created_after = 5;
+  optional google.protobuf.Timestamp created_before = 6;
+  optional google.protobuf.Timestamp updated_after = 7;
+  optional google.protobuf.Timestamp updated_before = 8;
+  optional common.v1.AccessMode access_mode = 9;
+  // When true, return content with NO tags (special inverse mode used
+  // by the "Untagged content" preset). Mutually exclusive with
+  // ``tag_ids`` -- the server ignores ``tag_ids`` when this is set.
+  bool untagged_only = 10;
+}
+
+message SavedTagFilter {
+  string id = 1;
+  string user_id = 2;
+  string organization_id = 3;
+  string name = 4;
+  optional string description = 5;
+  optional IconValue icon = 6;
+  TagFilterCriteria criteria = 7;
+  // 'count' | 'alpha' | 'updated'.
+  string sort_by = 8;
+  // 'asc' | 'desc'.
+  string sort_order = 9;
+  // System-seeded preset (cannot be edited / deleted).
+  bool is_preset = 10;
+  // Number of tag ids that were dropped from the response criteria
+  // because the underlying tag was deleted. Clients use this to show a
+  // one-time toast and persist the cleaned filter.
+  int32 removed_tag_count = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message SavedTagFilterResponse {
+  SavedTagFilter filter = 1;
+}
+
+message CreateSavedTagFilterRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional IconValue icon = 4;
+  TagFilterCriteria criteria = 5;
+  optional string sort_by = 6;
+  optional string sort_order = 7;
+}
+
+message UpdateSavedTagFilterRequest {
+  string organization_id = 1;
+  string filter_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional IconValue icon = 5;
+  optional TagFilterCriteria criteria = 6;
+  optional string sort_by = 7;
+  optional string sort_order = 8;
+}
+
+message DeleteSavedTagFilterRequest {
+  string organization_id = 1;
+  string filter_id = 2;
+}
+
+message DeleteSavedTagFilterResponse {
+  bool success = 1;
+}
+
+message ListSavedTagFiltersRequest {
+  string organization_id = 1;
+  // Include system-seeded presets in the response. Defaults true.
+  bool include_presets = 2;
+}
+
+message ListSavedTagFiltersResponse {
+  repeated SavedTagFilter filters = 1;
+}

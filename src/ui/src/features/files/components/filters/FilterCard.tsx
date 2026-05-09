@@ -23,6 +23,8 @@ import type { Icon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { renderIcon } from '@/components/icon-picker';
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector } from '@/app/hooks';
+import { TagChip } from '@/features/tags';
 import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 import { formatFileSize } from '@/shared/utils/dateFormatting';
 
@@ -35,7 +37,10 @@ interface FilterCardProps {
 }
 
 /**
- * Get display summary of filter criteria.
+ * Get display summary of non-tag filter criteria.
+ *
+ * Tag criteria render through ``<TagChip>`` from the tags-slice cache,
+ * so they live in their own row below the text summary chips.
  */
 function getCriteriaSummary(criteria: SerializedFilterCriteria): string[] {
     const parts: string[] = [];
@@ -46,10 +51,6 @@ function getCriteriaSummary(criteria: SerializedFilterCriteria): string[] {
 
     if (criteria.mimeCategories?.length) {
         parts.push(`Types: ${criteria.mimeCategories.join(', ')}`);
-    }
-
-    if (criteria.tags?.length) {
-        parts.push(`Tags: ${criteria.tags.join(', ')}`);
     }
 
     if (criteria.sizeMinBytes || criteria.sizeMaxBytes) {
@@ -89,7 +90,7 @@ function getFilterIconType(criteria: SerializedFilterCriteria): FilterIconType {
     if (criteria.createdAfter || criteria.createdBefore) {
         return 'date';
     }
-    if (criteria.tags?.length) {
+    if (criteria.tagIds?.length) {
         return 'tag';
     }
     return 'default';
@@ -131,6 +132,14 @@ export function FilterCard({
     const iconType = useMemo(() => getFilterIconType(filter.criteria), [filter.criteria]);
     const FilterIcon = ICON_MAP[iconType];
     const summaryParts = getCriteriaSummary(filter.criteria);
+
+    const tagsById = useAppSelector((state) => state.tags.byId);
+    const tagChips = useMemo(() => {
+        const ids = filter.criteria.tagIds ?? [];
+        return ids
+            .map((id) => tagsById[id])
+            .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag));
+    }, [filter.criteria.tagIds, tagsById]);
 
     // Render icon based on custom icon or fallback to auto-detected
     const renderFilterIcon = () => {
@@ -197,6 +206,19 @@ export function FilterCard({
                     {summaryParts.length > 3 && (
                         <span className="inline-flex items-center px-2 py-0.5 text-xs bg-muted rounded-md text-muted-foreground">
                             +{summaryParts.length - 3} more
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {tagChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                    {tagChips.slice(0, 6).map((tag) => (
+                        <TagChip key={tag.id} tag={tag} nonInteractive />
+                    ))}
+                    {tagChips.length > 6 && (
+                        <span className="inline-flex items-center px-2 py-0.5 text-xs bg-muted rounded-md text-muted-foreground">
+                            +{tagChips.length - 6}
                         </span>
                     )}
                 </div>

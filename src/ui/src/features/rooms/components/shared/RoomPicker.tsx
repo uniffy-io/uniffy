@@ -63,12 +63,16 @@ export function RoomPicker({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  // Fetch rooms if not loaded
+  // Fetch rooms once per (org) mount. Gating on ``rooms.length === 0``
+  // would loop forever for orgs with no rooms: the fulfilled action
+  // leaves ``loading.rooms`` false and the empty list as-is, so the
+  // dep tuple fires again on each commit.
+  const fetchedForOrg = useRef<string | null>(null);
   useEffect(() => {
-    if (rooms.length === 0 && !loading.rooms) {
-      dispatch(fetchRooms({ organizationId }));
-    }
-  }, [dispatch, organizationId, rooms.length, loading.rooms]);
+    if (fetchedForOrg.current === organizationId) return;
+    fetchedForOrg.current = organizationId;
+    dispatch(fetchRooms({ organizationId }));
+  }, [dispatch, organizationId]);
 
   const selectedRoom = useMemo(
     () => (selectedRoomId ? rooms.find((r) => r.id === selectedRoomId) : null),

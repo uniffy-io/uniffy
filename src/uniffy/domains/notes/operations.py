@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -42,6 +42,11 @@ from uniffy.core.types import (
     SubjectType,
 )
 from uniffy.domains.notes import queries
+from uniffy.domains.tags import (
+    TagAssignment,
+    TagOperations,
+    sync_inline_tags,
+)
 
 _MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^|\]]+)\|[^\]]+\\?\]\\?\]\\?\]")
 _MENTION_RE = re.compile(r"\[\[\[([^|]+)\|[^\]]+\]\]\]")
@@ -116,7 +121,7 @@ class _NoteContentFields:
     content: str
     canvas_content: dict[str, Any] | None
     outgoing_references: list[str] | None
-    inline_tags: list[str] | None
+    parsed_inline_tag_names: list[str]
 
 
 class NoteOperations(BaseContentOperations[Note]):
@@ -132,16 +137,12 @@ class NoteOperations(BaseContentOperations[Note]):
     def _build_search_keywords(self, model: Note) -> str:
         """Aggregate searchable text from a note.
 
-        Tags are prefixed with ``tag:`` so search queries can filter by
-        tag (``tag:work``). Both whole-note tags and inline ``[[[tag|...]]]``
-        markers are indexed. For canvas notes, text-node content and
-        shape labels are concatenated.
+        Tag slugs are written into the dedicated ``tags`` array on the
+        search document via :meth:`_get_search_tags_async`, so they are
+        not duplicated into the keyword stream. For canvas notes,
+        text-node content and shape labels are concatenated.
         """
         parts = [model.title]
-        if model.tags:
-            parts.extend(f"tag:{tag}" for tag in model.tags)
-        if model.inline_tags:
-            parts.extend(f"tag:{tag}" for tag in model.inline_tags)
         if model.node_type == NodeType.CANVAS and model.canvas_content:
             parts.extend(self._extract_canvas_text(model.canvas_content))
         elif model.content:
@@ -175,14 +176,16 @@ class NoteOperations(BaseContentOperations[Note]):
             return stripped[:200] if stripped else None
         return None
 
-    def _get_search_tags(self, model: Note) -> list[str] | None:
-        """Return the union of whole-note and inline tags for the index."""
-        all_tags: set[str] = set()
-        if model.tags:
-            all_tags.update(model.tags)
-        if model.inline_tags:
-            all_tags.update(model.inline_tags)
-        return sorted(all_tags) if all_tags else None
+    async def _get_search_tags_async(self, model: Note) -> list[str] | None:
+        """Return the slug list assigned to this note via the unified store."""
+        tag_ops = TagOperations(self.session)
+        urn = build_content_urn(self.content_type, model.id)
+        bulk = await tag_ops.get_for_urns(
+            organization_id=model.organization_id,
+            content_urns=[urn],
+        )
+        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
+        return slugs or None
 
     async def _get_search_metadata_async(self, model: Note) -> dict[str, str] | None:
         """Add parent-folder title so mention chips show a breadcrumb."""
@@ -225,7 +228,7 @@ class NoteOperations(BaseContentOperations[Note]):
         baseline_role: ContentRole | None = None,
         node_type: NodeType = NodeType.NOTE,
         parent_id: UUID | None = None,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
         group_ids: list[UUID] | None = None,
     ) -> Note:
@@ -255,8 +258,6 @@ class NoteOperations(BaseContentOperations[Note]):
             baseline_role=baseline_role,
             node_type=node_type,
             parent_id=parent_id,
-            tags=tags,
-            inline_tags=fields.inline_tags,
             note_metadata=metadata,
             outgoing_references=fields.outgoing_references,
         )
@@ -279,6 +280,14 @@ class NoteOperations(BaseContentOperations[Note]):
                     role=ContentRole.VIEWER,
                 )
 
+        await self._sync_tags_after_save(
+            user_id=user_id,
+            organization_id=organization_id,
+            note=note,
+            tag_ids=tag_ids,
+            parsed_inline_names=fields.parsed_inline_tag_names,
+        )
+
         await self._index_for_search(note, skip_member_lookup=not group_ids)
         await self.session.commit()
 
@@ -298,7 +307,7 @@ class NoteOperations(BaseContentOperations[Note]):
         canvas_content: dict[str, Any] | None = None,
         slug: str | None = None,
         parent_id: UUID | None | str = None,  # "" means clear
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> Note:
         """Update note metadata and/or body.
@@ -318,6 +327,7 @@ class NoteOperations(BaseContentOperations[Note]):
 
         old_refs = note.outgoing_references if content_changed else None
 
+        parsed_inline_names: list[str] | None = None
         if title is not None:
             note.title = title
         if content_changed:
@@ -327,15 +337,13 @@ class NoteOperations(BaseContentOperations[Note]):
             note.content = fields.content
             note.canvas_content = fields.canvas_content
             note.outgoing_references = fields.outgoing_references
-            note.inline_tags = fields.inline_tags
+            parsed_inline_names = fields.parsed_inline_tag_names
         if slug is not None:
             note.slug = slug
         if parent_id == "":
             note.parent_id = None
         elif parent_id is not None:
             note.parent_id = parent_id
-        if tags is not None:
-            note.tags = tags
         if metadata is not None:
             # Reassign a new dict so SQLAlchemy detects the JSONB change.
             merged = copy.deepcopy(note.note_metadata) if note.note_metadata else {}
@@ -347,6 +355,14 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self.session.commit()
         await self.session.refresh(note)
+
+        await self._sync_tags_after_save(
+            user_id=user_id,
+            organization_id=organization_id,
+            note=note,
+            tag_ids=tag_ids,
+            parsed_inline_names=parsed_inline_names if content_changed else None,
+        )
 
         await self._index_for_search(note)
         await self.session.commit()
@@ -396,6 +412,14 @@ class NoteOperations(BaseContentOperations[Note]):
             await queries.permanent_delete_recursive(self.session, note)
         else:
             await queries.soft_delete_recursive(self.session, note)
+
+        if permanent:
+            tag_ops = TagOperations(self.session)
+            for nid in removed_ids:
+                await tag_ops.unassign_all_for_urn(
+                    organization_id=organization_id,
+                    content_urn=build_content_urn(self.content_type, nid),
+                )
 
         for nid in removed_ids:
             await self.search_indexer.remove(build_content_urn(self.content_type, nid))
@@ -470,7 +494,6 @@ class NoteOperations(BaseContentOperations[Note]):
         note.content = fields.content
         note.canvas_content = fields.canvas_content
         note.outgoing_references = fields.outgoing_references
-        note.inline_tags = fields.inline_tags
         if title is not None:
             note.title = title
         note.version += 1
@@ -478,6 +501,14 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self.session.commit()
         await self.session.refresh(note)
+
+        await self._sync_tags_after_save(
+            user_id=user_id,
+            organization_id=organization_id,
+            note=note,
+            tag_ids=None,
+            parsed_inline_names=fields.parsed_inline_tag_names,
+        )
 
         await self._index_for_search(note)
         await self.session.commit()
@@ -575,8 +606,14 @@ class NoteOperations(BaseContentOperations[Note]):
 
         count = await queries.empty_trash(self.session, organization_id)
 
+        tag_ops = TagOperations(self.session)
         for nid in trash_ids:
-            await self.search_indexer.remove(build_content_urn(self.content_type, nid))
+            urn = build_content_urn(self.content_type, nid)
+            await tag_ops.unassign_all_for_urn(
+                organization_id=organization_id,
+                content_urn=urn,
+            )
+            await self.search_indexer.remove(urn)
         await self.session.commit()
 
         return count
@@ -590,7 +627,7 @@ class NoteOperations(BaseContentOperations[Note]):
         group_id: UUID | None = None,
         personal_only: bool = False,
         include_deleted: bool = False,
-        tags: list[str] | None = None,
+        tag_ids: list[UUID] | None = None,
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "updated_at",
@@ -616,9 +653,8 @@ class NoteOperations(BaseContentOperations[Note]):
             query = query.where(Note.access_mode == access_mode)
         if not include_deleted:
             query = query.where(Note.is_deleted == False)  # noqa: E712
-        if tags:
-            for tag in tags:
-                query = query.where(Note.tags.contains([tag]))
+        if tag_ids:
+            query = query.where(Note.id.in_(self._tag_filter_subquery(tag_ids)))
 
         total = (
             await self.session.execute(select(func.count()).select_from(query.subquery()))
@@ -690,8 +726,8 @@ class NoteOperations(BaseContentOperations[Note]):
         For canvas notes the JSONB ``canvas_content`` is the source of
         truth and ``content`` is forced empty. For markdown notes the
         opposite holds. Both paths derive ``outgoing_references`` and
-        ``inline_tags`` so search indexing and mention notifications
-        stay consistent.
+        the parsed inline-tag names; the names are reconciled into
+        unified-tag assignments by ``_sync_tags_after_save``.
         """
         if node_type == NodeType.CANVAS:
             outgoing = (
@@ -699,25 +735,79 @@ class NoteOperations(BaseContentOperations[Note]):
                 if canvas_content
                 else None
             ) or None
-            inline = (
-                queries.extract_inline_tags_from_canvas(canvas_content) if canvas_content else None
-            ) or None
+            parsed = (
+                queries.extract_inline_tags_from_canvas(canvas_content) if canvas_content else []
+            )
             return _NoteContentFields(
                 content="",
                 canvas_content=canvas_content,
                 outgoing_references=outgoing,
-                inline_tags=inline,
+                parsed_inline_tag_names=parsed,
             )
 
         outgoing = (
             extract_all_outgoing_references(content, organization_id) if content else None
         ) or None
-        inline = (queries.extract_inline_tags_from_content(content) if content else None) or None
+        parsed = queries.extract_inline_tags_from_content(content) if content else []
         return _NoteContentFields(
             content=content,
             canvas_content=None,
             outgoing_references=outgoing,
-            inline_tags=inline,
+            parsed_inline_tag_names=parsed,
+        )
+
+    async def _sync_tags_after_save(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        note: Note,
+        tag_ids: list[UUID] | None,
+        parsed_inline_names: list[str] | None,
+    ) -> None:
+        """Reconcile manual + inline tag assignments after a note write.
+
+        ``tag_ids=None`` leaves manual assignments untouched (used by
+        autosave and partial updates that did not ship tags).
+        ``parsed_inline_names=None`` leaves inline assignments untouched
+        (used by metadata-only updates that did not modify content).
+        """
+        urn = build_content_urn(self.content_type, note.id)
+        tag_ops = TagOperations(self.session)
+
+        if tag_ids is not None:
+            await tag_ops.replace_manual_tags(
+                actor_id=user_id,
+                organization_id=organization_id,
+                content_urn=urn,
+                tag_ids=tag_ids,
+            )
+
+        if parsed_inline_names is not None:
+            await sync_inline_tags(
+                self.session,
+                content_urn=urn,
+                organization_id=organization_id,
+                actor_id=user_id,
+                parsed_names=parsed_inline_names,
+            )
+
+    def _tag_filter_subquery(self, tag_ids: list[UUID]):
+        """Subquery: note ids that carry every tag id in ``tag_ids``.
+
+        Implements logical AND across the tag set via a GROUP BY +
+        HAVING COUNT(DISTINCT) check so the request shape mirrors the
+        explorer's filter rail. Empty input is filtered out by the
+        caller.
+        """
+        urn_prefix = "urn:uniffy:content:NOTE:"
+        urn_expr = func.concat(urn_prefix, cast(Note.id, String))
+        return (
+            select(Note.id)
+            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
+            .where(TagAssignment.tag_id.in_(tag_ids))
+            .group_by(Note.id)
+            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
         )
 
     async def _notify_new_mentions(

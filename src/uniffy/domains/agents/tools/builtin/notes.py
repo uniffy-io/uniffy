@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.tags import TagOperations
 
 _MAX_NOTE_CONTENT_CHARS = 50_000
 
@@ -167,11 +168,19 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     if content_truncated:
         note_content = note_content[:_MAX_NOTE_CONTENT_CHARS]
 
+    urn = f"urn:uniffy:content:NOTE:{note.id}"
+    tag_ops = TagOperations(ctx.session)
+    tags_by_urn = await tag_ops.get_for_urns(
+        organization_id=ctx.organization_id,
+        content_urns=[urn],
+    )
+    note_tags = [tag.slug for tag in tags_by_urn.get(urn, [])]
+
     result_dict: dict = {
         "id": str(note.id),
         "title": note.title,
         "content": note_content,
-        "tags": note.tags or [],
+        "tags": note_tags,
         "access_mode": (
             note.access_mode.value if hasattr(note.access_mode, "value") else str(note.access_mode)
         ),

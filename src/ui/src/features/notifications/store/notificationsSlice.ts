@@ -278,6 +278,32 @@ const notificationsSlice = createSlice({
         setActiveFilter: (state, action: PayloadAction<NotificationFilterType>) => {
             state.activeFilter = action.payload;
         },
+
+        /**
+         * Optimistically mark every unread notification matching a source
+         * URN as read, decrementing the unread counter accordingly.
+         *
+         * Mirrors the server-side cascade triggered when the originating
+         * content is marked read (e.g. opening a chat channel clears its
+         * mention/DM/thread-reply notifications). Used to keep the bell
+         * panel in sync without waiting for a refetch or stream tick.
+         */
+        markNotificationsReadBySource: (state, action: PayloadAction<string>) => {
+            const sourceUrn = action.payload;
+            if (!sourceUrn) return;
+            const now = new Date().toISOString();
+            let cleared = 0;
+            for (const n of state.notifications) {
+                if (n.sourceUrn === sourceUrn && !n.isRead) {
+                    n.isRead = true;
+                    n.readAt = now;
+                    cleared += 1;
+                }
+            }
+            if (cleared > 0) {
+                state.unreadCount = Math.max(0, state.unreadCount - cleared);
+            }
+        },
     },
     extraReducers: (builder) => {
         // Fetch notifications
@@ -470,5 +496,6 @@ export const {
     clearError,
     setSearchQuery,
     setActiveFilter,
+    markNotificationsReadBySource,
 } = notificationsSlice.actions;
 export const notificationsReducer = notificationsSlice.reducer;

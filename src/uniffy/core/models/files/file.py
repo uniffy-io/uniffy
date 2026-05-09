@@ -6,7 +6,6 @@ from uuid import UUID
 
 from sqlalchemy import BigInteger, Column, DateTime
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from uniffy.core.models.files.media_info import FileMediaInfo  # noqa: F401
@@ -72,8 +71,6 @@ class File(SQLModel, table=True):
         S3 bucket name.
     folder_id : UUID | None
         Parent folder ID (nullable for root-level files).
-    tags : list[str] | None
-        Tags for categorization.
     description : str | None
         Optional description for search.
     version : int
@@ -130,7 +127,6 @@ class File(SQLModel, table=True):
     storage_key: str = Field(max_length=1000, nullable=False)
     storage_bucket: str = Field(max_length=255, nullable=False)
     folder_id: UUID | None = Field(default=None, foreign_key="files_folders.id", index=True)
-    tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     description: str | None = Field(default=None, max_length=2000)
     version: int = Field(default=1, nullable=False)
     current_version_id: UUID | None = Field(

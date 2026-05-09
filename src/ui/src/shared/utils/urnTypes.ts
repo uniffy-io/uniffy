@@ -18,6 +18,7 @@ export const UrnType = {
   AGENT: 'agent',
   PROMPT: 'prompt',
   ROOM: 'room',
+  TAG: 'tag',
   UNKNOWN: 'unknown',
 } as const;
 

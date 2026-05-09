@@ -48,7 +48,8 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.types import RecurrencePattern
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import ContentType, RecurrencePattern
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.calendar import queries
@@ -67,6 +68,7 @@ from uniffy.domains.calendar.operations import (
     CategoryOperations,
     EventTemplateOperations,
 )
+from uniffy.domains.tags import TagOperations
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -75,6 +77,47 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _parse_tag_id_list(values) -> list[UUID]:
+    """Parse a list of tag id strings, raising ``INVALID_ARGUMENT`` on any miss."""
+    parsed: list[UUID] = []
+    for value in values:
+        try:
+            parsed.append(UUID(value))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid tag_id: {exc}") from exc
+    return parsed
+
+
+def _occurrence_master_id(event_id) -> UUID:
+    """Strip ``__occurrence__{date}`` from a synthetic recurring instance id."""
+    raw = str(event_id)
+    if "__occurrence__" in raw:
+        return UUID(raw.split("__occurrence__")[0])
+    return UUID(raw) if not isinstance(event_id, UUID) else event_id
+
+
+async def _hydrate_event_tags(
+    session: AsyncSession,
+    organization_id: UUID,
+    event_ids: list[UUID],
+) -> dict[str, list]:
+    """Bulk-fetch unified tags for a batch of events.
+
+    Recurring instances inherit from the master URN, so callers should
+    pass the master id (not the synthetic ``__occurrence__`` id) for
+    each event in the batch. The dict is keyed by master URN so virtual
+    occurrences resolve through the same lookup.
+    """
+    if not event_ids:
+        return {}
+    tag_ops = TagOperations(session)
+    urns = [build_content_urn(ContentType.CALENDAR_EVENT, eid) for eid in event_ids]
+    return await tag_ops.get_for_urns(
+        organization_id=organization_id,
+        content_urns=urns,
+    )
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
@@ -156,6 +199,8 @@ class CalendarHandlers:
         if request.HasField("room_id") and request.room_id:
             room_id = _parse_uuid(request.room_id, "room_id")
 
+        tag_ids = _parse_tag_id_list(request.tag_ids) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = CalendarEventOperations(session)
@@ -188,7 +233,7 @@ class CalendarHandlers:
                     recurrence_pattern=recurrence_pattern,
                     recurrence_config=recurrence_config,
                     is_focus_time=request.is_focus_time,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     linked_resources=linked_resources,
                     access_mode=access_mode,
                     baseline_role=baseline_role,
@@ -198,7 +243,20 @@ class CalendarHandlers:
 
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await self._get_event_room_info(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees, **room_info))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id]
+                )
+                return EventResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            [],
+                        ),
+                        **room_info,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -221,7 +279,20 @@ class CalendarHandlers:
                     user_id, organization_id, event_id
                 )
                 room_info = await self._get_event_room_info(session, event_id)
-                return EventResponse(event=event_to_proto(event, attendees, **room_info))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id]
+                )
+                return EventResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            [],
+                        ),
+                        **room_info,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -268,8 +339,8 @@ class CalendarHandlers:
             kwargs["recurrence_config"] = recurrence_config_from_proto(request.recurrence)
         if request.HasField("is_focus_time"):
             kwargs["is_focus_time"] = request.is_focus_time
-        if request.tags:
-            kwargs["tags"] = list(request.tags)
+        if request.HasField("tag_ids"):
+            kwargs["tag_ids"] = _parse_tag_id_list(request.tag_ids.ids)
         if request.linked_resource_urns:
             kwargs["linked_resources"] = [
                 {"id": urn, "type": "NOTE", "name": ""} for urn in request.linked_resource_urns
@@ -305,7 +376,20 @@ class CalendarHandlers:
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await self._get_event_room_info(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees, **room_info))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id]
+                )
+                return EventResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            [],
+                        ),
+                        **room_info,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -378,6 +462,8 @@ class CalendarHandlers:
         if request.HasField("end_date"):
             end_date = timestamp_to_datetime(request.end_date)
 
+        tag_ids = _parse_tag_id_list(request.tag_ids) if request.tag_ids else None
+
         try:
             async with open_session() as session:
                 ops = CalendarEventOperations(session)
@@ -389,7 +475,7 @@ class CalendarHandlers:
                     start_date=start_date,
                     end_date=end_date,
                     include_deleted=request.include_deleted,
-                    tags=list(request.tags) if request.tags else None,
+                    tag_ids=tag_ids,
                     page=max(1, request.page or 1),
                     page_size=min(100, max(1, request.page_size or 50)),
                     sort_by=request.sort_by or "start_time",
@@ -399,11 +485,25 @@ class CalendarHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id for event in events]
+                )
+
                 proto_events = []
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
                     room_info = await self._get_event_room_info(session, event.id)
-                    proto_events.append(event_to_proto(event, attendees, **room_info))
+                    proto_events.append(
+                        event_to_proto(
+                            event,
+                            attendees,
+                            tags=tags_by_urn.get(
+                                build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                                [],
+                            ),
+                            **room_info,
+                        )
+                    )
 
                 return ListEventsResponse(
                     events=proto_events,
@@ -448,14 +548,16 @@ class CalendarHandlers:
 
                 attendees_cache: dict[str, list] = {}
                 room_info_cache: dict[str, dict] = {}
+                master_ids: set[UUID] = set()
+                for event in events:
+                    master_ids.add(_occurrence_master_id(event.id))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, list(master_ids)
+                )
+
                 proto_events = []
                 for event in events:
-                    event_id_str = str(event.id)
-                    if "__occurrence__" in event_id_str:
-                        real_id = UUID(event_id_str.split("__occurrence__")[0])
-                    else:
-                        real_id = event.id
-
+                    real_id = _occurrence_master_id(event.id)
                     real_id_str = str(real_id)
                     if real_id_str not in attendees_cache:
                         attendees_cache[real_id_str] = await queries.get_event_attendees(
@@ -471,6 +573,10 @@ class CalendarHandlers:
                         event_to_proto(
                             event,
                             attendees_cache[real_id_str],
+                            tags=tags_by_urn.get(
+                                build_content_urn(ContentType.CALENDAR_EVENT, real_id),
+                                [],
+                            ),
                             **room_info_cache[real_id_str],
                         )
                     )
@@ -670,7 +776,19 @@ class CalendarHandlers:
                     role=role,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id]
+                )
+                return EventResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            [],
+                        ),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -698,7 +816,19 @@ class CalendarHandlers:
                     attendee_ids=attendee_ids,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees))
+                tags_by_urn = await _hydrate_event_tags(
+                    session, organization_id, [event.id]
+                )
+                return EventResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            [],
+                        ),
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:

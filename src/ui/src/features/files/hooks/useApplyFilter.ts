@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     setSearchQuery,
     setSortBy,
@@ -23,10 +23,14 @@ import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features
 export function useApplyFilter() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const tagsById = useAppSelector((state) => state.tags.byId);
 
     /**
      * Build a search query string from filter criteria.
      * This converts structured criteria into the search query format.
+     * Tag criteria resolve to slugs via the tags-slice cache; ids that
+     * have not yet been hydrated are skipped (the chip-summary path
+     * shows them once the cache catches up).
      */
     const buildSearchQuery = useCallback((criteria: SerializedFilterCriteria): string => {
         const parts: string[] = [];
@@ -41,9 +45,13 @@ export function useApplyFilter() {
             parts.push(`type:${criteria.mimeCategories.join(',')}`);
         }
 
-        // Tags: tag:important,work
-        if (criteria.tags?.length) {
-            parts.push(`tag:${criteria.tags.join(',')}`);
+        if (criteria.tagIds?.length) {
+            const slugs = criteria.tagIds
+                .map((id) => tagsById[id]?.slug)
+                .filter((slug): slug is string => Boolean(slug));
+            if (slugs.length > 0) {
+                parts.push(`tag:${slugs.join(',')}`);
+            }
         }
 
         // Size: size:>1mb size:<100mb
@@ -55,7 +63,7 @@ export function useApplyFilter() {
         }
 
         return parts.join(' ');
-    }, []);
+    }, [tagsById]);
 
     /**
      * Apply a saved filter and navigate to files list.
