@@ -180,9 +180,9 @@ dev_native() {
   echo "  Frontend: http://0.0.0.0:5173"
   echo "  Workers:  core + egress"
   trap 'kill 0' EXIT
-  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/ &
-  uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/ &
-  uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy --worker-core" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy --worker-egress" src/uniffy/ src/gen/python/ &
   pnpm --filter uniffy-ui dev
 }
 
@@ -191,12 +191,12 @@ mobile_dev() {
   echo "Backend:     http://0.0.0.0:8000"
   echo "Mobile web:  http://0.0.0.0:8081"
   trap 'kill 0' EXIT
-  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/ &
+  uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/gen/python/ &
   pnpm --filter uniffy-mobile exec npx expo start --web --port 8081
 }
 
 backend() {
-  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/
+  uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/gen/python/
 }
 
 ui() {
@@ -319,22 +319,22 @@ calls_turn_logs() {
 
 worker_core() {
   echo "Starting core background worker..."
-  uv run python -m uniffy.worker_core
+  uv run python -m uniffy --worker-core
 }
 
 worker_core_dev() {
   echo "Starting core background worker with hot reload..."
-  uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/
+  uv run watchfiles --filter python "python -m uniffy --worker-core" src/uniffy/ src/gen/python/
 }
 
 worker_egress() {
   echo "Starting egress background worker..."
-  uv run python -m uniffy.worker_egress
+  uv run python -m uniffy --worker-egress
 }
 
 worker_egress_dev() {
   echo "Starting egress background worker with hot reload..."
-  uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/
+  uv run watchfiles --filter python "python -m uniffy --worker-egress" src/uniffy/ src/gen/python/
 }
 
 licenses() {

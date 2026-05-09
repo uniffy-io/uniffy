@@ -52,21 +52,21 @@ services:
   backend:
     <<: *backend-base
     container_name: uniffy-dev-backend
-    command: uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ src/gen/python/
+    command: uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/gen/python/
     ports:
       - "8000:8000"
 
   worker-core:
     <<: *backend-base
     container_name: uniffy-dev-worker-core
-    command: uv run watchfiles --filter python "python -m uniffy.worker_core" src/uniffy/ src/gen/python/
+    command: uv run watchfiles --filter python "python -m uniffy --worker-core" src/uniffy/ src/gen/python/
     ports:
       - "9091:9091"
 
   worker-egress:
     <<: *backend-base
     container_name: uniffy-dev-worker-egress
-    command: uv run watchfiles --filter python "python -m uniffy.worker_egress" src/uniffy/ src/gen/python/
+    command: uv run watchfiles --filter python "python -m uniffy --worker-egress" src/uniffy/ src/gen/python/
     ports:
       - "9092:9092"
 

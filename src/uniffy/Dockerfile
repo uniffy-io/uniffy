@@ -33,5 +33,5 @@ ENV PYTHONUNBUFFERED=1
 
 ENTRYPOINT ["/bin/tini", "--"]
 
-# Override with: python -m uniffy.worker_core or python -m uniffy.worker_egress
-CMD ["python", "-m", "uniffy.main"]
+# Override with: python -m uniffy --worker-core or python -m uniffy --worker-egress
+CMD ["python", "-m", "uniffy", "--backend"]
