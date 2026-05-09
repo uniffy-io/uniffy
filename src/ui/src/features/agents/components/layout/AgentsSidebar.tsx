@@ -80,7 +80,7 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
   // Expanded mode (full sidebar with labels)
   if (!collapsed) {
     return (
-      <div className="h-full flex flex-col bg-card overflow-y-auto">
+      <div className="h-full flex flex-col overflow-y-auto">
         {/* Header with collapse toggle */}
         <div className="flex items-center px-3 pt-3 pb-1">
           <div className="flex-1" />
@@ -116,9 +116,7 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground border-l-2 border-transparent"
                     )}
                   >
-                    <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md">
-                      <IconComponent size={20} weight={isActive ? "fill" : "duotone"} />
-                    </span>
+                    <IconComponent size={16} weight={isActive ? "fill" : "duotone"} className="shrink-0" />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -135,7 +133,7 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
     <div className="group/sidebar h-full relative">
       <div
         className={cn(
-          "h-full flex flex-col bg-card overflow-y-auto overflow-x-hidden",
+          "h-full flex flex-col overflow-y-auto overflow-x-hidden",
           "w-full group-hover/sidebar:w-48",
           "transition-[width] duration-200 ease-out",
           "group-hover/sidebar:shadow-xl group-hover/sidebar:border-r group-hover/sidebar:border-border"
@@ -181,12 +179,11 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground border-l-2 border-transparent"
                     )}
                   >
-                    <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md">
-                      <IconComponent
-                        size={20}
-                        weight={isActive ? "fill" : "duotone"}
-                      />
-                    </span>
+                    <IconComponent
+                      size={16}
+                      weight={isActive ? "fill" : "duotone"}
+                      className="shrink-0"
+                    />
 
                     <span className="hidden group-hover/sidebar:inline text-sm whitespace-nowrap">
                       {item.label}
