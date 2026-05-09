@@ -43,6 +43,13 @@ const SHORTCUT_CATEGORIES = [
         ],
     },
     {
+        id: 'recording',
+        label: 'Screen Recording',
+        shortcuts: [
+            { action: 'recording.toggleQuickClip', label: 'Start / Stop Quick Recording' },
+        ],
+    },
+    {
         id: 'viewer',
         label: 'File Viewer',
         shortcuts: [

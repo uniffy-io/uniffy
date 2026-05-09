@@ -17,6 +17,7 @@ import { clearTree } from '@/features/notes/store/notesTreeSlice';
 import { clearNotesCache } from '@/features/notes';
 import { clearBookmarks } from '@/features/bookmarks';
 import { clearNotifications } from '@/features/notifications';
+import { cancelRecording } from '@/features/recording';
 import { clearPresence, useCustomStatus } from '@/features/presence';
 import { CustomStatusPicker } from '@/features/presence/components/CustomStatusPicker';
 import { clearPermissions } from '@/features/permissions';
@@ -35,17 +36,26 @@ import { useTheme } from '@/config/theme/ThemeProvider';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
 import { useNavigate } from 'react-router-dom';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export function UserMenu() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { user, refreshToken } = useAppSelector((state) => state.auth);
+    const recordingState = useAppSelector((state) => state.recording.state);
     const { canAccessAdmin } = useAdminAccess();
     const { themeMode, setTheme, availableModes } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const [showStatusPicker, setShowStatusPicker] = useState(false);
+    const [confirmingLogout, setConfirmingLogout] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const currentCustomStatus = useCustomStatus(user?.id ?? '');
+
+    const RECORDING_ACTIVE_STATES = new Set([
+        'requesting', 'initiating-upload', 'recording', 'paused',
+        'stopping', 'flushing', 'completing',
+    ]);
+    const isRecordingActive = RECORDING_ACTIVE_STATES.has(recordingState);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -74,7 +84,23 @@ export function UserMenu() {
 
     if (!user) return null;
 
+    const requestLogout = () => {
+        if (isRecordingActive) {
+            setConfirmingLogout(true);
+            setIsOpen(false);
+            return;
+        }
+        performLogout();
+    };
+
+    const performLogout = () => {
+        setConfirmingLogout(false);
+        handleLogout();
+    };
+
     const handleLogout = () => {
+        // Cancel any in-flight screen recording (aborts S3 multipart, clears state)
+        void dispatch(cancelRecording());
         // Notify backend to revoke the session (fire-and-forget)
         if (refreshToken) {
             const client = createClient(AuthService, transport);
@@ -291,7 +317,7 @@ export function UserMenu() {
                     {/* Sign out */}
                     <div className="border-t border-border pt-1.5 px-1.5">
                         <button
-                            onClick={handleLogout}
+                            onClick={requestLogout}
                             className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md transition-colors overflow-hidden"
                             style={{ color: 'var(--status-error)' }}
                         >
@@ -302,6 +328,17 @@ export function UserMenu() {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={confirmingLogout}
+                onClose={() => setConfirmingLogout(false)}
+                onConfirm={performLogout}
+                title="Stop recording and sign out?"
+                message="A screen recording is in progress. Signing out will discard it."
+                confirmLabel="Discard and sign out"
+                cancelLabel="Stay"
+                variant="warning"
+            />
         </div>
     );
 }

@@ -43,6 +43,7 @@ import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
 import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
 import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
 import { tagsReducer } from '@/features/tags/store/tagsSlice';
+import { recordingReducer } from '@/features/recording';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -135,6 +136,37 @@ const projectsUiTransform = createTransform(
 );
 
 /**
+ * Recording transform: Reset transient state on rehydration.
+ *
+ * Preserves picker preferences (source, mic, captureTabAudio,
+ * controllerCorner, recordingsFolderId, recents) but wipes the live state
+ * machine. The MediaRecorder + MediaStream cannot survive a reload, so
+ * leaving the slice "stuck" in `recording` after a refresh would be a
+ * bug; force `idle` on every rehydrate.
+ */
+const recordingTransform = createTransform(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (inboundState: any) => inboundState,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (outboundState: any) => ({
+    ...outboundState,
+    state: 'idle',
+    network: 'online',
+    auth: 'ok',
+    uploadId: null,
+    startedAt: null,
+    pausedDurationMs: 0,
+    pausedAt: null,
+    bytesQueued: 0,
+    bytesUploaded: 0,
+    lastFileId: null,
+    error: null,
+    firstUseModalOpen: false,
+  }),
+  { whitelist: ['recording'] },
+);
+
+/**
  * Agents UI transform: Reset transient state on rehydration.
  *
  * Preserves layout preferences (activeTab, sidebarCollapsed, agentsSidebarCollapsed,
@@ -198,6 +230,7 @@ const rootReducer = combineReducers({
   chatThreads: chatThreadsReducer,
   chatUi: chatUiReducer,
   tags: tagsReducer,
+  recording: recordingReducer,
 });
 
 // Migrations to handle state shape changes across versions
@@ -252,8 +285,8 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi'],
-  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform],
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi', 'recording'],
+  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform, recordingTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };
 
