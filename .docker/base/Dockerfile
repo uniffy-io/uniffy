@@ -1,5 +1,7 @@
 ARG UV_VERSION=0.11.12
 
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
+
 FROM python:3.14.4-slim-trixie AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,7 +13,7 @@ WORKDIR /builder
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc tini.asc
 
-COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
+COPY --from=uv /uv /uvx /bin/
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
