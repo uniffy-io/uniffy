@@ -26,6 +26,16 @@ THUMBNAIL_MIME_TYPES: dict[str, str] = {
     "video/ogg": "generate_video_thumbnail",
 }
 
+# MIME types that need server-side transcode to a universal format.
+# WebM is what Brave / Chrome / Firefox produce via `MediaRecorder`; the
+# bytes play in the browser but macOS Finder, iOS Files / Photos, AirDrop
+# previews, and older Slack clients refuse them. The transcode worker
+# fans out from this registry alongside thumbnails (both jobs run in
+# parallel for `video/webm`).
+TRANSCODE_MIME_TYPES: dict[str, str] = {
+    "video/webm": "transcode_video_to_mp4",
+}
+
 # MIME types that support metadata extraction
 EXTRACTION_MIME_TYPES: dict[str, str] = {
     # Images (EXIF, dimensions)
@@ -100,6 +110,9 @@ def get_jobs_for_mime_type(mime_type: str) -> list[str]:
     if base in THUMBNAIL_MIME_TYPES:
         jobs.append(THUMBNAIL_MIME_TYPES[base])
 
+    if base in TRANSCODE_MIME_TYPES:
+        jobs.append(TRANSCODE_MIME_TYPES[base])
+
     if base in EXTRACTION_MIME_TYPES:
         jobs.append(EXTRACTION_MIME_TYPES[base])
 
@@ -152,4 +165,8 @@ def get_processable_mime_types() -> set[str]:
         Set of MIME types that support thumbnails or extraction.
 
     """
-    return set(THUMBNAIL_MIME_TYPES.keys()) | set(EXTRACTION_MIME_TYPES.keys())
+    return (
+        set(THUMBNAIL_MIME_TYPES.keys())
+        | set(TRANSCODE_MIME_TYPES.keys())
+        | set(EXTRACTION_MIME_TYPES.keys())
+    )

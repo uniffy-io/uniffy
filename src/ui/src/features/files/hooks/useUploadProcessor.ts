@@ -140,6 +140,7 @@ async function processUpload(
             description: protoFile.description,
             version: protoFile.version,
             extractionStatus: protoFile.extractionStatus,
+            transcodeStatus: protoFile.transcodeStatus,
             isDeleted: protoFile.isDeleted,
             createdAt: serializeTimestamp(protoFile.createdAt),
             updatedAt: serializeTimestamp(protoFile.updatedAt),

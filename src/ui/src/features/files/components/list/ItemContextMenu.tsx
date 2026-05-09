@@ -35,6 +35,10 @@ interface ItemContextMenuProps {
     onRestore?: () => void;
     /** Whether the restore action should render (hidden for folders inside a trashed ancestor). */
     canRestore?: boolean;
+    /** When set, the Download item renders disabled with the given tooltip
+     * (used while a server-side WebM -> MP4 transcode is in flight). */
+    downloadDisabled?: boolean;
+    downloadTooltip?: string | null;
 }
 
 export function ItemContextMenu({
@@ -54,6 +58,8 @@ export function ItemContextMenu({
     trashMode = false,
     onRestore,
     canRestore = true,
+    downloadDisabled = false,
+    downloadTooltip = null,
 }: ItemContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -106,8 +112,10 @@ export function ItemContextMenu({
                     )}
 
                     <button
-                        onClick={(e) => handleAction(onDownload, e)}
-                        className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                        onClick={(e) => downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e)}
+                        disabled={downloadDisabled}
+                        title={downloadDisabled ? (downloadTooltip ?? '') : undefined}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Download size={16} className="text-primary" />
                         Download
@@ -189,8 +197,10 @@ export function ItemContextMenu({
                 )}
 
                 <button
-                    onClick={(e) => handleAction(onDownload, e)}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    onClick={(e) => downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e)}
+                    disabled={downloadDisabled}
+                    title={downloadDisabled ? (downloadTooltip ?? '') : undefined}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Download size={16} className="text-primary" />
                     Download

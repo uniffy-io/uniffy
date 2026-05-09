@@ -79,6 +79,11 @@ service FilesService {
   // Create a folder tree in a single transaction (for recursive folder upload).
   rpc CreateFolderTree(CreateFolderTreeRequest) returns (CreateFolderTreeResponse);
 
+  // Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+  // concurrent invocations across backend instances. Used by the screen
+  // recording feature to resolve the upload destination on first record.
+  rpc EnsureRecordingsFolder(EnsureRecordingsFolderRequest) returns (FolderResponse);
+
   // === Bulk Operations ===
 
   // Move files/folders to a different parent.
@@ -178,12 +183,29 @@ enum ExtractionStatus {
   EXTRACTION_STATUS_SKIPPED = 5;
 }
 
+// Server-side transcode pipeline state. Drives the download gate so the
+// browser does not hand the user a `.mp4` labelled file whose bytes are
+// still WebM. Files that never need a transcode (Safari path, non-video
+// uploads) sit at NOT_NEEDED forever.
+enum TranscodeStatus {
+  TRANSCODE_STATUS_UNSPECIFIED = 0;
+  TRANSCODE_STATUS_NOT_NEEDED = 1;
+  TRANSCODE_STATUS_PENDING = 2;
+  TRANSCODE_STATUS_PROCESSING = 3;
+  TRANSCODE_STATUS_COMPLETED = 4;
+  TRANSCODE_STATUS_FAILED = 5;
+}
+
 // UPLOAD MESSAGES
 
 message InitiateUploadRequest {
   string organization_id = 1;
   string filename = 2;
   string mime_type = 3;
+  // Expected total size in bytes. Pass 0 for streaming uploads where the final
+  // size is unknown (e.g. screen recording / MediaRecorder). For 0-size
+  // streams, the upfront quota check is deferred to CompleteUpload, which
+  // verifies the actual byte count before creating the File row.
   int64 total_size = 4;
   optional string folder_id = 5;
   common.v1.AccessMode access_mode = 6;
@@ -193,7 +215,9 @@ message InitiateUploadRequest {
 message InitiateUploadResponse {
   string upload_id = 1;
   int32 chunk_size = 2;     // Recommended chunk size in bytes
-  int32 total_chunks = 3;   // Expected number of chunks
+  // Expected number of chunks. 0 when total_size was 0 (unknown). Clients
+  // streaming an unknown-size upload must not rely on this for progress UI.
+  int32 total_chunks = 3;
 }
 
 message UploadChunkRequest {
@@ -313,6 +337,10 @@ message File {
 
   // Unified tags assigned to this file (manual source, hydrated server-side).
   repeated tags.v1.Tag tags = 24;
+
+  // Server-side transcode pipeline state. UI uses this to gate the download
+  // button while a WebM screen recording is being remuxed to MP4.
+  TranscodeStatus transcode_status = 25;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -838,4 +866,8 @@ message CreateFolderTreeRequest {
 
 message CreateFolderTreeResponse {
   repeated CreatedFolderInfo folders = 1;
+}
+
+message EnsureRecordingsFolderRequest {
+  string organization_id = 1;
 }

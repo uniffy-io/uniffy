@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.files.file import TranscodeStatus
 from uniffy.core.storage import get_s3_client
 from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
@@ -21,6 +22,31 @@ from uniffy.domains.files.operations import FileOperations
 
 thumbnails_router = APIRouter(prefix="/thumbnails", tags=["thumbnails"])
 files_router = APIRouter(prefix="/files", tags=["files"])
+
+_TOO_EARLY_RETRY_AFTER_SECONDS = 60
+
+
+def _too_early_response() -> StreamingResponse:
+    """Return ``425 Too Early`` while a transcode is pending.
+
+    The frontend reads ``transcode_status`` directly from the File proto
+    and disables the Download button before the request even fires; this
+    is the belt-and-braces guard for direct-link downloads and any
+    middleware-driven retry.
+    """
+
+    async def _empty_body():
+        yield b""
+
+    return StreamingResponse(
+        _empty_body(),
+        status_code=425,
+        headers={
+            "Retry-After": str(_TOO_EARLY_RETRY_AFTER_SECONDS),
+            "Cache-Control": "no-store",
+        },
+        media_type="text/plain",
+    )
 
 
 async def get_organization_id_from_token(
@@ -220,21 +246,39 @@ async def stream_file(
                     detail="File content not available",
                 )
 
+            # Gate the download while a server-side transcode is in flight.
+            # The user-visible filename is `.mp4` from the moment Stop is
+            # clicked even though the bytes on S3 may still be WebM. Serving
+            # the WebM under that name would hand the user an unplayable
+            # file in QuickTime / Finder / iOS, so block until the swap is
+            # done. FAILED falls back to serving whatever is on the live
+            # storage_key (the WebM) - playback in-browser still works and
+            # blocking forever is worse than mismatched extensions.
+            if file.transcode_status in (
+                TranscodeStatus.PENDING,
+                TranscodeStatus.PROCESSING,
+            ):
+                return _too_early_response()
+
             s3_key = file.storage_key
             mime_type = file.mime_type or "application/octet-stream"
 
             # Get S3 client and stream the file
             s3 = get_s3_client()
 
-            # Get object metadata for ETag and Content-Length
+            # Get object metadata for Content-Length only. The ETag we send
+            # to clients is derived from `File.version` so it changes on the
+            # transcode swap (which moves storage_key without changing the
+            # File row id). The S3 ETag belongs to the underlying object
+            # and would mask the swap from intermediate caches.
             try:
                 metadata = await s3.get_object_info(s3_key)
-                etag = metadata.get("ETag", "").strip('"')
                 content_length = metadata.get("ContentLength", 0)
             except Exception:
-                # If we can't get metadata, proceed without caching headers
-                etag = None
                 content_length = None
+
+            file_version = file.version
+            file_filename = file.filename
 
             async def stream_file_content(
                 _s3=s3,
@@ -247,16 +291,16 @@ async def stream_file(
                 ):
                     yield chunk
 
-            # Build response headers
             headers = {
                 "Content-Type": mime_type,
-                # Cache for 1 day, allow CDN caching (files are immutable by ID)
-                "Cache-Control": "public, max-age=86400, immutable",
-                "Content-Disposition": f'inline; filename="{file.filename}"',
+                # 5-minute revalidation so the post-transcode swap becomes
+                # visible to clients without a hard refresh. The version-
+                # derived ETag lets browsers / SW skip the body when the
+                # underlying File row hasn't changed.
+                "Cache-Control": "public, max-age=300, must-revalidate",
+                "ETag": f'"{file_id}.v{file_version}"',
+                "Content-Disposition": f'inline; filename="{file_filename}"',
             }
-
-            if etag:
-                headers["ETag"] = f'"{etag}"'
 
             if content_length:
                 headers["Content-Length"] = str(content_length)

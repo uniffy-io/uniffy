@@ -30,6 +30,7 @@ import type {
     MoveItemsRequest,
     CreateFolderTreeRequest,
     CheckStorageQuotaRequest,
+    EnsureRecordingsFolderRequest,
 } from '@uniffy/proto/files/v1/files_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -211,6 +212,14 @@ export const filesApi = {
      */
     createFolderTree: async (request: PartialMessage<CreateFolderTreeRequest>) => {
         return filesClient.createFolderTree(request);
+    },
+
+    /**
+     * Lazily create or fetch the per-user "Recordings" system folder.
+     * Idempotent under concurrent calls.
+     */
+    ensureRecordingsFolder: async (request: PartialMessage<EnsureRecordingsFolderRequest>) => {
+        return filesClient.ensureRecordingsFolder(request);
     },
 
     /**

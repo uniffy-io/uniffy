@@ -29,6 +29,7 @@ from uniffy_proto.files.v1.files_pb2 import (
     DownloadFileRequest,
     EmptyTrashRequest,
     EmptyTrashResponse,
+    EnsureRecordingsFolderRequest,
     FileResponse,
     FolderResponse,
     GetFileRequest,
@@ -67,6 +68,7 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.files.file import File
+from uniffy.core.models.files.multipart_upload import UploadStatus
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import ContentType
@@ -200,14 +202,17 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
 
-                # Get upload info and verify ownership
                 upload = await ops.get_upload_status(upload_id)
                 if not upload:
                     raise ConnectError(Code.NOT_FOUND, "Upload not found")
                 if upload.user_id != user_id:
                     raise ConnectError(Code.PERMISSION_DENIED, "Not your upload")
+                if upload.status != UploadStatus.ACTIVE:
+                    raise ConnectError(
+                        Code.FAILED_PRECONDITION,
+                        f"Upload is {upload.status.value}; cannot accept chunks.",
+                    )
 
-                # Upload part to S3
                 etag = await s3.upload_part(
                     key=upload.storage_key,
                     upload_id=upload.s3_upload_id,
@@ -215,7 +220,6 @@ class FilesHandlers:
                     data=request.data,
                 )
 
-                # Record completion
                 await ops.record_chunk_completed(
                     upload_id=upload_id,
                     part_number=request.chunk_number,
@@ -223,9 +227,8 @@ class FilesHandlers:
                     size=len(request.data),
                 )
 
-                # Get updated status
-                upload = await ops.get_upload_status(upload_id)
-                chunks_received = len(upload.get_completed_chunk_numbers())
+                completed_part_numbers = await ops.list_completed_part_numbers(upload_id)
+                chunks_received = len(completed_part_numbers)
 
                 return UploadChunkResponse(
                     success=True,
@@ -388,7 +391,7 @@ class FilesHandlers:
                 if not upload:
                     raise ConnectError(Code.NOT_FOUND, "Upload not found")
 
-                completed_chunks = upload.get_completed_chunk_numbers()
+                completed_chunks = await ops.list_completed_part_numbers(upload_id)
 
                 return GetUploadStatusResponse(
                     upload_id=str(upload.id),
@@ -1330,6 +1333,34 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.error(f"Error creating folder tree: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def ensure_recordings_folder(
+        self,
+        request: EnsureRecordingsFolderRequest,
+        ctx: RequestContext,
+    ) -> FolderResponse:
+        """Lazily create or fetch the per-user "Recordings" system folder."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = FolderOperations(session)
+                folder = await ops.ensure_named_folder(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    name="Recordings",
+                )
+                return FolderResponse(folder=folder_to_proto(folder))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error ensuring recordings folder: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def move_items(

@@ -24,6 +24,7 @@ from uniffy.workers.tasks.base import (
 from uniffy.workers.tasks.chat_mute import auto_unmute_channels
 from uniffy.workers.tasks.content_extraction import extract_document_content
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
+from uniffy.workers.tasks.multipart_reaper import reap_expired_multipart_uploads
 from uniffy.workers.tasks.notifications import (
     deliver_email_notification,
     deliver_push_notification,
@@ -39,11 +40,17 @@ from uniffy.workers.tasks.thumbnails import (
     generate_pdf_thumbnail,
     generate_video_thumbnail,
 )
+from uniffy.workers.tasks.video_transcode import (
+    delete_s3_object,
+    transcode_video_to_mp4,
+)
 
 CORE_TASKS = (
     generate_image_thumbnail,
     generate_pdf_thumbnail,
     generate_video_thumbnail,
+    transcode_video_to_mp4,
+    delete_s3_object,
     extract_image_metadata,
     extract_audio_metadata,
     extract_document_content,
@@ -53,6 +60,7 @@ CORE_TASKS = (
     send_email_digest,
     reindex_tag_urns,
     reindex_tag_doc,
+    reap_expired_multipart_uploads,
 )
 
 EGRESS_TASKS = (
@@ -73,6 +81,7 @@ __all__ = [
     "core_on_shutdown",
     "core_on_startup",
     "delete_run_stream",
+    "delete_s3_object",
     "deliver_email_notification",
     "deliver_push_notification",
     "egress_on_shutdown",
@@ -89,10 +98,12 @@ __all__ = [
     "on_job_end",
     "on_job_start",
     "process_notification_event",
+    "reap_expired_multipart_uploads",
     "recalculate_all_storage_usage",
     "reindex_tag_doc",
     "reindex_tag_urns",
     "respond_to_chat_message",
     "run_agent_session",
     "send_email_digest",
+    "transcode_video_to_mp4",
 ]
