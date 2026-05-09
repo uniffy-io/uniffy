@@ -1,8 +1,9 @@
+ARG UV_VERSION=0.11.12
+
 FROM python:3.14.4-slim-trixie AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TINI_VERSION=v0.19.0
-ENV UV_VERSION=0.11.12
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /builder
