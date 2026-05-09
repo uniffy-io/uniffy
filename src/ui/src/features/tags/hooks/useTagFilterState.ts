@@ -86,6 +86,7 @@ function writeToParams(
     };
     setOrDelete('tags', criteria.tagIds.join(','));
     setOrDelete('types', criteria.contentTypes.map(String).join(','));
+    next.delete('domain');
     setOrDelete('owners', criteria.ownerIds.join(','));
     setOrDelete('sources', criteria.sources.join(','));
     setOrDelete('createdAfter', criteria.createdAfter);

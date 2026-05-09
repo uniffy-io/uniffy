@@ -8,6 +8,8 @@ import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "@/features/auth/store/authSlice";
+import { cancelRecording } from "@/features/recording";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
@@ -91,6 +93,8 @@ export function OrganizationPicker() {
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const user = useAppSelector((state) => state.auth?.user);
+  const recordingState = useAppSelector((state) => state.recording.state);
+  const [pendingOrgSlug, setPendingOrgSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) {
@@ -117,18 +121,38 @@ export function OrganizationPicker() {
     fetchOrgs();
   }, [accessToken, navigate]);
 
+  const RECORDING_ACTIVE_STATES = new Set([
+    'requesting', 'initiating-upload', 'recording', 'paused',
+    'stopping', 'flushing', 'completing',
+  ]);
+
   const handleSelectOrg = async (orgSlug: string) => {
     if (!refreshToken) {
       setError("Session expired. Please login again.");
       return;
     }
+    // A live recording is owned by the current org's MultipartUpload
+    // row. Switching orgs would orphan the upload (server-side reaper
+    // handles it eventually, but the user loses the clip). Confirm
+    // before discarding.
+    if (RECORDING_ACTIVE_STATES.has(recordingState)) {
+      setPendingOrgSlug(orgSlug);
+      return;
+    }
+    await switchToOrg(orgSlug);
+  };
 
+  const switchToOrg = async (orgSlug: string) => {
+    if (!refreshToken) {
+      setError("Session expired. Please login again.");
+      return;
+    }
     setSelectingSlug(orgSlug);
     try {
       const client = createClient(AuthService, transport);
       // Refresh token with the selected organization slug to get an org-scoped token
       const response = await client.refreshToken({
-        refreshToken: refreshToken,
+        refreshToken,
         organizationSlug: orgSlug,
       });
 
@@ -163,6 +187,14 @@ export function OrganizationPicker() {
       setError('Failed to switch to organization.');
       setSelectingSlug(null);
     }
+  };
+
+  const confirmDiscardAndSwitch = async () => {
+    if (!pendingOrgSlug) return;
+    const slug = pendingOrgSlug;
+    setPendingOrgSlug(null);
+    await dispatch(cancelRecording());
+    await switchToOrg(slug);
   };
 
   const handleLogout = () => {
@@ -207,6 +239,17 @@ export function OrganizationPicker() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      <ConfirmDialog
+        isOpen={pendingOrgSlug !== null}
+        onClose={() => setPendingOrgSlug(null)}
+        onConfirm={() => void confirmDiscardAndSwitch()}
+        title="Discard active recording?"
+        message="A screen recording is in progress. Switching organizations will discard it."
+        confirmLabel="Discard and switch"
+        cancelLabel="Stay"
+        variant="warning"
+      />
 
       <div className="flex min-h-screen items-center justify-center px-6 py-12 bg-background">
         <div className="w-full max-w-md">

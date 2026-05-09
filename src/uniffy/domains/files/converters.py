@@ -19,6 +19,9 @@ from uniffy_proto.files.v1.files_pb2 import (
     Folder as ProtoFolder,
 )
 from uniffy_proto.files.v1.files_pb2 import (
+    TranscodeStatus as ProtoTranscodeStatus,
+)
+from uniffy_proto.files.v1.files_pb2 import (
     TreeNode as ProtoTreeNode,
 )
 from uniffy_proto.files.v1.files_pb2 import (
@@ -30,7 +33,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_role_to_proto,
 )
-from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -46,6 +49,15 @@ EXTRACTION_STATUS_TO_PROTO = {
     ExtractionStatus.COMPLETED: ProtoExtractionStatus.EXTRACTION_STATUS_COMPLETED,
     ExtractionStatus.FAILED: ProtoExtractionStatus.EXTRACTION_STATUS_FAILED,
     ExtractionStatus.SKIPPED: ProtoExtractionStatus.EXTRACTION_STATUS_SKIPPED,
+}
+
+# Transcode status mapping: model -> proto
+TRANSCODE_STATUS_TO_PROTO = {
+    TranscodeStatus.NOT_NEEDED: ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
+    TranscodeStatus.PENDING: ProtoTranscodeStatus.TRANSCODE_STATUS_PENDING,
+    TranscodeStatus.PROCESSING: ProtoTranscodeStatus.TRANSCODE_STATUS_PROCESSING,
+    TranscodeStatus.COMPLETED: ProtoTranscodeStatus.TRANSCODE_STATUS_COMPLETED,
+    TranscodeStatus.FAILED: ProtoTranscodeStatus.TRANSCODE_STATUS_FAILED,
 }
 
 # Upload status mapping: model -> proto
@@ -91,6 +103,10 @@ def file_to_proto(
         file.extraction_status,
         ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
     )
+    proto_transcode = TRANSCODE_STATUS_TO_PROTO.get(
+        file.transcode_status,
+        ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
+    )
 
     proto_file = ProtoFile(
         id=str(file.id),
@@ -104,6 +120,7 @@ def file_to_proto(
         size_bytes=file.size_bytes,
         version=file.version,
         extraction_status=proto_extraction,
+        transcode_status=proto_transcode,
         is_deleted=file.is_deleted,
         created_at=datetime_to_timestamp(file.created_at),
         updated_at=datetime_to_timestamp(file.updated_at),

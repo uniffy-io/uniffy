@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CheckStorageQuotaRequest, CheckStorageQuotaResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateFolderTreeRequest, CreateFolderTreeResponse, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetOrgStorageQuotaRequest, GetOrgStorageQuotaResponse, GetSavedFilterRequest, GetStorageUsageRequest, GetStorageUsageResponse, GetUploadStatusRequest, GetUploadStatusResponse, GetUserStorageQuotaRequest, GetUserStorageQuotaResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListOrgStorageUsageRequest, ListOrgStorageUsageResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTrashRequest, ListTrashResponse, ListUserStorageQuotaOverridesRequest, ListUserStorageQuotaOverridesResponse, MoveItemsRequest, MoveItemsResponse, RecalculateStorageUsageRequest, RecalculateStorageUsageResponse, RemoveUserStorageQuotaOverrideRequest, RemoveUserStorageQuotaOverrideResponse, RestoreFileRequest, RestoreFileVersionRequest, RestoreFolderRequest, SavedFilterResponse, SetOrgStorageQuotaRequest, SetOrgStorageQuotaResponse, SetUserStorageQuotaOverrideRequest, SetUserStorageQuotaOverrideResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
+import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CheckStorageQuotaRequest, CheckStorageQuotaResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateFolderTreeRequest, CreateFolderTreeResponse, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, EnsureRecordingsFolderRequest, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetOrgStorageQuotaRequest, GetOrgStorageQuotaResponse, GetSavedFilterRequest, GetStorageUsageRequest, GetStorageUsageResponse, GetUploadStatusRequest, GetUploadStatusResponse, GetUserStorageQuotaRequest, GetUserStorageQuotaResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListOrgStorageUsageRequest, ListOrgStorageUsageResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTrashRequest, ListTrashResponse, ListUserStorageQuotaOverridesRequest, ListUserStorageQuotaOverridesResponse, MoveItemsRequest, MoveItemsResponse, RecalculateStorageUsageRequest, RecalculateStorageUsageResponse, RemoveUserStorageQuotaOverrideRequest, RemoveUserStorageQuotaOverrideResponse, RestoreFileRequest, RestoreFileVersionRequest, RestoreFolderRequest, SavedFilterResponse, SetOrgStorageQuotaRequest, SetOrgStorageQuotaResponse, SetUserStorageQuotaOverrideRequest, SetUserStorageQuotaOverrideResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -215,6 +215,19 @@ export const FilesService = {
       name: "CreateFolderTree",
       I: CreateFolderTreeRequest,
       O: CreateFolderTreeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+     * concurrent invocations across backend instances. Used by the screen
+     * recording feature to resolve the upload destination on first record.
+     *
+     * @generated from rpc files.v1.FilesService.EnsureRecordingsFolder
+     */
+    ensureRecordingsFolder: {
+      name: "EnsureRecordingsFolder",
+      I: EnsureRecordingsFolderRequest,
+      O: FolderResponse,
       kind: MethodKind.Unary,
     },
     /**

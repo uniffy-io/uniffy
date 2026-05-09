@@ -5,7 +5,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import String, cast, func, or_, select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,9 +19,10 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.multipart_part import MultipartPart
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search.indexer import build_content_urn
@@ -266,15 +268,17 @@ class FileOperations(BaseContentOperations[File]):
             organization_id, access_mode, baseline_role
         )
 
-        # Quota check before creating the S3 upload
-        quota_ops = QuotaOperations(self.session)
-        quota_result = await quota_ops.check_quota(
-            organization_id=organization_id,
-            user_id=user_id,
-            additional_bytes=total_size,
-        )
-        if not quota_result.allowed:
-            raise ValidationError("quota", quota_result.reason)
+        is_streaming = total_size <= 0
+
+        if not is_streaming:
+            quota_ops = QuotaOperations(self.session)
+            quota_result = await quota_ops.check_quota(
+                organization_id=organization_id,
+                user_id=user_id,
+                additional_bytes=total_size,
+            )
+            if not quota_result.allowed:
+                raise ValidationError("quota", quota_result.reason)
 
         storage_key = f"{organization_id}/{user_id}/{generate_id()}/{filename}"
 
@@ -283,8 +287,14 @@ class FileOperations(BaseContentOperations[File]):
             content_type=mime_type,
         )
 
-        chunk_size = calculate_chunk_size(total_size)
-        total_chunks = (total_size + chunk_size - 1) // chunk_size
+        if is_streaming:
+            chunk_size = MIN_CHUNK_SIZE
+            total_chunks = 0
+            stored_total_size = 0
+        else:
+            chunk_size = calculate_chunk_size(total_size)
+            total_chunks = (total_size + chunk_size - 1) // chunk_size
+            stored_total_size = total_size
 
         upload = MultipartUpload(
             organization_id=organization_id,
@@ -294,14 +304,13 @@ class FileOperations(BaseContentOperations[File]):
             storage_bucket=self.s3.config.bucket_name,
             filename=filename,
             mime_type=mime_type,
-            total_size=total_size,
+            total_size=stored_total_size,
             total_chunks=total_chunks,
             chunk_size=chunk_size,
             folder_id=folder_id,
             access_mode=access_mode,
             baseline_role=baseline_role,
             status=UploadStatus.ACTIVE,
-            parts_completed=[],
             expires_at=datetime.now(UTC) + timedelta(hours=DEFAULT_UPLOAD_EXPIRY_HOURS),
         )
 
@@ -325,8 +334,16 @@ class FileOperations(BaseContentOperations[File]):
         etag: str,
         size: int,
     ) -> MultipartUpload:
-        """
-        Record that a chunk has been uploaded to S3.
+        """Record that a chunk has been uploaded to S3.
+
+        Concurrency-safe under HA: 15-20 backend instances may all be writing
+        parts for the same upload. The previous JSONB read-modify-write pattern
+        lost parts. We now insert into the dedicated `files_multipart_parts`
+        table, where `UNIQUE(upload_id, part_number)` lets us upsert idempotently
+        with `INSERT ... ON CONFLICT DO UPDATE`.
+
+        Refuses to record parts for non-ACTIVE uploads to keep
+        `complete_upload` and `abort_upload` from racing with late chunks.
 
         Parameters
         ----------
@@ -342,26 +359,47 @@ class FileOperations(BaseContentOperations[File]):
         Returns
         -------
         MultipartUpload
-            Updated upload record.
+            The upload record (unchanged; the part is stored in `multipart_parts`).
 
         """
         upload = await self.get_upload_status(upload_id)
         if not upload:
             raise NotFoundError("Upload", upload_id)
+        if upload.status != UploadStatus.ACTIVE:
+            raise ValidationError(
+                "upload_status",
+                f"Upload is {upload.status.value}, not ACTIVE",
+            )
 
-        # Add part to completed list
-        parts = list(upload.parts_completed or [])
-        parts.append({
-            "part_number": part_number,
-            "etag": etag,
-            "size": size,
-        })
-        upload.parts_completed = parts
-        upload.updated_at = datetime.now(UTC)
-
+        stmt = (
+            pg_insert(MultipartPart)
+            .values(
+                upload_id=upload_id,
+                part_number=part_number,
+                etag=etag,
+                size=size,
+            )
+            .on_conflict_do_update(
+                index_elements=[MultipartPart.upload_id, MultipartPart.part_number],
+                set_={"etag": etag, "size": size},
+            )
+        )
+        await self.session.execute(stmt)
         await self.session.commit()
-        await self.session.refresh(upload)
         return upload
+
+    async def list_completed_part_numbers(self, upload_id: UUID) -> list[int]:
+        """Return the sorted list of part numbers already uploaded.
+
+        Reads from `files_multipart_parts`. Used by handlers and by client
+        resume flows.
+        """
+        result = await self.session.execute(
+            select(MultipartPart.part_number)
+            .where(MultipartPart.upload_id == upload_id)
+            .order_by(MultipartPart.part_number)
+        )
+        return list(result.scalars().all())
 
     async def complete_upload(
         self,
@@ -388,29 +426,84 @@ class FileOperations(BaseContentOperations[File]):
             The created file.
 
         """
-        upload = await self.get_upload_status(upload_id)
+        upload_row = await self.session.execute(
+            select(MultipartUpload)
+            .where(MultipartUpload.id == upload_id)
+            .with_for_update()
+        )
+        upload = upload_row.scalar_one_or_none()
         if not upload:
             raise NotFoundError("Upload", upload_id)
-
+        if upload.status != UploadStatus.ACTIVE:
+            raise ValidationError(
+                "upload_status",
+                f"Upload is {upload.status.value}, not ACTIVE",
+            )
         if upload.user_id != user_id:
             raise PermissionDeniedError("complete", "upload")
 
-        # Complete S3 multipart upload
-        parts = [
-            {"PartNumber": p["part_number"], "ETag": p["etag"]}
-            for p in (upload.parts_completed or [])
-        ]
+        parts_result = await self.session.execute(
+            select(
+                MultipartPart.part_number,
+                MultipartPart.etag,
+                MultipartPart.size,
+            )
+            .where(MultipartPart.upload_id == upload_id)
+            .order_by(MultipartPart.part_number)
+        )
+        part_rows = parts_result.all()
+        if not part_rows:
+            raise ValidationError(
+                "upload_parts",
+                "No chunks have been uploaded for this upload.",
+            )
+
+        actual_size = sum(row.size for row in part_rows)
+
+        if upload.total_size and upload.total_size > 0 and actual_size > upload.total_size:
+            await self.s3.abort_multipart_upload(
+                key=upload.storage_key,
+                upload_id=upload.s3_upload_id,
+            )
+            upload.status = UploadStatus.ABORTED
+            upload.updated_at = datetime.now(UTC)
+            await self.session.commit()
+            raise ValidationError(
+                "upload_size",
+                "Uploaded bytes exceed declared total_size; multipart aborted.",
+            )
+
+        if upload.total_size == 0:
+            quota_ops = QuotaOperations(self.session)
+            quota_result = await quota_ops.check_quota(
+                organization_id=upload.organization_id,
+                user_id=upload.user_id,
+                additional_bytes=actual_size,
+            )
+            if not quota_result.allowed:
+                await self.s3.abort_multipart_upload(
+                    key=upload.storage_key,
+                    upload_id=upload.s3_upload_id,
+                )
+                upload.status = UploadStatus.ABORTED
+                upload.updated_at = datetime.now(UTC)
+                await self.session.commit()
+                raise ValidationError("quota", quota_result.reason)
+
         await self.s3.complete_multipart_upload(
             key=upload.storage_key,
             upload_id=upload.s3_upload_id,
-            parts=parts,
+            parts=[
+                {"PartNumber": row.part_number, "ETag": row.etag}
+                for row in part_rows
+            ],
         )
-
-        # Calculate actual size from parts
-        actual_size = sum(p["size"] for p in (upload.parts_completed or []))
 
         # Determine extraction status based on mime type
         extraction_status = self._get_initial_extraction_status(upload.mime_type)
+        transcode_status = self._get_initial_transcode_status(
+            upload.mime_type, upload.filename
+        )
 
         # Create file record
         file = File(
@@ -426,6 +519,7 @@ class FileOperations(BaseContentOperations[File]):
             storage_bucket=upload.storage_bucket,
             folder_id=upload.folder_id,
             extraction_status=extraction_status,
+            transcode_status=transcode_status,
         )
 
         self.session.add(file)
@@ -578,6 +672,25 @@ class FileOperations(BaseContentOperations[File]):
 
         await self.session.commit()
         return True
+
+    def _get_initial_transcode_status(
+        self, mime_type: str, filename: str
+    ) -> TranscodeStatus:
+        """Decide whether to enqueue the WebM -> MP4 transcode.
+
+        Recordings are uploaded with `mime_type='video/webm'` but with a
+        filename already labelled `.mp4` (the frontend commits to that
+        from the moment the user clicks Stop). This combination is the
+        signal that a transcode is required. Drag-and-drop WebM uploads
+        keep their `.webm` filename and are left at `NOT_NEEDED` so the
+        user gets exactly the bytes they uploaded.
+        """
+        if (
+            mime_type == "video/webm"
+            and filename.lower().endswith(".mp4")
+        ):
+            return TranscodeStatus.PENDING
+        return TranscodeStatus.NOT_NEEDED
 
     def _get_initial_extraction_status(self, mime_type: str) -> ExtractionStatus:
         """
@@ -1678,6 +1791,78 @@ class FolderOperations:
         await self.session.commit()
 
         return created
+
+    async def ensure_named_folder(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        name: str,
+    ) -> Folder:
+        """Lazily create or fetch a per-user root folder by name.
+
+        Idempotent under concurrency: 15-20 backend instances may all attempt
+        to create the same auto-provisioned folder (e.g. "Recordings") on the
+        user's first upload. The partial unique index
+        ``uq_folders_owner_root_name_active`` covers
+        ``(owner_id, organization_id, name) WHERE parent_id IS NULL AND
+        is_deleted = false`` so concurrent inserts deterministically fold
+        into a single row.
+
+        Used for system-managed folders ("Recordings", "Attachments"). Always
+        creates at the personal scope (``OWNER_ONLY``). Always at the root
+        (``parent_id = NULL``).
+        """
+        existing = await self.session.execute(
+            select(Folder).where(
+                Folder.organization_id == organization_id,
+                Folder.owner_id == user_id,
+                Folder.name == name,
+                Folder.parent_id.is_(None),
+                Folder.is_deleted == False,  # noqa: E712
+            )
+        )
+        folder = existing.scalar_one_or_none()
+        if folder is not None:
+            return folder
+
+        now = datetime.now(UTC)
+        stmt = (
+            pg_insert(Folder)
+            .values(
+                organization_id=organization_id,
+                owner_id=user_id,
+                name=name,
+                parent_id=None,
+                access_mode=AccessMode.OWNER_ONLY,
+                baseline_role=None,
+                is_system=True,
+                is_deleted=False,
+                created_at=now,
+                updated_at=now,
+            )
+            .on_conflict_do_nothing(
+                index_elements=["owner_id", "organization_id", "name"],
+                index_where=text(
+                    "parent_id IS NULL AND is_deleted = false AND is_system = true"
+                ),
+            )
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+        result = await self.session.execute(
+            select(Folder).where(
+                Folder.organization_id == organization_id,
+                Folder.owner_id == user_id,
+                Folder.name == name,
+                Folder.parent_id.is_(None),
+                Folder.is_deleted == False,  # noqa: E712
+            )
+        )
+        folder = result.scalar_one_or_none()
+        if folder is None:
+            raise NotFoundError("Folder", name)
+        return folder
 
     async def list_folders(
         self,

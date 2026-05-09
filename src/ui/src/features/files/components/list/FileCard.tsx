@@ -24,6 +24,7 @@ import { ItemContextMenu } from '@/features/files/components/list/ItemContextMen
 import { RenameInput } from '@/features/files/components/list/RenameInput';
 import { ThumbnailImage } from '@/features/files/components/list/ThumbnailImage';
 import { getInitials } from '@/components/subject/utils';
+import { getDownloadGateState } from '@/features/files/utils/transcodeGate';
 
 export interface FileCardProps {
     file: SerializedFile;
@@ -80,6 +81,7 @@ export function FileCard({
     const cardRef = useRef<HTMLDivElement>(null);
     const hasThumbnail = supportsThumbnail(file.mimeType);
     const config = sizeConfig || { cardMinWidth: 140, iconSize: 48, gap: 16, showDetails: true };
+    const downloadGate = getDownloadGateState(file.transcodeStatus);
 
     // Lock the popover to its anchor for the lifetime of the editing session.
     // Portal coords are computed once on open from the card's bounding rect so
@@ -366,6 +368,8 @@ export function FileCard({
                         trashMode={trashMode}
                         onRestore={onRestore ? () => onRestore(file.id) : undefined}
                         canRestore={canRestore}
+                        downloadDisabled={downloadGate.disabled}
+                        downloadTooltip={downloadGate.tooltip}
                     />
                 )}
 

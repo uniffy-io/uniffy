@@ -39,6 +39,7 @@ import {
 } from "@/features/agents/store/agentsUiSlice";
 import { useAppDispatch } from "@/app/hooks";
 import { toggleSidebar } from "@/features/agents/store/agentsUiSlice";
+import { useShortcutHandler } from "@/features/settings";
 import { AgentsSidebar } from "@/features/agents/components/layout/AgentsSidebar";
 import { ChatView } from "@/features/agents/components/views/ChatView";
 import { IntegrationsView } from "@/features/agents/components/views/IntegrationsView";
@@ -120,6 +121,8 @@ export function AgentsLayout() {
   const handleExpandSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
+
+  useShortcutHandler("app.toggleSidebar", handleExpandSidebar);
 
   const showSidebar = !isZenMode && !sidebarCollapsed;
   const showCollapsedRail = !isZenMode && sidebarCollapsed;

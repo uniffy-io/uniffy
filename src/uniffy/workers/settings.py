@@ -52,6 +52,7 @@ from uniffy.workers.tasks import (
     flush_chat_read_cursors,
     on_job_end,
     on_job_start,
+    reap_expired_multipart_uploads,
     recalculate_all_storage_usage,
 )
 
@@ -74,6 +75,7 @@ class CoreWorkerSettings:
         cron(flush_chat_read_cursors, second={0, 30}),
         cron(auto_unmute_channels, minute=None, second={0}),
         cron(recalculate_all_storage_usage, hour=3, minute=0),
+        cron(reap_expired_multipart_uploads, minute={0}),
     ]
     on_startup = core_on_startup
     on_shutdown = core_on_shutdown

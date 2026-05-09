@@ -139,17 +139,83 @@ func (ExtractionStatus) EnumDescriptor() ([]byte, []int) {
 	return file_files_v1_files_proto_rawDescGZIP(), []int{1}
 }
 
+// Server-side transcode pipeline state. Drives the download gate so the
+// browser does not hand the user a `.mp4` labelled file whose bytes are
+// still WebM. Files that never need a transcode (Safari path, non-video
+// uploads) sit at NOT_NEEDED forever.
+type TranscodeStatus int32
+
+const (
+	TranscodeStatus_TRANSCODE_STATUS_UNSPECIFIED TranscodeStatus = 0
+	TranscodeStatus_TRANSCODE_STATUS_NOT_NEEDED  TranscodeStatus = 1
+	TranscodeStatus_TRANSCODE_STATUS_PENDING     TranscodeStatus = 2
+	TranscodeStatus_TRANSCODE_STATUS_PROCESSING  TranscodeStatus = 3
+	TranscodeStatus_TRANSCODE_STATUS_COMPLETED   TranscodeStatus = 4
+	TranscodeStatus_TRANSCODE_STATUS_FAILED      TranscodeStatus = 5
+)
+
+// Enum value maps for TranscodeStatus.
+var (
+	TranscodeStatus_name = map[int32]string{
+		0: "TRANSCODE_STATUS_UNSPECIFIED",
+		1: "TRANSCODE_STATUS_NOT_NEEDED",
+		2: "TRANSCODE_STATUS_PENDING",
+		3: "TRANSCODE_STATUS_PROCESSING",
+		4: "TRANSCODE_STATUS_COMPLETED",
+		5: "TRANSCODE_STATUS_FAILED",
+	}
+	TranscodeStatus_value = map[string]int32{
+		"TRANSCODE_STATUS_UNSPECIFIED": 0,
+		"TRANSCODE_STATUS_NOT_NEEDED":  1,
+		"TRANSCODE_STATUS_PENDING":     2,
+		"TRANSCODE_STATUS_PROCESSING":  3,
+		"TRANSCODE_STATUS_COMPLETED":   4,
+		"TRANSCODE_STATUS_FAILED":      5,
+	}
+)
+
+func (x TranscodeStatus) Enum() *TranscodeStatus {
+	p := new(TranscodeStatus)
+	*p = x
+	return p
+}
+
+func (x TranscodeStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TranscodeStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_files_v1_files_proto_enumTypes[2].Descriptor()
+}
+
+func (TranscodeStatus) Type() protoreflect.EnumType {
+	return &file_files_v1_files_proto_enumTypes[2]
+}
+
+func (x TranscodeStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TranscodeStatus.Descriptor instead.
+func (TranscodeStatus) EnumDescriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{2}
+}
+
 type InitiateUploadRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Filename       string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
 	MimeType       string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
-	TotalSize      int64                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
-	FolderId       *string                `protobuf:"bytes,5,opt,name=folder_id,json=folderId,proto3,oneof" json:"folder_id,omitempty"`
-	AccessMode     v1.AccessMode          `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
-	BaselineRole   *v1.ContentRole        `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Expected total size in bytes. Pass 0 for streaming uploads where the final
+	// size is unknown (e.g. screen recording / MediaRecorder). For 0-size
+	// streams, the upfront quota check is deferred to CompleteUpload, which
+	// verifies the actual byte count before creating the File row.
+	TotalSize     int64           `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	FolderId      *string         `protobuf:"bytes,5,opt,name=folder_id,json=folderId,proto3,oneof" json:"folder_id,omitempty"`
+	AccessMode    v1.AccessMode   `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole  *v1.ContentRole `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InitiateUploadRequest) Reset() {
@@ -232,10 +298,12 @@ func (x *InitiateUploadRequest) GetBaselineRole() v1.ContentRole {
 }
 
 type InitiateUploadResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UploadId      string                 `protobuf:"bytes,1,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
-	ChunkSize     int32                  `protobuf:"varint,2,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`       // Recommended chunk size in bytes
-	TotalChunks   int32                  `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"` // Expected number of chunks
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	UploadId  string                 `protobuf:"bytes,1,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
+	ChunkSize int32                  `protobuf:"varint,2,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"` // Recommended chunk size in bytes
+	// Expected number of chunks. 0 when total_size was 0 (unknown). Clients
+	// streaming an unknown-size upload must not rely on this for progress UI.
+	TotalChunks   int32 `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1075,9 +1143,12 @@ type File struct {
 	// Baseline role granted by access mode (when applicable)
 	BaselineRole *v1.ContentRole `protobuf:"varint,23,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Unified tags assigned to this file (manual source, hydrated server-side).
-	Tags          []*v11.Tag `protobuf:"bytes,24,rep,name=tags,proto3" json:"tags,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Tags []*v11.Tag `protobuf:"bytes,24,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Server-side transcode pipeline state. UI uses this to gate the download
+	// button while a WebM screen recording is being remuxed to MP4.
+	TranscodeStatus TranscodeStatus `protobuf:"varint,25,opt,name=transcode_status,json=transcodeStatus,proto3,enum=files.v1.TranscodeStatus" json:"transcode_status,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *File) Reset() {
@@ -1269,6 +1340,13 @@ func (x *File) GetTags() []*v11.Tag {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *File) GetTranscodeStatus() TranscodeStatus {
+	if x != nil {
+		return x.TranscodeStatus
+	}
+	return TranscodeStatus_TRANSCODE_STATUS_UNSPECIFIED
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -6098,6 +6176,50 @@ func (x *CreateFolderTreeResponse) GetFolders() []*CreatedFolderInfo {
 	return nil
 }
 
+type EnsureRecordingsFolderRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EnsureRecordingsFolderRequest) Reset() {
+	*x = EnsureRecordingsFolderRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnsureRecordingsFolderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnsureRecordingsFolderRequest) ProtoMessage() {}
+
+func (x *EnsureRecordingsFolderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnsureRecordingsFolderRequest.ProtoReflect.Descriptor instead.
+func (*EnsureRecordingsFolderRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{88}
+}
+
+func (x *EnsureRecordingsFolderRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
 var File_files_v1_files_proto protoreflect.FileDescriptor
 
 const file_files_v1_files_proto_rawDesc = "" +
@@ -6185,7 +6307,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\trange_end\x18\x04 \x01(\x03R\brangeEnd\x12\x1b\n" +
 	"\tmime_type\x18\x05 \x01(\tR\bmimeType\x12\x1a\n" +
 	"\bfilename\x18\x06 \x01(\tR\bfilename\x12$\n" +
-	"\x0eis_first_chunk\x18\a \x01(\bR\fisFirstChunk\"\xb3\b\n" +
+	"\x0eis_first_chunk\x18\a \x01(\bR\fisFirstChunk\"\xf9\b\n" +
 	"\x04File\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03urn\x18\x02 \x01(\tR\x03urn\x12'\n" +
@@ -6217,7 +6339,8 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"owner_info\x18\x15 \x01(\v2\x13.files.v1.FileOwnerH\x03R\townerInfo\x88\x01\x01\x127\n" +
 	"\bmetadata\x18\x16 \x01(\v2\x16.files.v1.FileMetadataH\x04R\bmetadata\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x17 \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\fbaselineRole\x88\x01\x01\x12 \n" +
-	"\x04tags\x18\x18 \x03(\v2\f.tags.v1.TagR\x04tagsB\f\n" +
+	"\x04tags\x18\x18 \x03(\v2\f.tags.v1.TagR\x04tags\x12D\n" +
+	"\x10transcode_status\x18\x19 \x01(\x0e2\x19.files.v1.TranscodeStatusR\x0ftranscodeStatusB\f\n" +
 	"\n" +
 	"_folder_idB\x0e\n" +
 	"\f_descriptionB\r\n" +
@@ -6715,7 +6838,9 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x11_parent_folder_idB\x10\n" +
 	"\x0e_baseline_role\"Q\n" +
 	"\x18CreateFolderTreeResponse\x125\n" +
-	"\afolders\x18\x01 \x03(\v2\x1b.files.v1.CreatedFolderInfoR\afolders*\x9a\x01\n" +
+	"\afolders\x18\x01 \x03(\v2\x1b.files.v1.CreatedFolderInfoR\afolders\"H\n" +
+	"\x1dEnsureRecordingsFolderRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId*\x9a\x01\n" +
 	"\fUploadStatus\x12\x1d\n" +
 	"\x19UPLOAD_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14UPLOAD_STATUS_ACTIVE\x10\x01\x12\x1b\n" +
@@ -6728,7 +6853,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x1cEXTRACTION_STATUS_PROCESSING\x10\x02\x12\x1f\n" +
 	"\x1bEXTRACTION_STATUS_COMPLETED\x10\x03\x12\x1c\n" +
 	"\x18EXTRACTION_STATUS_FAILED\x10\x04\x12\x1d\n" +
-	"\x19EXTRACTION_STATUS_SKIPPED\x10\x052\xce\x1b\n" +
+	"\x19EXTRACTION_STATUS_SKIPPED\x10\x05*\xd0\x01\n" +
+	"\x0fTranscodeStatus\x12 \n" +
+	"\x1cTRANSCODE_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bTRANSCODE_STATUS_NOT_NEEDED\x10\x01\x12\x1c\n" +
+	"\x18TRANSCODE_STATUS_PENDING\x10\x02\x12\x1f\n" +
+	"\x1bTRANSCODE_STATUS_PROCESSING\x10\x03\x12\x1e\n" +
+	"\x1aTRANSCODE_STATUS_COMPLETED\x10\x04\x12\x1b\n" +
+	"\x17TRANSCODE_STATUS_FAILED\x10\x052\xab\x1c\n" +
 	"\fFilesService\x12S\n" +
 	"\x0eInitiateUpload\x12\x1f.files.v1.InitiateUploadRequest\x1a .files.v1.InitiateUploadResponse\x12J\n" +
 	"\vUploadChunk\x12\x1c.files.v1.UploadChunkRequest\x1a\x1d.files.v1.UploadChunkResponse\x12Q\n" +
@@ -6749,7 +6881,8 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\fUpdateFolder\x12\x1d.files.v1.UpdateFolderRequest\x1a\x18.files.v1.FolderResponse\x12M\n" +
 	"\fDeleteFolder\x12\x1d.files.v1.DeleteFolderRequest\x1a\x1e.files.v1.DeleteFolderResponse\x12M\n" +
 	"\fGetFilesTree\x12\x1d.files.v1.GetFilesTreeRequest\x1a\x1e.files.v1.GetFilesTreeResponse\x12Y\n" +
-	"\x10CreateFolderTree\x12!.files.v1.CreateFolderTreeRequest\x1a\".files.v1.CreateFolderTreeResponse\x12D\n" +
+	"\x10CreateFolderTree\x12!.files.v1.CreateFolderTreeRequest\x1a\".files.v1.CreateFolderTreeResponse\x12[\n" +
+	"\x16EnsureRecordingsFolder\x12'.files.v1.EnsureRecordingsFolderRequest\x1a\x18.files.v1.FolderResponse\x12D\n" +
 	"\tMoveItems\x12\x1a.files.v1.MoveItemsRequest\x1a\x1b.files.v1.MoveItemsResponse\x12D\n" +
 	"\tCopyItems\x12\x1a.files.v1.CopyItemsRequest\x1a\x1b.files.v1.CopyItemsResponse\x12G\n" +
 	"\n" +
@@ -6788,265 +6921,270 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 	return file_files_v1_files_proto_rawDescData
 }
 
-var file_files_v1_files_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 89)
+var file_files_v1_files_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 90)
 var file_files_v1_files_proto_goTypes = []any{
 	(UploadStatus)(0),                              // 0: files.v1.UploadStatus
 	(ExtractionStatus)(0),                          // 1: files.v1.ExtractionStatus
-	(*InitiateUploadRequest)(nil),                  // 2: files.v1.InitiateUploadRequest
-	(*InitiateUploadResponse)(nil),                 // 3: files.v1.InitiateUploadResponse
-	(*UploadChunkRequest)(nil),                     // 4: files.v1.UploadChunkRequest
-	(*UploadChunkResponse)(nil),                    // 5: files.v1.UploadChunkResponse
-	(*CompleteUploadRequest)(nil),                  // 6: files.v1.CompleteUploadRequest
-	(*UploadChunksResponse)(nil),                   // 7: files.v1.UploadChunksResponse
-	(*GetUploadStatusRequest)(nil),                 // 8: files.v1.GetUploadStatusRequest
-	(*GetUploadStatusResponse)(nil),                // 9: files.v1.GetUploadStatusResponse
-	(*AbortUploadRequest)(nil),                     // 10: files.v1.AbortUploadRequest
-	(*AbortUploadResponse)(nil),                    // 11: files.v1.AbortUploadResponse
-	(*DownloadFileRequest)(nil),                    // 12: files.v1.DownloadFileRequest
-	(*DownloadChunkResponse)(nil),                  // 13: files.v1.DownloadChunkResponse
-	(*StreamFileRangeRequest)(nil),                 // 14: files.v1.StreamFileRangeRequest
-	(*StreamFileRangeResponse)(nil),                // 15: files.v1.StreamFileRangeResponse
-	(*File)(nil),                                   // 16: files.v1.File
-	(*FileTagIds)(nil),                             // 17: files.v1.FileTagIds
-	(*FileMetadata)(nil),                           // 18: files.v1.FileMetadata
-	(*FileOwner)(nil),                              // 19: files.v1.FileOwner
-	(*FileResponse)(nil),                           // 20: files.v1.FileResponse
-	(*GetFileRequest)(nil),                         // 21: files.v1.GetFileRequest
-	(*UpdateFileRequest)(nil),                      // 22: files.v1.UpdateFileRequest
-	(*DeleteFileRequest)(nil),                      // 23: files.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),                     // 24: files.v1.DeleteFileResponse
-	(*RestoreFileRequest)(nil),                     // 25: files.v1.RestoreFileRequest
-	(*ListFilesRequest)(nil),                       // 26: files.v1.ListFilesRequest
-	(*ListFilesResponse)(nil),                      // 27: files.v1.ListFilesResponse
-	(*Folder)(nil),                                 // 28: files.v1.Folder
-	(*FolderResponse)(nil),                         // 29: files.v1.FolderResponse
-	(*CreateFolderRequest)(nil),                    // 30: files.v1.CreateFolderRequest
-	(*UpdateFolderRequest)(nil),                    // 31: files.v1.UpdateFolderRequest
-	(*DeleteFolderRequest)(nil),                    // 32: files.v1.DeleteFolderRequest
-	(*DeleteFolderResponse)(nil),                   // 33: files.v1.DeleteFolderResponse
-	(*GetFilesTreeRequest)(nil),                    // 34: files.v1.GetFilesTreeRequest
-	(*GetFilesTreeResponse)(nil),                   // 35: files.v1.GetFilesTreeResponse
-	(*TreeNode)(nil),                               // 36: files.v1.TreeNode
-	(*MoveItemsRequest)(nil),                       // 37: files.v1.MoveItemsRequest
-	(*MoveItemsResponse)(nil),                      // 38: files.v1.MoveItemsResponse
-	(*CopyItemsRequest)(nil),                       // 39: files.v1.CopyItemsRequest
-	(*CopyItemsResponse)(nil),                      // 40: files.v1.CopyItemsResponse
-	(*BulkDeleteRequest)(nil),                      // 41: files.v1.BulkDeleteRequest
-	(*BulkDeleteResponse)(nil),                     // 42: files.v1.BulkDeleteResponse
-	(*EmptyTrashRequest)(nil),                      // 43: files.v1.EmptyTrashRequest
-	(*EmptyTrashResponse)(nil),                     // 44: files.v1.EmptyTrashResponse
-	(*ListTrashRequest)(nil),                       // 45: files.v1.ListTrashRequest
-	(*ListTrashResponse)(nil),                      // 46: files.v1.ListTrashResponse
-	(*RestoreFolderRequest)(nil),                   // 47: files.v1.RestoreFolderRequest
-	(*FileVersion)(nil),                            // 48: files.v1.FileVersion
-	(*ListFileVersionsRequest)(nil),                // 49: files.v1.ListFileVersionsRequest
-	(*ListFileVersionsResponse)(nil),               // 50: files.v1.ListFileVersionsResponse
-	(*RestoreFileVersionRequest)(nil),              // 51: files.v1.RestoreFileVersionRequest
-	(*FilterCriteria)(nil),                         // 52: files.v1.FilterCriteria
-	(*IconValue)(nil),                              // 53: files.v1.IconValue
-	(*SavedFilter)(nil),                            // 54: files.v1.SavedFilter
-	(*SavedFilterResponse)(nil),                    // 55: files.v1.SavedFilterResponse
-	(*CreateSavedFilterRequest)(nil),               // 56: files.v1.CreateSavedFilterRequest
-	(*GetSavedFilterRequest)(nil),                  // 57: files.v1.GetSavedFilterRequest
-	(*UpdateSavedFilterRequest)(nil),               // 58: files.v1.UpdateSavedFilterRequest
-	(*DeleteSavedFilterRequest)(nil),               // 59: files.v1.DeleteSavedFilterRequest
-	(*DeleteSavedFilterResponse)(nil),              // 60: files.v1.DeleteSavedFilterResponse
-	(*ListSavedFiltersRequest)(nil),                // 61: files.v1.ListSavedFiltersRequest
-	(*ListSavedFiltersResponse)(nil),               // 62: files.v1.ListSavedFiltersResponse
-	(*OrgStorageQuota)(nil),                        // 63: files.v1.OrgStorageQuota
-	(*GetOrgStorageQuotaRequest)(nil),              // 64: files.v1.GetOrgStorageQuotaRequest
-	(*GetOrgStorageQuotaResponse)(nil),             // 65: files.v1.GetOrgStorageQuotaResponse
-	(*SetOrgStorageQuotaRequest)(nil),              // 66: files.v1.SetOrgStorageQuotaRequest
-	(*SetOrgStorageQuotaResponse)(nil),             // 67: files.v1.SetOrgStorageQuotaResponse
-	(*UserStorageQuotaOverrideInfo)(nil),           // 68: files.v1.UserStorageQuotaOverrideInfo
-	(*GetUserStorageQuotaRequest)(nil),             // 69: files.v1.GetUserStorageQuotaRequest
-	(*GetUserStorageQuotaResponse)(nil),            // 70: files.v1.GetUserStorageQuotaResponse
-	(*SetUserStorageQuotaOverrideRequest)(nil),     // 71: files.v1.SetUserStorageQuotaOverrideRequest
-	(*SetUserStorageQuotaOverrideResponse)(nil),    // 72: files.v1.SetUserStorageQuotaOverrideResponse
-	(*RemoveUserStorageQuotaOverrideRequest)(nil),  // 73: files.v1.RemoveUserStorageQuotaOverrideRequest
-	(*RemoveUserStorageQuotaOverrideResponse)(nil), // 74: files.v1.RemoveUserStorageQuotaOverrideResponse
-	(*ListUserStorageQuotaOverridesRequest)(nil),   // 75: files.v1.ListUserStorageQuotaOverridesRequest
-	(*ListUserStorageQuotaOverridesResponse)(nil),  // 76: files.v1.ListUserStorageQuotaOverridesResponse
-	(*StorageUsageInfo)(nil),                       // 77: files.v1.StorageUsageInfo
-	(*GetStorageUsageRequest)(nil),                 // 78: files.v1.GetStorageUsageRequest
-	(*GetStorageUsageResponse)(nil),                // 79: files.v1.GetStorageUsageResponse
-	(*ListOrgStorageUsageRequest)(nil),             // 80: files.v1.ListOrgStorageUsageRequest
-	(*ListOrgStorageUsageResponse)(nil),            // 81: files.v1.ListOrgStorageUsageResponse
-	(*RecalculateStorageUsageRequest)(nil),         // 82: files.v1.RecalculateStorageUsageRequest
-	(*RecalculateStorageUsageResponse)(nil),        // 83: files.v1.RecalculateStorageUsageResponse
-	(*CheckStorageQuotaRequest)(nil),               // 84: files.v1.CheckStorageQuotaRequest
-	(*CheckStorageQuotaResponse)(nil),              // 85: files.v1.CheckStorageQuotaResponse
-	(*FolderTreeNode)(nil),                         // 86: files.v1.FolderTreeNode
-	(*CreatedFolderInfo)(nil),                      // 87: files.v1.CreatedFolderInfo
-	(*CreateFolderTreeRequest)(nil),                // 88: files.v1.CreateFolderTreeRequest
-	(*CreateFolderTreeResponse)(nil),               // 89: files.v1.CreateFolderTreeResponse
-	nil,                                            // 90: files.v1.FileMetadata.ExifEntry
-	(v1.AccessMode)(0),                             // 91: common.v1.AccessMode
-	(v1.ContentRole)(0),                            // 92: common.v1.ContentRole
-	(*timestamppb.Timestamp)(nil),                  // 93: google.protobuf.Timestamp
-	(*v11.Tag)(nil),                                // 94: tags.v1.Tag
+	(TranscodeStatus)(0),                           // 2: files.v1.TranscodeStatus
+	(*InitiateUploadRequest)(nil),                  // 3: files.v1.InitiateUploadRequest
+	(*InitiateUploadResponse)(nil),                 // 4: files.v1.InitiateUploadResponse
+	(*UploadChunkRequest)(nil),                     // 5: files.v1.UploadChunkRequest
+	(*UploadChunkResponse)(nil),                    // 6: files.v1.UploadChunkResponse
+	(*CompleteUploadRequest)(nil),                  // 7: files.v1.CompleteUploadRequest
+	(*UploadChunksResponse)(nil),                   // 8: files.v1.UploadChunksResponse
+	(*GetUploadStatusRequest)(nil),                 // 9: files.v1.GetUploadStatusRequest
+	(*GetUploadStatusResponse)(nil),                // 10: files.v1.GetUploadStatusResponse
+	(*AbortUploadRequest)(nil),                     // 11: files.v1.AbortUploadRequest
+	(*AbortUploadResponse)(nil),                    // 12: files.v1.AbortUploadResponse
+	(*DownloadFileRequest)(nil),                    // 13: files.v1.DownloadFileRequest
+	(*DownloadChunkResponse)(nil),                  // 14: files.v1.DownloadChunkResponse
+	(*StreamFileRangeRequest)(nil),                 // 15: files.v1.StreamFileRangeRequest
+	(*StreamFileRangeResponse)(nil),                // 16: files.v1.StreamFileRangeResponse
+	(*File)(nil),                                   // 17: files.v1.File
+	(*FileTagIds)(nil),                             // 18: files.v1.FileTagIds
+	(*FileMetadata)(nil),                           // 19: files.v1.FileMetadata
+	(*FileOwner)(nil),                              // 20: files.v1.FileOwner
+	(*FileResponse)(nil),                           // 21: files.v1.FileResponse
+	(*GetFileRequest)(nil),                         // 22: files.v1.GetFileRequest
+	(*UpdateFileRequest)(nil),                      // 23: files.v1.UpdateFileRequest
+	(*DeleteFileRequest)(nil),                      // 24: files.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),                     // 25: files.v1.DeleteFileResponse
+	(*RestoreFileRequest)(nil),                     // 26: files.v1.RestoreFileRequest
+	(*ListFilesRequest)(nil),                       // 27: files.v1.ListFilesRequest
+	(*ListFilesResponse)(nil),                      // 28: files.v1.ListFilesResponse
+	(*Folder)(nil),                                 // 29: files.v1.Folder
+	(*FolderResponse)(nil),                         // 30: files.v1.FolderResponse
+	(*CreateFolderRequest)(nil),                    // 31: files.v1.CreateFolderRequest
+	(*UpdateFolderRequest)(nil),                    // 32: files.v1.UpdateFolderRequest
+	(*DeleteFolderRequest)(nil),                    // 33: files.v1.DeleteFolderRequest
+	(*DeleteFolderResponse)(nil),                   // 34: files.v1.DeleteFolderResponse
+	(*GetFilesTreeRequest)(nil),                    // 35: files.v1.GetFilesTreeRequest
+	(*GetFilesTreeResponse)(nil),                   // 36: files.v1.GetFilesTreeResponse
+	(*TreeNode)(nil),                               // 37: files.v1.TreeNode
+	(*MoveItemsRequest)(nil),                       // 38: files.v1.MoveItemsRequest
+	(*MoveItemsResponse)(nil),                      // 39: files.v1.MoveItemsResponse
+	(*CopyItemsRequest)(nil),                       // 40: files.v1.CopyItemsRequest
+	(*CopyItemsResponse)(nil),                      // 41: files.v1.CopyItemsResponse
+	(*BulkDeleteRequest)(nil),                      // 42: files.v1.BulkDeleteRequest
+	(*BulkDeleteResponse)(nil),                     // 43: files.v1.BulkDeleteResponse
+	(*EmptyTrashRequest)(nil),                      // 44: files.v1.EmptyTrashRequest
+	(*EmptyTrashResponse)(nil),                     // 45: files.v1.EmptyTrashResponse
+	(*ListTrashRequest)(nil),                       // 46: files.v1.ListTrashRequest
+	(*ListTrashResponse)(nil),                      // 47: files.v1.ListTrashResponse
+	(*RestoreFolderRequest)(nil),                   // 48: files.v1.RestoreFolderRequest
+	(*FileVersion)(nil),                            // 49: files.v1.FileVersion
+	(*ListFileVersionsRequest)(nil),                // 50: files.v1.ListFileVersionsRequest
+	(*ListFileVersionsResponse)(nil),               // 51: files.v1.ListFileVersionsResponse
+	(*RestoreFileVersionRequest)(nil),              // 52: files.v1.RestoreFileVersionRequest
+	(*FilterCriteria)(nil),                         // 53: files.v1.FilterCriteria
+	(*IconValue)(nil),                              // 54: files.v1.IconValue
+	(*SavedFilter)(nil),                            // 55: files.v1.SavedFilter
+	(*SavedFilterResponse)(nil),                    // 56: files.v1.SavedFilterResponse
+	(*CreateSavedFilterRequest)(nil),               // 57: files.v1.CreateSavedFilterRequest
+	(*GetSavedFilterRequest)(nil),                  // 58: files.v1.GetSavedFilterRequest
+	(*UpdateSavedFilterRequest)(nil),               // 59: files.v1.UpdateSavedFilterRequest
+	(*DeleteSavedFilterRequest)(nil),               // 60: files.v1.DeleteSavedFilterRequest
+	(*DeleteSavedFilterResponse)(nil),              // 61: files.v1.DeleteSavedFilterResponse
+	(*ListSavedFiltersRequest)(nil),                // 62: files.v1.ListSavedFiltersRequest
+	(*ListSavedFiltersResponse)(nil),               // 63: files.v1.ListSavedFiltersResponse
+	(*OrgStorageQuota)(nil),                        // 64: files.v1.OrgStorageQuota
+	(*GetOrgStorageQuotaRequest)(nil),              // 65: files.v1.GetOrgStorageQuotaRequest
+	(*GetOrgStorageQuotaResponse)(nil),             // 66: files.v1.GetOrgStorageQuotaResponse
+	(*SetOrgStorageQuotaRequest)(nil),              // 67: files.v1.SetOrgStorageQuotaRequest
+	(*SetOrgStorageQuotaResponse)(nil),             // 68: files.v1.SetOrgStorageQuotaResponse
+	(*UserStorageQuotaOverrideInfo)(nil),           // 69: files.v1.UserStorageQuotaOverrideInfo
+	(*GetUserStorageQuotaRequest)(nil),             // 70: files.v1.GetUserStorageQuotaRequest
+	(*GetUserStorageQuotaResponse)(nil),            // 71: files.v1.GetUserStorageQuotaResponse
+	(*SetUserStorageQuotaOverrideRequest)(nil),     // 72: files.v1.SetUserStorageQuotaOverrideRequest
+	(*SetUserStorageQuotaOverrideResponse)(nil),    // 73: files.v1.SetUserStorageQuotaOverrideResponse
+	(*RemoveUserStorageQuotaOverrideRequest)(nil),  // 74: files.v1.RemoveUserStorageQuotaOverrideRequest
+	(*RemoveUserStorageQuotaOverrideResponse)(nil), // 75: files.v1.RemoveUserStorageQuotaOverrideResponse
+	(*ListUserStorageQuotaOverridesRequest)(nil),   // 76: files.v1.ListUserStorageQuotaOverridesRequest
+	(*ListUserStorageQuotaOverridesResponse)(nil),  // 77: files.v1.ListUserStorageQuotaOverridesResponse
+	(*StorageUsageInfo)(nil),                       // 78: files.v1.StorageUsageInfo
+	(*GetStorageUsageRequest)(nil),                 // 79: files.v1.GetStorageUsageRequest
+	(*GetStorageUsageResponse)(nil),                // 80: files.v1.GetStorageUsageResponse
+	(*ListOrgStorageUsageRequest)(nil),             // 81: files.v1.ListOrgStorageUsageRequest
+	(*ListOrgStorageUsageResponse)(nil),            // 82: files.v1.ListOrgStorageUsageResponse
+	(*RecalculateStorageUsageRequest)(nil),         // 83: files.v1.RecalculateStorageUsageRequest
+	(*RecalculateStorageUsageResponse)(nil),        // 84: files.v1.RecalculateStorageUsageResponse
+	(*CheckStorageQuotaRequest)(nil),               // 85: files.v1.CheckStorageQuotaRequest
+	(*CheckStorageQuotaResponse)(nil),              // 86: files.v1.CheckStorageQuotaResponse
+	(*FolderTreeNode)(nil),                         // 87: files.v1.FolderTreeNode
+	(*CreatedFolderInfo)(nil),                      // 88: files.v1.CreatedFolderInfo
+	(*CreateFolderTreeRequest)(nil),                // 89: files.v1.CreateFolderTreeRequest
+	(*CreateFolderTreeResponse)(nil),               // 90: files.v1.CreateFolderTreeResponse
+	(*EnsureRecordingsFolderRequest)(nil),          // 91: files.v1.EnsureRecordingsFolderRequest
+	nil,                                            // 92: files.v1.FileMetadata.ExifEntry
+	(v1.AccessMode)(0),                             // 93: common.v1.AccessMode
+	(v1.ContentRole)(0),                            // 94: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),                  // 95: google.protobuf.Timestamp
+	(*v11.Tag)(nil),                                // 96: tags.v1.Tag
 }
 var file_files_v1_files_proto_depIdxs = []int32{
-	91,  // 0: files.v1.InitiateUploadRequest.access_mode:type_name -> common.v1.AccessMode
-	92,  // 1: files.v1.InitiateUploadRequest.baseline_role:type_name -> common.v1.ContentRole
-	16,  // 2: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
+	93,  // 0: files.v1.InitiateUploadRequest.access_mode:type_name -> common.v1.AccessMode
+	94,  // 1: files.v1.InitiateUploadRequest.baseline_role:type_name -> common.v1.ContentRole
+	17,  // 2: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
 	0,   // 3: files.v1.GetUploadStatusResponse.status:type_name -> files.v1.UploadStatus
-	91,  // 4: files.v1.File.access_mode:type_name -> common.v1.AccessMode
+	93,  // 4: files.v1.File.access_mode:type_name -> common.v1.AccessMode
 	1,   // 5: files.v1.File.extraction_status:type_name -> files.v1.ExtractionStatus
-	93,  // 6: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
-	93,  // 7: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
-	93,  // 8: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
-	92,  // 9: files.v1.File.user_role:type_name -> common.v1.ContentRole
-	19,  // 10: files.v1.File.owner_info:type_name -> files.v1.FileOwner
-	18,  // 11: files.v1.File.metadata:type_name -> files.v1.FileMetadata
-	92,  // 12: files.v1.File.baseline_role:type_name -> common.v1.ContentRole
-	94,  // 13: files.v1.File.tags:type_name -> tags.v1.Tag
-	90,  // 14: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
-	16,  // 15: files.v1.FileResponse.file:type_name -> files.v1.File
-	91,  // 16: files.v1.UpdateFileRequest.access_mode:type_name -> common.v1.AccessMode
-	92,  // 17: files.v1.UpdateFileRequest.baseline_role:type_name -> common.v1.ContentRole
-	17,  // 18: files.v1.UpdateFileRequest.tag_ids:type_name -> files.v1.FileTagIds
-	91,  // 19: files.v1.ListFilesRequest.access_mode:type_name -> common.v1.AccessMode
-	16,  // 20: files.v1.ListFilesResponse.files:type_name -> files.v1.File
-	91,  // 21: files.v1.Folder.access_mode:type_name -> common.v1.AccessMode
-	93,  // 22: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
-	93,  // 23: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
-	92,  // 24: files.v1.Folder.baseline_role:type_name -> common.v1.ContentRole
-	28,  // 25: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
-	91,  // 26: files.v1.CreateFolderRequest.access_mode:type_name -> common.v1.AccessMode
-	92,  // 27: files.v1.CreateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
-	91,  // 28: files.v1.UpdateFolderRequest.access_mode:type_name -> common.v1.AccessMode
-	92,  // 29: files.v1.UpdateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
-	36,  // 30: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
-	91,  // 31: files.v1.TreeNode.access_mode:type_name -> common.v1.AccessMode
-	36,  // 32: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
-	92,  // 33: files.v1.TreeNode.baseline_role:type_name -> common.v1.ContentRole
-	91,  // 34: files.v1.MoveItemsRequest.target_access_mode:type_name -> common.v1.AccessMode
-	92,  // 35: files.v1.MoveItemsRequest.target_baseline_role:type_name -> common.v1.ContentRole
-	16,  // 36: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
-	16,  // 37: files.v1.ListTrashResponse.files:type_name -> files.v1.File
-	28,  // 38: files.v1.ListTrashResponse.folders:type_name -> files.v1.Folder
-	93,  // 39: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
-	48,  // 40: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
-	91,  // 41: files.v1.FilterCriteria.access_mode:type_name -> common.v1.AccessMode
-	93,  // 42: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
-	93,  // 43: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
-	53,  // 44: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
-	52,  // 45: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
-	93,  // 46: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
-	93,  // 47: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
-	54,  // 48: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
-	53,  // 49: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	52,  // 50: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	53,  // 51: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	52,  // 52: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	54,  // 53: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
-	93,  // 54: files.v1.OrgStorageQuota.created_at:type_name -> google.protobuf.Timestamp
-	93,  // 55: files.v1.OrgStorageQuota.updated_at:type_name -> google.protobuf.Timestamp
-	63,  // 56: files.v1.GetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
-	63,  // 57: files.v1.SetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
-	93,  // 58: files.v1.UserStorageQuotaOverrideInfo.created_at:type_name -> google.protobuf.Timestamp
-	93,  // 59: files.v1.UserStorageQuotaOverrideInfo.updated_at:type_name -> google.protobuf.Timestamp
-	68,  // 60: files.v1.GetUserStorageQuotaResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
-	68,  // 61: files.v1.SetUserStorageQuotaOverrideResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
-	68,  // 62: files.v1.ListUserStorageQuotaOverridesResponse.overrides:type_name -> files.v1.UserStorageQuotaOverrideInfo
-	93,  // 63: files.v1.StorageUsageInfo.last_recalculated_at:type_name -> google.protobuf.Timestamp
-	77,  // 64: files.v1.GetStorageUsageResponse.usage:type_name -> files.v1.StorageUsageInfo
-	77,  // 65: files.v1.ListOrgStorageUsageResponse.users:type_name -> files.v1.StorageUsageInfo
-	77,  // 66: files.v1.RecalculateStorageUsageResponse.recalculated:type_name -> files.v1.StorageUsageInfo
-	86,  // 67: files.v1.FolderTreeNode.children:type_name -> files.v1.FolderTreeNode
-	86,  // 68: files.v1.CreateFolderTreeRequest.tree:type_name -> files.v1.FolderTreeNode
-	91,  // 69: files.v1.CreateFolderTreeRequest.access_mode:type_name -> common.v1.AccessMode
-	92,  // 70: files.v1.CreateFolderTreeRequest.baseline_role:type_name -> common.v1.ContentRole
-	87,  // 71: files.v1.CreateFolderTreeResponse.folders:type_name -> files.v1.CreatedFolderInfo
-	2,   // 72: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
-	4,   // 73: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
-	6,   // 74: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
-	4,   // 75: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
-	8,   // 76: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
-	10,  // 77: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
-	12,  // 78: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
-	14,  // 79: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
-	21,  // 80: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
-	22,  // 81: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
-	23,  // 82: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
-	25,  // 83: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
-	26,  // 84: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
-	30,  // 85: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
-	31,  // 86: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
-	32,  // 87: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
-	34,  // 88: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
-	88,  // 89: files.v1.FilesService.CreateFolderTree:input_type -> files.v1.CreateFolderTreeRequest
-	37,  // 90: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
-	39,  // 91: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
-	41,  // 92: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
-	43,  // 93: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
-	45,  // 94: files.v1.FilesService.ListTrash:input_type -> files.v1.ListTrashRequest
-	47,  // 95: files.v1.FilesService.RestoreFolder:input_type -> files.v1.RestoreFolderRequest
-	49,  // 96: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
-	51,  // 97: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
-	64,  // 98: files.v1.FilesService.GetOrgStorageQuota:input_type -> files.v1.GetOrgStorageQuotaRequest
-	66,  // 99: files.v1.FilesService.SetOrgStorageQuota:input_type -> files.v1.SetOrgStorageQuotaRequest
-	69,  // 100: files.v1.FilesService.GetUserStorageQuota:input_type -> files.v1.GetUserStorageQuotaRequest
-	71,  // 101: files.v1.FilesService.SetUserStorageQuotaOverride:input_type -> files.v1.SetUserStorageQuotaOverrideRequest
-	73,  // 102: files.v1.FilesService.RemoveUserStorageQuotaOverride:input_type -> files.v1.RemoveUserStorageQuotaOverrideRequest
-	75,  // 103: files.v1.FilesService.ListUserStorageQuotaOverrides:input_type -> files.v1.ListUserStorageQuotaOverridesRequest
-	78,  // 104: files.v1.FilesService.GetStorageUsage:input_type -> files.v1.GetStorageUsageRequest
-	80,  // 105: files.v1.FilesService.ListOrgStorageUsage:input_type -> files.v1.ListOrgStorageUsageRequest
-	82,  // 106: files.v1.FilesService.RecalculateStorageUsage:input_type -> files.v1.RecalculateStorageUsageRequest
-	84,  // 107: files.v1.FilesService.CheckStorageQuota:input_type -> files.v1.CheckStorageQuotaRequest
-	56,  // 108: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
-	57,  // 109: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
-	58,  // 110: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
-	59,  // 111: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
-	61,  // 112: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
-	3,   // 113: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
-	5,   // 114: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
-	7,   // 115: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
-	7,   // 116: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
-	9,   // 117: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
-	11,  // 118: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
-	13,  // 119: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
-	15,  // 120: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
-	20,  // 121: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
-	20,  // 122: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
-	24,  // 123: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
-	20,  // 124: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
-	27,  // 125: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
-	29,  // 126: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
-	29,  // 127: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
-	33,  // 128: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
-	35,  // 129: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
-	89,  // 130: files.v1.FilesService.CreateFolderTree:output_type -> files.v1.CreateFolderTreeResponse
-	38,  // 131: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
-	40,  // 132: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
-	42,  // 133: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
-	44,  // 134: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
-	46,  // 135: files.v1.FilesService.ListTrash:output_type -> files.v1.ListTrashResponse
-	29,  // 136: files.v1.FilesService.RestoreFolder:output_type -> files.v1.FolderResponse
-	50,  // 137: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
-	20,  // 138: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
-	65,  // 139: files.v1.FilesService.GetOrgStorageQuota:output_type -> files.v1.GetOrgStorageQuotaResponse
-	67,  // 140: files.v1.FilesService.SetOrgStorageQuota:output_type -> files.v1.SetOrgStorageQuotaResponse
-	70,  // 141: files.v1.FilesService.GetUserStorageQuota:output_type -> files.v1.GetUserStorageQuotaResponse
-	72,  // 142: files.v1.FilesService.SetUserStorageQuotaOverride:output_type -> files.v1.SetUserStorageQuotaOverrideResponse
-	74,  // 143: files.v1.FilesService.RemoveUserStorageQuotaOverride:output_type -> files.v1.RemoveUserStorageQuotaOverrideResponse
-	76,  // 144: files.v1.FilesService.ListUserStorageQuotaOverrides:output_type -> files.v1.ListUserStorageQuotaOverridesResponse
-	79,  // 145: files.v1.FilesService.GetStorageUsage:output_type -> files.v1.GetStorageUsageResponse
-	81,  // 146: files.v1.FilesService.ListOrgStorageUsage:output_type -> files.v1.ListOrgStorageUsageResponse
-	83,  // 147: files.v1.FilesService.RecalculateStorageUsage:output_type -> files.v1.RecalculateStorageUsageResponse
-	85,  // 148: files.v1.FilesService.CheckStorageQuota:output_type -> files.v1.CheckStorageQuotaResponse
-	55,  // 149: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	55,  // 150: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
-	55,  // 151: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	60,  // 152: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
-	62,  // 153: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
-	113, // [113:154] is the sub-list for method output_type
-	72,  // [72:113] is the sub-list for method input_type
-	72,  // [72:72] is the sub-list for extension type_name
-	72,  // [72:72] is the sub-list for extension extendee
-	0,   // [0:72] is the sub-list for field type_name
+	95,  // 6: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 7: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
+	95,  // 8: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
+	94,  // 9: files.v1.File.user_role:type_name -> common.v1.ContentRole
+	20,  // 10: files.v1.File.owner_info:type_name -> files.v1.FileOwner
+	19,  // 11: files.v1.File.metadata:type_name -> files.v1.FileMetadata
+	94,  // 12: files.v1.File.baseline_role:type_name -> common.v1.ContentRole
+	96,  // 13: files.v1.File.tags:type_name -> tags.v1.Tag
+	2,   // 14: files.v1.File.transcode_status:type_name -> files.v1.TranscodeStatus
+	92,  // 15: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
+	17,  // 16: files.v1.FileResponse.file:type_name -> files.v1.File
+	93,  // 17: files.v1.UpdateFileRequest.access_mode:type_name -> common.v1.AccessMode
+	94,  // 18: files.v1.UpdateFileRequest.baseline_role:type_name -> common.v1.ContentRole
+	18,  // 19: files.v1.UpdateFileRequest.tag_ids:type_name -> files.v1.FileTagIds
+	93,  // 20: files.v1.ListFilesRequest.access_mode:type_name -> common.v1.AccessMode
+	17,  // 21: files.v1.ListFilesResponse.files:type_name -> files.v1.File
+	93,  // 22: files.v1.Folder.access_mode:type_name -> common.v1.AccessMode
+	95,  // 23: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 24: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 25: files.v1.Folder.baseline_role:type_name -> common.v1.ContentRole
+	29,  // 26: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
+	93,  // 27: files.v1.CreateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	94,  // 28: files.v1.CreateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	93,  // 29: files.v1.UpdateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	94,  // 30: files.v1.UpdateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	37,  // 31: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
+	93,  // 32: files.v1.TreeNode.access_mode:type_name -> common.v1.AccessMode
+	37,  // 33: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
+	94,  // 34: files.v1.TreeNode.baseline_role:type_name -> common.v1.ContentRole
+	93,  // 35: files.v1.MoveItemsRequest.target_access_mode:type_name -> common.v1.AccessMode
+	94,  // 36: files.v1.MoveItemsRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	17,  // 37: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
+	17,  // 38: files.v1.ListTrashResponse.files:type_name -> files.v1.File
+	29,  // 39: files.v1.ListTrashResponse.folders:type_name -> files.v1.Folder
+	95,  // 40: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
+	49,  // 41: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
+	93,  // 42: files.v1.FilterCriteria.access_mode:type_name -> common.v1.AccessMode
+	95,  // 43: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
+	95,  // 44: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
+	54,  // 45: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
+	53,  // 46: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
+	95,  // 47: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 48: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
+	55,  // 49: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
+	54,  // 50: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	53,  // 51: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	54,  // 52: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	53,  // 53: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	55,  // 54: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
+	95,  // 55: files.v1.OrgStorageQuota.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 56: files.v1.OrgStorageQuota.updated_at:type_name -> google.protobuf.Timestamp
+	64,  // 57: files.v1.GetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
+	64,  // 58: files.v1.SetOrgStorageQuotaResponse.quota:type_name -> files.v1.OrgStorageQuota
+	95,  // 59: files.v1.UserStorageQuotaOverrideInfo.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 60: files.v1.UserStorageQuotaOverrideInfo.updated_at:type_name -> google.protobuf.Timestamp
+	69,  // 61: files.v1.GetUserStorageQuotaResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	69,  // 62: files.v1.SetUserStorageQuotaOverrideResponse.override:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	69,  // 63: files.v1.ListUserStorageQuotaOverridesResponse.overrides:type_name -> files.v1.UserStorageQuotaOverrideInfo
+	95,  // 64: files.v1.StorageUsageInfo.last_recalculated_at:type_name -> google.protobuf.Timestamp
+	78,  // 65: files.v1.GetStorageUsageResponse.usage:type_name -> files.v1.StorageUsageInfo
+	78,  // 66: files.v1.ListOrgStorageUsageResponse.users:type_name -> files.v1.StorageUsageInfo
+	78,  // 67: files.v1.RecalculateStorageUsageResponse.recalculated:type_name -> files.v1.StorageUsageInfo
+	87,  // 68: files.v1.FolderTreeNode.children:type_name -> files.v1.FolderTreeNode
+	87,  // 69: files.v1.CreateFolderTreeRequest.tree:type_name -> files.v1.FolderTreeNode
+	93,  // 70: files.v1.CreateFolderTreeRequest.access_mode:type_name -> common.v1.AccessMode
+	94,  // 71: files.v1.CreateFolderTreeRequest.baseline_role:type_name -> common.v1.ContentRole
+	88,  // 72: files.v1.CreateFolderTreeResponse.folders:type_name -> files.v1.CreatedFolderInfo
+	3,   // 73: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
+	5,   // 74: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
+	7,   // 75: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
+	5,   // 76: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
+	9,   // 77: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
+	11,  // 78: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
+	13,  // 79: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
+	15,  // 80: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
+	22,  // 81: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
+	23,  // 82: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
+	24,  // 83: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
+	26,  // 84: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
+	27,  // 85: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
+	31,  // 86: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
+	32,  // 87: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
+	33,  // 88: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
+	35,  // 89: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
+	89,  // 90: files.v1.FilesService.CreateFolderTree:input_type -> files.v1.CreateFolderTreeRequest
+	91,  // 91: files.v1.FilesService.EnsureRecordingsFolder:input_type -> files.v1.EnsureRecordingsFolderRequest
+	38,  // 92: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
+	40,  // 93: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
+	42,  // 94: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
+	44,  // 95: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
+	46,  // 96: files.v1.FilesService.ListTrash:input_type -> files.v1.ListTrashRequest
+	48,  // 97: files.v1.FilesService.RestoreFolder:input_type -> files.v1.RestoreFolderRequest
+	50,  // 98: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
+	52,  // 99: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
+	65,  // 100: files.v1.FilesService.GetOrgStorageQuota:input_type -> files.v1.GetOrgStorageQuotaRequest
+	67,  // 101: files.v1.FilesService.SetOrgStorageQuota:input_type -> files.v1.SetOrgStorageQuotaRequest
+	70,  // 102: files.v1.FilesService.GetUserStorageQuota:input_type -> files.v1.GetUserStorageQuotaRequest
+	72,  // 103: files.v1.FilesService.SetUserStorageQuotaOverride:input_type -> files.v1.SetUserStorageQuotaOverrideRequest
+	74,  // 104: files.v1.FilesService.RemoveUserStorageQuotaOverride:input_type -> files.v1.RemoveUserStorageQuotaOverrideRequest
+	76,  // 105: files.v1.FilesService.ListUserStorageQuotaOverrides:input_type -> files.v1.ListUserStorageQuotaOverridesRequest
+	79,  // 106: files.v1.FilesService.GetStorageUsage:input_type -> files.v1.GetStorageUsageRequest
+	81,  // 107: files.v1.FilesService.ListOrgStorageUsage:input_type -> files.v1.ListOrgStorageUsageRequest
+	83,  // 108: files.v1.FilesService.RecalculateStorageUsage:input_type -> files.v1.RecalculateStorageUsageRequest
+	85,  // 109: files.v1.FilesService.CheckStorageQuota:input_type -> files.v1.CheckStorageQuotaRequest
+	57,  // 110: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
+	58,  // 111: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
+	59,  // 112: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
+	60,  // 113: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
+	62,  // 114: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
+	4,   // 115: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
+	6,   // 116: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
+	8,   // 117: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
+	8,   // 118: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
+	10,  // 119: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
+	12,  // 120: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
+	14,  // 121: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
+	16,  // 122: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
+	21,  // 123: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
+	21,  // 124: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
+	25,  // 125: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
+	21,  // 126: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
+	28,  // 127: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
+	30,  // 128: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
+	30,  // 129: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
+	34,  // 130: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
+	36,  // 131: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
+	90,  // 132: files.v1.FilesService.CreateFolderTree:output_type -> files.v1.CreateFolderTreeResponse
+	30,  // 133: files.v1.FilesService.EnsureRecordingsFolder:output_type -> files.v1.FolderResponse
+	39,  // 134: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
+	41,  // 135: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
+	43,  // 136: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
+	45,  // 137: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
+	47,  // 138: files.v1.FilesService.ListTrash:output_type -> files.v1.ListTrashResponse
+	30,  // 139: files.v1.FilesService.RestoreFolder:output_type -> files.v1.FolderResponse
+	51,  // 140: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
+	21,  // 141: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
+	66,  // 142: files.v1.FilesService.GetOrgStorageQuota:output_type -> files.v1.GetOrgStorageQuotaResponse
+	68,  // 143: files.v1.FilesService.SetOrgStorageQuota:output_type -> files.v1.SetOrgStorageQuotaResponse
+	71,  // 144: files.v1.FilesService.GetUserStorageQuota:output_type -> files.v1.GetUserStorageQuotaResponse
+	73,  // 145: files.v1.FilesService.SetUserStorageQuotaOverride:output_type -> files.v1.SetUserStorageQuotaOverrideResponse
+	75,  // 146: files.v1.FilesService.RemoveUserStorageQuotaOverride:output_type -> files.v1.RemoveUserStorageQuotaOverrideResponse
+	77,  // 147: files.v1.FilesService.ListUserStorageQuotaOverrides:output_type -> files.v1.ListUserStorageQuotaOverridesResponse
+	80,  // 148: files.v1.FilesService.GetStorageUsage:output_type -> files.v1.GetStorageUsageResponse
+	82,  // 149: files.v1.FilesService.ListOrgStorageUsage:output_type -> files.v1.ListOrgStorageUsageResponse
+	84,  // 150: files.v1.FilesService.RecalculateStorageUsage:output_type -> files.v1.RecalculateStorageUsageResponse
+	86,  // 151: files.v1.FilesService.CheckStorageQuota:output_type -> files.v1.CheckStorageQuotaResponse
+	56,  // 152: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	56,  // 153: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
+	56,  // 154: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	61,  // 155: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
+	63,  // 156: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
+	115, // [115:157] is the sub-list for method output_type
+	73,  // [73:115] is the sub-list for method input_type
+	73,  // [73:73] is the sub-list for extension type_name
+	73,  // [73:73] is the sub-list for extension extendee
+	0,   // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -7090,8 +7228,8 @@ func file_files_v1_files_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   89,
+			NumEnums:      3,
+			NumMessages:   90,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

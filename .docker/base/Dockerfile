@@ -1,7 +1,8 @@
-FROM python:3.14.0-slim-trixie AS builder
+FROM python:3.14.4-slim-trixie AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TINI_VERSION=v0.19.0
+ENV UV_VERSION=0.11.12
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /builder
@@ -9,7 +10,7 @@ WORKDIR /builder
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc tini.asc
 
-COPY --from=ghcr.io/astral-sh/uv:0.10.0 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \

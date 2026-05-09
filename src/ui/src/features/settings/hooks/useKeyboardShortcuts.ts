@@ -55,6 +55,9 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'projects.undo': 'Ctrl+Z',
     'projects.redo': 'Ctrl+Shift+Z',
 
+    // Recording actions
+    'recording.toggleQuickClip': 'Ctrl+Alt+S',
+
     // Chat actions
     'chat.editLast': 'ArrowUp',
     // Canvas actions

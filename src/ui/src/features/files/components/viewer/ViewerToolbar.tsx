@@ -29,6 +29,7 @@ import {
 } from '@/features/files/store/viewerSlice';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize } from '@/features/files/components/list/utils';
+import { getDownloadGateState } from '@/features/files/utils/transcodeGate';
 
 interface ViewerToolbarProps {
     file: SerializedFile;
@@ -63,6 +64,11 @@ export function ViewerToolbar({ file, onClose, onDownload, onEdit, isEditing }: 
     const isPdf = file.mimeType === 'application/pdf';
     const showImageControls = isImage && !isEditing;
     const canEdit = isImage && !isEditing;
+
+    const downloadGate = getDownloadGateState(file.transcodeStatus);
+    const downloadTitle = downloadGate.disabled
+        ? (downloadGate.tooltip ?? '')
+        : `Download (${downloadShortcut})`;
 
     const handleFullscreen = async () => {
         if (!document.fullscreenElement) {
@@ -193,8 +199,9 @@ export function ViewerToolbar({ file, onClose, onDownload, onEdit, isEditing }: 
                 )}
                 <button
                     onClick={onDownload}
-                    className="viewer-btn p-2"
-                    title={`Download (${downloadShortcut})`}
+                    disabled={downloadGate.disabled}
+                    className="viewer-btn p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={downloadTitle}
                 >
                     <DownloadSimple size={20} />
                 </button>

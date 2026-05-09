@@ -48,6 +48,12 @@ const MESSAGE_PATTERNS: [RegExp, string][] = [
     [/fetch failed|failed to fetch|networkerror/i, 'Could not connect to the server. Please check your internet connection.'],
     [/timeout|timed?\s*out/i, 'The request timed out. Please try again.'],
     [/abort/i, ''],  // empty = suppress (handled separately by middleware)
+    // Recording-specific MediaRecorder / getDisplayMedia errors. The trigger
+    // thunk treats `permission_denied` as a silent cancel, but the patterns
+    // here cover any straggler that escapes through `rejectWithValue`.
+    [/notallowederror|permission denied/i, 'Screen recording permission denied. Click the camcorder icon to retry.'],
+    [/notfounderror|no recording source/i, 'No screen, window, or tab is available to record.'],
+    [/encodingerror|encoder initialization failed/i, "Recording encoder failed. Try again, or restart your browser if it keeps happening."],
 ];
 
 /**

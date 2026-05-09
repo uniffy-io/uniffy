@@ -95,6 +95,55 @@ proto3.util.setEnumType(ExtractionStatus, "files.v1.ExtractionStatus", [
 ]);
 
 /**
+ * Server-side transcode pipeline state. Drives the download gate so the
+ * browser does not hand the user a `.mp4` labelled file whose bytes are
+ * still WebM. Files that never need a transcode (Safari path, non-video
+ * uploads) sit at NOT_NEEDED forever.
+ *
+ * @generated from enum files.v1.TranscodeStatus
+ */
+export enum TranscodeStatus {
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_NOT_NEEDED = 1;
+   */
+  NOT_NEEDED = 1,
+
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_PENDING = 2;
+   */
+  PENDING = 2,
+
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_PROCESSING = 3;
+   */
+  PROCESSING = 3,
+
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_COMPLETED = 4;
+   */
+  COMPLETED = 4,
+
+  /**
+   * @generated from enum value: TRANSCODE_STATUS_FAILED = 5;
+   */
+  FAILED = 5,
+}
+// Retrieve enum metadata with: proto3.getEnumType(TranscodeStatus)
+proto3.util.setEnumType(TranscodeStatus, "files.v1.TranscodeStatus", [
+  { no: 0, name: "TRANSCODE_STATUS_UNSPECIFIED" },
+  { no: 1, name: "TRANSCODE_STATUS_NOT_NEEDED" },
+  { no: 2, name: "TRANSCODE_STATUS_PENDING" },
+  { no: 3, name: "TRANSCODE_STATUS_PROCESSING" },
+  { no: 4, name: "TRANSCODE_STATUS_COMPLETED" },
+  { no: 5, name: "TRANSCODE_STATUS_FAILED" },
+]);
+
+/**
  * @generated from message files.v1.InitiateUploadRequest
  */
 export class InitiateUploadRequest extends Message<InitiateUploadRequest> {
@@ -114,6 +163,11 @@ export class InitiateUploadRequest extends Message<InitiateUploadRequest> {
   mimeType = "";
 
   /**
+   * Expected total size in bytes. Pass 0 for streaming uploads where the final
+   * size is unknown (e.g. screen recording / MediaRecorder). For 0-size
+   * streams, the upfront quota check is deferred to CompleteUpload, which
+   * verifies the actual byte count before creating the File row.
+   *
    * @generated from field: int64 total_size = 4;
    */
   totalSize = protoInt64.zero;
@@ -184,7 +238,8 @@ export class InitiateUploadResponse extends Message<InitiateUploadResponse> {
   chunkSize = 0;
 
   /**
-   * Expected number of chunks
+   * Expected number of chunks. 0 when total_size was 0 (unknown). Clients
+   * streaming an unknown-size upload must not rely on this for progress UI.
    *
    * @generated from field: int32 total_chunks = 3;
    */
@@ -993,6 +1048,14 @@ export class File extends Message<File> {
    */
   tags: Tag[] = [];
 
+  /**
+   * Server-side transcode pipeline state. UI uses this to gate the download
+   * button while a WebM screen recording is being remuxed to MP4.
+   *
+   * @generated from field: files.v1.TranscodeStatus transcode_status = 25;
+   */
+  transcodeStatus = TranscodeStatus.UNSPECIFIED;
+
   constructor(data?: PartialMessage<File>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1024,6 +1087,7 @@ export class File extends Message<File> {
     { no: 22, name: "metadata", kind: "message", T: FileMetadata, opt: true },
     { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
     { no: 24, name: "tags", kind: "message", T: Tag, repeated: true },
+    { no: 25, name: "transcode_status", kind: "enum", T: proto3.getEnumType(TranscodeStatus) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): File {
@@ -5050,6 +5114,43 @@ export class CreateFolderTreeResponse extends Message<CreateFolderTreeResponse> 
 
   static equals(a: CreateFolderTreeResponse | PlainMessage<CreateFolderTreeResponse> | undefined, b: CreateFolderTreeResponse | PlainMessage<CreateFolderTreeResponse> | undefined): boolean {
     return proto3.util.equals(CreateFolderTreeResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.EnsureRecordingsFolderRequest
+ */
+export class EnsureRecordingsFolderRequest extends Message<EnsureRecordingsFolderRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<EnsureRecordingsFolderRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.EnsureRecordingsFolderRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnsureRecordingsFolderRequest {
+    return new EnsureRecordingsFolderRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnsureRecordingsFolderRequest {
+    return new EnsureRecordingsFolderRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnsureRecordingsFolderRequest {
+    return new EnsureRecordingsFolderRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnsureRecordingsFolderRequest | PlainMessage<EnsureRecordingsFolderRequest> | undefined, b: EnsureRecordingsFolderRequest | PlainMessage<EnsureRecordingsFolderRequest> | undefined): boolean {
+    return proto3.util.equals(EnsureRecordingsFolderRequest, a, b);
   }
 }
 

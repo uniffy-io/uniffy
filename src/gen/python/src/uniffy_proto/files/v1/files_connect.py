@@ -70,6 +70,9 @@ class FilesService(Protocol):
     async def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -324,6 +327,16 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_folder_tree,
+                ),
+                "/files.v1.FilesService/EnsureRecordingsFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="EnsureRecordingsFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.ensure_recordings_folder,
                 ),
                 "/files.v1.FilesService/MoveItems": Endpoint.unary(
                     method=MethodInfo(
@@ -927,6 +940,26 @@ class FilesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def ensure_recordings_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EnsureRecordingsFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def move_items(
         self,
         request: files_dot_v1_dot_files__pb2.MoveItemsRequest,
@@ -1425,6 +1458,8 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def copy_items(self, request: files_dot_v1_dot_files__pb2.CopyItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CopyItemsResponse:
@@ -1656,6 +1691,16 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_folder_tree,
+                ),
+                "/files.v1.FilesService/EnsureRecordingsFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="EnsureRecordingsFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.ensure_recordings_folder,
                 ),
                 "/files.v1.FilesService/MoveItems": EndpointSync.unary(
                     method=MethodInfo(
@@ -2253,6 +2298,26 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CreateFolderTreeRequest,
                 output=files_dot_v1_dot_files__pb2.CreateFolderTreeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def ensure_recordings_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EnsureRecordingsFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
+                output=files_dot_v1_dot_files__pb2.FolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

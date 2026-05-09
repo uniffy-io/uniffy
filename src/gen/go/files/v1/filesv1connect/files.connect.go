@@ -83,6 +83,9 @@ const (
 	// FilesServiceCreateFolderTreeProcedure is the fully-qualified name of the FilesService's
 	// CreateFolderTree RPC.
 	FilesServiceCreateFolderTreeProcedure = "/files.v1.FilesService/CreateFolderTree"
+	// FilesServiceEnsureRecordingsFolderProcedure is the fully-qualified name of the FilesService's
+	// EnsureRecordingsFolder RPC.
+	FilesServiceEnsureRecordingsFolderProcedure = "/files.v1.FilesService/EnsureRecordingsFolder"
 	// FilesServiceMoveItemsProcedure is the fully-qualified name of the FilesService's MoveItems RPC.
 	FilesServiceMoveItemsProcedure = "/files.v1.FilesService/MoveItems"
 	// FilesServiceCopyItemsProcedure is the fully-qualified name of the FilesService's CopyItems RPC.
@@ -190,6 +193,10 @@ type FilesServiceClient interface {
 	GetFilesTree(context.Context, *connect.Request[v1.GetFilesTreeRequest]) (*connect.Response[v1.GetFilesTreeResponse], error)
 	// Create a folder tree in a single transaction (for recursive folder upload).
 	CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error)
+	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+	// concurrent invocations across backend instances. Used by the screen
+	// recording feature to resolve the upload destination on first record.
+	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -357,6 +364,12 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("CreateFolderTree")),
 			connect.WithClientOptions(opts...),
 		),
+		ensureRecordingsFolder: connect.NewClient[v1.EnsureRecordingsFolderRequest, v1.FolderResponse](
+			httpClient,
+			baseURL+FilesServiceEnsureRecordingsFolderProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("EnsureRecordingsFolder")),
+			connect.WithClientOptions(opts...),
+		),
 		moveItems: connect.NewClient[v1.MoveItemsRequest, v1.MoveItemsResponse](
 			httpClient,
 			baseURL+FilesServiceMoveItemsProcedure,
@@ -518,6 +531,7 @@ type filesServiceClient struct {
 	deleteFolder                   *connect.Client[v1.DeleteFolderRequest, v1.DeleteFolderResponse]
 	getFilesTree                   *connect.Client[v1.GetFilesTreeRequest, v1.GetFilesTreeResponse]
 	createFolderTree               *connect.Client[v1.CreateFolderTreeRequest, v1.CreateFolderTreeResponse]
+	ensureRecordingsFolder         *connect.Client[v1.EnsureRecordingsFolderRequest, v1.FolderResponse]
 	moveItems                      *connect.Client[v1.MoveItemsRequest, v1.MoveItemsResponse]
 	copyItems                      *connect.Client[v1.CopyItemsRequest, v1.CopyItemsResponse]
 	bulkDelete                     *connect.Client[v1.BulkDeleteRequest, v1.BulkDeleteResponse]
@@ -631,6 +645,11 @@ func (c *filesServiceClient) GetFilesTree(ctx context.Context, req *connect.Requ
 // CreateFolderTree calls files.v1.FilesService.CreateFolderTree.
 func (c *filesServiceClient) CreateFolderTree(ctx context.Context, req *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error) {
 	return c.createFolderTree.CallUnary(ctx, req)
+}
+
+// EnsureRecordingsFolder calls files.v1.FilesService.EnsureRecordingsFolder.
+func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, req *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+	return c.ensureRecordingsFolder.CallUnary(ctx, req)
 }
 
 // MoveItems calls files.v1.FilesService.MoveItems.
@@ -789,6 +808,10 @@ type FilesServiceHandler interface {
 	GetFilesTree(context.Context, *connect.Request[v1.GetFilesTreeRequest]) (*connect.Response[v1.GetFilesTreeResponse], error)
 	// Create a folder tree in a single transaction (for recursive folder upload).
 	CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error)
+	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+	// concurrent invocations across backend instances. Used by the screen
+	// recording feature to resolve the upload destination on first record.
+	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -950,6 +973,12 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		FilesServiceCreateFolderTreeProcedure,
 		svc.CreateFolderTree,
 		connect.WithSchema(filesServiceMethods.ByName("CreateFolderTree")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceEnsureRecordingsFolderHandler := connect.NewUnaryHandler(
+		FilesServiceEnsureRecordingsFolderProcedure,
+		svc.EnsureRecordingsFolder,
+		connect.WithSchema(filesServiceMethods.ByName("EnsureRecordingsFolder")),
 		connect.WithHandlerOptions(opts...),
 	)
 	filesServiceMoveItemsHandler := connect.NewUnaryHandler(
@@ -1128,6 +1157,8 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceGetFilesTreeHandler.ServeHTTP(w, r)
 		case FilesServiceCreateFolderTreeProcedure:
 			filesServiceCreateFolderTreeHandler.ServeHTTP(w, r)
+		case FilesServiceEnsureRecordingsFolderProcedure:
+			filesServiceEnsureRecordingsFolderHandler.ServeHTTP(w, r)
 		case FilesServiceMoveItemsProcedure:
 			filesServiceMoveItemsHandler.ServeHTTP(w, r)
 		case FilesServiceCopyItemsProcedure:
@@ -1253,6 +1284,10 @@ func (UnimplementedFilesServiceHandler) GetFilesTree(context.Context, *connect.R
 
 func (UnimplementedFilesServiceHandler) CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CreateFolderTree is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.EnsureRecordingsFolder is not implemented"))
 }
 
 func (UnimplementedFilesServiceHandler) MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error) {

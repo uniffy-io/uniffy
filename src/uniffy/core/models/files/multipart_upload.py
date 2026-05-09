@@ -77,7 +77,9 @@ class MultipartUpload(SQLModel, table=True):
     status : UploadStatus
         Current status of the upload.
     parts_completed : list[dict] | None
-        List of completed parts: [{"part_number": int, "etag": str, "size": int}].
+        Deprecated. Completed parts now live in `files_multipart_parts`. Kept
+        as a nullable column for one release cycle to keep rolling deploys
+        safe; reads must go through ``FileOperations.list_completed_part_numbers``.
     expires_at : datetime
         When this upload expires if not completed.
     created_at : datetime
@@ -151,15 +153,9 @@ class MultipartUpload(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
-    def get_completed_chunk_numbers(self) -> list[int]:
-        """Get list of completed chunk numbers."""
-        if not self.parts_completed:
-            return []
-        return sorted([p["part_number"] for p in self.parts_completed])
-
     def __repr__(self) -> str:
         """Return string representation of MultipartUpload."""
         return (
             f"<MultipartUpload(id={self.id}, filename={self.filename!r}, "
-            f"status={self.status}, chunks={len(self.parts_completed or [])}/{self.total_chunks})>"
+            f"status={self.status}, total_chunks={self.total_chunks})>"
         )

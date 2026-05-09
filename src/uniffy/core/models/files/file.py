@@ -38,6 +38,37 @@ class ExtractionStatus(str, Enum):
     SKIPPED = "SKIPPED"
 
 
+class TranscodeStatus(str, Enum):
+    """Server-side transcode pipeline state.
+
+    Drives the download-button gate. The user always sees a `.mp4`
+    filename, regardless of whether the bytes on S3 are WebM (pending
+    transcode) or MP4 (post-swap). Allowing the download while
+    `PENDING`/`PROCESSING` would deliver mismatched bytes.
+
+    Attributes
+    ----------
+    NOT_NEEDED : str
+        Default. Non-video uploads, and recordings already encoded as
+        H.264 MP4 by the browser (Safari).
+    PENDING : str
+        Enqueued by `complete_upload`; worker has not picked it up.
+    PROCESSING : str
+        Worker is holding the Valkey lock and running ffmpeg.
+    COMPLETED : str
+        Atomic swap done; `storage_key` points at the MP4.
+    FAILED : str
+        Worker errored; `storage_key` still points at the WebM. The
+        download path serves the WebM rather than blocking the user.
+    """
+
+    NOT_NEEDED = "NOT_NEEDED"
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
 class File(SQLModel, table=True):
     """
     File model representing an uploaded file in the system.
@@ -142,6 +173,19 @@ class File(SQLModel, table=True):
             ),
             nullable=False,
             server_default="PENDING",
+        ),
+    )
+    transcode_status: TranscodeStatus = Field(
+        default=TranscodeStatus.NOT_NEEDED,
+        sa_column=Column(
+            SAEnum(
+                TranscodeStatus,
+                name="transcodestatus",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            server_default="NOT_NEEDED",
         ),
     )
     is_deleted: bool = Field(default=False, nullable=False)

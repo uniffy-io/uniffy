@@ -13,6 +13,7 @@ import { cn } from '@/shared/utils/cn';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useShortcutHandler } from '@/features/settings';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Drawer } from '@/components/ui/drawer';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
@@ -91,6 +92,8 @@ export function NotificationsPage() {
         dispatch(toggleFilterSidebar());
     }, [dispatch]);
 
+    useShortcutHandler('app.toggleSidebar', handleExpandSidebar);
+
     const contentArea = (
         <div className="flex flex-col h-full overflow-hidden">
             <NotificationsPageHeader />
@@ -142,7 +145,7 @@ export function NotificationsPage() {
                                 defaultSize={isMobileOrTablet ? 200 : 260}
                                 minSize={160}
                                 maxSize={isMobileOrTablet ? 300 : 400}
-                                className="bg-card overflow-hidden"
+                                className="bg-background overflow-hidden"
                             >
                                 <NotificationsFilterSidebar />
                             </Panel>

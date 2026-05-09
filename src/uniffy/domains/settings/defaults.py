@@ -70,6 +70,8 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "canvas.zoomOut": "Ctrl+-",
     "canvas.undo": "Ctrl+Z",
     "canvas.redo": "Ctrl+Shift+Z",
+    # Recording actions
+    "recording.toggleQuickClip": "Ctrl+Alt+S",
     # Chat actions
     "chat.newMessage": "N",
     "chat.search": "Ctrl+F",

@@ -27,6 +27,7 @@ import { ViewerNavigation } from '@/features/files/components/viewer/ViewerNavig
 import { ViewerContent } from '@/features/files/components/viewer/ViewerContent';
 import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
+import { getDownloadGateState } from '@/features/files/utils/transcodeGate';
 
 // Import viewer-specific styles
 import '../../styles/viewer.css';
@@ -89,15 +90,14 @@ export function FileViewerModal() {
 
     // Handle download
     const handleDownload = useCallback(() => {
-        if (file) {
-            // Trigger download via hidden anchor
-            const link = document.createElement('a');
-            link.href = buildMediaStreamUrl(file.organizationId, file.id);
-            link.download = file.filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        if (!file) return;
+        if (getDownloadGateState(file.transcodeStatus).disabled) return;
+        const link = document.createElement('a');
+        link.href = buildMediaStreamUrl(file.organizationId, file.id);
+        link.download = file.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }, [file]);
 
     // PDF page navigation

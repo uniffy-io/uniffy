@@ -37,6 +37,7 @@ const (
 	FilesService_DeleteFolder_FullMethodName                   = "/files.v1.FilesService/DeleteFolder"
 	FilesService_GetFilesTree_FullMethodName                   = "/files.v1.FilesService/GetFilesTree"
 	FilesService_CreateFolderTree_FullMethodName               = "/files.v1.FilesService/CreateFolderTree"
+	FilesService_EnsureRecordingsFolder_FullMethodName         = "/files.v1.FilesService/EnsureRecordingsFolder"
 	FilesService_MoveItems_FullMethodName                      = "/files.v1.FilesService/MoveItems"
 	FilesService_CopyItems_FullMethodName                      = "/files.v1.FilesService/CopyItems"
 	FilesService_BulkDelete_FullMethodName                     = "/files.v1.FilesService/BulkDelete"
@@ -107,6 +108,10 @@ type FilesServiceClient interface {
 	GetFilesTree(ctx context.Context, in *GetFilesTreeRequest, opts ...grpc.CallOption) (*GetFilesTreeResponse, error)
 	// Create a folder tree in a single transaction (for recursive folder upload).
 	CreateFolderTree(ctx context.Context, in *CreateFolderTreeRequest, opts ...grpc.CallOption) (*CreateFolderTreeResponse, error)
+	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+	// concurrent invocations across backend instances. Used by the screen
+	// recording feature to resolve the upload destination on first record.
+	EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(ctx context.Context, in *MoveItemsRequest, opts ...grpc.CallOption) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -358,6 +363,16 @@ func (c *filesServiceClient) CreateFolderTree(ctx context.Context, in *CreateFol
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateFolderTreeResponse)
 	err := c.cc.Invoke(ctx, FilesService_CreateFolderTree_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FolderResponse)
+	err := c.cc.Invoke(ctx, FilesService_EnsureRecordingsFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -639,6 +654,10 @@ type FilesServiceServer interface {
 	GetFilesTree(context.Context, *GetFilesTreeRequest) (*GetFilesTreeResponse, error)
 	// Create a folder tree in a single transaction (for recursive folder upload).
 	CreateFolderTree(context.Context, *CreateFolderTreeRequest) (*CreateFolderTreeResponse, error)
+	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
+	// concurrent invocations across backend instances. Used by the screen
+	// recording feature to resolve the upload destination on first record.
+	EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*FolderResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -748,6 +767,9 @@ func (UnimplementedFilesServiceServer) GetFilesTree(context.Context, *GetFilesTr
 }
 func (UnimplementedFilesServiceServer) CreateFolderTree(context.Context, *CreateFolderTreeRequest) (*CreateFolderTreeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateFolderTree not implemented")
+}
+func (UnimplementedFilesServiceServer) EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*FolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnsureRecordingsFolder not implemented")
 }
 func (UnimplementedFilesServiceServer) MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveItems not implemented")
@@ -1134,6 +1156,24 @@ func _FilesService_CreateFolderTree_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FilesServiceServer).CreateFolderTree(ctx, req.(*CreateFolderTreeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_EnsureRecordingsFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnsureRecordingsFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).EnsureRecordingsFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_EnsureRecordingsFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).EnsureRecordingsFolder(ctx, req.(*EnsureRecordingsFolderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1618,6 +1658,10 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateFolderTree",
 			Handler:    _FilesService_CreateFolderTree_Handler,
+		},
+		{
+			MethodName: "EnsureRecordingsFolder",
+			Handler:    _FilesService_EnsureRecordingsFolder_Handler,
 		},
 		{
 			MethodName: "MoveItems",

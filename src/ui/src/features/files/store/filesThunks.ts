@@ -39,6 +39,7 @@ export const fileToPlain = (file: File) => ({
     description: file.description,
     version: file.version,
     extractionStatus: file.extractionStatus,
+    transcodeStatus: file.transcodeStatus,
     isDeleted: file.isDeleted,
     createdAt: file.createdAt ? {
         seconds: typeof file.createdAt.seconds === 'bigint' ? Number(file.createdAt.seconds) : file.createdAt.seconds,
