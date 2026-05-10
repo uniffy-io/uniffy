@@ -8,7 +8,6 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v11 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	v1 "github.com/uniffy-io/uniffy-proto-go/users/v1"
 	http "net/http"
 	strings "strings"
@@ -70,20 +69,20 @@ const (
 // UsersServiceClient is a client for the users.v1.UsersService service.
 type UsersServiceClient interface {
 	// Self-service profile operations
-	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.UserProfile], error)
-	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UserProfile], error)
+	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error)
+	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error)
 	// System Admin operations
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
-	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.UserProfile], error)
-	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.UserProfile], error)
-	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UserProfile], error)
+	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// Avatar operations
-	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UserProfile], error)
-	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.UserProfile], error)
+	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error)
+	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error)
 	// User-Organization operations (System Admin)
 	ListUserOrganizations(context.Context, *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error)
-	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v11.MemberInfo], error)
+	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error)
 	RemoveUserFromOrganization(context.Context, *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error)
 }
 
@@ -98,13 +97,13 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 	baseURL = strings.TrimRight(baseURL, "/")
 	usersServiceMethods := v1.File_users_v1_users_proto.Services().ByName("UsersService").Methods()
 	return &usersServiceClient{
-		getMyProfile: connect.NewClient[v1.GetMyProfileRequest, v1.UserProfile](
+		getMyProfile: connect.NewClient[v1.GetMyProfileRequest, v1.GetMyProfileResponse](
 			httpClient,
 			baseURL+UsersServiceGetMyProfileProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("GetMyProfile")),
 			connect.WithClientOptions(opts...),
 		),
-		updateMyProfile: connect.NewClient[v1.UpdateMyProfileRequest, v1.UserProfile](
+		updateMyProfile: connect.NewClient[v1.UpdateMyProfileRequest, v1.UpdateMyProfileResponse](
 			httpClient,
 			baseURL+UsersServiceUpdateMyProfileProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("UpdateMyProfile")),
@@ -116,19 +115,19 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceMethods.ByName("ListUsers")),
 			connect.WithClientOptions(opts...),
 		),
-		getUser: connect.NewClient[v1.GetUserRequest, v1.UserProfile](
+		getUser: connect.NewClient[v1.GetUserRequest, v1.GetUserResponse](
 			httpClient,
 			baseURL+UsersServiceGetUserProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("GetUser")),
 			connect.WithClientOptions(opts...),
 		),
-		createUser: connect.NewClient[v1.CreateUserRequest, v1.UserProfile](
+		createUser: connect.NewClient[v1.CreateUserRequest, v1.CreateUserResponse](
 			httpClient,
 			baseURL+UsersServiceCreateUserProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("CreateUser")),
 			connect.WithClientOptions(opts...),
 		),
-		updateUser: connect.NewClient[v1.UpdateUserRequest, v1.UserProfile](
+		updateUser: connect.NewClient[v1.UpdateUserRequest, v1.UpdateUserResponse](
 			httpClient,
 			baseURL+UsersServiceUpdateUserProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("UpdateUser")),
@@ -140,13 +139,13 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceMethods.ByName("DeleteUser")),
 			connect.WithClientOptions(opts...),
 		),
-		uploadAvatar: connect.NewClient[v1.UploadAvatarRequest, v1.UserProfile](
+		uploadAvatar: connect.NewClient[v1.UploadAvatarRequest, v1.UploadAvatarResponse](
 			httpClient,
 			baseURL+UsersServiceUploadAvatarProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("UploadAvatar")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteAvatar: connect.NewClient[v1.DeleteAvatarRequest, v1.UserProfile](
+		deleteAvatar: connect.NewClient[v1.DeleteAvatarRequest, v1.DeleteAvatarResponse](
 			httpClient,
 			baseURL+UsersServiceDeleteAvatarProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("DeleteAvatar")),
@@ -158,7 +157,7 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceMethods.ByName("ListUserOrganizations")),
 			connect.WithClientOptions(opts...),
 		),
-		addUserToOrganization: connect.NewClient[v1.AddUserToOrganizationRequest, v11.MemberInfo](
+		addUserToOrganization: connect.NewClient[v1.AddUserToOrganizationRequest, v1.AddUserToOrganizationResponse](
 			httpClient,
 			baseURL+UsersServiceAddUserToOrganizationProcedure,
 			connect.WithSchema(usersServiceMethods.ByName("AddUserToOrganization")),
@@ -175,27 +174,27 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // usersServiceClient implements UsersServiceClient.
 type usersServiceClient struct {
-	getMyProfile               *connect.Client[v1.GetMyProfileRequest, v1.UserProfile]
-	updateMyProfile            *connect.Client[v1.UpdateMyProfileRequest, v1.UserProfile]
+	getMyProfile               *connect.Client[v1.GetMyProfileRequest, v1.GetMyProfileResponse]
+	updateMyProfile            *connect.Client[v1.UpdateMyProfileRequest, v1.UpdateMyProfileResponse]
 	listUsers                  *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
-	getUser                    *connect.Client[v1.GetUserRequest, v1.UserProfile]
-	createUser                 *connect.Client[v1.CreateUserRequest, v1.UserProfile]
-	updateUser                 *connect.Client[v1.UpdateUserRequest, v1.UserProfile]
+	getUser                    *connect.Client[v1.GetUserRequest, v1.GetUserResponse]
+	createUser                 *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
+	updateUser                 *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
 	deleteUser                 *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
-	uploadAvatar               *connect.Client[v1.UploadAvatarRequest, v1.UserProfile]
-	deleteAvatar               *connect.Client[v1.DeleteAvatarRequest, v1.UserProfile]
+	uploadAvatar               *connect.Client[v1.UploadAvatarRequest, v1.UploadAvatarResponse]
+	deleteAvatar               *connect.Client[v1.DeleteAvatarRequest, v1.DeleteAvatarResponse]
 	listUserOrganizations      *connect.Client[v1.ListUserOrganizationsRequest, v1.ListUserOrganizationsResponse]
-	addUserToOrganization      *connect.Client[v1.AddUserToOrganizationRequest, v11.MemberInfo]
+	addUserToOrganization      *connect.Client[v1.AddUserToOrganizationRequest, v1.AddUserToOrganizationResponse]
 	removeUserFromOrganization *connect.Client[v1.RemoveUserFromOrganizationRequest, v1.RemoveUserFromOrganizationResponse]
 }
 
 // GetMyProfile calls users.v1.UsersService.GetMyProfile.
-func (c *usersServiceClient) GetMyProfile(ctx context.Context, req *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) GetMyProfile(ctx context.Context, req *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error) {
 	return c.getMyProfile.CallUnary(ctx, req)
 }
 
 // UpdateMyProfile calls users.v1.UsersService.UpdateMyProfile.
-func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, req *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, req *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error) {
 	return c.updateMyProfile.CallUnary(ctx, req)
 }
 
@@ -205,17 +204,17 @@ func (c *usersServiceClient) ListUsers(ctx context.Context, req *connect.Request
 }
 
 // GetUser calls users.v1.UsersService.GetUser.
-func (c *usersServiceClient) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
 	return c.getUser.CallUnary(ctx, req)
 }
 
 // CreateUser calls users.v1.UsersService.CreateUser.
-func (c *usersServiceClient) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
 	return c.createUser.CallUnary(ctx, req)
 }
 
 // UpdateUser calls users.v1.UsersService.UpdateUser.
-func (c *usersServiceClient) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
 	return c.updateUser.CallUnary(ctx, req)
 }
 
@@ -225,12 +224,12 @@ func (c *usersServiceClient) DeleteUser(ctx context.Context, req *connect.Reques
 }
 
 // UploadAvatar calls users.v1.UsersService.UploadAvatar.
-func (c *usersServiceClient) UploadAvatar(ctx context.Context, req *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) UploadAvatar(ctx context.Context, req *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error) {
 	return c.uploadAvatar.CallUnary(ctx, req)
 }
 
 // DeleteAvatar calls users.v1.UsersService.DeleteAvatar.
-func (c *usersServiceClient) DeleteAvatar(ctx context.Context, req *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.UserProfile], error) {
+func (c *usersServiceClient) DeleteAvatar(ctx context.Context, req *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error) {
 	return c.deleteAvatar.CallUnary(ctx, req)
 }
 
@@ -240,7 +239,7 @@ func (c *usersServiceClient) ListUserOrganizations(ctx context.Context, req *con
 }
 
 // AddUserToOrganization calls users.v1.UsersService.AddUserToOrganization.
-func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, req *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v11.MemberInfo], error) {
+func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, req *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error) {
 	return c.addUserToOrganization.CallUnary(ctx, req)
 }
 
@@ -252,20 +251,20 @@ func (c *usersServiceClient) RemoveUserFromOrganization(ctx context.Context, req
 // UsersServiceHandler is an implementation of the users.v1.UsersService service.
 type UsersServiceHandler interface {
 	// Self-service profile operations
-	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.UserProfile], error)
-	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UserProfile], error)
+	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error)
+	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error)
 	// System Admin operations
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
-	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.UserProfile], error)
-	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.UserProfile], error)
-	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UserProfile], error)
+	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// Avatar operations
-	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UserProfile], error)
-	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.UserProfile], error)
+	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error)
+	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error)
 	// User-Organization operations (System Admin)
 	ListUserOrganizations(context.Context, *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error)
-	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v11.MemberInfo], error)
+	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error)
 	RemoveUserFromOrganization(context.Context, *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error)
 }
 
@@ -383,11 +382,11 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedUsersServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedUsersServiceHandler struct{}
 
-func (UnimplementedUsersServiceHandler) GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.GetMyProfile is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UpdateMyProfile is not implemented"))
 }
 
@@ -395,15 +394,15 @@ func (UnimplementedUsersServiceHandler) ListUsers(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.ListUsers is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.GetUser is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.CreateUser is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UpdateUser is not implemented"))
 }
 
@@ -411,11 +410,11 @@ func (UnimplementedUsersServiceHandler) DeleteUser(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.DeleteUser is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UploadAvatar is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.UserProfile], error) {
+func (UnimplementedUsersServiceHandler) DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.DeleteAvatar is not implemented"))
 }
 
@@ -423,7 +422,7 @@ func (UnimplementedUsersServiceHandler) ListUserOrganizations(context.Context, *
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.ListUserOrganizations is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v11.MemberInfo], error) {
+func (UnimplementedUsersServiceHandler) AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.AddUserToOrganization is not implemented"))
 }
 

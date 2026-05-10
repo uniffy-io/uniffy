@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ConfirmationResponse, ConfirmationResponseAck, GetUsageStatsRequest, GetUsageStatsResponse, SendMessageRequest, SendMessageResponse, StreamSendMessageEvent, SubscribeToRunRequest } from "./runtime_pb.js";
+import { GetUsageStatsRequest, GetUsageStatsResponse, RespondToConfirmationRequest, RespondToConfirmationResponse, SendMessageRequest, SendMessageResponse, StreamSendMessageRequest, StreamSendMessageResponse, SubscribeToRunRequest, SubscribeToRunResponse } from "./runtime_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -32,8 +32,8 @@ export const RuntimeService = {
      */
     streamSendMessage: {
       name: "StreamSendMessage",
-      I: SendMessageRequest,
-      O: StreamSendMessageEvent,
+      I: StreamSendMessageRequest,
+      O: StreamSendMessageResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**
@@ -47,7 +47,7 @@ export const RuntimeService = {
     subscribeToRun: {
       name: "SubscribeToRun",
       I: SubscribeToRunRequest,
-      O: StreamSendMessageEvent,
+      O: SubscribeToRunResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**
@@ -57,8 +57,8 @@ export const RuntimeService = {
      */
     respondToConfirmation: {
       name: "RespondToConfirmation",
-      I: ConfirmationResponse,
-      O: ConfirmationResponseAck,
+      I: RespondToConfirmationRequest,
+      O: RespondToConfirmationResponse,
       kind: MethodKind.Unary,
     },
     /**

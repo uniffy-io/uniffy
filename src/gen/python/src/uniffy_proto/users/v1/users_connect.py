@@ -12,42 +12,41 @@ from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, Endpoint, EndpointSync
-import common.v1.common_pb2 as common_dot_v1_dot_common__pb2
 import users.v1.users_pb2 as users_dot_v1_dot_users__pb2
 
 
 class UsersService(Protocol):
-    async def get_my_profile(self, request: users_dot_v1_dot_users__pb2.GetMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def get_my_profile(self, request: users_dot_v1_dot_users__pb2.GetMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.GetMyProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_my_profile(self, request: users_dot_v1_dot_users__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def update_my_profile(self, request: users_dot_v1_dot_users__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UpdateMyProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_users(self, request: users_dot_v1_dot_users__pb2.ListUsersRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUsersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_user(self, request: users_dot_v1_dot_users__pb2.GetUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def get_user(self, request: users_dot_v1_dot_users__pb2.GetUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.GetUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_user(self, request: users_dot_v1_dot_users__pb2.CreateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def create_user(self, request: users_dot_v1_dot_users__pb2.CreateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.CreateUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_user(self, request: users_dot_v1_dot_users__pb2.UpdateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def update_user(self, request: users_dot_v1_dot_users__pb2.UpdateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UpdateUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_user(self, request: users_dot_v1_dot_users__pb2.DeleteUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UploadAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    async def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_user_organizations(self, request: users_dot_v1_dot_users__pb2.ListUserOrganizationsRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUserOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_user_to_organization(self, request: users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    async def add_user_to_organization(self, request: users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def remove_user_from_organization(self, request: users_dot_v1_dot_users__pb2.RemoveUserFromOrganizationRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.RemoveUserFromOrganizationResponse:
@@ -64,7 +63,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="GetMyProfile",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.GetMyProfileRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.GetMyProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_my_profile,
@@ -74,7 +73,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="UpdateMyProfile",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UpdateMyProfileRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UpdateMyProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_my_profile,
@@ -94,7 +93,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="GetUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.GetUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.GetUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_user,
@@ -104,7 +103,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="CreateUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.CreateUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.CreateUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_user,
@@ -114,7 +113,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="UpdateUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UpdateUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UpdateUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_user,
@@ -134,7 +133,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="UploadAvatar",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UploadAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.upload_avatar,
@@ -144,7 +143,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="DeleteAvatar",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.DeleteAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_avatar,
@@ -164,7 +163,7 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         name="AddUserToOrganization",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_user_to_organization,
@@ -197,14 +196,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.GetMyProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetMyProfile",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.GetMyProfileRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.GetMyProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -217,14 +216,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UpdateMyProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMyProfile",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UpdateMyProfileRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UpdateMyProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -257,14 +256,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.GetUserResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.GetUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.GetUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -277,14 +276,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.CreateUserResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.CreateUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.CreateUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -297,14 +296,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UpdateUserResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UpdateUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UpdateUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -337,14 +336,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UploadAvatarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UploadAvatar",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UploadAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -357,14 +356,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.DeleteAvatarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteAvatar",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.DeleteAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -397,14 +396,14 @@ class UsersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddUserToOrganization",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -433,27 +432,27 @@ class UsersServiceClient(ConnectClient):
 
 
 class UsersServiceSync(Protocol):
-    def get_my_profile(self, request: users_dot_v1_dot_users__pb2.GetMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def get_my_profile(self, request: users_dot_v1_dot_users__pb2.GetMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.GetMyProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_my_profile(self, request: users_dot_v1_dot_users__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def update_my_profile(self, request: users_dot_v1_dot_users__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UpdateMyProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_users(self, request: users_dot_v1_dot_users__pb2.ListUsersRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUsersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_user(self, request: users_dot_v1_dot_users__pb2.GetUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def get_user(self, request: users_dot_v1_dot_users__pb2.GetUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.GetUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_user(self, request: users_dot_v1_dot_users__pb2.CreateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def create_user(self, request: users_dot_v1_dot_users__pb2.CreateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.CreateUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_user(self, request: users_dot_v1_dot_users__pb2.UpdateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def update_user(self, request: users_dot_v1_dot_users__pb2.UpdateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UpdateUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_user(self, request: users_dot_v1_dot_users__pb2.DeleteUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UploadAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+    def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_user_organizations(self, request: users_dot_v1_dot_users__pb2.ListUserOrganizationsRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUserOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_user_to_organization(self, request: users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    def add_user_to_organization(self, request: users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_user_from_organization(self, request: users_dot_v1_dot_users__pb2.RemoveUserFromOrganizationRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.RemoveUserFromOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -468,7 +467,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetMyProfile",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.GetMyProfileRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.GetMyProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_my_profile,
@@ -478,7 +477,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateMyProfile",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UpdateMyProfileRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UpdateMyProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_my_profile,
@@ -498,7 +497,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.GetUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.GetUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_user,
@@ -508,7 +507,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.CreateUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.CreateUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_user,
@@ -518,7 +517,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateUser",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UpdateUserRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UpdateUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_user,
@@ -538,7 +537,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="UploadAvatar",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.UploadAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.upload_avatar,
@@ -548,7 +547,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="DeleteAvatar",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
-                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        output=users_dot_v1_dot_users__pb2.DeleteAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_avatar,
@@ -568,7 +567,7 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddUserToOrganization",
                         service_name="users.v1.UsersService",
                         input=users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_user_to_organization,
@@ -601,14 +600,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.GetMyProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetMyProfile",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.GetMyProfileRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.GetMyProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -621,14 +620,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UpdateMyProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMyProfile",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UpdateMyProfileRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UpdateMyProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -661,14 +660,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.GetUserResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.GetUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.GetUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -681,14 +680,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.CreateUserResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.CreateUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.CreateUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -701,14 +700,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UpdateUserResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateUser",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UpdateUserRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UpdateUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -741,14 +740,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.UploadAvatarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UploadAvatar",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.UploadAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -761,14 +760,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+    ) -> users_dot_v1_dot_users__pb2.DeleteAvatarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteAvatar",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
-                output=users_dot_v1_dot_users__pb2.UserProfile,
+                output=users_dot_v1_dot_users__pb2.DeleteAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -801,14 +800,14 @@ class UsersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddUserToOrganization",
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.AddUserToOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=users_dot_v1_dot_users__pb2.AddUserToOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

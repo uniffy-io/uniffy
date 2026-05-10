@@ -421,118 +421,118 @@ export class CalendarEvent extends Message<CalendarEvent> {
   /**
    * Linked resources (notes, files, chats)
    *
-   * @generated from field: repeated cal.v1.LinkedResource linked_resources = 18;
+   * @generated from field: repeated cal.v1.LinkedResource linked_resources = 17;
    */
   linkedResources: LinkedResource[] = [];
 
   /**
    * Access mode
    *
-   * @generated from field: common.v1.AccessMode access_mode = 19;
+   * @generated from field: common.v1.AccessMode access_mode = 18;
    */
   accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Is deleted flag (soft delete)
    *
-   * @generated from field: bool is_deleted = 20;
+   * @generated from field: bool is_deleted = 19;
    */
   isDeleted = false;
 
   /**
    * URNs referenced in this event's description (outgoing links)
    *
-   * @generated from field: repeated string outgoing_references = 21;
+   * @generated from field: repeated string outgoing_references = 20;
    */
   outgoingReferences: string[] = [];
 
   /**
    * Created timestamp
    *
-   * @generated from field: google.protobuf.Timestamp created_at = 22;
+   * @generated from field: google.protobuf.Timestamp created_at = 21;
    */
   createdAt?: Timestamp;
 
   /**
    * Updated timestamp
    *
-   * @generated from field: google.protobuf.Timestamp updated_at = 23;
+   * @generated from field: google.protobuf.Timestamp updated_at = 22;
    */
   updatedAt?: Timestamp;
 
   /**
    * Deleted timestamp (if soft-deleted)
    *
-   * @generated from field: optional google.protobuf.Timestamp deleted_at = 24;
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 23;
    */
   deletedAt?: Timestamp;
 
   /**
    * Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
    *
-   * @generated from field: repeated int32 reminders = 25;
+   * @generated from field: repeated int32 reminders = 24;
    */
   reminders: number[] = [];
 
   /**
    * Whether this is a recurring event (has recurrence pattern other than NONE)
    *
-   * @generated from field: bool is_recurring = 26;
+   * @generated from field: bool is_recurring = 25;
    */
   isRecurring = false;
 
   /**
    * If this is an override of a recurring occurrence, the master event ID
    *
-   * @generated from field: optional string recurrence_id = 27;
+   * @generated from field: optional string recurrence_id = 26;
    */
   recurrenceId?: string;
 
   /**
    * For expanded instances: the specific occurrence date (YYYY-MM-DD)
    *
-   * @generated from field: optional string occurrence_date = 28;
+   * @generated from field: optional string occurrence_date = 27;
    */
   occurrenceDate?: string;
 
   /**
    * Room booking fields (read-only, populated by handler)
    *
-   * @generated from field: optional string room_id = 29;
+   * @generated from field: optional string room_id = 28;
    */
   roomId?: string;
 
   /**
-   * @generated from field: optional string room_name = 30;
+   * @generated from field: optional string room_name = 29;
    */
   roomName?: string;
 
   /**
-   * @generated from field: optional string room_location = 31;
+   * @generated from field: optional string room_location = 30;
    */
   roomLocation?: string;
 
   /**
-   * @generated from field: optional int32 room_capacity = 32;
+   * @generated from field: optional int32 room_capacity = 31;
    */
   roomCapacity?: number;
 
   /**
-   * @generated from field: repeated string room_amenities = 33;
+   * @generated from field: repeated string room_amenities = 32;
    */
   roomAmenities: string[] = [];
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 34;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 33;
    */
   baselineRole?: ContentRole;
 
   /**
    * Hydrated tags applied to this event (server-side from TagOperations).
    *
-   * @generated from field: repeated tags.v1.Tag tags = 35;
+   * @generated from field: repeated tags.v1.Tag tags = 34;
    */
   tags: Tag[] = [];
 
@@ -560,24 +560,24 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 14, name: "organizer_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 15, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 16, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 18, name: "linked_resources", kind: "message", T: LinkedResource, repeated: true },
-    { no: 19, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
-    { no: 20, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 21, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 22, name: "created_at", kind: "message", T: Timestamp },
-    { no: 23, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 24, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
-    { no: 25, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
-    { no: 26, name: "is_recurring", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 27, name: "recurrence_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 28, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 29, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 30, name: "room_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 31, name: "room_location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 32, name: "room_capacity", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
-    { no: 33, name: "room_amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 34, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 35, name: "tags", kind: "message", T: Tag, repeated: true },
+    { no: 17, name: "linked_resources", kind: "message", T: LinkedResource, repeated: true },
+    { no: 18, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 19, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 21, name: "created_at", kind: "message", T: Timestamp },
+    { no: 22, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 23, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 24, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 25, name: "is_recurring", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 26, name: "recurrence_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 27, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 28, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 29, name: "room_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 30, name: "room_location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 31, name: "room_capacity", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 32, name: "room_amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 33, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 34, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -947,42 +947,42 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
   /**
    * Linked resource URNs
    *
-   * @generated from field: repeated string linked_resource_urns = 16;
+   * @generated from field: repeated string linked_resource_urns = 15;
    */
   linkedResourceUrns: string[] = [];
 
   /**
    * Access mode (defaults to OWNER_ONLY)
    *
-   * @generated from field: optional common.v1.AccessMode access_mode = 17;
+   * @generated from field: optional common.v1.AccessMode access_mode = 16;
    */
   accessMode?: AccessMode;
 
   /**
    * Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
    *
-   * @generated from field: repeated int32 reminders = 18;
+   * @generated from field: repeated int32 reminders = 17;
    */
   reminders: number[] = [];
 
   /**
    * Optional room ID to book alongside the event
    *
-   * @generated from field: optional string room_id = 19;
+   * @generated from field: optional string room_id = 18;
    */
   roomId?: string;
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 20;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 19;
    */
   baselineRole?: ContentRole;
 
   /**
    * Optional unified-tag ids to assign on create
    *
-   * @generated from field: repeated string tag_ids = 21;
+   * @generated from field: repeated string tag_ids = 20;
    */
   tagIds: string[] = [];
 
@@ -1008,12 +1008,12 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
     { no: 12, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 13, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
-    { no: 19, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 20, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 21, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 15, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 16, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 17, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 18, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 19, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 20, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
@@ -1189,56 +1189,56 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
   /**
    * Updated linked resource URNs (replaces existing)
    *
-   * @generated from field: repeated string linked_resource_urns = 16;
+   * @generated from field: repeated string linked_resource_urns = 15;
    */
   linkedResourceUrns: string[] = [];
 
   /**
    * Updated access mode
    *
-   * @generated from field: optional common.v1.AccessMode access_mode = 17;
+   * @generated from field: optional common.v1.AccessMode access_mode = 16;
    */
   accessMode?: AccessMode;
 
   /**
    * Updated attendee IDs (replaces existing list)
    *
-   * @generated from field: repeated string attendee_ids = 18;
+   * @generated from field: repeated string attendee_ids = 17;
    */
   attendeeIds: string[] = [];
 
   /**
    * Updated reminder intervals in minutes before event
    *
-   * @generated from field: repeated int32 reminders = 19;
+   * @generated from field: repeated int32 reminders = 18;
    */
   reminders: number[] = [];
 
   /**
    * Edit scope for recurring events
    *
-   * @generated from field: optional cal.v1.RecurrenceEditScope recurrence_edit_scope = 20;
+   * @generated from field: optional cal.v1.RecurrenceEditScope recurrence_edit_scope = 19;
    */
   recurrenceEditScope?: RecurrenceEditScope;
 
   /**
    * For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
    *
-   * @generated from field: optional string occurrence_date = 21;
+   * @generated from field: optional string occurrence_date = 20;
    */
   occurrenceDate?: string;
 
   /**
    * Optional room ID to book/change for this event
    *
-   * @generated from field: optional string room_id = 22;
+   * @generated from field: optional string room_id = 21;
    */
   roomId?: string;
 
   /**
    * Updated baseline role granted by access mode
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 22;
    */
   baselineRole?: ContentRole;
 
@@ -1246,7 +1246,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    * Replacement set of unified-tag ids. Empty list clears all manual tags.
    * Field is unset (HasField=false) to leave manual tags untouched.
    *
-   * @generated from field: optional cal.v1.EventTagIds tag_ids = 24;
+   * @generated from field: optional cal.v1.EventTagIds tag_ids = 23;
    */
   tagIds?: EventTagIds;
 
@@ -1272,15 +1272,15 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 12, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "recurrence", kind: "message", T: RecurrenceConfig, opt: true },
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 19, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
-    { no: 20, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
-    { no: 21, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 22, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 24, name: "tag_ids", kind: "message", T: EventTagIds, opt: true },
+    { no: 15, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 16, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 17, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 19, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
+    { no: 20, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 21, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 22, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 23, name: "tag_ids", kind: "message", T: EventTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {
@@ -1460,41 +1460,197 @@ export class DeleteEventResponse extends Message<DeleteEventResponse> {
 }
 
 /**
- * Response containing an event
+ * Response containing an event (Create)
  *
- * @generated from message cal.v1.EventResponse
+ * @generated from message cal.v1.CreateEventResponse
  */
-export class EventResponse extends Message<EventResponse> {
+export class CreateEventResponse extends Message<CreateEventResponse> {
   /**
    * @generated from field: cal.v1.CalendarEvent event = 1;
    */
   event?: CalendarEvent;
 
-  constructor(data?: PartialMessage<EventResponse>) {
+  constructor(data?: PartialMessage<CreateEventResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "cal.v1.EventResponse";
+  static readonly typeName = "cal.v1.CreateEventResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event", kind: "message", T: CalendarEvent },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventResponse {
-    return new EventResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventResponse {
-    return new EventResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventResponse {
-    return new EventResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventResponse | PlainMessage<EventResponse> | undefined, b: EventResponse | PlainMessage<EventResponse> | undefined): boolean {
-    return proto3.util.equals(EventResponse, a, b);
+  static equals(a: CreateEventResponse | PlainMessage<CreateEventResponse> | undefined, b: CreateEventResponse | PlainMessage<CreateEventResponse> | undefined): boolean {
+    return proto3.util.equals(CreateEventResponse, a, b);
+  }
+}
+
+/**
+ * Response containing an event (Get)
+ *
+ * @generated from message cal.v1.GetEventResponse
+ */
+export class GetEventResponse extends Message<GetEventResponse> {
+  /**
+   * @generated from field: cal.v1.CalendarEvent event = 1;
+   */
+  event?: CalendarEvent;
+
+  constructor(data?: PartialMessage<GetEventResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.GetEventResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event", kind: "message", T: CalendarEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventResponse {
+    return new GetEventResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventResponse {
+    return new GetEventResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventResponse {
+    return new GetEventResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetEventResponse | PlainMessage<GetEventResponse> | undefined, b: GetEventResponse | PlainMessage<GetEventResponse> | undefined): boolean {
+    return proto3.util.equals(GetEventResponse, a, b);
+  }
+}
+
+/**
+ * Response containing an event (Update)
+ *
+ * @generated from message cal.v1.UpdateEventResponse
+ */
+export class UpdateEventResponse extends Message<UpdateEventResponse> {
+  /**
+   * @generated from field: cal.v1.CalendarEvent event = 1;
+   */
+  event?: CalendarEvent;
+
+  constructor(data?: PartialMessage<UpdateEventResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.UpdateEventResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event", kind: "message", T: CalendarEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventResponse {
+    return new UpdateEventResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateEventResponse {
+    return new UpdateEventResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateEventResponse {
+    return new UpdateEventResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateEventResponse | PlainMessage<UpdateEventResponse> | undefined, b: UpdateEventResponse | PlainMessage<UpdateEventResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateEventResponse, a, b);
+  }
+}
+
+/**
+ * Response containing an event (AddAttendees)
+ *
+ * @generated from message cal.v1.AddAttendeesResponse
+ */
+export class AddAttendeesResponse extends Message<AddAttendeesResponse> {
+  /**
+   * @generated from field: cal.v1.CalendarEvent event = 1;
+   */
+  event?: CalendarEvent;
+
+  constructor(data?: PartialMessage<AddAttendeesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.AddAttendeesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event", kind: "message", T: CalendarEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddAttendeesResponse {
+    return new AddAttendeesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddAttendeesResponse {
+    return new AddAttendeesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddAttendeesResponse {
+    return new AddAttendeesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AddAttendeesResponse | PlainMessage<AddAttendeesResponse> | undefined, b: AddAttendeesResponse | PlainMessage<AddAttendeesResponse> | undefined): boolean {
+    return proto3.util.equals(AddAttendeesResponse, a, b);
+  }
+}
+
+/**
+ * Response containing an event (RemoveAttendees)
+ *
+ * @generated from message cal.v1.RemoveAttendeesResponse
+ */
+export class RemoveAttendeesResponse extends Message<RemoveAttendeesResponse> {
+  /**
+   * @generated from field: cal.v1.CalendarEvent event = 1;
+   */
+  event?: CalendarEvent;
+
+  constructor(data?: PartialMessage<RemoveAttendeesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.RemoveAttendeesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event", kind: "message", T: CalendarEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveAttendeesResponse {
+    return new RemoveAttendeesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveAttendeesResponse {
+    return new RemoveAttendeesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveAttendeesResponse {
+    return new RemoveAttendeesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveAttendeesResponse | PlainMessage<RemoveAttendeesResponse> | undefined, b: RemoveAttendeesResponse | PlainMessage<RemoveAttendeesResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveAttendeesResponse, a, b);
   }
 }
 
@@ -1549,35 +1705,35 @@ export class ListEventsRequest extends Message<ListEventsRequest> {
   /**
    * Pagination: page number (1-indexed)
    *
-   * @generated from field: int32 page = 8;
+   * @generated from field: int32 page = 7;
    */
   page = 0;
 
   /**
    * Pagination: page size (default: 50, max: 100)
    *
-   * @generated from field: int32 page_size = 9;
+   * @generated from field: int32 page_size = 8;
    */
   pageSize = 0;
 
   /**
    * Sort by field (start_time, created_at, title)
    *
-   * @generated from field: string sort_by = 10;
+   * @generated from field: string sort_by = 9;
    */
   sortBy = "";
 
   /**
    * Sort order (asc, desc)
    *
-   * @generated from field: string sort_order = 11;
+   * @generated from field: string sort_order = 10;
    */
   sortOrder = "";
 
   /**
    * Filter events that have ALL of the provided tag ids (logical AND).
    *
-   * @generated from field: repeated string tag_ids = 12;
+   * @generated from field: repeated string tag_ids = 11;
    */
   tagIds: string[] = [];
 
@@ -1595,11 +1751,11 @@ export class ListEventsRequest extends Message<ListEventsRequest> {
     { no: 4, name: "start_date", kind: "message", T: Timestamp, opt: true },
     { no: 5, name: "end_date", kind: "message", T: Timestamp, opt: true },
     { no: 6, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 9, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 10, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 11, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEventsRequest {
@@ -2213,41 +2369,119 @@ export class DeleteCalendarResponse extends Message<DeleteCalendarResponse> {
 }
 
 /**
- * Response containing a calendar
+ * Response containing a calendar (Create)
  *
- * @generated from message cal.v1.CalendarResponse
+ * @generated from message cal.v1.CreateCalendarResponse
  */
-export class CalendarResponse extends Message<CalendarResponse> {
+export class CreateCalendarResponse extends Message<CreateCalendarResponse> {
   /**
    * @generated from field: cal.v1.Calendar calendar = 1;
    */
   calendar?: Calendar;
 
-  constructor(data?: PartialMessage<CalendarResponse>) {
+  constructor(data?: PartialMessage<CreateCalendarResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "cal.v1.CalendarResponse";
+  static readonly typeName = "cal.v1.CreateCalendarResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "calendar", kind: "message", T: Calendar },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarResponse {
-    return new CalendarResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCalendarResponse {
+    return new CreateCalendarResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CalendarResponse {
-    return new CalendarResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCalendarResponse {
+    return new CreateCalendarResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CalendarResponse {
-    return new CalendarResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCalendarResponse {
+    return new CreateCalendarResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CalendarResponse | PlainMessage<CalendarResponse> | undefined, b: CalendarResponse | PlainMessage<CalendarResponse> | undefined): boolean {
-    return proto3.util.equals(CalendarResponse, a, b);
+  static equals(a: CreateCalendarResponse | PlainMessage<CreateCalendarResponse> | undefined, b: CreateCalendarResponse | PlainMessage<CreateCalendarResponse> | undefined): boolean {
+    return proto3.util.equals(CreateCalendarResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a calendar (Get)
+ *
+ * @generated from message cal.v1.GetCalendarResponse
+ */
+export class GetCalendarResponse extends Message<GetCalendarResponse> {
+  /**
+   * @generated from field: cal.v1.Calendar calendar = 1;
+   */
+  calendar?: Calendar;
+
+  constructor(data?: PartialMessage<GetCalendarResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.GetCalendarResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "calendar", kind: "message", T: Calendar },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCalendarResponse {
+    return new GetCalendarResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCalendarResponse {
+    return new GetCalendarResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCalendarResponse {
+    return new GetCalendarResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCalendarResponse | PlainMessage<GetCalendarResponse> | undefined, b: GetCalendarResponse | PlainMessage<GetCalendarResponse> | undefined): boolean {
+    return proto3.util.equals(GetCalendarResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a calendar (Update)
+ *
+ * @generated from message cal.v1.UpdateCalendarResponse
+ */
+export class UpdateCalendarResponse extends Message<UpdateCalendarResponse> {
+  /**
+   * @generated from field: cal.v1.Calendar calendar = 1;
+   */
+  calendar?: Calendar;
+
+  constructor(data?: PartialMessage<UpdateCalendarResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.UpdateCalendarResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "calendar", kind: "message", T: Calendar },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCalendarResponse {
+    return new UpdateCalendarResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCalendarResponse {
+    return new UpdateCalendarResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCalendarResponse {
+    return new UpdateCalendarResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCalendarResponse | PlainMessage<UpdateCalendarResponse> | undefined, b: UpdateCalendarResponse | PlainMessage<UpdateCalendarResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCalendarResponse, a, b);
   }
 }
 
@@ -2734,41 +2968,119 @@ export class DeleteCategoryResponse extends Message<DeleteCategoryResponse> {
 }
 
 /**
- * Response containing a category
+ * Response containing a category (Create)
  *
- * @generated from message cal.v1.CategoryResponse
+ * @generated from message cal.v1.CreateCategoryResponse
  */
-export class CategoryResponse extends Message<CategoryResponse> {
+export class CreateCategoryResponse extends Message<CreateCategoryResponse> {
   /**
    * @generated from field: cal.v1.Category category = 1;
    */
   category?: Category;
 
-  constructor(data?: PartialMessage<CategoryResponse>) {
+  constructor(data?: PartialMessage<CreateCategoryResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "cal.v1.CategoryResponse";
+  static readonly typeName = "cal.v1.CreateCategoryResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "category", kind: "message", T: Category },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CategoryResponse {
-    return new CategoryResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCategoryResponse {
+    return new CreateCategoryResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CategoryResponse {
-    return new CategoryResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCategoryResponse {
+    return new CreateCategoryResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CategoryResponse {
-    return new CategoryResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCategoryResponse {
+    return new CreateCategoryResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CategoryResponse | PlainMessage<CategoryResponse> | undefined, b: CategoryResponse | PlainMessage<CategoryResponse> | undefined): boolean {
-    return proto3.util.equals(CategoryResponse, a, b);
+  static equals(a: CreateCategoryResponse | PlainMessage<CreateCategoryResponse> | undefined, b: CreateCategoryResponse | PlainMessage<CreateCategoryResponse> | undefined): boolean {
+    return proto3.util.equals(CreateCategoryResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a category (Get)
+ *
+ * @generated from message cal.v1.GetCategoryResponse
+ */
+export class GetCategoryResponse extends Message<GetCategoryResponse> {
+  /**
+   * @generated from field: cal.v1.Category category = 1;
+   */
+  category?: Category;
+
+  constructor(data?: PartialMessage<GetCategoryResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.GetCategoryResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "category", kind: "message", T: Category },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCategoryResponse {
+    return new GetCategoryResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCategoryResponse {
+    return new GetCategoryResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCategoryResponse {
+    return new GetCategoryResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCategoryResponse | PlainMessage<GetCategoryResponse> | undefined, b: GetCategoryResponse | PlainMessage<GetCategoryResponse> | undefined): boolean {
+    return proto3.util.equals(GetCategoryResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a category (Update)
+ *
+ * @generated from message cal.v1.UpdateCategoryResponse
+ */
+export class UpdateCategoryResponse extends Message<UpdateCategoryResponse> {
+  /**
+   * @generated from field: cal.v1.Category category = 1;
+   */
+  category?: Category;
+
+  constructor(data?: PartialMessage<UpdateCategoryResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.UpdateCategoryResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "category", kind: "message", T: Category },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCategoryResponse {
+    return new UpdateCategoryResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCategoryResponse {
+    return new UpdateCategoryResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCategoryResponse {
+    return new UpdateCategoryResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCategoryResponse | PlainMessage<UpdateCategoryResponse> | undefined, b: UpdateCategoryResponse | PlainMessage<UpdateCategoryResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCategoryResponse, a, b);
   }
 }
 
@@ -3539,39 +3851,113 @@ export class DeleteEventTemplateResponse extends Message<DeleteEventTemplateResp
 }
 
 /**
- * @generated from message cal.v1.EventTemplateResponse
+ * @generated from message cal.v1.CreateEventTemplateResponse
  */
-export class EventTemplateResponse extends Message<EventTemplateResponse> {
+export class CreateEventTemplateResponse extends Message<CreateEventTemplateResponse> {
   /**
    * @generated from field: cal.v1.EventTemplate template = 1;
    */
   template?: EventTemplate;
 
-  constructor(data?: PartialMessage<EventTemplateResponse>) {
+  constructor(data?: PartialMessage<CreateEventTemplateResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "cal.v1.EventTemplateResponse";
+  static readonly typeName = "cal.v1.CreateEventTemplateResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "template", kind: "message", T: EventTemplate },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventTemplateResponse {
-    return new EventTemplateResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventTemplateResponse {
+    return new CreateEventTemplateResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventTemplateResponse {
-    return new EventTemplateResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEventTemplateResponse {
+    return new CreateEventTemplateResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventTemplateResponse {
-    return new EventTemplateResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEventTemplateResponse {
+    return new CreateEventTemplateResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventTemplateResponse | PlainMessage<EventTemplateResponse> | undefined, b: EventTemplateResponse | PlainMessage<EventTemplateResponse> | undefined): boolean {
-    return proto3.util.equals(EventTemplateResponse, a, b);
+  static equals(a: CreateEventTemplateResponse | PlainMessage<CreateEventTemplateResponse> | undefined, b: CreateEventTemplateResponse | PlainMessage<CreateEventTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(CreateEventTemplateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.GetEventTemplateResponse
+ */
+export class GetEventTemplateResponse extends Message<GetEventTemplateResponse> {
+  /**
+   * @generated from field: cal.v1.EventTemplate template = 1;
+   */
+  template?: EventTemplate;
+
+  constructor(data?: PartialMessage<GetEventTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.GetEventTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template", kind: "message", T: EventTemplate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventTemplateResponse {
+    return new GetEventTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventTemplateResponse {
+    return new GetEventTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventTemplateResponse {
+    return new GetEventTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetEventTemplateResponse | PlainMessage<GetEventTemplateResponse> | undefined, b: GetEventTemplateResponse | PlainMessage<GetEventTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(GetEventTemplateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.UpdateEventTemplateResponse
+ */
+export class UpdateEventTemplateResponse extends Message<UpdateEventTemplateResponse> {
+  /**
+   * @generated from field: cal.v1.EventTemplate template = 1;
+   */
+  template?: EventTemplate;
+
+  constructor(data?: PartialMessage<UpdateEventTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.UpdateEventTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template", kind: "message", T: EventTemplate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventTemplateResponse {
+    return new UpdateEventTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateEventTemplateResponse {
+    return new UpdateEventTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateEventTemplateResponse {
+    return new UpdateEventTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateEventTemplateResponse | PlainMessage<UpdateEventTemplateResponse> | undefined, b: UpdateEventTemplateResponse | PlainMessage<UpdateEventTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateEventTemplateResponse, a, b);
   }
 }
 

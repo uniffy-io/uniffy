@@ -26,6 +26,10 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      // Empty `catch {}` is a recognised pattern in this codebase: thunks already
+      // surface errors via errorToastMiddleware, so swallowing the rejection in
+      // the caller is intentional. Empty `if`/`while` blocks remain disallowed.
+      'no-empty': ['error', { allowEmptyCatch: true }],
       'no-restricted-syntax': [
         'error',
         {

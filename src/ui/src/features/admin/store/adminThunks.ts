@@ -79,7 +79,8 @@ export const updatePermissionDefaults = createAsyncThunk<
             : undefined,
     });
 
-    return serializeContentTypeDefaults(response);
+    if (!response.defaults) throw new Error('defaults missing in UpdatePermissionDefaults response');
+    return serializeContentTypeDefaults(response.defaults);
 });
 
 // Organization Overview
@@ -97,7 +98,8 @@ export const fetchOrganizationOverview = createAsyncThunk<
     }
 
     const response = await adminApi.getOrganizationOverview({ organizationId });
-    return serializeOrgOverview(response);
+    if (!response.overview) throw new Error('overview missing in GetOrganizationOverview response');
+    return serializeOrgOverview(response.overview);
 });
 
 // Organization Settings
@@ -123,7 +125,7 @@ export const fetchOrganizationSettings = createAsyncThunk<
     const response = await adminApi.getOrganizationSettings({ organizationId });
     return {
         chat: {
-            agentsEnabled: response.chat?.agentsEnabled ?? false,
+            agentsEnabled: response.settings?.chat?.agentsEnabled ?? false,
         },
     };
 });
@@ -146,7 +148,7 @@ export const updateOrganizationSettings = createAsyncThunk<
     });
     return {
         chat: {
-            agentsEnabled: response.chat?.agentsEnabled ?? false,
+            agentsEnabled: response.settings?.chat?.agentsEnabled ?? false,
         },
     };
 });
@@ -199,7 +201,8 @@ export const updateMemberRole = createAsyncThunk<
         role: role as OrganizationRole,
     });
 
-    return serializeMemberInfo(response);
+    if (!response.member) throw new Error('member missing in UpdateMemberRole response');
+    return serializeMemberInfo(response.member);
 });
 
 export const removeMember = createAsyncThunk<
@@ -263,7 +266,8 @@ export const createGroup = createAsyncThunk<
         description: description || '',
     });
 
-    return serializeGroupInfo(response);
+    if (!response.group) throw new Error('group missing in CreateGroup response');
+    return serializeGroupInfo(response.group);
 });
 
 export const updateGroup = createAsyncThunk<
@@ -285,7 +289,8 @@ export const updateGroup = createAsyncThunk<
         description,
     });
 
-    return serializeGroupInfo(response);
+    if (!response.group) throw new Error('group missing in UpdateGroup response');
+    return serializeGroupInfo(response.group);
 });
 
 export const deleteGroup = createAsyncThunk<
@@ -351,7 +356,8 @@ export const addGroupMember = createAsyncThunk<
         role: (role || GroupRole.MEMBER) as GroupRole,
     });
 
-    return serializeGroupMemberInfo(response);
+    if (!response.member) throw new Error('member missing in AddGroupMember response');
+    return serializeGroupMemberInfo(response.member);
 });
 
 export const removeGroupMember = createAsyncThunk<
@@ -416,7 +422,8 @@ export const grantDomainAdmin = createAsyncThunk<
         domain: domain as DomainType,
     });
 
-    return serializeDomainAdminInfo(response);
+    if (!response.domainAdmin) throw new Error('domainAdmin missing in GrantDomainAdmin response');
+    return serializeDomainAdminInfo(response.domainAdmin);
 });
 
 export const revokeDomainAdmin = createAsyncThunk<

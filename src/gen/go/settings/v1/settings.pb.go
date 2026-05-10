@@ -342,8 +342,8 @@ func (x *DeleteProfileResponse) GetMessage() string {
 	return ""
 }
 
-// Response containing a single profile
-type ProfileResponse struct {
+// Response containing a single profile (Create)
+type CreateProfileResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The profile data
 	Profile       *SettingsProfile `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
@@ -351,20 +351,20 @@ type ProfileResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ProfileResponse) Reset() {
-	*x = ProfileResponse{}
+func (x *CreateProfileResponse) Reset() {
+	*x = CreateProfileResponse{}
 	mi := &file_settings_v1_settings_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ProfileResponse) String() string {
+func (x *CreateProfileResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ProfileResponse) ProtoMessage() {}
+func (*CreateProfileResponse) ProtoMessage() {}
 
-func (x *ProfileResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateProfileResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_settings_v1_settings_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -376,12 +376,150 @@ func (x *ProfileResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ProfileResponse.ProtoReflect.Descriptor instead.
-func (*ProfileResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateProfileResponse.ProtoReflect.Descriptor instead.
+func (*CreateProfileResponse) Descriptor() ([]byte, []int) {
 	return file_settings_v1_settings_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ProfileResponse) GetProfile() *SettingsProfile {
+func (x *CreateProfileResponse) GetProfile() *SettingsProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+// Response containing a single profile (Get)
+type GetProfileResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The profile data
+	Profile       *SettingsProfile `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProfileResponse) Reset() {
+	*x = GetProfileResponse{}
+	mi := &file_settings_v1_settings_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProfileResponse) ProtoMessage() {}
+
+func (x *GetProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProfileResponse.ProtoReflect.Descriptor instead.
+func (*GetProfileResponse) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetProfileResponse) GetProfile() *SettingsProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+// Response containing a single profile (Update)
+type UpdateProfileResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The profile data
+	Profile       *SettingsProfile `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProfileResponse) Reset() {
+	*x = UpdateProfileResponse{}
+	mi := &file_settings_v1_settings_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProfileResponse) ProtoMessage() {}
+
+func (x *UpdateProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProfileResponse.ProtoReflect.Descriptor instead.
+func (*UpdateProfileResponse) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateProfileResponse) GetProfile() *SettingsProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+// Response containing a single profile (SetDefaultProfile)
+type SetDefaultProfileResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The profile data
+	Profile       *SettingsProfile `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetDefaultProfileResponse) Reset() {
+	*x = SetDefaultProfileResponse{}
+	mi := &file_settings_v1_settings_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetDefaultProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetDefaultProfileResponse) ProtoMessage() {}
+
+func (x *SetDefaultProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetDefaultProfileResponse.ProtoReflect.Descriptor instead.
+func (*SetDefaultProfileResponse) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SetDefaultProfileResponse) GetProfile() *SettingsProfile {
 	if x != nil {
 		return x.Profile
 	}
@@ -397,7 +535,7 @@ type ListProfilesRequest struct {
 
 func (x *ListProfilesRequest) Reset() {
 	*x = ListProfilesRequest{}
-	mi := &file_settings_v1_settings_proto_msgTypes[6]
+	mi := &file_settings_v1_settings_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +547,7 @@ func (x *ListProfilesRequest) String() string {
 func (*ListProfilesRequest) ProtoMessage() {}
 
 func (x *ListProfilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[6]
+	mi := &file_settings_v1_settings_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +560,7 @@ func (x *ListProfilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProfilesRequest.ProtoReflect.Descriptor instead.
 func (*ListProfilesRequest) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{6}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{9}
 }
 
 // Response for listing profiles
@@ -438,7 +576,7 @@ type ListProfilesResponse struct {
 
 func (x *ListProfilesResponse) Reset() {
 	*x = ListProfilesResponse{}
-	mi := &file_settings_v1_settings_proto_msgTypes[7]
+	mi := &file_settings_v1_settings_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +588,7 @@ func (x *ListProfilesResponse) String() string {
 func (*ListProfilesResponse) ProtoMessage() {}
 
 func (x *ListProfilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[7]
+	mi := &file_settings_v1_settings_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +601,7 @@ func (x *ListProfilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProfilesResponse.ProtoReflect.Descriptor instead.
 func (*ListProfilesResponse) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{7}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListProfilesResponse) GetProfiles() []*SettingsProfile {
@@ -491,7 +629,7 @@ type GetEffectiveSettingsRequest struct {
 
 func (x *GetEffectiveSettingsRequest) Reset() {
 	*x = GetEffectiveSettingsRequest{}
-	mi := &file_settings_v1_settings_proto_msgTypes[8]
+	mi := &file_settings_v1_settings_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -503,7 +641,7 @@ func (x *GetEffectiveSettingsRequest) String() string {
 func (*GetEffectiveSettingsRequest) ProtoMessage() {}
 
 func (x *GetEffectiveSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[8]
+	mi := &file_settings_v1_settings_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -516,7 +654,7 @@ func (x *GetEffectiveSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEffectiveSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetEffectiveSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{8}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetEffectiveSettingsRequest) GetProfileId() string {
@@ -527,7 +665,7 @@ func (x *GetEffectiveSettingsRequest) GetProfileId() string {
 }
 
 // Response with effective settings (defaults merged with overrides)
-type EffectiveSettingsResponse struct {
+type GetEffectiveSettingsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The profile used
 	Profile *SettingsProfile `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
@@ -537,21 +675,21 @@ type EffectiveSettingsResponse struct {
 	sizeCache         protoimpl.SizeCache
 }
 
-func (x *EffectiveSettingsResponse) Reset() {
-	*x = EffectiveSettingsResponse{}
-	mi := &file_settings_v1_settings_proto_msgTypes[9]
+func (x *GetEffectiveSettingsResponse) Reset() {
+	*x = GetEffectiveSettingsResponse{}
+	mi := &file_settings_v1_settings_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EffectiveSettingsResponse) String() string {
+func (x *GetEffectiveSettingsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EffectiveSettingsResponse) ProtoMessage() {}
+func (*GetEffectiveSettingsResponse) ProtoMessage() {}
 
-func (x *EffectiveSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[9]
+func (x *GetEffectiveSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,19 +700,19 @@ func (x *EffectiveSettingsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EffectiveSettingsResponse.ProtoReflect.Descriptor instead.
-func (*EffectiveSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{9}
+// Deprecated: Use GetEffectiveSettingsResponse.ProtoReflect.Descriptor instead.
+func (*GetEffectiveSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *EffectiveSettingsResponse) GetProfile() *SettingsProfile {
+func (x *GetEffectiveSettingsResponse) GetProfile() *SettingsProfile {
 	if x != nil {
 		return x.Profile
 	}
 	return nil
 }
 
-func (x *EffectiveSettingsResponse) GetEffectiveSettings() *EffectiveSettings {
+func (x *GetEffectiveSettingsResponse) GetEffectiveSettings() *EffectiveSettings {
 	if x != nil {
 		return x.EffectiveSettings
 	}
@@ -590,7 +728,7 @@ type GetSettingsSchemaRequest struct {
 
 func (x *GetSettingsSchemaRequest) Reset() {
 	*x = GetSettingsSchemaRequest{}
-	mi := &file_settings_v1_settings_proto_msgTypes[10]
+	mi := &file_settings_v1_settings_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +740,7 @@ func (x *GetSettingsSchemaRequest) String() string {
 func (*GetSettingsSchemaRequest) ProtoMessage() {}
 
 func (x *GetSettingsSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[10]
+	mi := &file_settings_v1_settings_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,11 +753,11 @@ func (x *GetSettingsSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsSchemaRequest.ProtoReflect.Descriptor instead.
 func (*GetSettingsSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{10}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{13}
 }
 
 // Response with settings schema
-type SettingsSchemaResponse struct {
+type GetSettingsSchemaResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Default appearance settings
 	AppearanceDefaults *AppearanceSettings `protobuf:"bytes,1,opt,name=appearance_defaults,json=appearanceDefaults,proto3" json:"appearance_defaults,omitempty"`
@@ -631,21 +769,21 @@ type SettingsSchemaResponse struct {
 	sizeCache             protoimpl.SizeCache
 }
 
-func (x *SettingsSchemaResponse) Reset() {
-	*x = SettingsSchemaResponse{}
-	mi := &file_settings_v1_settings_proto_msgTypes[11]
+func (x *GetSettingsSchemaResponse) Reset() {
+	*x = GetSettingsSchemaResponse{}
+	mi := &file_settings_v1_settings_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SettingsSchemaResponse) String() string {
+func (x *GetSettingsSchemaResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SettingsSchemaResponse) ProtoMessage() {}
+func (*GetSettingsSchemaResponse) ProtoMessage() {}
 
-func (x *SettingsSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[11]
+func (x *GetSettingsSchemaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -656,26 +794,26 @@ func (x *SettingsSchemaResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SettingsSchemaResponse.ProtoReflect.Descriptor instead.
-func (*SettingsSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{11}
+// Deprecated: Use GetSettingsSchemaResponse.ProtoReflect.Descriptor instead.
+func (*GetSettingsSchemaResponse) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *SettingsSchemaResponse) GetAppearanceDefaults() *AppearanceSettings {
+func (x *GetSettingsSchemaResponse) GetAppearanceDefaults() *AppearanceSettings {
 	if x != nil {
 		return x.AppearanceDefaults
 	}
 	return nil
 }
 
-func (x *SettingsSchemaResponse) GetKeyboardShortcutsDefaults() *KeyboardShortcutsSettings {
+func (x *GetSettingsSchemaResponse) GetKeyboardShortcutsDefaults() *KeyboardShortcutsSettings {
 	if x != nil {
 		return x.KeyboardShortcutsDefaults
 	}
 	return nil
 }
 
-func (x *SettingsSchemaResponse) GetNotificationsDefaults() *NotificationsSettings {
+func (x *GetSettingsSchemaResponse) GetNotificationsDefaults() *NotificationsSettings {
 	if x != nil {
 		return x.NotificationsDefaults
 	}
@@ -693,7 +831,7 @@ type SetDefaultProfileRequest struct {
 
 func (x *SetDefaultProfileRequest) Reset() {
 	*x = SetDefaultProfileRequest{}
-	mi := &file_settings_v1_settings_proto_msgTypes[12]
+	mi := &file_settings_v1_settings_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -705,7 +843,7 @@ func (x *SetDefaultProfileRequest) String() string {
 func (*SetDefaultProfileRequest) ProtoMessage() {}
 
 func (x *SetDefaultProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[12]
+	mi := &file_settings_v1_settings_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -718,7 +856,7 @@ func (x *SetDefaultProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultProfileRequest.ProtoReflect.Descriptor instead.
 func (*SetDefaultProfileRequest) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{12}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SetDefaultProfileRequest) GetProfileId() string {
@@ -755,7 +893,7 @@ type SettingsProfile struct {
 
 func (x *SettingsProfile) Reset() {
 	*x = SettingsProfile{}
-	mi := &file_settings_v1_settings_proto_msgTypes[13]
+	mi := &file_settings_v1_settings_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -767,7 +905,7 @@ func (x *SettingsProfile) String() string {
 func (*SettingsProfile) ProtoMessage() {}
 
 func (x *SettingsProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[13]
+	mi := &file_settings_v1_settings_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -780,7 +918,7 @@ func (x *SettingsProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettingsProfile.ProtoReflect.Descriptor instead.
 func (*SettingsProfile) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{13}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SettingsProfile) GetId() string {
@@ -861,7 +999,7 @@ type EffectiveSettings struct {
 
 func (x *EffectiveSettings) Reset() {
 	*x = EffectiveSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[14]
+	mi := &file_settings_v1_settings_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +1011,7 @@ func (x *EffectiveSettings) String() string {
 func (*EffectiveSettings) ProtoMessage() {}
 
 func (x *EffectiveSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[14]
+	mi := &file_settings_v1_settings_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +1024,7 @@ func (x *EffectiveSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectiveSettings.ProtoReflect.Descriptor instead.
 func (*EffectiveSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{14}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EffectiveSettings) GetAppearance() *AppearanceSettings {
@@ -933,7 +1071,7 @@ type AppearanceSettings struct {
 
 func (x *AppearanceSettings) Reset() {
 	*x = AppearanceSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[15]
+	mi := &file_settings_v1_settings_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -945,7 +1083,7 @@ func (x *AppearanceSettings) String() string {
 func (*AppearanceSettings) ProtoMessage() {}
 
 func (x *AppearanceSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[15]
+	mi := &file_settings_v1_settings_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -958,7 +1096,7 @@ func (x *AppearanceSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppearanceSettings.ProtoReflect.Descriptor instead.
 func (*AppearanceSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{15}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AppearanceSettings) GetTheme() string {
@@ -1023,7 +1161,7 @@ type KeyboardShortcutsSettings struct {
 
 func (x *KeyboardShortcutsSettings) Reset() {
 	*x = KeyboardShortcutsSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[16]
+	mi := &file_settings_v1_settings_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1035,7 +1173,7 @@ func (x *KeyboardShortcutsSettings) String() string {
 func (*KeyboardShortcutsSettings) ProtoMessage() {}
 
 func (x *KeyboardShortcutsSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[16]
+	mi := &file_settings_v1_settings_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1048,7 +1186,7 @@ func (x *KeyboardShortcutsSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyboardShortcutsSettings.ProtoReflect.Descriptor instead.
 func (*KeyboardShortcutsSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{16}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *KeyboardShortcutsSettings) GetBindings() map[string]string {
@@ -1086,7 +1224,7 @@ type NotificationsSettings struct {
 
 func (x *NotificationsSettings) Reset() {
 	*x = NotificationsSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[17]
+	mi := &file_settings_v1_settings_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +1236,7 @@ func (x *NotificationsSettings) String() string {
 func (*NotificationsSettings) ProtoMessage() {}
 
 func (x *NotificationsSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[17]
+	mi := &file_settings_v1_settings_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +1249,7 @@ func (x *NotificationsSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotificationsSettings.ProtoReflect.Descriptor instead.
 func (*NotificationsSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{17}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *NotificationsSettings) GetBrowserEnabled() bool {
@@ -1183,16 +1321,16 @@ type NotificationChannelPreference struct {
 	// Enable in-app notifications
 	InApp *bool `protobuf:"varint,1,opt,name=in_app,json=inApp,proto3,oneof" json:"in_app,omitempty"`
 	// Enable browser push notifications
-	Browser *bool `protobuf:"varint,3,opt,name=browser,proto3,oneof" json:"browser,omitempty"`
+	Browser *bool `protobuf:"varint,2,opt,name=browser,proto3,oneof" json:"browser,omitempty"`
 	// Enable email notifications
-	Email         *bool `protobuf:"varint,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Email         *bool `protobuf:"varint,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NotificationChannelPreference) Reset() {
 	*x = NotificationChannelPreference{}
-	mi := &file_settings_v1_settings_proto_msgTypes[18]
+	mi := &file_settings_v1_settings_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1342,7 @@ func (x *NotificationChannelPreference) String() string {
 func (*NotificationChannelPreference) ProtoMessage() {}
 
 func (x *NotificationChannelPreference) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[18]
+	mi := &file_settings_v1_settings_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1355,7 @@ func (x *NotificationChannelPreference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotificationChannelPreference.ProtoReflect.Descriptor instead.
 func (*NotificationChannelPreference) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{18}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *NotificationChannelPreference) GetInApp() bool {
@@ -1276,8 +1414,14 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\"K\n" +
 	"\x15DeleteProfileResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"I\n" +
-	"\x0fProfileResponse\x126\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"O\n" +
+	"\x15CreateProfileResponse\x126\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\"L\n" +
+	"\x12GetProfileResponse\x126\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\"O\n" +
+	"\x15UpdateProfileResponse\x126\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\"S\n" +
+	"\x19SetDefaultProfileResponse\x126\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\"\x15\n" +
 	"\x13ListProfilesRequest\"q\n" +
 	"\x14ListProfilesResponse\x128\n" +
@@ -1287,12 +1431,12 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x1bGetEffectiveSettingsRequest\x12\"\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tH\x00R\tprofileId\x88\x01\x01B\r\n" +
-	"\v_profile_id\"\xa2\x01\n" +
-	"\x19EffectiveSettingsResponse\x126\n" +
+	"\v_profile_id\"\xa5\x01\n" +
+	"\x1cGetEffectiveSettingsResponse\x126\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\x12M\n" +
 	"\x12effective_settings\x18\x02 \x01(\v2\x1e.settings.v1.EffectiveSettingsR\x11effectiveSettings\"\x1a\n" +
-	"\x18GetSettingsSchemaRequest\"\xad\x02\n" +
-	"\x16SettingsSchemaResponse\x12P\n" +
+	"\x18GetSettingsSchemaRequest\"\xb0\x02\n" +
+	"\x19GetSettingsSchemaResponse\x12P\n" +
 	"\x13appearance_defaults\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\x12appearanceDefaults\x12f\n" +
 	"\x1bkeyboard_shortcuts_defaults\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x19keyboardShortcutsDefaults\x12Y\n" +
 	"\x16notifications_defaults\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\x15notificationsDefaults\"9\n" +
@@ -1360,25 +1504,25 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x10_email_frequencyB\x14\n" +
 	"\x12_quiet_hours_startB\x12\n" +
 	"\x10_quiet_hours_endB\x10\n" +
-	"\x0e_toast_enabled\"\x9c\x01\n" +
+	"\x0e_toast_enabled\"\x96\x01\n" +
 	"\x1dNotificationChannelPreference\x12\x1a\n" +
 	"\x06in_app\x18\x01 \x01(\bH\x00R\x05inApp\x88\x01\x01\x12\x1d\n" +
-	"\abrowser\x18\x03 \x01(\bH\x01R\abrowser\x88\x01\x01\x12\x19\n" +
-	"\x05email\x18\x04 \x01(\bH\x02R\x05email\x88\x01\x01B\t\n" +
+	"\abrowser\x18\x02 \x01(\bH\x01R\abrowser\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x03 \x01(\bH\x02R\x05email\x88\x01\x01B\t\n" +
 	"\a_in_appB\n" +
 	"\n" +
 	"\b_browserB\b\n" +
-	"\x06_emailJ\x04\b\x02\x10\x032\xe3\x05\n" +
-	"\x0fSettingsService\x12R\n" +
-	"\rCreateProfile\x12!.settings.v1.CreateProfileRequest\x1a\x1c.settings.v1.ProfileResponse\"\x00\x12L\n" +
+	"\x06_email2\x82\x06\n" +
+	"\x0fSettingsService\x12X\n" +
+	"\rCreateProfile\x12!.settings.v1.CreateProfileRequest\x1a\".settings.v1.CreateProfileResponse\"\x00\x12O\n" +
 	"\n" +
-	"GetProfile\x12\x1e.settings.v1.GetProfileRequest\x1a\x1c.settings.v1.ProfileResponse\"\x00\x12R\n" +
-	"\rUpdateProfile\x12!.settings.v1.UpdateProfileRequest\x1a\x1c.settings.v1.ProfileResponse\"\x00\x12X\n" +
+	"GetProfile\x12\x1e.settings.v1.GetProfileRequest\x1a\x1f.settings.v1.GetProfileResponse\"\x00\x12X\n" +
+	"\rUpdateProfile\x12!.settings.v1.UpdateProfileRequest\x1a\".settings.v1.UpdateProfileResponse\"\x00\x12X\n" +
 	"\rDeleteProfile\x12!.settings.v1.DeleteProfileRequest\x1a\".settings.v1.DeleteProfileResponse\"\x00\x12U\n" +
-	"\fListProfiles\x12 .settings.v1.ListProfilesRequest\x1a!.settings.v1.ListProfilesResponse\"\x00\x12j\n" +
-	"\x14GetEffectiveSettings\x12(.settings.v1.GetEffectiveSettingsRequest\x1a&.settings.v1.EffectiveSettingsResponse\"\x00\x12a\n" +
-	"\x11GetSettingsSchema\x12%.settings.v1.GetSettingsSchemaRequest\x1a#.settings.v1.SettingsSchemaResponse\"\x00\x12Z\n" +
-	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a\x1c.settings.v1.ProfileResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
+	"\fListProfiles\x12 .settings.v1.ListProfilesRequest\x1a!.settings.v1.ListProfilesResponse\"\x00\x12m\n" +
+	"\x14GetEffectiveSettings\x12(.settings.v1.GetEffectiveSettingsRequest\x1a).settings.v1.GetEffectiveSettingsResponse\"\x00\x12d\n" +
+	"\x11GetSettingsSchema\x12%.settings.v1.GetSettingsSchemaRequest\x1a&.settings.v1.GetSettingsSchemaResponse\"\x00\x12d\n" +
+	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a&.settings.v1.SetDefaultProfileResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
 
 var (
 	file_settings_v1_settings_proto_rawDescOnce sync.Once
@@ -1392,77 +1536,83 @@ func file_settings_v1_settings_proto_rawDescGZIP() []byte {
 	return file_settings_v1_settings_proto_rawDescData
 }
 
-var file_settings_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_settings_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_settings_v1_settings_proto_goTypes = []any{
 	(*CreateProfileRequest)(nil),          // 0: settings.v1.CreateProfileRequest
 	(*GetProfileRequest)(nil),             // 1: settings.v1.GetProfileRequest
 	(*UpdateProfileRequest)(nil),          // 2: settings.v1.UpdateProfileRequest
 	(*DeleteProfileRequest)(nil),          // 3: settings.v1.DeleteProfileRequest
 	(*DeleteProfileResponse)(nil),         // 4: settings.v1.DeleteProfileResponse
-	(*ProfileResponse)(nil),               // 5: settings.v1.ProfileResponse
-	(*ListProfilesRequest)(nil),           // 6: settings.v1.ListProfilesRequest
-	(*ListProfilesResponse)(nil),          // 7: settings.v1.ListProfilesResponse
-	(*GetEffectiveSettingsRequest)(nil),   // 8: settings.v1.GetEffectiveSettingsRequest
-	(*EffectiveSettingsResponse)(nil),     // 9: settings.v1.EffectiveSettingsResponse
-	(*GetSettingsSchemaRequest)(nil),      // 10: settings.v1.GetSettingsSchemaRequest
-	(*SettingsSchemaResponse)(nil),        // 11: settings.v1.SettingsSchemaResponse
-	(*SetDefaultProfileRequest)(nil),      // 12: settings.v1.SetDefaultProfileRequest
-	(*SettingsProfile)(nil),               // 13: settings.v1.SettingsProfile
-	(*EffectiveSettings)(nil),             // 14: settings.v1.EffectiveSettings
-	(*AppearanceSettings)(nil),            // 15: settings.v1.AppearanceSettings
-	(*KeyboardShortcutsSettings)(nil),     // 16: settings.v1.KeyboardShortcutsSettings
-	(*NotificationsSettings)(nil),         // 17: settings.v1.NotificationsSettings
-	(*NotificationChannelPreference)(nil), // 18: settings.v1.NotificationChannelPreference
-	nil,                                   // 19: settings.v1.KeyboardShortcutsSettings.BindingsEntry
-	nil,                                   // 20: settings.v1.NotificationsSettings.ChannelOverridesEntry
-	(*timestamppb.Timestamp)(nil),         // 21: google.protobuf.Timestamp
+	(*CreateProfileResponse)(nil),         // 5: settings.v1.CreateProfileResponse
+	(*GetProfileResponse)(nil),            // 6: settings.v1.GetProfileResponse
+	(*UpdateProfileResponse)(nil),         // 7: settings.v1.UpdateProfileResponse
+	(*SetDefaultProfileResponse)(nil),     // 8: settings.v1.SetDefaultProfileResponse
+	(*ListProfilesRequest)(nil),           // 9: settings.v1.ListProfilesRequest
+	(*ListProfilesResponse)(nil),          // 10: settings.v1.ListProfilesResponse
+	(*GetEffectiveSettingsRequest)(nil),   // 11: settings.v1.GetEffectiveSettingsRequest
+	(*GetEffectiveSettingsResponse)(nil),  // 12: settings.v1.GetEffectiveSettingsResponse
+	(*GetSettingsSchemaRequest)(nil),      // 13: settings.v1.GetSettingsSchemaRequest
+	(*GetSettingsSchemaResponse)(nil),     // 14: settings.v1.GetSettingsSchemaResponse
+	(*SetDefaultProfileRequest)(nil),      // 15: settings.v1.SetDefaultProfileRequest
+	(*SettingsProfile)(nil),               // 16: settings.v1.SettingsProfile
+	(*EffectiveSettings)(nil),             // 17: settings.v1.EffectiveSettings
+	(*AppearanceSettings)(nil),            // 18: settings.v1.AppearanceSettings
+	(*KeyboardShortcutsSettings)(nil),     // 19: settings.v1.KeyboardShortcutsSettings
+	(*NotificationsSettings)(nil),         // 20: settings.v1.NotificationsSettings
+	(*NotificationChannelPreference)(nil), // 21: settings.v1.NotificationChannelPreference
+	nil,                                   // 22: settings.v1.KeyboardShortcutsSettings.BindingsEntry
+	nil,                                   // 23: settings.v1.NotificationsSettings.ChannelOverridesEntry
+	(*timestamppb.Timestamp)(nil),         // 24: google.protobuf.Timestamp
 }
 var file_settings_v1_settings_proto_depIdxs = []int32{
-	15, // 0: settings.v1.CreateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
-	16, // 1: settings.v1.CreateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	17, // 2: settings.v1.CreateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
-	15, // 3: settings.v1.UpdateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
-	16, // 4: settings.v1.UpdateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	17, // 5: settings.v1.UpdateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
-	13, // 6: settings.v1.ProfileResponse.profile:type_name -> settings.v1.SettingsProfile
-	13, // 7: settings.v1.ListProfilesResponse.profiles:type_name -> settings.v1.SettingsProfile
-	13, // 8: settings.v1.EffectiveSettingsResponse.profile:type_name -> settings.v1.SettingsProfile
-	14, // 9: settings.v1.EffectiveSettingsResponse.effective_settings:type_name -> settings.v1.EffectiveSettings
-	15, // 10: settings.v1.SettingsSchemaResponse.appearance_defaults:type_name -> settings.v1.AppearanceSettings
-	16, // 11: settings.v1.SettingsSchemaResponse.keyboard_shortcuts_defaults:type_name -> settings.v1.KeyboardShortcutsSettings
-	17, // 12: settings.v1.SettingsSchemaResponse.notifications_defaults:type_name -> settings.v1.NotificationsSettings
-	15, // 13: settings.v1.SettingsProfile.appearance:type_name -> settings.v1.AppearanceSettings
-	16, // 14: settings.v1.SettingsProfile.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	17, // 15: settings.v1.SettingsProfile.notifications:type_name -> settings.v1.NotificationsSettings
-	21, // 16: settings.v1.SettingsProfile.created_at:type_name -> google.protobuf.Timestamp
-	21, // 17: settings.v1.SettingsProfile.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 18: settings.v1.EffectiveSettings.appearance:type_name -> settings.v1.AppearanceSettings
-	16, // 19: settings.v1.EffectiveSettings.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	17, // 20: settings.v1.EffectiveSettings.notifications:type_name -> settings.v1.NotificationsSettings
-	19, // 21: settings.v1.KeyboardShortcutsSettings.bindings:type_name -> settings.v1.KeyboardShortcutsSettings.BindingsEntry
-	20, // 22: settings.v1.NotificationsSettings.channel_overrides:type_name -> settings.v1.NotificationsSettings.ChannelOverridesEntry
-	18, // 23: settings.v1.NotificationsSettings.ChannelOverridesEntry.value:type_name -> settings.v1.NotificationChannelPreference
-	0,  // 24: settings.v1.SettingsService.CreateProfile:input_type -> settings.v1.CreateProfileRequest
-	1,  // 25: settings.v1.SettingsService.GetProfile:input_type -> settings.v1.GetProfileRequest
-	2,  // 26: settings.v1.SettingsService.UpdateProfile:input_type -> settings.v1.UpdateProfileRequest
-	3,  // 27: settings.v1.SettingsService.DeleteProfile:input_type -> settings.v1.DeleteProfileRequest
-	6,  // 28: settings.v1.SettingsService.ListProfiles:input_type -> settings.v1.ListProfilesRequest
-	8,  // 29: settings.v1.SettingsService.GetEffectiveSettings:input_type -> settings.v1.GetEffectiveSettingsRequest
-	10, // 30: settings.v1.SettingsService.GetSettingsSchema:input_type -> settings.v1.GetSettingsSchemaRequest
-	12, // 31: settings.v1.SettingsService.SetDefaultProfile:input_type -> settings.v1.SetDefaultProfileRequest
-	5,  // 32: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.ProfileResponse
-	5,  // 33: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.ProfileResponse
-	5,  // 34: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.ProfileResponse
-	4,  // 35: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
-	7,  // 36: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
-	9,  // 37: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.EffectiveSettingsResponse
-	11, // 38: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.SettingsSchemaResponse
-	5,  // 39: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.ProfileResponse
-	32, // [32:40] is the sub-list for method output_type
-	24, // [24:32] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	18, // 0: settings.v1.CreateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
+	19, // 1: settings.v1.CreateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	20, // 2: settings.v1.CreateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
+	18, // 3: settings.v1.UpdateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
+	19, // 4: settings.v1.UpdateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	20, // 5: settings.v1.UpdateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
+	16, // 6: settings.v1.CreateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 7: settings.v1.GetProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 8: settings.v1.UpdateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 9: settings.v1.SetDefaultProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 10: settings.v1.ListProfilesResponse.profiles:type_name -> settings.v1.SettingsProfile
+	16, // 11: settings.v1.GetEffectiveSettingsResponse.profile:type_name -> settings.v1.SettingsProfile
+	17, // 12: settings.v1.GetEffectiveSettingsResponse.effective_settings:type_name -> settings.v1.EffectiveSettings
+	18, // 13: settings.v1.GetSettingsSchemaResponse.appearance_defaults:type_name -> settings.v1.AppearanceSettings
+	19, // 14: settings.v1.GetSettingsSchemaResponse.keyboard_shortcuts_defaults:type_name -> settings.v1.KeyboardShortcutsSettings
+	20, // 15: settings.v1.GetSettingsSchemaResponse.notifications_defaults:type_name -> settings.v1.NotificationsSettings
+	18, // 16: settings.v1.SettingsProfile.appearance:type_name -> settings.v1.AppearanceSettings
+	19, // 17: settings.v1.SettingsProfile.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	20, // 18: settings.v1.SettingsProfile.notifications:type_name -> settings.v1.NotificationsSettings
+	24, // 19: settings.v1.SettingsProfile.created_at:type_name -> google.protobuf.Timestamp
+	24, // 20: settings.v1.SettingsProfile.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 21: settings.v1.EffectiveSettings.appearance:type_name -> settings.v1.AppearanceSettings
+	19, // 22: settings.v1.EffectiveSettings.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	20, // 23: settings.v1.EffectiveSettings.notifications:type_name -> settings.v1.NotificationsSettings
+	22, // 24: settings.v1.KeyboardShortcutsSettings.bindings:type_name -> settings.v1.KeyboardShortcutsSettings.BindingsEntry
+	23, // 25: settings.v1.NotificationsSettings.channel_overrides:type_name -> settings.v1.NotificationsSettings.ChannelOverridesEntry
+	21, // 26: settings.v1.NotificationsSettings.ChannelOverridesEntry.value:type_name -> settings.v1.NotificationChannelPreference
+	0,  // 27: settings.v1.SettingsService.CreateProfile:input_type -> settings.v1.CreateProfileRequest
+	1,  // 28: settings.v1.SettingsService.GetProfile:input_type -> settings.v1.GetProfileRequest
+	2,  // 29: settings.v1.SettingsService.UpdateProfile:input_type -> settings.v1.UpdateProfileRequest
+	3,  // 30: settings.v1.SettingsService.DeleteProfile:input_type -> settings.v1.DeleteProfileRequest
+	9,  // 31: settings.v1.SettingsService.ListProfiles:input_type -> settings.v1.ListProfilesRequest
+	11, // 32: settings.v1.SettingsService.GetEffectiveSettings:input_type -> settings.v1.GetEffectiveSettingsRequest
+	13, // 33: settings.v1.SettingsService.GetSettingsSchema:input_type -> settings.v1.GetSettingsSchemaRequest
+	15, // 34: settings.v1.SettingsService.SetDefaultProfile:input_type -> settings.v1.SetDefaultProfileRequest
+	5,  // 35: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.CreateProfileResponse
+	6,  // 36: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.GetProfileResponse
+	7,  // 37: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.UpdateProfileResponse
+	4,  // 38: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
+	10, // 39: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
+	12, // 40: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.GetEffectiveSettingsResponse
+	14, // 41: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.GetSettingsSchemaResponse
+	8,  // 42: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.SetDefaultProfileResponse
+	35, // [35:43] is the sub-list for method output_type
+	27, // [27:35] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_settings_v1_settings_proto_init() }
@@ -1471,17 +1621,17 @@ func file_settings_v1_settings_proto_init() {
 		return
 	}
 	file_settings_v1_settings_proto_msgTypes[2].OneofWrappers = []any{}
-	file_settings_v1_settings_proto_msgTypes[8].OneofWrappers = []any{}
-	file_settings_v1_settings_proto_msgTypes[15].OneofWrappers = []any{}
-	file_settings_v1_settings_proto_msgTypes[17].OneofWrappers = []any{}
+	file_settings_v1_settings_proto_msgTypes[11].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[18].OneofWrappers = []any{}
+	file_settings_v1_settings_proto_msgTypes[20].OneofWrappers = []any{}
+	file_settings_v1_settings_proto_msgTypes[21].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_settings_v1_settings_proto_rawDesc), len(file_settings_v1_settings_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

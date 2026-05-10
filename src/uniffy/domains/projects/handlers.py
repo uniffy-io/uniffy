@@ -20,11 +20,17 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     BulkUpdateTasksRequest,
     BulkUpdateTasksResponse,
     CompleteSprintRequest,
+    CompleteSprintResponse,
     CreateFieldRequest,
+    CreateFieldResponse,
     CreateProjectRequest,
+    CreateProjectResponse,
     CreateSprintRequest,
+    CreateSprintResponse,
     CreateTaskRequest,
+    CreateTaskResponse,
     CreateViewRequest,
+    CreateViewResponse,
     DeleteFieldRequest,
     DeleteFieldResponse,
     DeleteProjectRequest,
@@ -37,9 +43,10 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     DeleteTasksResponse,
     DeleteViewRequest,
     DeleteViewResponse,
-    FieldResponse,
     GetProjectRequest,
+    GetProjectResponse,
     GetTaskRequest,
+    GetTaskResponse,
     ListActivitiesRequest,
     ListActivitiesResponse,
     ListProjectsRequest,
@@ -51,18 +58,21 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     ListTaskWatchersRequest,
     ListTaskWatchersResponse,
     MoveTaskRequest,
-    ProjectResponse,
-    SprintResponse,
+    MoveTaskResponse,
     StartSprintRequest,
-    TaskResponse,
+    StartSprintResponse,
     ToggleTaskWatcherRequest,
     ToggleTaskWatcherResponse,
     UpdateFieldRequest,
+    UpdateFieldResponse,
     UpdateProjectRequest,
+    UpdateProjectResponse,
     UpdateSprintRequest,
+    UpdateSprintResponse,
     UpdateTaskRequest,
+    UpdateTaskResponse,
     UpdateViewRequest,
-    ViewResponse,
+    UpdateViewResponse,
 )
 
 from uniffy.core.converters.common_proto import (
@@ -169,7 +179,7 @@ class ProjectsHandlers:
         self,
         request: CreateProjectRequest,
         ctx: RequestContext,
-    ) -> ProjectResponse:
+    ) -> CreateProjectResponse:
         """Create a new project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -201,7 +211,7 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
-                return ProjectResponse(
+                return CreateProjectResponse(
                     project=project_to_proto(
                         project, fields, views, user_role, tags=tags_by_id.get(project.id)
                     )
@@ -215,7 +225,7 @@ class ProjectsHandlers:
         self,
         request: GetProjectRequest,
         ctx: RequestContext,
-    ) -> ProjectResponse:
+    ) -> GetProjectResponse:
         """Get a project by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -231,7 +241,7 @@ class ProjectsHandlers:
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
 
-                return ProjectResponse(
+                return GetProjectResponse(
                     project=project_to_proto(
                         project, fields, views, user_role, tags=tags_by_id.get(project.id)
                     )
@@ -245,7 +255,7 @@ class ProjectsHandlers:
         self,
         request: UpdateProjectRequest,
         ctx: RequestContext,
-    ) -> ProjectResponse:
+    ) -> UpdateProjectResponse:
         """Update an existing project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -290,7 +300,7 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
-                return ProjectResponse(
+                return UpdateProjectResponse(
                     project=project_to_proto(
                         project, fields, views, user_role, tags=tags_by_id.get(project.id)
                     )
@@ -390,7 +400,7 @@ class ProjectsHandlers:
         self,
         request: CreateTaskRequest,
         ctx: RequestContext,
-    ) -> TaskResponse:
+    ) -> CreateTaskResponse:
         """Create a new task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -469,7 +479,7 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(parent.id),
                     )
 
-                return TaskResponse(
+                return CreateTaskResponse(
                     task=task_to_proto(task, user_role, tags=tags_by_id.get(task.id)),
                     updated_parent=updated_parent_proto,
                 )
@@ -482,7 +492,7 @@ class ProjectsHandlers:
         self,
         request: GetTaskRequest,
         ctx: RequestContext,
-    ) -> TaskResponse:
+    ) -> GetTaskResponse:
         """Get a task by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -498,7 +508,7 @@ class ProjectsHandlers:
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
                 tags_by_id = await _hydrate_task_tags(session, organization_id, [task.id])
 
-                return TaskResponse(
+                return GetTaskResponse(
                     task=task_to_proto(
                         task, user_role, st_total, st_done, tags=tags_by_id.get(task.id)
                     )
@@ -512,7 +522,7 @@ class ProjectsHandlers:
         self,
         request: UpdateTaskRequest,
         ctx: RequestContext,
-    ) -> TaskResponse:
+    ) -> UpdateTaskResponse:
         """Update an existing task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -600,7 +610,7 @@ class ProjectsHandlers:
                     else None
                 )
 
-                return TaskResponse(
+                return UpdateTaskResponse(
                     task=task_to_proto(
                         task,
                         user_role,
@@ -620,7 +630,7 @@ class ProjectsHandlers:
         self,
         request: MoveTaskRequest,
         ctx: RequestContext,
-    ) -> TaskResponse:
+    ) -> MoveTaskResponse:
         """Move a task (board drag-and-drop)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -668,7 +678,7 @@ class ProjectsHandlers:
                     else None
                 )
 
-                return TaskResponse(
+                return MoveTaskResponse(
                     task=task_to_proto(
                         task,
                         user_role,
@@ -885,7 +895,7 @@ class ProjectsHandlers:
         self,
         request: CreateFieldRequest,
         ctx: RequestContext,
-    ) -> FieldResponse:
+    ) -> CreateFieldResponse:
         """Create a custom field definition."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -919,7 +929,7 @@ class ProjectsHandlers:
                 await session.commit()
                 await session.refresh(field)
 
-                return FieldResponse(field=field_to_proto(field))
+                return CreateFieldResponse(field=field_to_proto(field))
         except ConnectError:
             raise
         except Exception as exc:
@@ -929,7 +939,7 @@ class ProjectsHandlers:
         self,
         request: UpdateFieldRequest,
         ctx: RequestContext,
-    ) -> FieldResponse:
+    ) -> UpdateFieldResponse:
         """Update a custom field definition."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -968,7 +978,7 @@ class ProjectsHandlers:
                 await session.commit()
                 await session.refresh(field)
 
-                return FieldResponse(field=field_to_proto(field))
+                return UpdateFieldResponse(field=field_to_proto(field))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1016,7 +1026,7 @@ class ProjectsHandlers:
         self,
         request: CreateViewRequest,
         ctx: RequestContext,
-    ) -> ViewResponse:
+    ) -> CreateViewResponse:
         """Create a view configuration."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1048,7 +1058,7 @@ class ProjectsHandlers:
                 await session.commit()
                 await session.refresh(view)
 
-                return ViewResponse(view=view_to_proto(view))
+                return CreateViewResponse(view=view_to_proto(view))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1058,7 +1068,7 @@ class ProjectsHandlers:
         self,
         request: UpdateViewRequest,
         ctx: RequestContext,
-    ) -> ViewResponse:
+    ) -> UpdateViewResponse:
         """Update a view configuration."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1094,7 +1104,7 @@ class ProjectsHandlers:
                 await session.commit()
                 await session.refresh(view)
 
-                return ViewResponse(view=view_to_proto(view))
+                return UpdateViewResponse(view=view_to_proto(view))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1190,7 +1200,7 @@ class SprintHandlers:
         self,
         request: CreateSprintRequest,
         ctx: RequestContext,
-    ) -> SprintResponse:
+    ) -> CreateSprintResponse:
         """Create a new sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1208,7 +1218,7 @@ class SprintHandlers:
                     start_date=request.start_date if request.HasField("start_date") else None,
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
-                return SprintResponse(sprint=sprint_to_proto(sprint))
+                return CreateSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1218,7 +1228,7 @@ class SprintHandlers:
         self,
         request: UpdateSprintRequest,
         ctx: RequestContext,
-    ) -> SprintResponse:
+    ) -> UpdateSprintResponse:
         """Update a sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1236,7 +1246,7 @@ class SprintHandlers:
                     start_date=request.start_date if request.HasField("start_date") else None,
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
-                return SprintResponse(sprint=sprint_to_proto(sprint))
+                return UpdateSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1246,7 +1256,7 @@ class SprintHandlers:
         self,
         request: StartSprintRequest,
         ctx: RequestContext,
-    ) -> SprintResponse:
+    ) -> StartSprintResponse:
         """Start a sprint (make it active)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1262,7 +1272,7 @@ class SprintHandlers:
                     start_date=request.start_date if request.HasField("start_date") else None,
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
-                return SprintResponse(sprint=sprint_to_proto(sprint))
+                return StartSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
             raise
         except Exception as exc:
@@ -1272,7 +1282,7 @@ class SprintHandlers:
         self,
         request: CompleteSprintRequest,
         ctx: RequestContext,
-    ) -> SprintResponse:
+    ) -> CompleteSprintResponse:
         """Complete a sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -1286,7 +1296,7 @@ class SprintHandlers:
                     organization_id=organization_id,
                     sprint_id=sprint_id,
                 )
-                return SprintResponse(sprint=sprint_to_proto(sprint))
+                return CompleteSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
             raise
         except Exception as exc:

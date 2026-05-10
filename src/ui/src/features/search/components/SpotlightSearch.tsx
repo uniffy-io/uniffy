@@ -112,8 +112,8 @@ export function SpotlightSearch() {
             }
             setCopiedUrn(true);
             setTimeout(() => setCopiedUrn(false), 1500);
-        } catch (err) {
-            console.error('Failed to copy URN:', err);
+        } catch {
+            // clipboard unavailable
         }
     }, [results, boundedSelectedIndex]);
 

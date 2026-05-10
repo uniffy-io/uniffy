@@ -53,13 +53,13 @@ const (
 // PromptsServiceClient is a client for the agents.v1.PromptsService service.
 type PromptsServiceClient interface {
 	// Create a new prompt
-	CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.CreatePromptResponse], error)
 	// Get a prompt by ID
-	GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.GetPromptResponse], error)
 	// List prompts (bundled + organization + personal)
 	ListPrompts(context.Context, *connect.Request[v1.ListPromptsRequest]) (*connect.Response[v1.ListPromptsResponse], error)
 	// Update a prompt
-	UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.UpdatePromptResponse], error)
 	// Delete a prompt
 	DeletePrompt(context.Context, *connect.Request[v1.DeletePromptRequest]) (*connect.Response[v1.DeletePromptResponse], error)
 }
@@ -75,13 +75,13 @@ func NewPromptsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	promptsServiceMethods := v1.File_agents_v1_prompts_proto.Services().ByName("PromptsService").Methods()
 	return &promptsServiceClient{
-		createPrompt: connect.NewClient[v1.CreatePromptRequest, v1.PromptResponse](
+		createPrompt: connect.NewClient[v1.CreatePromptRequest, v1.CreatePromptResponse](
 			httpClient,
 			baseURL+PromptsServiceCreatePromptProcedure,
 			connect.WithSchema(promptsServiceMethods.ByName("CreatePrompt")),
 			connect.WithClientOptions(opts...),
 		),
-		getPrompt: connect.NewClient[v1.GetPromptRequest, v1.PromptResponse](
+		getPrompt: connect.NewClient[v1.GetPromptRequest, v1.GetPromptResponse](
 			httpClient,
 			baseURL+PromptsServiceGetPromptProcedure,
 			connect.WithSchema(promptsServiceMethods.ByName("GetPrompt")),
@@ -93,7 +93,7 @@ func NewPromptsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(promptsServiceMethods.ByName("ListPrompts")),
 			connect.WithClientOptions(opts...),
 		),
-		updatePrompt: connect.NewClient[v1.UpdatePromptRequest, v1.PromptResponse](
+		updatePrompt: connect.NewClient[v1.UpdatePromptRequest, v1.UpdatePromptResponse](
 			httpClient,
 			baseURL+PromptsServiceUpdatePromptProcedure,
 			connect.WithSchema(promptsServiceMethods.ByName("UpdatePrompt")),
@@ -110,20 +110,20 @@ func NewPromptsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // promptsServiceClient implements PromptsServiceClient.
 type promptsServiceClient struct {
-	createPrompt *connect.Client[v1.CreatePromptRequest, v1.PromptResponse]
-	getPrompt    *connect.Client[v1.GetPromptRequest, v1.PromptResponse]
+	createPrompt *connect.Client[v1.CreatePromptRequest, v1.CreatePromptResponse]
+	getPrompt    *connect.Client[v1.GetPromptRequest, v1.GetPromptResponse]
 	listPrompts  *connect.Client[v1.ListPromptsRequest, v1.ListPromptsResponse]
-	updatePrompt *connect.Client[v1.UpdatePromptRequest, v1.PromptResponse]
+	updatePrompt *connect.Client[v1.UpdatePromptRequest, v1.UpdatePromptResponse]
 	deletePrompt *connect.Client[v1.DeletePromptRequest, v1.DeletePromptResponse]
 }
 
 // CreatePrompt calls agents.v1.PromptsService.CreatePrompt.
-func (c *promptsServiceClient) CreatePrompt(ctx context.Context, req *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (c *promptsServiceClient) CreatePrompt(ctx context.Context, req *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.CreatePromptResponse], error) {
 	return c.createPrompt.CallUnary(ctx, req)
 }
 
 // GetPrompt calls agents.v1.PromptsService.GetPrompt.
-func (c *promptsServiceClient) GetPrompt(ctx context.Context, req *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (c *promptsServiceClient) GetPrompt(ctx context.Context, req *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.GetPromptResponse], error) {
 	return c.getPrompt.CallUnary(ctx, req)
 }
 
@@ -133,7 +133,7 @@ func (c *promptsServiceClient) ListPrompts(ctx context.Context, req *connect.Req
 }
 
 // UpdatePrompt calls agents.v1.PromptsService.UpdatePrompt.
-func (c *promptsServiceClient) UpdatePrompt(ctx context.Context, req *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (c *promptsServiceClient) UpdatePrompt(ctx context.Context, req *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.UpdatePromptResponse], error) {
 	return c.updatePrompt.CallUnary(ctx, req)
 }
 
@@ -145,13 +145,13 @@ func (c *promptsServiceClient) DeletePrompt(ctx context.Context, req *connect.Re
 // PromptsServiceHandler is an implementation of the agents.v1.PromptsService service.
 type PromptsServiceHandler interface {
 	// Create a new prompt
-	CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.CreatePromptResponse], error)
 	// Get a prompt by ID
-	GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.GetPromptResponse], error)
 	// List prompts (bundled + organization + personal)
 	ListPrompts(context.Context, *connect.Request[v1.ListPromptsRequest]) (*connect.Response[v1.ListPromptsResponse], error)
 	// Update a prompt
-	UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.PromptResponse], error)
+	UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.UpdatePromptResponse], error)
 	// Delete a prompt
 	DeletePrompt(context.Context, *connect.Request[v1.DeletePromptRequest]) (*connect.Response[v1.DeletePromptResponse], error)
 }
@@ -214,11 +214,11 @@ func NewPromptsServiceHandler(svc PromptsServiceHandler, opts ...connect.Handler
 // UnimplementedPromptsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPromptsServiceHandler struct{}
 
-func (UnimplementedPromptsServiceHandler) CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (UnimplementedPromptsServiceHandler) CreatePrompt(context.Context, *connect.Request[v1.CreatePromptRequest]) (*connect.Response[v1.CreatePromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PromptsService.CreatePrompt is not implemented"))
 }
 
-func (UnimplementedPromptsServiceHandler) GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (UnimplementedPromptsServiceHandler) GetPrompt(context.Context, *connect.Request[v1.GetPromptRequest]) (*connect.Response[v1.GetPromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PromptsService.GetPrompt is not implemented"))
 }
 
@@ -226,7 +226,7 @@ func (UnimplementedPromptsServiceHandler) ListPrompts(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PromptsService.ListPrompts is not implemented"))
 }
 
-func (UnimplementedPromptsServiceHandler) UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.PromptResponse], error) {
+func (UnimplementedPromptsServiceHandler) UpdatePrompt(context.Context, *connect.Request[v1.UpdatePromptRequest]) (*connect.Response[v1.UpdatePromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PromptsService.UpdatePrompt is not implemented"))
 }
 

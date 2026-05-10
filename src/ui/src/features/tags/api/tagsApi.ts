@@ -12,19 +12,19 @@ import { transport } from '@/config/api';
 import { TagsService } from '@uniffy/proto/tags/v1/tags_connect';
 import type {
     AssignTagsRequest,
-    CreateSavedTagFilterRequest,
+    CreateSavedFilterRequest,
     CreateTagRequest,
-    DeleteSavedTagFilterRequest,
+    DeleteSavedFilterRequest,
     DeleteTagRequest,
     GetTagRequest,
     GetTagsForUrnsRequest,
     ListContentByTagRequest,
-    ListSavedTagFiltersRequest,
+    ListSavedFiltersRequest,
     ListTagsRequest,
     MergeTagsRequest,
     SuggestTagsRequest,
     UnassignTagsRequest,
-    UpdateSavedTagFilterRequest,
+    UpdateSavedFilterRequest,
     UpdateTagRequest,
 } from '@uniffy/proto/tags/v1/tags_pb';
 
@@ -47,12 +47,12 @@ export const tagsApi = {
     listContentByTag: (request: PartialMessage<ListContentByTagRequest>) =>
         tagsClient.listContentByTag(request),
 
-    createSavedFilter: (request: PartialMessage<CreateSavedTagFilterRequest>) =>
+    createSavedFilter: (request: PartialMessage<CreateSavedFilterRequest>) =>
         tagsClient.createSavedFilter(request),
-    updateSavedFilter: (request: PartialMessage<UpdateSavedTagFilterRequest>) =>
+    updateSavedFilter: (request: PartialMessage<UpdateSavedFilterRequest>) =>
         tagsClient.updateSavedFilter(request),
-    deleteSavedFilter: (request: PartialMessage<DeleteSavedTagFilterRequest>) =>
+    deleteSavedFilter: (request: PartialMessage<DeleteSavedFilterRequest>) =>
         tagsClient.deleteSavedFilter(request),
-    listSavedFilters: (request: PartialMessage<ListSavedTagFiltersRequest>) =>
+    listSavedFilters: (request: PartialMessage<ListSavedFiltersRequest>) =>
         tagsClient.listSavedFilters(request),
 };

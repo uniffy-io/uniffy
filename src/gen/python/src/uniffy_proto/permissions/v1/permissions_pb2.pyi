@@ -174,7 +174,7 @@ class SetAccessModeRequest(_message.Message):
     note: str
     def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., remove_members_on_narrow: _Optional[bool] = ..., note: _Optional[str] = ...) -> None: ...
 
-class AccessModeResponse(_message.Message):
+class SetAccessModeResponse(_message.Message):
     __slots__ = ("policy",)
     POLICY_FIELD_NUMBER: _ClassVar[int]
     policy: ContentAccessPolicy
@@ -200,7 +200,13 @@ class TransferOwnershipResponse(_message.Message):
     policy: ContentAccessPolicy
     def __init__(self, policy: _Optional[_Union[ContentAccessPolicy, _Mapping]] = ...) -> None: ...
 
-class MemberResponse(_message.Message):
+class AddMemberResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: ContentMember
+    def __init__(self, member: _Optional[_Union[ContentMember, _Mapping]] = ...) -> None: ...
+
+class UpdateMemberRoleResponse(_message.Message):
     __slots__ = ("member",)
     MEMBER_FIELD_NUMBER: _ClassVar[int]
     member: ContentMember

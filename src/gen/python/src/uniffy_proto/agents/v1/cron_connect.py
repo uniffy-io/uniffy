@@ -16,16 +16,16 @@ import agents.v1.cron_pb2 as agents_dot_v1_dot_cron__pb2
 
 
 class CronService(Protocol):
-    async def create_cron_task(self, request: agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    async def create_cron_task(self, request: agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_cron_task(self, request: agents_dot_v1_dot_cron__pb2.GetCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    async def get_cron_task(self, request: agents_dot_v1_dot_cron__pb2.GetCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.GetCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_cron_tasks(self, request: agents_dot_v1_dot_cron__pb2.ListCronTasksRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.ListCronTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_cron_task(self, request: agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    async def update_cron_task(self, request: agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_cron_task(self, request: agents_dot_v1_dot_cron__pb2.DeleteCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.DeleteCronTaskResponse:
@@ -48,7 +48,7 @@ class CronServiceASGIApplication(ConnectASGIApplication[CronService]):
                         name="CreateCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_cron_task,
@@ -58,7 +58,7 @@ class CronServiceASGIApplication(ConnectASGIApplication[CronService]):
                         name="GetCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.GetCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.GetCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_cron_task,
@@ -78,7 +78,7 @@ class CronServiceASGIApplication(ConnectASGIApplication[CronService]):
                         name="UpdateCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_cron_task,
@@ -131,14 +131,14 @@ class CronServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -151,14 +151,14 @@ class CronServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.GetCronTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.GetCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.GetCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -191,14 +191,14 @@ class CronServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -267,13 +267,13 @@ class CronServiceClient(ConnectClient):
 
 
 class CronServiceSync(Protocol):
-    def create_cron_task(self, request: agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    def create_cron_task(self, request: agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_cron_task(self, request: agents_dot_v1_dot_cron__pb2.GetCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    def get_cron_task(self, request: agents_dot_v1_dot_cron__pb2.GetCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.GetCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_cron_tasks(self, request: agents_dot_v1_dot_cron__pb2.ListCronTasksRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.ListCronTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_cron_task(self, request: agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    def update_cron_task(self, request: agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_cron_task(self, request: agents_dot_v1_dot_cron__pb2.DeleteCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.DeleteCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -292,7 +292,7 @@ class CronServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_cron_task,
@@ -302,7 +302,7 @@ class CronServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.GetCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.GetCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_cron_task,
@@ -322,7 +322,7 @@ class CronServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateCronTask",
                         service_name="agents.v1.CronService",
                         input=agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest,
-                        output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                        output=agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_cron_task,
@@ -375,14 +375,14 @@ class CronServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -395,14 +395,14 @@ class CronServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.GetCronTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.GetCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.GetCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -435,14 +435,14 @@ class CronServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_cron__pb2.CronTaskResponse:
+    ) -> agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCronTask",
                 service_name="agents.v1.CronService",
                 input=agents_dot_v1_dot_cron__pb2.UpdateCronTaskRequest,
-                output=agents_dot_v1_dot_cron__pb2.CronTaskResponse,
+                output=agents_dot_v1_dot_cron__pb2.UpdateCronTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

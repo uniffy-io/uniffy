@@ -50,84 +50,84 @@ export class AgentInfo extends Message<AgentInfo> {
   fallbackModels: string[] = [];
 
   /**
-   * @generated from field: repeated string enabled_tools = 10;
+   * @generated from field: repeated string enabled_tools = 8;
    */
   enabledTools: string[] = [];
 
   /**
-   * @generated from field: string avatar_emoji = 11;
+   * @generated from field: string avatar_emoji = 9;
    */
   avatarEmoji = "";
 
   /**
-   * @generated from field: string theme_color = 12;
+   * @generated from field: string theme_color = 10;
    */
   themeColor = "";
 
   /**
-   * @generated from field: bool is_default = 13;
+   * @generated from field: bool is_default = 11;
    */
   isDefault = false;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created_at = 14;
+   * @generated from field: google.protobuf.Timestamp created_at = 12;
    */
   createdAt?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 15;
+   * @generated from field: google.protobuf.Timestamp updated_at = 13;
    */
   updatedAt?: Timestamp;
 
   /**
-   * @generated from field: repeated string enabled_skills = 16;
+   * @generated from field: repeated string enabled_skills = 14;
    */
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: common.v1.AccessMode access_mode = 17;
+   * @generated from field: common.v1.AccessMode access_mode = 15;
    */
   accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * S3 key prefix for avatar images (empty string if none)
    *
-   * @generated from field: string avatar_key = 19;
+   * @generated from field: string avatar_key = 16;
    */
   avatarKey = "";
 
   /**
    * Image generation model (empty string = disabled)
    *
-   * @generated from field: string image_model = 21;
+   * @generated from field: string image_model = 17;
    */
   imageModel = "";
 
   /**
    * Provider key ID for the primary model (empty = not assigned)
    *
-   * @generated from field: string primary_provider_key_id = 22;
+   * @generated from field: string primary_provider_key_id = 18;
    */
   primaryProviderKeyId = "";
 
   /**
    * Provider key ID for the image model (empty = not assigned)
    *
-   * @generated from field: string image_provider_key_id = 23;
+   * @generated from field: string image_provider_key_id = 19;
    */
   imageProviderKeyId = "";
 
   /**
    * Prompt template ID (empty = no template, uses soul_prompt directly)
    *
-   * @generated from field: string prompt_id = 24;
+   * @generated from field: string prompt_id = 20;
    */
   promptId = "";
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 25;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 21;
    */
   baselineRole?: ContentRole;
 
@@ -136,7 +136,7 @@ export class AgentInfo extends Message<AgentInfo> {
    * Set by the server so the UI can render edit/share affordances
    * without re-resolving permissions client-side.
    *
-   * @generated from field: optional common.v1.ContentRole user_role = 26;
+   * @generated from field: optional common.v1.ContentRole user_role = 22;
    */
   userRole?: ContentRole;
 
@@ -144,7 +144,7 @@ export class AgentInfo extends Message<AgentInfo> {
    * Hydrated unified-tag rows assigned to this agent. Server-populated
    * via ``TagOperations.get_for_urns``; clients should treat as read-only.
    *
-   * @generated from field: repeated tags.v1.Tag tags = 27;
+   * @generated from field: repeated tags.v1.Tag tags = 23;
    */
   tags: Tag[] = [];
 
@@ -163,22 +163,22 @@ export class AgentInfo extends Message<AgentInfo> {
     { no: 5, name: "soul_prompt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "primary_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "fallback_models", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 10, name: "enabled_tools", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 11, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 12, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 13, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 14, name: "created_at", kind: "message", T: Timestamp },
-    { no: 15, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 16, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
-    { no: 19, name: "avatar_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 21, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 22, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 23, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 24, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 26, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 27, name: "tags", kind: "message", T: Tag, repeated: true },
+    { no: 8, name: "enabled_tools", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "created_at", kind: "message", T: Timestamp },
+    { no: 13, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 14, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 15, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 16, name: "avatar_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 17, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 19, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 20, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 21, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 22, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 23, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentInfo {
@@ -228,72 +228,72 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
   fallbackModels: string[] = [];
 
   /**
-   * @generated from field: optional string avatar_emoji = 8;
+   * @generated from field: optional string avatar_emoji = 6;
    */
   avatarEmoji?: string;
 
   /**
-   * @generated from field: optional string theme_color = 9;
+   * @generated from field: optional string theme_color = 7;
    */
   themeColor?: string;
 
   /**
-   * @generated from field: optional bool is_default = 10;
+   * @generated from field: optional bool is_default = 8;
    */
   isDefault?: boolean;
 
   /**
-   * @generated from field: repeated string enabled_skills = 11;
+   * @generated from field: repeated string enabled_skills = 9;
    */
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: optional common.v1.AccessMode access_mode = 12;
+   * @generated from field: optional common.v1.AccessMode access_mode = 10;
    */
   accessMode?: AccessMode;
 
   /**
-   * @generated from field: repeated string group_ids = 13;
+   * @generated from field: repeated string group_ids = 11;
    */
   groupIds: string[] = [];
 
   /**
    * Image generation model (empty string = disabled)
    *
-   * @generated from field: optional string image_model = 17;
+   * @generated from field: optional string image_model = 12;
    */
   imageModel?: string;
 
   /**
    * Provider key ID for the primary model
    *
-   * @generated from field: optional string primary_provider_key_id = 18;
+   * @generated from field: optional string primary_provider_key_id = 13;
    */
   primaryProviderKeyId?: string;
 
   /**
    * Provider key ID for the image model
    *
-   * @generated from field: optional string image_provider_key_id = 19;
+   * @generated from field: optional string image_provider_key_id = 14;
    */
   imageProviderKeyId?: string;
 
   /**
    * Prompt template ID
    *
-   * @generated from field: optional string prompt_id = 20;
+   * @generated from field: optional string prompt_id = 15;
    */
   promptId?: string;
 
   /**
-   * @generated from field: optional common.v1.ContentRole baseline_role = 21;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 16;
    */
   baselineRole?: ContentRole;
 
   /**
    * Optional unified-tag ids to assign on create.
    *
-   * @generated from field: repeated string tag_ids = 22;
+   * @generated from field: repeated string tag_ids = 17;
    */
   tagIds: string[] = [];
 
@@ -310,18 +310,18 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
     { no: 3, name: "soul_prompt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "primary_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "fallback_models", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 8, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 9, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 10, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 11, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 12, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 13, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 18, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 19, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 20, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 21, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 22, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 9, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 11, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 12, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 15, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 16, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 17, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentRequest {
@@ -342,39 +342,187 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
 }
 
 /**
- * @generated from message agents.v1.AgentResponse
+ * @generated from message agents.v1.CreateAgentResponse
  */
-export class AgentResponse extends Message<AgentResponse> {
+export class CreateAgentResponse extends Message<CreateAgentResponse> {
   /**
    * @generated from field: agents.v1.AgentInfo agent = 1;
    */
   agent?: AgentInfo;
 
-  constructor(data?: PartialMessage<AgentResponse>) {
+  constructor(data?: PartialMessage<CreateAgentResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.AgentResponse";
+  static readonly typeName = "agents.v1.CreateAgentResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "agent", kind: "message", T: AgentInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentResponse {
-    return new AgentResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentResponse {
+    return new CreateAgentResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AgentResponse {
-    return new AgentResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateAgentResponse {
+    return new CreateAgentResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AgentResponse {
-    return new AgentResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateAgentResponse {
+    return new CreateAgentResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AgentResponse | PlainMessage<AgentResponse> | undefined, b: AgentResponse | PlainMessage<AgentResponse> | undefined): boolean {
-    return proto3.util.equals(AgentResponse, a, b);
+  static equals(a: CreateAgentResponse | PlainMessage<CreateAgentResponse> | undefined, b: CreateAgentResponse | PlainMessage<CreateAgentResponse> | undefined): boolean {
+    return proto3.util.equals(CreateAgentResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetAgentResponse
+ */
+export class GetAgentResponse extends Message<GetAgentResponse> {
+  /**
+   * @generated from field: agents.v1.AgentInfo agent = 1;
+   */
+  agent?: AgentInfo;
+
+  constructor(data?: PartialMessage<GetAgentResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetAgentResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agent", kind: "message", T: AgentInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAgentResponse {
+    return new GetAgentResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAgentResponse {
+    return new GetAgentResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAgentResponse {
+    return new GetAgentResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAgentResponse | PlainMessage<GetAgentResponse> | undefined, b: GetAgentResponse | PlainMessage<GetAgentResponse> | undefined): boolean {
+    return proto3.util.equals(GetAgentResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdateAgentResponse
+ */
+export class UpdateAgentResponse extends Message<UpdateAgentResponse> {
+  /**
+   * @generated from field: agents.v1.AgentInfo agent = 1;
+   */
+  agent?: AgentInfo;
+
+  constructor(data?: PartialMessage<UpdateAgentResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdateAgentResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agent", kind: "message", T: AgentInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAgentResponse {
+    return new UpdateAgentResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateAgentResponse {
+    return new UpdateAgentResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateAgentResponse {
+    return new UpdateAgentResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateAgentResponse | PlainMessage<UpdateAgentResponse> | undefined, b: UpdateAgentResponse | PlainMessage<UpdateAgentResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateAgentResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UploadAgentAvatarResponse
+ */
+export class UploadAgentAvatarResponse extends Message<UploadAgentAvatarResponse> {
+  /**
+   * @generated from field: agents.v1.AgentInfo agent = 1;
+   */
+  agent?: AgentInfo;
+
+  constructor(data?: PartialMessage<UploadAgentAvatarResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UploadAgentAvatarResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agent", kind: "message", T: AgentInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadAgentAvatarResponse {
+    return new UploadAgentAvatarResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UploadAgentAvatarResponse {
+    return new UploadAgentAvatarResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UploadAgentAvatarResponse {
+    return new UploadAgentAvatarResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UploadAgentAvatarResponse | PlainMessage<UploadAgentAvatarResponse> | undefined, b: UploadAgentAvatarResponse | PlainMessage<UploadAgentAvatarResponse> | undefined): boolean {
+    return proto3.util.equals(UploadAgentAvatarResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.DeleteAgentAvatarResponse
+ */
+export class DeleteAgentAvatarResponse extends Message<DeleteAgentAvatarResponse> {
+  /**
+   * @generated from field: agents.v1.AgentInfo agent = 1;
+   */
+  agent?: AgentInfo;
+
+  constructor(data?: PartialMessage<DeleteAgentAvatarResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DeleteAgentAvatarResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "agent", kind: "message", T: AgentInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAgentAvatarResponse {
+    return new DeleteAgentAvatarResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAgentAvatarResponse {
+    return new DeleteAgentAvatarResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAgentAvatarResponse {
+    return new DeleteAgentAvatarResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAgentAvatarResponse | PlainMessage<DeleteAgentAvatarResponse> | undefined, b: DeleteAgentAvatarResponse | PlainMessage<DeleteAgentAvatarResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteAgentAvatarResponse, a, b);
   }
 }
 
@@ -569,77 +717,77 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
   fallbackModels: string[] = [];
 
   /**
-   * @generated from field: optional string avatar_emoji = 9;
+   * @generated from field: optional string avatar_emoji = 7;
    */
   avatarEmoji?: string;
 
   /**
-   * @generated from field: optional string theme_color = 10;
+   * @generated from field: optional string theme_color = 8;
    */
   themeColor?: string;
 
   /**
-   * @generated from field: optional bool is_default = 11;
+   * @generated from field: optional bool is_default = 9;
    */
   isDefault?: boolean;
 
   /**
-   * @generated from field: repeated string enabled_skills = 12;
+   * @generated from field: repeated string enabled_skills = 10;
    */
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: optional common.v1.AccessMode access_mode = 13;
+   * @generated from field: optional common.v1.AccessMode access_mode = 11;
    */
   accessMode?: AccessMode;
 
   /**
-   * @generated from field: repeated string group_ids = 14;
+   * @generated from field: repeated string group_ids = 12;
    */
   groupIds: string[] = [];
 
   /**
-   * @generated from field: repeated string enabled_tools = 15;
+   * @generated from field: repeated string enabled_tools = 13;
    */
   enabledTools: string[] = [];
 
   /**
    * Image generation model (empty string = disabled)
    *
-   * @generated from field: optional string image_model = 18;
+   * @generated from field: optional string image_model = 14;
    */
   imageModel?: string;
 
   /**
    * Provider key ID for the primary model
    *
-   * @generated from field: optional string primary_provider_key_id = 19;
+   * @generated from field: optional string primary_provider_key_id = 15;
    */
   primaryProviderKeyId?: string;
 
   /**
    * Provider key ID for the image model
    *
-   * @generated from field: optional string image_provider_key_id = 20;
+   * @generated from field: optional string image_provider_key_id = 16;
    */
   imageProviderKeyId?: string;
 
   /**
    * Prompt template ID
    *
-   * @generated from field: optional string prompt_id = 21;
+   * @generated from field: optional string prompt_id = 17;
    */
   promptId?: string;
 
   /**
    * Clear the prompt template (set to null)
    *
-   * @generated from field: optional bool clear_prompt = 22;
+   * @generated from field: optional bool clear_prompt = 18;
    */
   clearPrompt?: boolean;
 
   /**
-   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 19;
    */
   baselineRole?: ContentRole;
 
@@ -649,7 +797,7 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
    * the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
    * pattern.
    *
-   * @generated from field: optional agents.v1.AgentTagIds tag_ids = 24;
+   * @generated from field: optional agents.v1.AgentTagIds tag_ids = 20;
    */
   tagIds?: AgentTagIds;
 
@@ -667,20 +815,20 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
     { no: 4, name: "soul_prompt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "primary_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "fallback_models", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 9, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 10, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 11, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 12, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 13, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 14, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 15, name: "enabled_tools", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 18, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 19, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 20, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 21, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 22, name: "clear_prompt", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 24, name: "tag_ids", kind: "message", T: AgentTagIds, opt: true },
+    { no: 7, name: "avatar_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 11, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 12, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 13, name: "enabled_tools", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 14, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 15, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 16, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 18, name: "clear_prompt", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 19, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 20, name: "tag_ids", kind: "message", T: AgentTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAgentRequest {

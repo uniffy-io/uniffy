@@ -38,8 +38,7 @@ export function CategoryList() {
 
     try {
       await dispatch(deleteCategory(categoryId)).unwrap();
-    } catch (error) {
-      console.error('Failed to delete category:', error);
+    } catch {
     }
   };
 

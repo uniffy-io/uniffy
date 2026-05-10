@@ -16,16 +16,16 @@ import tags.v1.tags_pb2 as tags_dot_v1_dot_tags__pb2
 
 
 class TagsService(Protocol):
-    async def create_tag(self, request: tags_dot_v1_dot_tags__pb2.CreateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    async def create_tag(self, request: tags_dot_v1_dot_tags__pb2.CreateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.CreateTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_tag(self, request: tags_dot_v1_dot_tags__pb2.UpdateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    async def update_tag(self, request: tags_dot_v1_dot_tags__pb2.UpdateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.UpdateTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_tag(self, request: tags_dot_v1_dot_tags__pb2.DeleteTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_tag(self, request: tags_dot_v1_dot_tags__pb2.GetTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    async def get_tag(self, request: tags_dot_v1_dot_tags__pb2.GetTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.GetTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_tags(self, request: tags_dot_v1_dot_tags__pb2.ListTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListTagsResponse:
@@ -46,19 +46,19 @@ class TagsService(Protocol):
     async def list_content_by_tag(self, request: tags_dot_v1_dot_tags__pb2.ListContentByTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListContentByTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def merge_tags(self, request: tags_dot_v1_dot_tags__pb2.MergeTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    async def merge_tags(self, request: tags_dot_v1_dot_tags__pb2.MergeTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.MergeTagsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    async def create_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    async def update_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def delete_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse:
+    async def delete_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_saved_filters(self, request: tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse:
+    async def list_saved_filters(self, request: tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -72,7 +72,7 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                         name="CreateTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.CreateTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.CreateTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_tag,
@@ -82,7 +82,7 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                         name="UpdateTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.UpdateTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.UpdateTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_tag,
@@ -102,7 +102,7 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                         name="GetTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.GetTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.GetTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_tag,
@@ -172,7 +172,7 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                         name="MergeTags",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.MergeTagsRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.MergeTagsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.merge_tags,
@@ -181,8 +181,8 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                     method=MethodInfo(
                         name="CreateSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_saved_filter,
@@ -191,8 +191,8 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                     method=MethodInfo(
                         name="UpdateSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_saved_filter,
@@ -201,8 +201,8 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                     method=MethodInfo(
                         name="DeleteSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_saved_filter,
@@ -211,8 +211,8 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
                     method=MethodInfo(
                         name="ListSavedFilters",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
-                        output=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse,
+                        input=tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
+                        output=tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_saved_filters,
@@ -235,14 +235,14 @@ class TagsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.CreateTagResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.CreateTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.CreateTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -255,14 +255,14 @@ class TagsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.UpdateTagResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.UpdateTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.UpdateTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -295,14 +295,14 @@ class TagsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.GetTagResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.GetTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.GetTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -435,14 +435,14 @@ class TagsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.MergeTagsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MergeTags",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.MergeTagsRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.MergeTagsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -451,18 +451,18 @@ class TagsServiceClient(ConnectClient):
 
     async def create_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -471,18 +471,18 @@ class TagsServiceClient(ConnectClient):
 
     async def update_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -491,18 +491,18 @@ class TagsServiceClient(ConnectClient):
 
     async def delete_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -511,18 +511,18 @@ class TagsServiceClient(ConnectClient):
 
     async def list_saved_filters(
         self,
-        request: tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
+        request: tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListSavedFilters",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
-                output=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse,
+                input=tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
+                output=tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -531,13 +531,13 @@ class TagsServiceClient(ConnectClient):
 
 
 class TagsServiceSync(Protocol):
-    def create_tag(self, request: tags_dot_v1_dot_tags__pb2.CreateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    def create_tag(self, request: tags_dot_v1_dot_tags__pb2.CreateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.CreateTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_tag(self, request: tags_dot_v1_dot_tags__pb2.UpdateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    def update_tag(self, request: tags_dot_v1_dot_tags__pb2.UpdateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.UpdateTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_tag(self, request: tags_dot_v1_dot_tags__pb2.DeleteTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_tag(self, request: tags_dot_v1_dot_tags__pb2.GetTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    def get_tag(self, request: tags_dot_v1_dot_tags__pb2.GetTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.GetTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_tags(self, request: tags_dot_v1_dot_tags__pb2.ListTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListTagsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -551,15 +551,15 @@ class TagsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_content_by_tag(self, request: tags_dot_v1_dot_tags__pb2.ListContentByTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListContentByTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def merge_tags(self, request: tags_dot_v1_dot_tags__pb2.MergeTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    def merge_tags(self, request: tags_dot_v1_dot_tags__pb2.MergeTagsRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.MergeTagsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    def create_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    def update_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse:
+    def delete_saved_filter(self, request: tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_saved_filters(self, request: tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse:
+    def list_saved_filters(self, request: tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -572,7 +572,7 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.CreateTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.CreateTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_tag,
@@ -582,7 +582,7 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.UpdateTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.UpdateTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_tag,
@@ -602,7 +602,7 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetTag",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.GetTagRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.GetTagResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_tag,
@@ -672,7 +672,7 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                         name="MergeTags",
                         service_name="tags.v1.TagsService",
                         input=tags_dot_v1_dot_tags__pb2.MergeTagsRequest,
-                        output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                        output=tags_dot_v1_dot_tags__pb2.MergeTagsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.merge_tags,
@@ -681,8 +681,8 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="CreateSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_saved_filter,
@@ -691,8 +691,8 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="UpdateSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_saved_filter,
@@ -701,8 +701,8 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="DeleteSavedFilter",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
-                        output=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse,
+                        input=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
+                        output=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_saved_filter,
@@ -711,8 +711,8 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="ListSavedFilters",
                         service_name="tags.v1.TagsService",
-                        input=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
-                        output=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse,
+                        input=tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
+                        output=tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_saved_filters,
@@ -735,14 +735,14 @@ class TagsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.CreateTagResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.CreateTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.CreateTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -755,14 +755,14 @@ class TagsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.UpdateTagResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.UpdateTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.UpdateTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -795,14 +795,14 @@ class TagsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.GetTagResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetTag",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.GetTagRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.GetTagResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -935,14 +935,14 @@ class TagsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.TagResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.MergeTagsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MergeTags",
                 service_name="tags.v1.TagsService",
                 input=tags_dot_v1_dot_tags__pb2.MergeTagsRequest,
-                output=tags_dot_v1_dot_tags__pb2.TagResponse,
+                output=tags_dot_v1_dot_tags__pb2.MergeTagsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -951,18 +951,18 @@ class TagsServiceClientSync(ConnectClientSync):
 
     def create_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.CreateSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.CreateSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.CreateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -971,18 +971,18 @@ class TagsServiceClientSync(ConnectClientSync):
 
     def update_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.UpdateSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.SavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.UpdateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -991,18 +991,18 @@ class TagsServiceClientSync(ConnectClientSync):
 
     def delete_saved_filter(
         self,
-        request: tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
+        request: tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteSavedFilter",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterRequest,
-                output=tags_dot_v1_dot_tags__pb2.DeleteSavedTagFilterResponse,
+                input=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterRequest,
+                output=tags_dot_v1_dot_tags__pb2.DeleteSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1011,18 +1011,18 @@ class TagsServiceClientSync(ConnectClientSync):
 
     def list_saved_filters(
         self,
-        request: tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
+        request: tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse:
+    ) -> tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListSavedFilters",
                 service_name="tags.v1.TagsService",
-                input=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersRequest,
-                output=tags_dot_v1_dot_tags__pb2.ListSavedTagFiltersResponse,
+                input=tags_dot_v1_dot_tags__pb2.ListSavedFiltersRequest,
+                output=tags_dot_v1_dot_tags__pb2.ListSavedFiltersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -95,6 +95,18 @@ class UploadChunkRequest(_message.Message):
     is_last: bool
     def __init__(self, upload_id: _Optional[str] = ..., chunk_number: _Optional[int] = ..., data: _Optional[bytes] = ..., is_last: _Optional[bool] = ...) -> None: ...
 
+class UploadChunksRequest(_message.Message):
+    __slots__ = ("upload_id", "chunk_number", "data", "is_last")
+    UPLOAD_ID_FIELD_NUMBER: _ClassVar[int]
+    CHUNK_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    IS_LAST_FIELD_NUMBER: _ClassVar[int]
+    upload_id: str
+    chunk_number: int
+    data: bytes
+    is_last: bool
+    def __init__(self, upload_id: _Optional[str] = ..., chunk_number: _Optional[int] = ..., data: _Optional[bytes] = ..., is_last: _Optional[bool] = ...) -> None: ...
+
 class UploadChunkResponse(_message.Message):
     __slots__ = ("success", "chunk_number", "chunks_received")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
@@ -114,6 +126,12 @@ class CompleteUploadRequest(_message.Message):
     def __init__(self, upload_id: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UploadChunksResponse(_message.Message):
+    __slots__ = ("file",)
+    FILE_FIELD_NUMBER: _ClassVar[int]
+    file: File
+    def __init__(self, file: _Optional[_Union[File, _Mapping]] = ...) -> None: ...
+
+class CompleteUploadResponse(_message.Message):
     __slots__ = ("file",)
     FILE_FIELD_NUMBER: _ClassVar[int]
     file: File
@@ -165,7 +183,7 @@ class DownloadFileRequest(_message.Message):
     version_id: str
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., version_id: _Optional[str] = ...) -> None: ...
 
-class DownloadChunkResponse(_message.Message):
+class DownloadFileResponse(_message.Message):
     __slots__ = ("data", "chunk_number", "total_chunks", "filename", "mime_type", "total_size")
     DATA_FIELD_NUMBER: _ClassVar[int]
     CHUNK_NUMBER_FIELD_NUMBER: _ClassVar[int]
@@ -314,7 +332,25 @@ class FileOwner(_message.Message):
     email: str
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ...) -> None: ...
 
-class FileResponse(_message.Message):
+class GetFileResponse(_message.Message):
+    __slots__ = ("file",)
+    FILE_FIELD_NUMBER: _ClassVar[int]
+    file: File
+    def __init__(self, file: _Optional[_Union[File, _Mapping]] = ...) -> None: ...
+
+class UpdateFileResponse(_message.Message):
+    __slots__ = ("file",)
+    FILE_FIELD_NUMBER: _ClassVar[int]
+    file: File
+    def __init__(self, file: _Optional[_Union[File, _Mapping]] = ...) -> None: ...
+
+class RestoreFileResponse(_message.Message):
+    __slots__ = ("file",)
+    FILE_FIELD_NUMBER: _ClassVar[int]
+    file: File
+    def __init__(self, file: _Optional[_Union[File, _Mapping]] = ...) -> None: ...
+
+class RestoreFileVersionResponse(_message.Message):
     __slots__ = ("file",)
     FILE_FIELD_NUMBER: _ClassVar[int]
     file: File
@@ -442,7 +478,25 @@ class Folder(_message.Message):
     baseline_role: _common_pb2.ContentRole
     def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_system: _Optional[bool] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
-class FolderResponse(_message.Message):
+class CreateFolderResponse(_message.Message):
+    __slots__ = ("folder",)
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    folder: Folder
+    def __init__(self, folder: _Optional[_Union[Folder, _Mapping]] = ...) -> None: ...
+
+class UpdateFolderResponse(_message.Message):
+    __slots__ = ("folder",)
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    folder: Folder
+    def __init__(self, folder: _Optional[_Union[Folder, _Mapping]] = ...) -> None: ...
+
+class EnsureRecordingsFolderResponse(_message.Message):
+    __slots__ = ("folder",)
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    folder: Folder
+    def __init__(self, folder: _Optional[_Union[Folder, _Mapping]] = ...) -> None: ...
+
+class RestoreFolderResponse(_message.Message):
     __slots__ = ("folder",)
     FOLDER_FIELD_NUMBER: _ClassVar[int]
     folder: Folder
@@ -756,7 +810,19 @@ class SavedFilter(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[_Union[IconValue, _Mapping]] = ..., criteria: _Optional[_Union[FilterCriteria, _Mapping]] = ..., is_preset: _Optional[bool] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
-class SavedFilterResponse(_message.Message):
+class CreateSavedFilterResponse(_message.Message):
+    __slots__ = ("filter",)
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    filter: SavedFilter
+    def __init__(self, filter: _Optional[_Union[SavedFilter, _Mapping]] = ...) -> None: ...
+
+class GetSavedFilterResponse(_message.Message):
+    __slots__ = ("filter",)
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    filter: SavedFilter
+    def __init__(self, filter: _Optional[_Union[SavedFilter, _Mapping]] = ...) -> None: ...
+
+class UpdateSavedFilterResponse(_message.Message):
     __slots__ = ("filter",)
     FILTER_FIELD_NUMBER: _ClassVar[int]
     filter: SavedFilter

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -357,7 +357,31 @@ class DeleteEventResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class EventResponse(_message.Message):
+class CreateEventResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: CalendarEvent
+    def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
+
+class GetEventResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: CalendarEvent
+    def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
+
+class UpdateEventResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: CalendarEvent
+    def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
+
+class AddAttendeesResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: CalendarEvent
+    def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
+
+class RemoveAttendeesResponse(_message.Message):
     __slots__ = ("event",)
     EVENT_FIELD_NUMBER: _ClassVar[int]
     event: CalendarEvent
@@ -503,7 +527,19 @@ class DeleteCalendarResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class CalendarResponse(_message.Message):
+class CreateCalendarResponse(_message.Message):
+    __slots__ = ("calendar",)
+    CALENDAR_FIELD_NUMBER: _ClassVar[int]
+    calendar: Calendar
+    def __init__(self, calendar: _Optional[_Union[Calendar, _Mapping]] = ...) -> None: ...
+
+class GetCalendarResponse(_message.Message):
+    __slots__ = ("calendar",)
+    CALENDAR_FIELD_NUMBER: _ClassVar[int]
+    calendar: Calendar
+    def __init__(self, calendar: _Optional[_Union[Calendar, _Mapping]] = ...) -> None: ...
+
+class UpdateCalendarResponse(_message.Message):
     __slots__ = ("calendar",)
     CALENDAR_FIELD_NUMBER: _ClassVar[int]
     calendar: Calendar
@@ -597,7 +633,19 @@ class DeleteCategoryResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class CategoryResponse(_message.Message):
+class CreateCategoryResponse(_message.Message):
+    __slots__ = ("category",)
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    category: Category
+    def __init__(self, category: _Optional[_Union[Category, _Mapping]] = ...) -> None: ...
+
+class GetCategoryResponse(_message.Message):
+    __slots__ = ("category",)
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    category: Category
+    def __init__(self, category: _Optional[_Union[Category, _Mapping]] = ...) -> None: ...
+
+class UpdateCategoryResponse(_message.Message):
     __slots__ = ("category",)
     CATEGORY_FIELD_NUMBER: _ClassVar[int]
     category: Category
@@ -761,7 +809,19 @@ class DeleteEventTemplateResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class EventTemplateResponse(_message.Message):
+class CreateEventTemplateResponse(_message.Message):
+    __slots__ = ("template",)
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    template: EventTemplate
+    def __init__(self, template: _Optional[_Union[EventTemplate, _Mapping]] = ...) -> None: ...
+
+class GetEventTemplateResponse(_message.Message):
+    __slots__ = ("template",)
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    template: EventTemplate
+    def __init__(self, template: _Optional[_Union[EventTemplate, _Mapping]] = ...) -> None: ...
+
+class UpdateEventTemplateResponse(_message.Message):
     __slots__ = ("template",)
     TEMPLATE_FIELD_NUMBER: _ClassVar[int]
     template: EventTemplate

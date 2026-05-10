@@ -19,16 +19,16 @@ class MembersService(Protocol):
     async def list_members(self, request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    async def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AddMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    async def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def remove_member(self, request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
+    async def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def transfer_ownership(self, request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
@@ -58,7 +58,7 @@ class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
                         name="AddMember",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.AddMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_member,
@@ -68,7 +68,7 @@ class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
                         name="UpdateMemberRole",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_member_role,
@@ -88,7 +88,7 @@ class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
                         name="SetAccessMode",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.set_access_mode,
@@ -151,14 +151,14 @@ class MembersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.AddMemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMember",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.AddMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -171,14 +171,14 @@ class MembersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemberRole",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -211,14 +211,14 @@ class MembersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="SetAccessMode",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -269,13 +269,13 @@ class MembersServiceClient(ConnectClient):
 class MembersServiceSync(Protocol):
     def list_members(self, request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AddMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_member(self, request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
+    def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def transfer_ownership(self, request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -302,7 +302,7 @@ class MembersServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddMember",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.AddMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_member,
@@ -312,7 +312,7 @@ class MembersServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateMemberRole",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_member_role,
@@ -332,7 +332,7 @@ class MembersServiceWSGIApplication(ConnectWSGIApplication):
                         name="SetAccessMode",
                         service_name="permissions.v1.MembersService",
                         input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
+                        output=permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.set_access_mode,
@@ -395,14 +395,14 @@ class MembersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.AddMemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMember",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.AddMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -415,14 +415,14 @@ class MembersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemberRole",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -455,14 +455,14 @@ class MembersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="SetAccessMode",
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
+                output=permissions_dot_v1_dot_permissions__pb2.SetAccessModeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

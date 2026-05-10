@@ -86,7 +86,6 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
       
       onClose();
     } catch (err: unknown) {
-      console.error('Failed to save category:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to save category. Please try again.';
       setError(errorMessage);
     } finally {

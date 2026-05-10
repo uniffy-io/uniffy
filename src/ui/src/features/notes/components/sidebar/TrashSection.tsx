@@ -68,8 +68,7 @@ export function TrashSection({
         try {
             setRestoringNoteId(noteId);
             await dispatch(restoreNote(noteId)).unwrap();
-        } catch (error) {
-            console.error('Failed to restore note:', error);
+        } catch {
         } finally {
             setRestoringNoteId(null);
         }

@@ -42,6 +42,7 @@ export {
   clearChannelMessages,
   setTypingUser,
   clearTypingUser,
+  evictExpiredTyping,
   addReactionToMessage,
   removeReactionFromMessage,
   clearChatMessages,

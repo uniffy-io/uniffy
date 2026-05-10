@@ -367,11 +367,11 @@ export class AddProviderKeyRequest extends Message<AddProviderKeyRequest> {
 }
 
 /**
- * Response containing a single provider key
+ * Response containing a single provider key (Add)
  *
- * @generated from message agents.v1.ProviderKeyResponse
+ * @generated from message agents.v1.AddProviderKeyResponse
  */
-export class ProviderKeyResponse extends Message<ProviderKeyResponse> {
+export class AddProviderKeyResponse extends Message<AddProviderKeyResponse> {
   /**
    * The provider key info (credential is never included)
    *
@@ -379,31 +379,72 @@ export class ProviderKeyResponse extends Message<ProviderKeyResponse> {
    */
   key?: ProviderKeyInfo;
 
-  constructor(data?: PartialMessage<ProviderKeyResponse>) {
+  constructor(data?: PartialMessage<AddProviderKeyResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.ProviderKeyResponse";
+  static readonly typeName = "agents.v1.AddProviderKeyResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "message", T: ProviderKeyInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProviderKeyResponse {
-    return new ProviderKeyResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddProviderKeyResponse {
+    return new AddProviderKeyResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProviderKeyResponse {
-    return new ProviderKeyResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddProviderKeyResponse {
+    return new AddProviderKeyResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProviderKeyResponse {
-    return new ProviderKeyResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddProviderKeyResponse {
+    return new AddProviderKeyResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ProviderKeyResponse | PlainMessage<ProviderKeyResponse> | undefined, b: ProviderKeyResponse | PlainMessage<ProviderKeyResponse> | undefined): boolean {
-    return proto3.util.equals(ProviderKeyResponse, a, b);
+  static equals(a: AddProviderKeyResponse | PlainMessage<AddProviderKeyResponse> | undefined, b: AddProviderKeyResponse | PlainMessage<AddProviderKeyResponse> | undefined): boolean {
+    return proto3.util.equals(AddProviderKeyResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single provider key (Toggle)
+ *
+ * @generated from message agents.v1.ToggleProviderKeyResponse
+ */
+export class ToggleProviderKeyResponse extends Message<ToggleProviderKeyResponse> {
+  /**
+   * The provider key info (credential is never included)
+   *
+   * @generated from field: agents.v1.ProviderKeyInfo key = 1;
+   */
+  key?: ProviderKeyInfo;
+
+  constructor(data?: PartialMessage<ToggleProviderKeyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ToggleProviderKeyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "message", T: ProviderKeyInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleProviderKeyResponse {
+    return new ToggleProviderKeyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ToggleProviderKeyResponse {
+    return new ToggleProviderKeyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ToggleProviderKeyResponse {
+    return new ToggleProviderKeyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ToggleProviderKeyResponse | PlainMessage<ToggleProviderKeyResponse> | undefined, b: ToggleProviderKeyResponse | PlainMessage<ToggleProviderKeyResponse> | undefined): boolean {
+    return proto3.util.equals(ToggleProviderKeyResponse, a, b);
   }
 }
 
@@ -778,6 +819,47 @@ export class ListAvailableModelsResponse extends Message<ListAvailableModelsResp
 
   static equals(a: ListAvailableModelsResponse | PlainMessage<ListAvailableModelsResponse> | undefined, b: ListAvailableModelsResponse | PlainMessage<ListAvailableModelsResponse> | undefined): boolean {
     return proto3.util.equals(ListAvailableModelsResponse, a, b);
+  }
+}
+
+/**
+ * Response with models for a specific provider key
+ *
+ * @generated from message agents.v1.ListModelsForKeyResponse
+ */
+export class ListModelsForKeyResponse extends Message<ListModelsForKeyResponse> {
+  /**
+   * Available models
+   *
+   * @generated from field: repeated agents.v1.ModelInfo models = 1;
+   */
+  models: ModelInfo[] = [];
+
+  constructor(data?: PartialMessage<ListModelsForKeyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ListModelsForKeyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "models", kind: "message", T: ModelInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListModelsForKeyResponse {
+    return new ListModelsForKeyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListModelsForKeyResponse {
+    return new ListModelsForKeyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListModelsForKeyResponse {
+    return new ListModelsForKeyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListModelsForKeyResponse | PlainMessage<ListModelsForKeyResponse> | undefined, b: ListModelsForKeyResponse | PlainMessage<ListModelsForKeyResponse> | undefined): boolean {
+    return proto3.util.equals(ListModelsForKeyResponse, a, b);
   }
 }
 

@@ -3,7 +3,6 @@ syntax = "proto3";
 package groups.v1;
 
 import "common/v1/common.proto";
-import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/groups/v1;groupsv1";
 
@@ -12,15 +11,15 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/groups/v1;groupsv1";
 service GroupsService {
   // Group CRUD operations
   rpc ListGroups(ListGroupsRequest) returns (ListGroupsResponse);
-  rpc GetGroup(GetGroupRequest) returns (common.v1.GroupInfo);
-  rpc CreateGroup(CreateGroupRequest) returns (common.v1.GroupInfo);
-  rpc UpdateGroup(UpdateGroupRequest) returns (common.v1.GroupInfo);
+  rpc GetGroup(GetGroupRequest) returns (GetGroupResponse);
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse);
+  rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse);
   rpc DeleteGroup(DeleteGroupRequest) returns (DeleteGroupResponse);
 
   // Group membership operations
   rpc ListGroupMembers(ListGroupMembersRequest) returns (ListGroupMembersResponse);
-  rpc AddGroupMember(AddGroupMemberRequest) returns (common.v1.GroupMemberInfo);
-  rpc UpdateGroupMember(UpdateGroupMemberRequest) returns (common.v1.GroupMemberInfo);
+  rpc AddGroupMember(AddGroupMemberRequest) returns (AddGroupMemberResponse);
+  rpc UpdateGroupMember(UpdateGroupMemberRequest) returns (UpdateGroupMemberResponse);
   rpc RemoveGroupMember(RemoveGroupMemberRequest) returns (RemoveGroupMemberResponse);
 
   // Bulk operations
@@ -30,42 +29,62 @@ service GroupsService {
 // Group CRUD Messages
 
 message ListGroupsRequest {
-  string                               organization_id = 1;
-  optional common.v1.PaginationRequest pagination      = 2;
-  optional string                      search          = 3;  // Filter by name
-  optional bool                        include_private = 4;  // Include private groups (requires admin)
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional string search = 3; // Filter by name
+  optional bool include_private = 4; // Include private groups (requires admin)
 }
 
 message ListGroupsResponse {
-  repeated common.v1.GroupInfo          groups     = 1;
+  repeated common.v1.GroupInfo groups = 1;
   optional common.v1.PaginationResponse pagination = 2;
 }
 
 message GetGroupRequest {
   string organization_id = 1;
-  string group_id        = 2;
+  string group_id = 2;
+}
+
+message GetGroupResponse {
+  common.v1.GroupInfo group = 1;
+}
+
+message CreateGroupResponse {
+  common.v1.GroupInfo group = 1;
+}
+
+message UpdateGroupResponse {
+  common.v1.GroupInfo group = 1;
+}
+
+message AddGroupMemberResponse {
+  common.v1.GroupMemberInfo member = 1;
+}
+
+message UpdateGroupMemberResponse {
+  common.v1.GroupMemberInfo member = 1;
 }
 
 message CreateGroupRequest {
-  string          organization_id = 1;
-  string          name            = 2;
-  optional string description     = 3;
-  bool            is_private      = 4;
-  bool            is_default      = 5; // Auto-add new org members
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  bool is_private = 4;
+  bool is_default = 5; // Auto-add new org members
 }
 
 message UpdateGroupRequest {
-  string          organization_id = 1;
-  string          group_id        = 2;
-  optional string name            = 3;
-  optional string description     = 4;
-  optional bool   is_private      = 5;
-  optional bool   is_default      = 6;
+  string organization_id = 1;
+  string group_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional bool is_private = 5;
+  optional bool is_default = 6;
 }
 
 message DeleteGroupRequest {
   string organization_id = 1;
-  string group_id        = 2;
+  string group_id = 2;
 }
 
 message DeleteGroupResponse {
@@ -75,35 +94,35 @@ message DeleteGroupResponse {
 // Group Membership Messages
 
 message ListGroupMembersRequest {
-  string                               organization_id = 1;
-  string                               group_id        = 2;
-  optional common.v1.PaginationRequest pagination      = 3;
-  optional common.v1.GroupRole         role_filter     = 4;
+  string organization_id = 1;
+  string group_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+  optional common.v1.GroupRole role_filter = 4;
 }
 
 message ListGroupMembersResponse {
-  repeated common.v1.GroupMemberInfo    members    = 1;
+  repeated common.v1.GroupMemberInfo members = 1;
   optional common.v1.PaginationResponse pagination = 2;
 }
 
 message AddGroupMemberRequest {
-  string              organization_id = 1;
-  string              group_id        = 2;
-  string              user_id         = 3;
-  common.v1.GroupRole role            = 4;
+  string organization_id = 1;
+  string group_id = 2;
+  string user_id = 3;
+  common.v1.GroupRole role = 4;
 }
 
 message UpdateGroupMemberRequest {
-  string              organization_id = 1;
-  string              group_id        = 2;
-  string              user_id         = 3;
-  common.v1.GroupRole role            = 4;
+  string organization_id = 1;
+  string group_id = 2;
+  string user_id = 3;
+  common.v1.GroupRole role = 4;
 }
 
 message RemoveGroupMemberRequest {
   string organization_id = 1;
-  string group_id        = 2;
-  string user_id         = 3;
+  string group_id = 2;
+  string user_id = 3;
 }
 
 message RemoveGroupMemberResponse {
@@ -114,7 +133,7 @@ message RemoveGroupMemberResponse {
 
 message GetUserGroupsRequest {
   string organization_id = 1;
-  string user_id         = 2;
+  string user_id = 2;
 }
 
 message GetUserGroupsResponse {

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -112,7 +112,19 @@ class CreateCronTaskRequest(_message.Message):
     baseline_role: _common_pb2.ContentRole
     def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., name: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., description: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
-class CronTaskResponse(_message.Message):
+class CreateCronTaskResponse(_message.Message):
+    __slots__ = ("task",)
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    task: CronTaskInfo
+    def __init__(self, task: _Optional[_Union[CronTaskInfo, _Mapping]] = ...) -> None: ...
+
+class GetCronTaskResponse(_message.Message):
+    __slots__ = ("task",)
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    task: CronTaskInfo
+    def __init__(self, task: _Optional[_Union[CronTaskInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateCronTaskResponse(_message.Message):
     __slots__ = ("task",)
     TASK_FIELD_NUMBER: _ClassVar[int]
     task: CronTaskInfo

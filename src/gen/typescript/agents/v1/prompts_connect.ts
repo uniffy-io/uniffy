@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreatePromptRequest, DeletePromptRequest, DeletePromptResponse, GetPromptRequest, ListPromptsRequest, ListPromptsResponse, PromptResponse, UpdatePromptRequest } from "./prompts_pb.js";
+import { CreatePromptRequest, CreatePromptResponse, DeletePromptRequest, DeletePromptResponse, GetPromptRequest, GetPromptResponse, ListPromptsRequest, ListPromptsResponse, UpdatePromptRequest, UpdatePromptResponse } from "./prompts_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -23,7 +23,7 @@ export const PromptsService = {
     createPrompt: {
       name: "CreatePrompt",
       I: CreatePromptRequest,
-      O: PromptResponse,
+      O: CreatePromptResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -34,7 +34,7 @@ export const PromptsService = {
     getPrompt: {
       name: "GetPrompt",
       I: GetPromptRequest,
-      O: PromptResponse,
+      O: GetPromptResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -56,7 +56,7 @@ export const PromptsService = {
     updatePrompt: {
       name: "UpdatePrompt",
       I: UpdatePromptRequest,
-      O: PromptResponse,
+      O: UpdatePromptResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -292,11 +292,11 @@ export class DeleteProfileResponse extends Message<DeleteProfileResponse> {
 }
 
 /**
- * Response containing a single profile
+ * Response containing a single profile (Create)
  *
- * @generated from message settings.v1.ProfileResponse
+ * @generated from message settings.v1.CreateProfileResponse
  */
-export class ProfileResponse extends Message<ProfileResponse> {
+export class CreateProfileResponse extends Message<CreateProfileResponse> {
   /**
    * The profile data
    *
@@ -304,31 +304,154 @@ export class ProfileResponse extends Message<ProfileResponse> {
    */
   profile?: SettingsProfile;
 
-  constructor(data?: PartialMessage<ProfileResponse>) {
+  constructor(data?: PartialMessage<CreateProfileResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "settings.v1.ProfileResponse";
+  static readonly typeName = "settings.v1.CreateProfileResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "profile", kind: "message", T: SettingsProfile },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProfileResponse {
-    return new ProfileResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProfileResponse {
+    return new CreateProfileResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProfileResponse {
-    return new ProfileResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateProfileResponse {
+    return new CreateProfileResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProfileResponse {
-    return new ProfileResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateProfileResponse {
+    return new CreateProfileResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ProfileResponse | PlainMessage<ProfileResponse> | undefined, b: ProfileResponse | PlainMessage<ProfileResponse> | undefined): boolean {
-    return proto3.util.equals(ProfileResponse, a, b);
+  static equals(a: CreateProfileResponse | PlainMessage<CreateProfileResponse> | undefined, b: CreateProfileResponse | PlainMessage<CreateProfileResponse> | undefined): boolean {
+    return proto3.util.equals(CreateProfileResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single profile (Get)
+ *
+ * @generated from message settings.v1.GetProfileResponse
+ */
+export class GetProfileResponse extends Message<GetProfileResponse> {
+  /**
+   * The profile data
+   *
+   * @generated from field: settings.v1.SettingsProfile profile = 1;
+   */
+  profile?: SettingsProfile;
+
+  constructor(data?: PartialMessage<GetProfileResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "settings.v1.GetProfileResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "profile", kind: "message", T: SettingsProfile },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProfileResponse {
+    return new GetProfileResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProfileResponse {
+    return new GetProfileResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProfileResponse {
+    return new GetProfileResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetProfileResponse | PlainMessage<GetProfileResponse> | undefined, b: GetProfileResponse | PlainMessage<GetProfileResponse> | undefined): boolean {
+    return proto3.util.equals(GetProfileResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single profile (Update)
+ *
+ * @generated from message settings.v1.UpdateProfileResponse
+ */
+export class UpdateProfileResponse extends Message<UpdateProfileResponse> {
+  /**
+   * The profile data
+   *
+   * @generated from field: settings.v1.SettingsProfile profile = 1;
+   */
+  profile?: SettingsProfile;
+
+  constructor(data?: PartialMessage<UpdateProfileResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "settings.v1.UpdateProfileResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "profile", kind: "message", T: SettingsProfile },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProfileResponse {
+    return new UpdateProfileResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateProfileResponse {
+    return new UpdateProfileResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateProfileResponse {
+    return new UpdateProfileResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateProfileResponse | PlainMessage<UpdateProfileResponse> | undefined, b: UpdateProfileResponse | PlainMessage<UpdateProfileResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateProfileResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single profile (SetDefaultProfile)
+ *
+ * @generated from message settings.v1.SetDefaultProfileResponse
+ */
+export class SetDefaultProfileResponse extends Message<SetDefaultProfileResponse> {
+  /**
+   * The profile data
+   *
+   * @generated from field: settings.v1.SettingsProfile profile = 1;
+   */
+  profile?: SettingsProfile;
+
+  constructor(data?: PartialMessage<SetDefaultProfileResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "settings.v1.SetDefaultProfileResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "profile", kind: "message", T: SettingsProfile },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetDefaultProfileResponse {
+    return new SetDefaultProfileResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetDefaultProfileResponse {
+    return new SetDefaultProfileResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetDefaultProfileResponse {
+    return new SetDefaultProfileResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetDefaultProfileResponse | PlainMessage<SetDefaultProfileResponse> | undefined, b: SetDefaultProfileResponse | PlainMessage<SetDefaultProfileResponse> | undefined): boolean {
+    return proto3.util.equals(SetDefaultProfileResponse, a, b);
   }
 }
 
@@ -460,9 +583,9 @@ export class GetEffectiveSettingsRequest extends Message<GetEffectiveSettingsReq
 /**
  * Response with effective settings (defaults merged with overrides)
  *
- * @generated from message settings.v1.EffectiveSettingsResponse
+ * @generated from message settings.v1.GetEffectiveSettingsResponse
  */
-export class EffectiveSettingsResponse extends Message<EffectiveSettingsResponse> {
+export class GetEffectiveSettingsResponse extends Message<GetEffectiveSettingsResponse> {
   /**
    * The profile used
    *
@@ -477,32 +600,32 @@ export class EffectiveSettingsResponse extends Message<EffectiveSettingsResponse
    */
   effectiveSettings?: EffectiveSettings;
 
-  constructor(data?: PartialMessage<EffectiveSettingsResponse>) {
+  constructor(data?: PartialMessage<GetEffectiveSettingsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "settings.v1.EffectiveSettingsResponse";
+  static readonly typeName = "settings.v1.GetEffectiveSettingsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "profile", kind: "message", T: SettingsProfile },
     { no: 2, name: "effective_settings", kind: "message", T: EffectiveSettings },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EffectiveSettingsResponse {
-    return new EffectiveSettingsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEffectiveSettingsResponse {
+    return new GetEffectiveSettingsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EffectiveSettingsResponse {
-    return new EffectiveSettingsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEffectiveSettingsResponse {
+    return new GetEffectiveSettingsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EffectiveSettingsResponse {
-    return new EffectiveSettingsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEffectiveSettingsResponse {
+    return new GetEffectiveSettingsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EffectiveSettingsResponse | PlainMessage<EffectiveSettingsResponse> | undefined, b: EffectiveSettingsResponse | PlainMessage<EffectiveSettingsResponse> | undefined): boolean {
-    return proto3.util.equals(EffectiveSettingsResponse, a, b);
+  static equals(a: GetEffectiveSettingsResponse | PlainMessage<GetEffectiveSettingsResponse> | undefined, b: GetEffectiveSettingsResponse | PlainMessage<GetEffectiveSettingsResponse> | undefined): boolean {
+    return proto3.util.equals(GetEffectiveSettingsResponse, a, b);
   }
 }
 
@@ -544,9 +667,9 @@ export class GetSettingsSchemaRequest extends Message<GetSettingsSchemaRequest> 
 /**
  * Response with settings schema
  *
- * @generated from message settings.v1.SettingsSchemaResponse
+ * @generated from message settings.v1.GetSettingsSchemaResponse
  */
-export class SettingsSchemaResponse extends Message<SettingsSchemaResponse> {
+export class GetSettingsSchemaResponse extends Message<GetSettingsSchemaResponse> {
   /**
    * Default appearance settings
    *
@@ -568,33 +691,33 @@ export class SettingsSchemaResponse extends Message<SettingsSchemaResponse> {
    */
   notificationsDefaults?: NotificationsSettings;
 
-  constructor(data?: PartialMessage<SettingsSchemaResponse>) {
+  constructor(data?: PartialMessage<GetSettingsSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "settings.v1.SettingsSchemaResponse";
+  static readonly typeName = "settings.v1.GetSettingsSchemaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "appearance_defaults", kind: "message", T: AppearanceSettings },
     { no: 2, name: "keyboard_shortcuts_defaults", kind: "message", T: KeyboardShortcutsSettings },
     { no: 3, name: "notifications_defaults", kind: "message", T: NotificationsSettings },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SettingsSchemaResponse {
-    return new SettingsSchemaResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSettingsSchemaResponse {
+    return new GetSettingsSchemaResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SettingsSchemaResponse {
-    return new SettingsSchemaResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSettingsSchemaResponse {
+    return new GetSettingsSchemaResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SettingsSchemaResponse {
-    return new SettingsSchemaResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSettingsSchemaResponse {
+    return new GetSettingsSchemaResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SettingsSchemaResponse | PlainMessage<SettingsSchemaResponse> | undefined, b: SettingsSchemaResponse | PlainMessage<SettingsSchemaResponse> | undefined): boolean {
-    return proto3.util.equals(SettingsSchemaResponse, a, b);
+  static equals(a: GetSettingsSchemaResponse | PlainMessage<GetSettingsSchemaResponse> | undefined, b: GetSettingsSchemaResponse | PlainMessage<GetSettingsSchemaResponse> | undefined): boolean {
+    return proto3.util.equals(GetSettingsSchemaResponse, a, b);
   }
 }
 
@@ -1055,14 +1178,14 @@ export class NotificationChannelPreference extends Message<NotificationChannelPr
   /**
    * Enable browser push notifications
    *
-   * @generated from field: optional bool browser = 3;
+   * @generated from field: optional bool browser = 2;
    */
   browser?: boolean;
 
   /**
    * Enable email notifications
    *
-   * @generated from field: optional bool email = 4;
+   * @generated from field: optional bool email = 3;
    */
   email?: boolean;
 
@@ -1075,8 +1198,8 @@ export class NotificationChannelPreference extends Message<NotificationChannelPr
   static readonly typeName = "settings.v1.NotificationChannelPreference";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "in_app", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 3, name: "browser", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 4, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "browser", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NotificationChannelPreference {

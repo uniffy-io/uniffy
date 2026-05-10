@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateSkillRequest, DeleteSkillRequest, DeleteSkillResponse, GetSkillRequest, ListSkillsRequest, ListSkillsResponse, SkillResponse, UpdateSkillRequest } from "./skills_pb.js";
+import { CreateSkillRequest, CreateSkillResponse, DeleteSkillRequest, DeleteSkillResponse, GetSkillRequest, GetSkillResponse, ListSkillsRequest, ListSkillsResponse, UpdateSkillRequest, UpdateSkillResponse } from "./skills_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -23,7 +23,7 @@ export const SkillsService = {
     createSkill: {
       name: "CreateSkill",
       I: CreateSkillRequest,
-      O: SkillResponse,
+      O: CreateSkillResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -34,7 +34,7 @@ export const SkillsService = {
     getSkill: {
       name: "GetSkill",
       I: GetSkillRequest,
-      O: SkillResponse,
+      O: GetSkillResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -56,7 +56,7 @@ export const SkillsService = {
     updateSkill: {
       name: "UpdateSkill",
       I: UpdateSkillRequest,
-      O: SkillResponse,
+      O: UpdateSkillResponse,
       kind: MethodKind.Unary,
     },
     /**

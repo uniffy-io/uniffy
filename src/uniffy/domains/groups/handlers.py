@@ -76,7 +76,7 @@ class GroupsHandlers:
         self,
         request: pb.GetGroupRequest,
         ctx: RequestContext,
-    ) -> common.GroupInfo:
+    ) -> pb.GetGroupResponse:
         """
         Get a specific group.
 
@@ -100,13 +100,13 @@ class GroupsHandlers:
             ops = GroupOperations(session)
             group = await ops.get_by_id(group_id)
 
-        return group_info_to_proto(group)
+        return pb.GetGroupResponse(group=group_info_to_proto(group))
 
     async def create_group(
         self,
         request: pb.CreateGroupRequest,
         ctx: RequestContext,
-    ) -> common.GroupInfo:
+    ) -> pb.CreateGroupResponse:
         """
         Create a new group.
 
@@ -137,13 +137,13 @@ class GroupsHandlers:
                 is_default=request.is_default,
             )
 
-        return group_info_to_proto(group)
+        return pb.CreateGroupResponse(group=group_info_to_proto(group))
 
     async def update_group(
         self,
         request: pb.UpdateGroupRequest,
         ctx: RequestContext,
-    ) -> common.GroupInfo:
+    ) -> pb.UpdateGroupResponse:
         """
         Update a group.
 
@@ -173,7 +173,7 @@ class GroupsHandlers:
                 is_default=request.is_default if request.HasField("is_default") else None,
             )
 
-        return group_info_to_proto(group)
+        return pb.UpdateGroupResponse(group=group_info_to_proto(group))
 
     async def delete_group(
         self,
@@ -262,7 +262,7 @@ class GroupsHandlers:
         self,
         request: pb.AddGroupMemberRequest,
         ctx: RequestContext,
-    ) -> common.GroupMemberInfo:
+    ) -> pb.AddGroupMemberResponse:
         """
         Add a member to a group.
 
@@ -294,13 +294,13 @@ class GroupsHandlers:
             # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
-        return group_member_info_to_proto(user, membership)
+        return pb.AddGroupMemberResponse(member=group_member_info_to_proto(user, membership))
 
     async def update_group_member(
         self,
         request: pb.UpdateGroupMemberRequest,
         ctx: RequestContext,
-    ) -> common.GroupMemberInfo:
+    ) -> pb.UpdateGroupMemberResponse:
         """
         Update a group member's role.
 
@@ -332,7 +332,9 @@ class GroupsHandlers:
             # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
-        return group_member_info_to_proto(user, membership)
+        return pb.UpdateGroupMemberResponse(
+            member=group_member_info_to_proto(user, membership)
+        )
 
     async def remove_group_member(
         self,

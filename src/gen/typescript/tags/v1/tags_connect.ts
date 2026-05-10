@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AssignTagsRequest, AssignTagsResponse, CreateSavedTagFilterRequest, CreateTagRequest, DeleteSavedTagFilterRequest, DeleteSavedTagFilterResponse, DeleteTagRequest, DeleteTagResponse, GetTagRequest, GetTagsForUrnsRequest, GetTagsForUrnsResponse, ListContentByTagRequest, ListContentByTagResponse, ListSavedTagFiltersRequest, ListSavedTagFiltersResponse, ListTagsRequest, ListTagsResponse, MergeTagsRequest, SavedTagFilterResponse, SuggestTagsRequest, SuggestTagsResponse, TagResponse, UnassignTagsRequest, UnassignTagsResponse, UpdateSavedTagFilterRequest, UpdateTagRequest } from "./tags_pb.js";
+import { AssignTagsRequest, AssignTagsResponse, CreateSavedFilterRequest, CreateSavedFilterResponse, CreateTagRequest, CreateTagResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DeleteTagRequest, DeleteTagResponse, GetTagRequest, GetTagResponse, GetTagsForUrnsRequest, GetTagsForUrnsResponse, ListContentByTagRequest, ListContentByTagResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTagsRequest, ListTagsResponse, MergeTagsRequest, MergeTagsResponse, SuggestTagsRequest, SuggestTagsResponse, UnassignTagsRequest, UnassignTagsResponse, UpdateSavedFilterRequest, UpdateSavedFilterResponse, UpdateTagRequest, UpdateTagResponse } from "./tags_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -23,7 +23,7 @@ export const TagsService = {
     createTag: {
       name: "CreateTag",
       I: CreateTagRequest,
-      O: TagResponse,
+      O: CreateTagResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -32,7 +32,7 @@ export const TagsService = {
     updateTag: {
       name: "UpdateTag",
       I: UpdateTagRequest,
-      O: TagResponse,
+      O: UpdateTagResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -50,7 +50,7 @@ export const TagsService = {
     getTag: {
       name: "GetTag",
       I: GetTagRequest,
-      O: TagResponse,
+      O: GetTagResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -113,7 +113,7 @@ export const TagsService = {
     mergeTags: {
       name: "MergeTags",
       I: MergeTagsRequest,
-      O: TagResponse,
+      O: MergeTagsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -121,8 +121,8 @@ export const TagsService = {
      */
     createSavedFilter: {
       name: "CreateSavedFilter",
-      I: CreateSavedTagFilterRequest,
-      O: SavedTagFilterResponse,
+      I: CreateSavedFilterRequest,
+      O: CreateSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -130,8 +130,8 @@ export const TagsService = {
      */
     updateSavedFilter: {
       name: "UpdateSavedFilter",
-      I: UpdateSavedTagFilterRequest,
-      O: SavedTagFilterResponse,
+      I: UpdateSavedFilterRequest,
+      O: UpdateSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -139,8 +139,8 @@ export const TagsService = {
      */
     deleteSavedFilter: {
       name: "DeleteSavedFilter",
-      I: DeleteSavedTagFilterRequest,
-      O: DeleteSavedTagFilterResponse,
+      I: DeleteSavedFilterRequest,
+      O: DeleteSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -148,8 +148,8 @@ export const TagsService = {
      */
     listSavedFilters: {
       name: "ListSavedFilters",
-      I: ListSavedTagFiltersRequest,
-      O: ListSavedTagFiltersResponse,
+      I: ListSavedFiltersRequest,
+      O: ListSavedFiltersResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -197,37 +197,37 @@ class FileUpdatePayload(_message.Message):
     organization_id: str
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
-class StreamNotificationEvent(_message.Message):
+class StreamNotificationsResponse(_message.Message):
     __slots__ = ("event_type", "notification", "timestamp", "file_update", "presence_changed", "mention_state_changed")
     class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        EVENT_TYPE_UNSPECIFIED: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_NEW_NOTIFICATION: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_HEARTBEAT: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_FILE_UPDATED: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_PRESENCE_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_MENTION_STATE_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
-        EVENT_TYPE_PERMISSIONS_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
-    EVENT_TYPE_UNSPECIFIED: StreamNotificationEvent.EventType
-    EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationEvent.EventType
-    EVENT_TYPE_HEARTBEAT: StreamNotificationEvent.EventType
-    EVENT_TYPE_FILE_UPDATED: StreamNotificationEvent.EventType
-    EVENT_TYPE_PRESENCE_CHANGED: StreamNotificationEvent.EventType
-    EVENT_TYPE_MENTION_STATE_CHANGED: StreamNotificationEvent.EventType
-    EVENT_TYPE_PERMISSIONS_CHANGED: StreamNotificationEvent.EventType
+        EVENT_TYPE_UNSPECIFIED: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_NEW_NOTIFICATION: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_HEARTBEAT: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_FILE_UPDATED: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_PRESENCE_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_MENTION_STATE_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_PERMISSIONS_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
+    EVENT_TYPE_UNSPECIFIED: StreamNotificationsResponse.EventType
+    EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationsResponse.EventType
+    EVENT_TYPE_HEARTBEAT: StreamNotificationsResponse.EventType
+    EVENT_TYPE_FILE_UPDATED: StreamNotificationsResponse.EventType
+    EVENT_TYPE_PRESENCE_CHANGED: StreamNotificationsResponse.EventType
+    EVENT_TYPE_MENTION_STATE_CHANGED: StreamNotificationsResponse.EventType
+    EVENT_TYPE_PERMISSIONS_CHANGED: StreamNotificationsResponse.EventType
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     FILE_UPDATE_FIELD_NUMBER: _ClassVar[int]
     PRESENCE_CHANGED_FIELD_NUMBER: _ClassVar[int]
     MENTION_STATE_CHANGED_FIELD_NUMBER: _ClassVar[int]
-    event_type: StreamNotificationEvent.EventType
+    event_type: StreamNotificationsResponse.EventType
     notification: Notification
     timestamp: _timestamp_pb2.Timestamp
     file_update: FileUpdatePayload
     presence_changed: PresenceChangedPayload
     mention_state_changed: MentionStateChangedPayload
-    def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ..., presence_changed: _Optional[_Union[PresenceChangedPayload, _Mapping]] = ..., mention_state_changed: _Optional[_Union[MentionStateChangedPayload, _Mapping]] = ...) -> None: ...
+    def __init__(self, event_type: _Optional[_Union[StreamNotificationsResponse.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ..., presence_changed: _Optional[_Union[PresenceChangedPayload, _Mapping]] = ..., mention_state_changed: _Optional[_Union[MentionStateChangedPayload, _Mapping]] = ...) -> None: ...
 
 class PresenceChangedPayload(_message.Message):
     __slots__ = ("user_id", "status", "last_active", "status_emoji", "status_text", "status_expires_at")

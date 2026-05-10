@@ -15,24 +15,26 @@ from uniffy_proto.files.v1.files_pb2 import (
     BulkDeleteRequest,
     BulkDeleteResponse,
     CompleteUploadRequest,
+    CompleteUploadResponse,
     CopyItemsRequest,
     CopyItemsResponse,
     CreatedFolderInfo,
     CreateFolderRequest,
+    CreateFolderResponse,
     CreateFolderTreeRequest,
     CreateFolderTreeResponse,
     DeleteFileRequest,
     DeleteFileResponse,
     DeleteFolderRequest,
     DeleteFolderResponse,
-    DownloadChunkResponse,
     DownloadFileRequest,
+    DownloadFileResponse,
     EmptyTrashRequest,
     EmptyTrashResponse,
     EnsureRecordingsFolderRequest,
-    FileResponse,
-    FolderResponse,
+    EnsureRecordingsFolderResponse,
     GetFileRequest,
+    GetFileResponse,
     GetFilesTreeRequest,
     GetFilesTreeResponse,
     GetUploadStatusRequest,
@@ -48,15 +50,21 @@ from uniffy_proto.files.v1.files_pb2 import (
     MoveItemsRequest,
     MoveItemsResponse,
     RestoreFileRequest,
+    RestoreFileResponse,
     RestoreFileVersionRequest,
+    RestoreFileVersionResponse,
     RestoreFolderRequest,
+    RestoreFolderResponse,
     StreamFileRangeRequest,
     StreamFileRangeResponse,
     TreeNode,
     UpdateFileRequest,
+    UpdateFileResponse,
     UpdateFolderRequest,
+    UpdateFolderResponse,
     UploadChunkRequest,
     UploadChunkResponse,
+    UploadChunksRequest,
     UploadChunksResponse,
 )
 
@@ -246,7 +254,7 @@ class FilesHandlers:
         self,
         request: CompleteUploadRequest,
         ctx: RequestContext,
-    ) -> UploadChunksResponse:
+    ) -> CompleteUploadResponse:
         """
         Complete an upload after all chunks have been sent.
 
@@ -275,7 +283,7 @@ class FilesHandlers:
                 logger.info(f"[Upload] Completed file id={file.id} folder_id={file.folder_id}")
 
                 tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
-                return UploadChunksResponse(
+                return CompleteUploadResponse(
                     file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
                 )
 
@@ -291,7 +299,7 @@ class FilesHandlers:
 
     async def upload_chunks(
         self,
-        request_iterator: AsyncIterator[UploadChunkRequest],
+        request_iterator: AsyncIterator[UploadChunksRequest],
         ctx: RequestContext,
     ) -> UploadChunksResponse:
         """
@@ -449,7 +457,7 @@ class FilesHandlers:
         self,
         request: DownloadFileRequest,
         ctx: RequestContext,
-    ) -> AsyncIterator[DownloadChunkResponse]:
+    ) -> AsyncIterator[DownloadFileResponse]:
         """
         Stream file content to client.
 
@@ -477,7 +485,7 @@ class FilesHandlers:
                 async for chunk_data, chunk_num, total_chunks in s3.download_stream(
                     key=file.storage_key
                 ):
-                    response = DownloadChunkResponse(
+                    response = DownloadFileResponse(
                         data=chunk_data,
                         chunk_number=chunk_num,
                         total_chunks=total_chunks,
@@ -575,7 +583,7 @@ class FilesHandlers:
         self,
         request: GetFileRequest,
         ctx: RequestContext,
-    ) -> FileResponse:
+    ) -> GetFileResponse:
         """Get a file by ID."""
         try:
             file_id = UUID(request.file_id)
@@ -590,7 +598,7 @@ class FilesHandlers:
                 ops = FileOperations(session)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
-                return FileResponse(
+                return GetFileResponse(
                     file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
                 )
 
@@ -608,7 +616,7 @@ class FilesHandlers:
         self,
         request: UpdateFileRequest,
         ctx: RequestContext,
-    ) -> FileResponse:
+    ) -> UpdateFileResponse:
         """Update file metadata.
 
         Access policy changes (access_mode, baseline_role) on the request
@@ -665,7 +673,7 @@ class FilesHandlers:
                 )
 
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
-                return FileResponse(
+                return UpdateFileResponse(
                     file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
                 )
 
@@ -722,7 +730,7 @@ class FilesHandlers:
         self,
         request: RestoreFileRequest,
         ctx: RequestContext,
-    ) -> FileResponse:
+    ) -> RestoreFileResponse:
         """Restore a soft-deleted file."""
         try:
             file_id = UUID(request.file_id)
@@ -741,7 +749,7 @@ class FilesHandlers:
                     file_id=file_id,
                 )
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
-                return FileResponse(
+                return RestoreFileResponse(
                     file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
                 )
 
@@ -859,7 +867,7 @@ class FilesHandlers:
         self,
         request: CreateFolderRequest,
         ctx: RequestContext,
-    ) -> FolderResponse:
+    ) -> CreateFolderResponse:
         """Create a new folder."""
         try:
             organization_id = UUID(request.organization_id)
@@ -893,7 +901,7 @@ class FilesHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return FolderResponse(folder=folder_to_proto(folder))
+                return CreateFolderResponse(folder=folder_to_proto(folder))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -907,7 +915,7 @@ class FilesHandlers:
         self,
         request: UpdateFolderRequest,
         ctx: RequestContext,
-    ) -> FolderResponse:
+    ) -> UpdateFolderResponse:
         """Update a folder."""
         try:
             folder_id = UUID(request.folder_id)
@@ -962,7 +970,7 @@ class FilesHandlers:
                     name=request.name if request.HasField("name") else None,
                     parent_id=parent_id,
                 )
-                return FolderResponse(folder=folder_to_proto(folder))
+                return UpdateFolderResponse(folder=folder_to_proto(folder))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
@@ -1192,7 +1200,7 @@ class FilesHandlers:
         self,
         request: RestoreFolderRequest,
         ctx: RequestContext,
-    ) -> FolderResponse:
+    ) -> RestoreFolderResponse:
         """Restore a soft-deleted folder (and its soft-deleted contents)."""
         try:
             folder_id = UUID(request.folder_id)
@@ -1210,7 +1218,7 @@ class FilesHandlers:
                     organization_id=organization_id,
                     folder_id=folder_id,
                 )
-                return FolderResponse(folder=folder_to_proto(folder))
+                return RestoreFolderResponse(folder=folder_to_proto(folder))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
@@ -1339,7 +1347,7 @@ class FilesHandlers:
         self,
         request: EnsureRecordingsFolderRequest,
         ctx: RequestContext,
-    ) -> FolderResponse:
+    ) -> EnsureRecordingsFolderResponse:
         """Lazily create or fetch the per-user "Recordings" system folder."""
         try:
             organization_id = UUID(request.organization_id)
@@ -1356,7 +1364,7 @@ class FilesHandlers:
                     organization_id=organization_id,
                     name="Recordings",
                 )
-                return FolderResponse(folder=folder_to_proto(folder))
+                return EnsureRecordingsFolderResponse(folder=folder_to_proto(folder))
         except ConnectError:
             raise
         except Exception as e:
@@ -1528,6 +1536,6 @@ class FilesHandlers:
         self,
         request: RestoreFileVersionRequest,
         ctx: RequestContext,
-    ) -> FileResponse:
+    ) -> RestoreFileVersionResponse:
         """Restore a previous version of a file."""
         raise ConnectError(Code.UNIMPLEMENTED, "RestoreFileVersion not yet implemented")

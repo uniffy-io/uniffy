@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateMemoryRequest, DeleteMemoryRequest, DeleteMemoryResponse, ListMemoriesRequest, ListMemoriesResponse, MemoryResponse, UpdateMemoryRequest } from "./memories_pb.js";
+import { CreateMemoryRequest, CreateMemoryResponse, DeleteMemoryRequest, DeleteMemoryResponse, ListMemoriesRequest, ListMemoriesResponse, UpdateMemoryRequest, UpdateMemoryResponse } from "./memories_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -33,7 +33,7 @@ export const MemoriesService = {
     createMemory: {
       name: "CreateMemory",
       I: CreateMemoryRequest,
-      O: MemoryResponse,
+      O: CreateMemoryResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -44,7 +44,7 @@ export const MemoriesService = {
     updateMemory: {
       name: "UpdateMemory",
       I: UpdateMemoryRequest,
-      O: MemoryResponse,
+      O: UpdateMemoryResponse,
       kind: MethodKind.Unary,
     },
     /**

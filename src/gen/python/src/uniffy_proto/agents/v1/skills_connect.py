@@ -16,16 +16,16 @@ import agents.v1.skills_pb2 as agents_dot_v1_dot_skills__pb2
 
 
 class SkillsService(Protocol):
-    async def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    async def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_skill(self, request: agents_dot_v1_dot_skills__pb2.GetSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    async def get_skill(self, request: agents_dot_v1_dot_skills__pb2.GetSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_skills(self, request: agents_dot_v1_dot_skills__pb2.ListSkillsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_skill(self, request: agents_dot_v1_dot_skills__pb2.UpdateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    async def update_skill(self, request: agents_dot_v1_dot_skills__pb2.UpdateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.UpdateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_skill(self, request: agents_dot_v1_dot_skills__pb2.DeleteSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DeleteSkillResponse:
@@ -42,7 +42,7 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
                         name="CreateSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.CreateSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.CreateSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_skill,
@@ -52,7 +52,7 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
                         name="GetSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.GetSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_skill,
@@ -72,7 +72,7 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
                         name="UpdateSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.UpdateSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.UpdateSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_skill,
@@ -105,14 +105,14 @@ class SkillsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.CreateSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.CreateSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -125,14 +125,14 @@ class SkillsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.GetSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -165,14 +165,14 @@ class SkillsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.UpdateSkillResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.UpdateSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.UpdateSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -201,13 +201,13 @@ class SkillsServiceClient(ConnectClient):
 
 
 class SkillsServiceSync(Protocol):
-    def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_skill(self, request: agents_dot_v1_dot_skills__pb2.GetSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    def get_skill(self, request: agents_dot_v1_dot_skills__pb2.GetSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_skills(self, request: agents_dot_v1_dot_skills__pb2.ListSkillsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_skill(self, request: agents_dot_v1_dot_skills__pb2.UpdateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    def update_skill(self, request: agents_dot_v1_dot_skills__pb2.UpdateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.UpdateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_skill(self, request: agents_dot_v1_dot_skills__pb2.DeleteSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DeleteSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -222,7 +222,7 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.CreateSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.CreateSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_skill,
@@ -232,7 +232,7 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.GetSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_skill,
@@ -252,7 +252,7 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateSkill",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.UpdateSkillRequest,
-                        output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                        output=agents_dot_v1_dot_skills__pb2.UpdateSkillResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_skill,
@@ -285,14 +285,14 @@ class SkillsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.CreateSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.CreateSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -305,14 +305,14 @@ class SkillsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.GetSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -345,14 +345,14 @@ class SkillsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.SkillResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.UpdateSkillResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSkill",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.UpdateSkillRequest,
-                output=agents_dot_v1_dot_skills__pb2.SkillResponse,
+                output=agents_dot_v1_dot_skills__pb2.UpdateSkillResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

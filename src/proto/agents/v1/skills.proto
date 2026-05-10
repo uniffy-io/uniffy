@@ -2,25 +2,25 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 service SkillsService {
   // Create a new organization skill
-  rpc CreateSkill(CreateSkillRequest) returns (SkillResponse) {}
+  rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse) {}
 
   // Get a skill by ID
-  rpc GetSkill(GetSkillRequest) returns (SkillResponse) {}
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse) {}
 
   // List skills (bundled + organization)
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {}
 
   // Update an organization skill
-  rpc UpdateSkill(UpdateSkillRequest) returns (SkillResponse) {}
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse) {}
 
   // Delete an organization skill
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {}
@@ -29,21 +29,21 @@ service SkillsService {
 // Source of a skill definition
 enum SkillSource {
   SKILL_SOURCE_UNSPECIFIED = 0;
-  SKILL_SOURCE_BUNDLED = 1;       // shipped with the app, org_id is null
-  SKILL_SOURCE_ORGANIZATION = 2;  // created by an org admin
-  SKILL_SOURCE_PERSONAL = 3;      // created by a user for personal use
+  SKILL_SOURCE_BUNDLED = 1; // shipped with the app, org_id is null
+  SKILL_SOURCE_ORGANIZATION = 2; // created by an org admin
+  SKILL_SOURCE_PERSONAL = 3; // created by a user for personal use
 }
 
 // Skill definition returned to clients
 message SkillInfo {
   string id = 1;
-  optional string organization_id = 2;  // null for bundled skills
+  optional string organization_id = 2; // null for bundled skills
   string name = 3;
   string display_name = 4;
   string description = 5;
-  string content = 6;                   // markdown instructions
+  string content = 6; // markdown instructions
   SkillSource source = 7;
-  bool always_active = 8;               // injected regardless of agent config
+  bool always_active = 8; // injected regardless of agent config
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   // Owner user ID for personal skills (null for org/bundled skills)
@@ -63,7 +63,15 @@ message CreateSkillRequest {
   optional string owner_id = 7;
 }
 
-message SkillResponse {
+message CreateSkillResponse {
+  SkillInfo skill = 1;
+}
+
+message GetSkillResponse {
+  SkillInfo skill = 1;
+}
+
+message UpdateSkillResponse {
   SkillInfo skill = 1;
 }
 

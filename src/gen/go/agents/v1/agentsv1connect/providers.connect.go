@@ -59,7 +59,7 @@ const (
 // ProvidersServiceClient is a client for the agents.v1.ProvidersService service.
 type ProvidersServiceClient interface {
 	// Add a new provider API key or setup token
-	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error)
+	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *connect.Request[v1.ListProviderKeysRequest]) (*connect.Response[v1.ListProviderKeysResponse], error)
 	// Remove a provider key
@@ -69,9 +69,9 @@ type ProvidersServiceClient interface {
 	// List available models based on configured provider keys
 	ListAvailableModels(context.Context, *connect.Request[v1.ListAvailableModelsRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error)
 	// Enable or disable a provider key
-	ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error)
+	ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ToggleProviderKeyResponse], error)
 	// List models available through a specific provider key
-	ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error)
+	ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListModelsForKeyResponse], error)
 }
 
 // NewProvidersServiceClient constructs a client for the agents.v1.ProvidersService service. By
@@ -85,7 +85,7 @@ func NewProvidersServiceClient(httpClient connect.HTTPClient, baseURL string, op
 	baseURL = strings.TrimRight(baseURL, "/")
 	providersServiceMethods := v1.File_agents_v1_providers_proto.Services().ByName("ProvidersService").Methods()
 	return &providersServiceClient{
-		addProviderKey: connect.NewClient[v1.AddProviderKeyRequest, v1.ProviderKeyResponse](
+		addProviderKey: connect.NewClient[v1.AddProviderKeyRequest, v1.AddProviderKeyResponse](
 			httpClient,
 			baseURL+ProvidersServiceAddProviderKeyProcedure,
 			connect.WithSchema(providersServiceMethods.ByName("AddProviderKey")),
@@ -115,13 +115,13 @@ func NewProvidersServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(providersServiceMethods.ByName("ListAvailableModels")),
 			connect.WithClientOptions(opts...),
 		),
-		toggleProviderKey: connect.NewClient[v1.ToggleProviderKeyRequest, v1.ProviderKeyResponse](
+		toggleProviderKey: connect.NewClient[v1.ToggleProviderKeyRequest, v1.ToggleProviderKeyResponse](
 			httpClient,
 			baseURL+ProvidersServiceToggleProviderKeyProcedure,
 			connect.WithSchema(providersServiceMethods.ByName("ToggleProviderKey")),
 			connect.WithClientOptions(opts...),
 		),
-		listModelsForKey: connect.NewClient[v1.ListModelsForKeyRequest, v1.ListAvailableModelsResponse](
+		listModelsForKey: connect.NewClient[v1.ListModelsForKeyRequest, v1.ListModelsForKeyResponse](
 			httpClient,
 			baseURL+ProvidersServiceListModelsForKeyProcedure,
 			connect.WithSchema(providersServiceMethods.ByName("ListModelsForKey")),
@@ -132,17 +132,17 @@ func NewProvidersServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // providersServiceClient implements ProvidersServiceClient.
 type providersServiceClient struct {
-	addProviderKey      *connect.Client[v1.AddProviderKeyRequest, v1.ProviderKeyResponse]
+	addProviderKey      *connect.Client[v1.AddProviderKeyRequest, v1.AddProviderKeyResponse]
 	listProviderKeys    *connect.Client[v1.ListProviderKeysRequest, v1.ListProviderKeysResponse]
 	removeProviderKey   *connect.Client[v1.RemoveProviderKeyRequest, v1.RemoveProviderKeyResponse]
 	validateProviderKey *connect.Client[v1.ValidateProviderKeyRequest, v1.ValidateProviderKeyResponse]
 	listAvailableModels *connect.Client[v1.ListAvailableModelsRequest, v1.ListAvailableModelsResponse]
-	toggleProviderKey   *connect.Client[v1.ToggleProviderKeyRequest, v1.ProviderKeyResponse]
-	listModelsForKey    *connect.Client[v1.ListModelsForKeyRequest, v1.ListAvailableModelsResponse]
+	toggleProviderKey   *connect.Client[v1.ToggleProviderKeyRequest, v1.ToggleProviderKeyResponse]
+	listModelsForKey    *connect.Client[v1.ListModelsForKeyRequest, v1.ListModelsForKeyResponse]
 }
 
 // AddProviderKey calls agents.v1.ProvidersService.AddProviderKey.
-func (c *providersServiceClient) AddProviderKey(ctx context.Context, req *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error) {
+func (c *providersServiceClient) AddProviderKey(ctx context.Context, req *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error) {
 	return c.addProviderKey.CallUnary(ctx, req)
 }
 
@@ -167,19 +167,19 @@ func (c *providersServiceClient) ListAvailableModels(ctx context.Context, req *c
 }
 
 // ToggleProviderKey calls agents.v1.ProvidersService.ToggleProviderKey.
-func (c *providersServiceClient) ToggleProviderKey(ctx context.Context, req *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error) {
+func (c *providersServiceClient) ToggleProviderKey(ctx context.Context, req *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ToggleProviderKeyResponse], error) {
 	return c.toggleProviderKey.CallUnary(ctx, req)
 }
 
 // ListModelsForKey calls agents.v1.ProvidersService.ListModelsForKey.
-func (c *providersServiceClient) ListModelsForKey(ctx context.Context, req *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error) {
+func (c *providersServiceClient) ListModelsForKey(ctx context.Context, req *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListModelsForKeyResponse], error) {
 	return c.listModelsForKey.CallUnary(ctx, req)
 }
 
 // ProvidersServiceHandler is an implementation of the agents.v1.ProvidersService service.
 type ProvidersServiceHandler interface {
 	// Add a new provider API key or setup token
-	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error)
+	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *connect.Request[v1.ListProviderKeysRequest]) (*connect.Response[v1.ListProviderKeysResponse], error)
 	// Remove a provider key
@@ -189,9 +189,9 @@ type ProvidersServiceHandler interface {
 	// List available models based on configured provider keys
 	ListAvailableModels(context.Context, *connect.Request[v1.ListAvailableModelsRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error)
 	// Enable or disable a provider key
-	ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error)
+	ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ToggleProviderKeyResponse], error)
 	// List models available through a specific provider key
-	ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error)
+	ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListModelsForKeyResponse], error)
 }
 
 // NewProvidersServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -268,7 +268,7 @@ func NewProvidersServiceHandler(svc ProvidersServiceHandler, opts ...connect.Han
 // UnimplementedProvidersServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedProvidersServiceHandler struct{}
 
-func (UnimplementedProvidersServiceHandler) AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error) {
+func (UnimplementedProvidersServiceHandler) AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.ProvidersService.AddProviderKey is not implemented"))
 }
 
@@ -288,10 +288,10 @@ func (UnimplementedProvidersServiceHandler) ListAvailableModels(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.ProvidersService.ListAvailableModels is not implemented"))
 }
 
-func (UnimplementedProvidersServiceHandler) ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ProviderKeyResponse], error) {
+func (UnimplementedProvidersServiceHandler) ToggleProviderKey(context.Context, *connect.Request[v1.ToggleProviderKeyRequest]) (*connect.Response[v1.ToggleProviderKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.ProvidersService.ToggleProviderKey is not implemented"))
 }
 
-func (UnimplementedProvidersServiceHandler) ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListAvailableModelsResponse], error) {
+func (UnimplementedProvidersServiceHandler) ListModelsForKey(context.Context, *connect.Request[v1.ListModelsForKeyRequest]) (*connect.Response[v1.ListModelsForKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.ProvidersService.ListModelsForKey is not implemented"))
 }

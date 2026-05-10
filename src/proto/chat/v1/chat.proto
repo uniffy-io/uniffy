@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package chat.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
 
 // ChatService provides channel, message, thread, reaction, and category management.
 service ChatService {

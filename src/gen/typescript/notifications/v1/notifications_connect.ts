@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BulkDeleteNotificationsRequest, BulkDeleteNotificationsResponse, BulkMarkAsReadRequest, BulkMarkAsReadResponse, DeleteNotificationRequest, DeleteNotificationResponse, GetNotificationStatsRequest, GetNotificationStatsResponse, GetUnreadCountRequest, GetUnreadCountResponse, GetVapidPublicKeyRequest, GetVapidPublicKeyResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, SearchNotificationsRequest, SearchNotificationsResponse, StreamNotificationEvent, StreamNotificationsRequest, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
+import { BulkDeleteNotificationsRequest, BulkDeleteNotificationsResponse, BulkMarkAsReadRequest, BulkMarkAsReadResponse, DeleteNotificationRequest, DeleteNotificationResponse, GetNotificationStatsRequest, GetNotificationStatsResponse, GetUnreadCountRequest, GetUnreadCountResponse, GetVapidPublicKeyRequest, GetVapidPublicKeyResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, SearchNotificationsRequest, SearchNotificationsResponse, StreamNotificationsRequest, StreamNotificationsResponse, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -99,7 +99,7 @@ export const NotificationsService = {
     streamNotifications: {
       name: "StreamNotifications",
       I: StreamNotificationsRequest,
-      O: StreamNotificationEvent,
+      O: StreamNotificationsResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**

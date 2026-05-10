@@ -93,8 +93,7 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
         }
 
         onClose();
-    } catch (error) {
-        console.error('Failed to save template:', error);
+    } catch {
     }
   };
 

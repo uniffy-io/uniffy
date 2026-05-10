@@ -74,21 +74,21 @@ const (
 
 // TagsServiceClient is a client for the tags.v1.TagsService service.
 type TagsServiceClient interface {
-	CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.TagResponse], error)
-	UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.TagResponse], error)
+	CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.CreateTagResponse], error)
+	UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.UpdateTagResponse], error)
 	DeleteTag(context.Context, *connect.Request[v1.DeleteTagRequest]) (*connect.Response[v1.DeleteTagResponse], error)
-	GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.TagResponse], error)
+	GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.GetTagResponse], error)
 	ListTags(context.Context, *connect.Request[v1.ListTagsRequest]) (*connect.Response[v1.ListTagsResponse], error)
 	SuggestTags(context.Context, *connect.Request[v1.SuggestTagsRequest]) (*connect.Response[v1.SuggestTagsResponse], error)
 	AssignTags(context.Context, *connect.Request[v1.AssignTagsRequest]) (*connect.Response[v1.AssignTagsResponse], error)
 	UnassignTags(context.Context, *connect.Request[v1.UnassignTagsRequest]) (*connect.Response[v1.UnassignTagsResponse], error)
 	GetTagsForUrns(context.Context, *connect.Request[v1.GetTagsForUrnsRequest]) (*connect.Response[v1.GetTagsForUrnsResponse], error)
 	ListContentByTag(context.Context, *connect.Request[v1.ListContentByTagRequest]) (*connect.Response[v1.ListContentByTagResponse], error)
-	MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.TagResponse], error)
-	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error)
-	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error)
-	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedTagFilterRequest]) (*connect.Response[v1.DeleteSavedTagFilterResponse], error)
-	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedTagFiltersRequest]) (*connect.Response[v1.ListSavedTagFiltersResponse], error)
+	MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.MergeTagsResponse], error)
+	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error)
+	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error)
+	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
+	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error)
 }
 
 // NewTagsServiceClient constructs a client for the tags.v1.TagsService service. By default, it uses
@@ -102,13 +102,13 @@ func NewTagsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	tagsServiceMethods := v1.File_tags_v1_tags_proto.Services().ByName("TagsService").Methods()
 	return &tagsServiceClient{
-		createTag: connect.NewClient[v1.CreateTagRequest, v1.TagResponse](
+		createTag: connect.NewClient[v1.CreateTagRequest, v1.CreateTagResponse](
 			httpClient,
 			baseURL+TagsServiceCreateTagProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("CreateTag")),
 			connect.WithClientOptions(opts...),
 		),
-		updateTag: connect.NewClient[v1.UpdateTagRequest, v1.TagResponse](
+		updateTag: connect.NewClient[v1.UpdateTagRequest, v1.UpdateTagResponse](
 			httpClient,
 			baseURL+TagsServiceUpdateTagProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("UpdateTag")),
@@ -120,7 +120,7 @@ func NewTagsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(tagsServiceMethods.ByName("DeleteTag")),
 			connect.WithClientOptions(opts...),
 		),
-		getTag: connect.NewClient[v1.GetTagRequest, v1.TagResponse](
+		getTag: connect.NewClient[v1.GetTagRequest, v1.GetTagResponse](
 			httpClient,
 			baseURL+TagsServiceGetTagProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("GetTag")),
@@ -162,31 +162,31 @@ func NewTagsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(tagsServiceMethods.ByName("ListContentByTag")),
 			connect.WithClientOptions(opts...),
 		),
-		mergeTags: connect.NewClient[v1.MergeTagsRequest, v1.TagResponse](
+		mergeTags: connect.NewClient[v1.MergeTagsRequest, v1.MergeTagsResponse](
 			httpClient,
 			baseURL+TagsServiceMergeTagsProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("MergeTags")),
 			connect.WithClientOptions(opts...),
 		),
-		createSavedFilter: connect.NewClient[v1.CreateSavedTagFilterRequest, v1.SavedTagFilterResponse](
+		createSavedFilter: connect.NewClient[v1.CreateSavedFilterRequest, v1.CreateSavedFilterResponse](
 			httpClient,
 			baseURL+TagsServiceCreateSavedFilterProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("CreateSavedFilter")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSavedFilter: connect.NewClient[v1.UpdateSavedTagFilterRequest, v1.SavedTagFilterResponse](
+		updateSavedFilter: connect.NewClient[v1.UpdateSavedFilterRequest, v1.UpdateSavedFilterResponse](
 			httpClient,
 			baseURL+TagsServiceUpdateSavedFilterProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("UpdateSavedFilter")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteSavedFilter: connect.NewClient[v1.DeleteSavedTagFilterRequest, v1.DeleteSavedTagFilterResponse](
+		deleteSavedFilter: connect.NewClient[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse](
 			httpClient,
 			baseURL+TagsServiceDeleteSavedFilterProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("DeleteSavedFilter")),
 			connect.WithClientOptions(opts...),
 		),
-		listSavedFilters: connect.NewClient[v1.ListSavedTagFiltersRequest, v1.ListSavedTagFiltersResponse](
+		listSavedFilters: connect.NewClient[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse](
 			httpClient,
 			baseURL+TagsServiceListSavedFiltersProcedure,
 			connect.WithSchema(tagsServiceMethods.ByName("ListSavedFilters")),
@@ -197,30 +197,30 @@ func NewTagsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // tagsServiceClient implements TagsServiceClient.
 type tagsServiceClient struct {
-	createTag         *connect.Client[v1.CreateTagRequest, v1.TagResponse]
-	updateTag         *connect.Client[v1.UpdateTagRequest, v1.TagResponse]
+	createTag         *connect.Client[v1.CreateTagRequest, v1.CreateTagResponse]
+	updateTag         *connect.Client[v1.UpdateTagRequest, v1.UpdateTagResponse]
 	deleteTag         *connect.Client[v1.DeleteTagRequest, v1.DeleteTagResponse]
-	getTag            *connect.Client[v1.GetTagRequest, v1.TagResponse]
+	getTag            *connect.Client[v1.GetTagRequest, v1.GetTagResponse]
 	listTags          *connect.Client[v1.ListTagsRequest, v1.ListTagsResponse]
 	suggestTags       *connect.Client[v1.SuggestTagsRequest, v1.SuggestTagsResponse]
 	assignTags        *connect.Client[v1.AssignTagsRequest, v1.AssignTagsResponse]
 	unassignTags      *connect.Client[v1.UnassignTagsRequest, v1.UnassignTagsResponse]
 	getTagsForUrns    *connect.Client[v1.GetTagsForUrnsRequest, v1.GetTagsForUrnsResponse]
 	listContentByTag  *connect.Client[v1.ListContentByTagRequest, v1.ListContentByTagResponse]
-	mergeTags         *connect.Client[v1.MergeTagsRequest, v1.TagResponse]
-	createSavedFilter *connect.Client[v1.CreateSavedTagFilterRequest, v1.SavedTagFilterResponse]
-	updateSavedFilter *connect.Client[v1.UpdateSavedTagFilterRequest, v1.SavedTagFilterResponse]
-	deleteSavedFilter *connect.Client[v1.DeleteSavedTagFilterRequest, v1.DeleteSavedTagFilterResponse]
-	listSavedFilters  *connect.Client[v1.ListSavedTagFiltersRequest, v1.ListSavedTagFiltersResponse]
+	mergeTags         *connect.Client[v1.MergeTagsRequest, v1.MergeTagsResponse]
+	createSavedFilter *connect.Client[v1.CreateSavedFilterRequest, v1.CreateSavedFilterResponse]
+	updateSavedFilter *connect.Client[v1.UpdateSavedFilterRequest, v1.UpdateSavedFilterResponse]
+	deleteSavedFilter *connect.Client[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse]
+	listSavedFilters  *connect.Client[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse]
 }
 
 // CreateTag calls tags.v1.TagsService.CreateTag.
-func (c *tagsServiceClient) CreateTag(ctx context.Context, req *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (c *tagsServiceClient) CreateTag(ctx context.Context, req *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.CreateTagResponse], error) {
 	return c.createTag.CallUnary(ctx, req)
 }
 
 // UpdateTag calls tags.v1.TagsService.UpdateTag.
-func (c *tagsServiceClient) UpdateTag(ctx context.Context, req *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (c *tagsServiceClient) UpdateTag(ctx context.Context, req *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.UpdateTagResponse], error) {
 	return c.updateTag.CallUnary(ctx, req)
 }
 
@@ -230,7 +230,7 @@ func (c *tagsServiceClient) DeleteTag(ctx context.Context, req *connect.Request[
 }
 
 // GetTag calls tags.v1.TagsService.GetTag.
-func (c *tagsServiceClient) GetTag(ctx context.Context, req *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (c *tagsServiceClient) GetTag(ctx context.Context, req *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.GetTagResponse], error) {
 	return c.getTag.CallUnary(ctx, req)
 }
 
@@ -265,47 +265,47 @@ func (c *tagsServiceClient) ListContentByTag(ctx context.Context, req *connect.R
 }
 
 // MergeTags calls tags.v1.TagsService.MergeTags.
-func (c *tagsServiceClient) MergeTags(ctx context.Context, req *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.TagResponse], error) {
+func (c *tagsServiceClient) MergeTags(ctx context.Context, req *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.MergeTagsResponse], error) {
 	return c.mergeTags.CallUnary(ctx, req)
 }
 
 // CreateSavedFilter calls tags.v1.TagsService.CreateSavedFilter.
-func (c *tagsServiceClient) CreateSavedFilter(ctx context.Context, req *connect.Request[v1.CreateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error) {
+func (c *tagsServiceClient) CreateSavedFilter(ctx context.Context, req *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error) {
 	return c.createSavedFilter.CallUnary(ctx, req)
 }
 
 // UpdateSavedFilter calls tags.v1.TagsService.UpdateSavedFilter.
-func (c *tagsServiceClient) UpdateSavedFilter(ctx context.Context, req *connect.Request[v1.UpdateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error) {
+func (c *tagsServiceClient) UpdateSavedFilter(ctx context.Context, req *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error) {
 	return c.updateSavedFilter.CallUnary(ctx, req)
 }
 
 // DeleteSavedFilter calls tags.v1.TagsService.DeleteSavedFilter.
-func (c *tagsServiceClient) DeleteSavedFilter(ctx context.Context, req *connect.Request[v1.DeleteSavedTagFilterRequest]) (*connect.Response[v1.DeleteSavedTagFilterResponse], error) {
+func (c *tagsServiceClient) DeleteSavedFilter(ctx context.Context, req *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error) {
 	return c.deleteSavedFilter.CallUnary(ctx, req)
 }
 
 // ListSavedFilters calls tags.v1.TagsService.ListSavedFilters.
-func (c *tagsServiceClient) ListSavedFilters(ctx context.Context, req *connect.Request[v1.ListSavedTagFiltersRequest]) (*connect.Response[v1.ListSavedTagFiltersResponse], error) {
+func (c *tagsServiceClient) ListSavedFilters(ctx context.Context, req *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error) {
 	return c.listSavedFilters.CallUnary(ctx, req)
 }
 
 // TagsServiceHandler is an implementation of the tags.v1.TagsService service.
 type TagsServiceHandler interface {
-	CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.TagResponse], error)
-	UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.TagResponse], error)
+	CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.CreateTagResponse], error)
+	UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.UpdateTagResponse], error)
 	DeleteTag(context.Context, *connect.Request[v1.DeleteTagRequest]) (*connect.Response[v1.DeleteTagResponse], error)
-	GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.TagResponse], error)
+	GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.GetTagResponse], error)
 	ListTags(context.Context, *connect.Request[v1.ListTagsRequest]) (*connect.Response[v1.ListTagsResponse], error)
 	SuggestTags(context.Context, *connect.Request[v1.SuggestTagsRequest]) (*connect.Response[v1.SuggestTagsResponse], error)
 	AssignTags(context.Context, *connect.Request[v1.AssignTagsRequest]) (*connect.Response[v1.AssignTagsResponse], error)
 	UnassignTags(context.Context, *connect.Request[v1.UnassignTagsRequest]) (*connect.Response[v1.UnassignTagsResponse], error)
 	GetTagsForUrns(context.Context, *connect.Request[v1.GetTagsForUrnsRequest]) (*connect.Response[v1.GetTagsForUrnsResponse], error)
 	ListContentByTag(context.Context, *connect.Request[v1.ListContentByTagRequest]) (*connect.Response[v1.ListContentByTagResponse], error)
-	MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.TagResponse], error)
-	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error)
-	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error)
-	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedTagFilterRequest]) (*connect.Response[v1.DeleteSavedTagFilterResponse], error)
-	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedTagFiltersRequest]) (*connect.Response[v1.ListSavedTagFiltersResponse], error)
+	MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.MergeTagsResponse], error)
+	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error)
+	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error)
+	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
+	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error)
 }
 
 // NewTagsServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -446,11 +446,11 @@ func NewTagsServiceHandler(svc TagsServiceHandler, opts ...connect.HandlerOption
 // UnimplementedTagsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTagsServiceHandler struct{}
 
-func (UnimplementedTagsServiceHandler) CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (UnimplementedTagsServiceHandler) CreateTag(context.Context, *connect.Request[v1.CreateTagRequest]) (*connect.Response[v1.CreateTagResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.CreateTag is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (UnimplementedTagsServiceHandler) UpdateTag(context.Context, *connect.Request[v1.UpdateTagRequest]) (*connect.Response[v1.UpdateTagResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.UpdateTag is not implemented"))
 }
 
@@ -458,7 +458,7 @@ func (UnimplementedTagsServiceHandler) DeleteTag(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.DeleteTag is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.TagResponse], error) {
+func (UnimplementedTagsServiceHandler) GetTag(context.Context, *connect.Request[v1.GetTagRequest]) (*connect.Response[v1.GetTagResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.GetTag is not implemented"))
 }
 
@@ -486,22 +486,22 @@ func (UnimplementedTagsServiceHandler) ListContentByTag(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.ListContentByTag is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.TagResponse], error) {
+func (UnimplementedTagsServiceHandler) MergeTags(context.Context, *connect.Request[v1.MergeTagsRequest]) (*connect.Response[v1.MergeTagsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.MergeTags is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error) {
+func (UnimplementedTagsServiceHandler) CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.CreateSavedFilter is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedTagFilterRequest]) (*connect.Response[v1.SavedTagFilterResponse], error) {
+func (UnimplementedTagsServiceHandler) UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.UpdateSavedFilter is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedTagFilterRequest]) (*connect.Response[v1.DeleteSavedTagFilterResponse], error) {
+func (UnimplementedTagsServiceHandler) DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.DeleteSavedFilter is not implemented"))
 }
 
-func (UnimplementedTagsServiceHandler) ListSavedFilters(context.Context, *connect.Request[v1.ListSavedTagFiltersRequest]) (*connect.Response[v1.ListSavedTagFiltersResponse], error) {
+func (UnimplementedTagsServiceHandler) ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tags.v1.TagsService.ListSavedFilters is not implemented"))
 }

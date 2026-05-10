@@ -23,14 +23,16 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.runtime_pb2 import (
-    ConfirmationResponse,
-    ConfirmationResponseAck,
     GetUsageStatsRequest,
     GetUsageStatsResponse,
+    RespondToConfirmationRequest,
+    RespondToConfirmationResponse,
     SendMessageRequest,
     SendMessageResponse,
-    StreamSendMessageEvent,
+    StreamSendMessageRequest,
+    StreamSendMessageResponse,
     SubscribeToRunRequest,
+    SubscribeToRunResponse,
 )
 
 from uniffy.core.errors import (
@@ -162,17 +164,17 @@ async def _enqueue_run(
     )
 
 
-def _build_run_id_event(run_id: UUID) -> StreamSendMessageEvent:
+def _build_run_id_event(run_id: UUID) -> StreamSendMessageResponse:
     """First proto event yielded - carries ``run_id`` and no oneof payload."""
-    event = StreamSendMessageEvent()
+    event = StreamSendMessageResponse()
     event.run_id = str(run_id)
     return event
 
 
 def _stamp_run_id(
-    proto_event: StreamSendMessageEvent,
+    proto_event: StreamSendMessageResponse,
     run_id: UUID,
-) -> StreamSendMessageEvent:
+) -> StreamSendMessageResponse:
     """Stamp ``run_id`` on a proto envelope and return it."""
     proto_event.run_id = str(run_id)
     return proto_event
@@ -181,12 +183,39 @@ def _stamp_run_id(
 def _build_synthetic_error_event(
     run_id: UUID,
     error_text: str,
-) -> StreamSendMessageEvent:
+) -> StreamSendMessageResponse:
     """Build a proto error envelope with ``run_id`` for terminal cases."""
     return _stamp_run_id(
         runtime_stream_event_to_proto(RuntimeErrorEvent(error=error_text)),
         run_id,
     )
+
+
+def _build_subscribe_run_id_event(run_id: UUID) -> SubscribeToRunResponse:
+    """First proto event yielded for SubscribeToRun - carries ``run_id``."""
+    event = SubscribeToRunResponse()
+    event.run_id = str(run_id)
+    return event
+
+
+def _stamp_subscribe_run_id(
+    proto_event: StreamSendMessageResponse,
+    run_id: UUID,
+) -> SubscribeToRunResponse:
+    """Convert a StreamSendMessageResponse-shaped proto into SubscribeToRunResponse."""
+    converted = SubscribeToRunResponse()
+    converted.MergeFromString(proto_event.SerializeToString())
+    converted.run_id = str(run_id)
+    return converted
+
+
+def _build_subscribe_synthetic_error_event(
+    run_id: UUID,
+    error_text: str,
+) -> SubscribeToRunResponse:
+    """Build a SubscribeToRunResponse error envelope."""
+    base = runtime_stream_event_to_proto(RuntimeErrorEvent(error=error_text))
+    return _stamp_subscribe_run_id(base, run_id)
 
 
 async def _subscribe_runtime_events(
@@ -335,9 +364,9 @@ class RuntimeHandlers:
 
     async def stream_send_message(
         self,
-        request: SendMessageRequest,
+        request: StreamSendMessageRequest,
         ctx: RequestContext,
-    ) -> AsyncIterator[StreamSendMessageEvent]:
+    ) -> AsyncIterator[StreamSendMessageResponse]:
         """Handle ``StreamSendMessage`` (server-streaming).
 
         Runs the synchronous preflight, enqueues the egress job, yields a
@@ -398,7 +427,7 @@ class RuntimeHandlers:
         self,
         request: SubscribeToRunRequest,
         ctx: RequestContext,
-    ) -> AsyncIterator[StreamSendMessageEvent]:
+    ) -> AsyncIterator[SubscribeToRunResponse]:
         """Resume an in-flight run by ``run_id``.
 
         Replays the per-run Valkey stream from its head, then tails live
@@ -425,11 +454,13 @@ class RuntimeHandlers:
         if state.get("organization_id") != str(org_id):
             raise ConnectError(Code.PERMISSION_DENIED, "not your run")
 
-        yield _build_run_id_event(run_id)
+        yield _build_subscribe_run_id_event(run_id)
 
         try:
             async for event in _subscribe_runtime_events(run_id):
-                yield _stamp_run_id(runtime_stream_event_to_proto(event), run_id)
+                yield _stamp_subscribe_run_id(
+                    runtime_stream_event_to_proto(event), run_id
+                )
         except (asyncio.CancelledError, GeneratorExit):
             logger.info(f"subscribe_to_run cancelled by client (run={run_id})")
             raise
@@ -440,7 +471,7 @@ class RuntimeHandlers:
                 f"Error in subscribe_to_run loop (run={run_id}): {exc}",
                 exc_info=True,
             )
-            yield _build_synthetic_error_event(run_id, "Internal server error")
+            yield _build_subscribe_synthetic_error_event(run_id, "Internal server error")
 
     async def _preflight_and_enqueue(
         self,
@@ -448,7 +479,7 @@ class RuntimeHandlers:
         user_id: UUID,
         organization_id: UUID,
         session_id: UUID,
-        request: SendMessageRequest,
+        request: SendMessageRequest | StreamSendMessageRequest,
     ) -> tuple[UUID, list[dict[str, Any]] | None]:
         """Run synchronous preflight checks and enqueue ``run_agent_session``.
 
@@ -515,9 +546,9 @@ class RuntimeHandlers:
 
     async def respond_to_confirmation(
         self,
-        request: ConfirmationResponse,
+        request: RespondToConfirmationRequest,
         ctx: RequestContext,
-    ) -> ConfirmationResponseAck:
+    ) -> RespondToConfirmationResponse:
         """Resolve a pending destructive-tool approval."""
         get_user_id_from_context(ctx)
 
@@ -532,7 +563,7 @@ class RuntimeHandlers:
         store = get_approval_store()
         accepted = await store.respond(session_id, request.tool_call_id, request.approved)
 
-        return ConfirmationResponseAck(accepted=accepted)
+        return RespondToConfirmationResponse(accepted=accepted)
 
     async def get_usage_stats(
         self,

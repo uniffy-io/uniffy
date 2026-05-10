@@ -16,7 +16,7 @@ import chat.v1.chat_stream_pb2 as chat_dot_v1_dot_chat__stream__pb2
 
 
 class ChatStreamService(Protocol):
-    def stream_user_chat_events(self, request: chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest, ctx: RequestContext) -> AsyncIterator[chat_dot_v1_dot_chat__stream__pb2.UserChatEvent]:
+    def stream_user_chat_events(self, request: chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest, ctx: RequestContext) -> AsyncIterator[chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -30,7 +30,7 @@ class ChatStreamServiceASGIApplication(ConnectASGIApplication[ChatStreamService]
                         name="StreamUserChatEvents",
                         service_name="chat.v1.ChatStreamService",
                         input=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest,
-                        output=chat_dot_v1_dot_chat__stream__pb2.UserChatEvent,
+                        output=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stream_user_chat_events,
@@ -53,14 +53,14 @@ class ChatStreamServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> AsyncIterator[chat_dot_v1_dot_chat__stream__pb2.UserChatEvent]:
+    ) -> AsyncIterator[chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="StreamUserChatEvents",
                 service_name="chat.v1.ChatStreamService",
                 input=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest,
-                output=chat_dot_v1_dot_chat__stream__pb2.UserChatEvent,
+                output=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -69,7 +69,7 @@ class ChatStreamServiceClient(ConnectClient):
 
 
 class ChatStreamServiceSync(Protocol):
-    def stream_user_chat_events(self, request: chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest, ctx: RequestContext) -> Iterator[chat_dot_v1_dot_chat__stream__pb2.UserChatEvent]:
+    def stream_user_chat_events(self, request: chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest, ctx: RequestContext) -> Iterator[chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -82,7 +82,7 @@ class ChatStreamServiceWSGIApplication(ConnectWSGIApplication):
                         name="StreamUserChatEvents",
                         service_name="chat.v1.ChatStreamService",
                         input=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest,
-                        output=chat_dot_v1_dot_chat__stream__pb2.UserChatEvent,
+                        output=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stream_user_chat_events,
@@ -105,14 +105,14 @@ class ChatStreamServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> Iterator[chat_dot_v1_dot_chat__stream__pb2.UserChatEvent]:
+    ) -> Iterator[chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="StreamUserChatEvents",
                 service_name="chat.v1.ChatStreamService",
                 input=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest,
-                output=chat_dot_v1_dot_chat__stream__pb2.UserChatEvent,
+                output=chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

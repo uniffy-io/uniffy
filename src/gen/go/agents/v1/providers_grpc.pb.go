@@ -35,7 +35,7 @@ const (
 // ProvidersService manages LLM provider credentials for an organization.
 type ProvidersServiceClient interface {
 	// Add a new provider API key or setup token
-	AddProviderKey(ctx context.Context, in *AddProviderKeyRequest, opts ...grpc.CallOption) (*ProviderKeyResponse, error)
+	AddProviderKey(ctx context.Context, in *AddProviderKeyRequest, opts ...grpc.CallOption) (*AddProviderKeyResponse, error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(ctx context.Context, in *ListProviderKeysRequest, opts ...grpc.CallOption) (*ListProviderKeysResponse, error)
 	// Remove a provider key
@@ -45,9 +45,9 @@ type ProvidersServiceClient interface {
 	// List available models based on configured provider keys
 	ListAvailableModels(ctx context.Context, in *ListAvailableModelsRequest, opts ...grpc.CallOption) (*ListAvailableModelsResponse, error)
 	// Enable or disable a provider key
-	ToggleProviderKey(ctx context.Context, in *ToggleProviderKeyRequest, opts ...grpc.CallOption) (*ProviderKeyResponse, error)
+	ToggleProviderKey(ctx context.Context, in *ToggleProviderKeyRequest, opts ...grpc.CallOption) (*ToggleProviderKeyResponse, error)
 	// List models available through a specific provider key
-	ListModelsForKey(ctx context.Context, in *ListModelsForKeyRequest, opts ...grpc.CallOption) (*ListAvailableModelsResponse, error)
+	ListModelsForKey(ctx context.Context, in *ListModelsForKeyRequest, opts ...grpc.CallOption) (*ListModelsForKeyResponse, error)
 }
 
 type providersServiceClient struct {
@@ -58,9 +58,9 @@ func NewProvidersServiceClient(cc grpc.ClientConnInterface) ProvidersServiceClie
 	return &providersServiceClient{cc}
 }
 
-func (c *providersServiceClient) AddProviderKey(ctx context.Context, in *AddProviderKeyRequest, opts ...grpc.CallOption) (*ProviderKeyResponse, error) {
+func (c *providersServiceClient) AddProviderKey(ctx context.Context, in *AddProviderKeyRequest, opts ...grpc.CallOption) (*AddProviderKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProviderKeyResponse)
+	out := new(AddProviderKeyResponse)
 	err := c.cc.Invoke(ctx, ProvidersService_AddProviderKey_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -108,9 +108,9 @@ func (c *providersServiceClient) ListAvailableModels(ctx context.Context, in *Li
 	return out, nil
 }
 
-func (c *providersServiceClient) ToggleProviderKey(ctx context.Context, in *ToggleProviderKeyRequest, opts ...grpc.CallOption) (*ProviderKeyResponse, error) {
+func (c *providersServiceClient) ToggleProviderKey(ctx context.Context, in *ToggleProviderKeyRequest, opts ...grpc.CallOption) (*ToggleProviderKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProviderKeyResponse)
+	out := new(ToggleProviderKeyResponse)
 	err := c.cc.Invoke(ctx, ProvidersService_ToggleProviderKey_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -118,9 +118,9 @@ func (c *providersServiceClient) ToggleProviderKey(ctx context.Context, in *Togg
 	return out, nil
 }
 
-func (c *providersServiceClient) ListModelsForKey(ctx context.Context, in *ListModelsForKeyRequest, opts ...grpc.CallOption) (*ListAvailableModelsResponse, error) {
+func (c *providersServiceClient) ListModelsForKey(ctx context.Context, in *ListModelsForKeyRequest, opts ...grpc.CallOption) (*ListModelsForKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListAvailableModelsResponse)
+	out := new(ListModelsForKeyResponse)
 	err := c.cc.Invoke(ctx, ProvidersService_ListModelsForKey_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func (c *providersServiceClient) ListModelsForKey(ctx context.Context, in *ListM
 // ProvidersService manages LLM provider credentials for an organization.
 type ProvidersServiceServer interface {
 	// Add a new provider API key or setup token
-	AddProviderKey(context.Context, *AddProviderKeyRequest) (*ProviderKeyResponse, error)
+	AddProviderKey(context.Context, *AddProviderKeyRequest) (*AddProviderKeyResponse, error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *ListProviderKeysRequest) (*ListProviderKeysResponse, error)
 	// Remove a provider key
@@ -145,9 +145,9 @@ type ProvidersServiceServer interface {
 	// List available models based on configured provider keys
 	ListAvailableModels(context.Context, *ListAvailableModelsRequest) (*ListAvailableModelsResponse, error)
 	// Enable or disable a provider key
-	ToggleProviderKey(context.Context, *ToggleProviderKeyRequest) (*ProviderKeyResponse, error)
+	ToggleProviderKey(context.Context, *ToggleProviderKeyRequest) (*ToggleProviderKeyResponse, error)
 	// List models available through a specific provider key
-	ListModelsForKey(context.Context, *ListModelsForKeyRequest) (*ListAvailableModelsResponse, error)
+	ListModelsForKey(context.Context, *ListModelsForKeyRequest) (*ListModelsForKeyResponse, error)
 	mustEmbedUnimplementedProvidersServiceServer()
 }
 
@@ -158,7 +158,7 @@ type ProvidersServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProvidersServiceServer struct{}
 
-func (UnimplementedProvidersServiceServer) AddProviderKey(context.Context, *AddProviderKeyRequest) (*ProviderKeyResponse, error) {
+func (UnimplementedProvidersServiceServer) AddProviderKey(context.Context, *AddProviderKeyRequest) (*AddProviderKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddProviderKey not implemented")
 }
 func (UnimplementedProvidersServiceServer) ListProviderKeys(context.Context, *ListProviderKeysRequest) (*ListProviderKeysResponse, error) {
@@ -173,10 +173,10 @@ func (UnimplementedProvidersServiceServer) ValidateProviderKey(context.Context, 
 func (UnimplementedProvidersServiceServer) ListAvailableModels(context.Context, *ListAvailableModelsRequest) (*ListAvailableModelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAvailableModels not implemented")
 }
-func (UnimplementedProvidersServiceServer) ToggleProviderKey(context.Context, *ToggleProviderKeyRequest) (*ProviderKeyResponse, error) {
+func (UnimplementedProvidersServiceServer) ToggleProviderKey(context.Context, *ToggleProviderKeyRequest) (*ToggleProviderKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ToggleProviderKey not implemented")
 }
-func (UnimplementedProvidersServiceServer) ListModelsForKey(context.Context, *ListModelsForKeyRequest) (*ListAvailableModelsResponse, error) {
+func (UnimplementedProvidersServiceServer) ListModelsForKey(context.Context, *ListModelsForKeyRequest) (*ListModelsForKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListModelsForKey not implemented")
 }
 func (UnimplementedProvidersServiceServer) mustEmbedUnimplementedProvidersServiceServer() {}

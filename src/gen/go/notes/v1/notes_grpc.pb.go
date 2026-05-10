@@ -45,11 +45,11 @@ const (
 // NotesService provides note management functionality
 type NotesServiceClient interface {
 	// Create a new note
-	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error)
 	// Get a note by ID
-	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
 	// Update an existing note
-	UpdateNote(ctx context.Context, in *UpdateNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	UpdateNote(ctx context.Context, in *UpdateNoteRequest, opts ...grpc.CallOption) (*UpdateNoteResponse, error)
 	// Delete a note (soft delete)
 	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 	// List notes in organization with pagination and filters
@@ -57,27 +57,27 @@ type NotesServiceClient interface {
 	// Search notes using full-text search
 	SearchNotes(ctx context.Context, in *SearchNotesRequest, opts ...grpc.CallOption) (*SearchNotesResponse, error)
 	// Get backlinks for a note (other notes that reference this note)
-	GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*BacklinksResponse, error)
+	GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*GetBacklinksResponse, error)
 	// Restore a deleted note
-	RestoreNote(ctx context.Context, in *RestoreNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	RestoreNote(ctx context.Context, in *RestoreNoteRequest, opts ...grpc.CallOption) (*RestoreNoteResponse, error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(ctx context.Context, in *EmptyTrashRequest, opts ...grpc.CallOption) (*EmptyTrashResponse, error)
 	// Autosave note content (optimized for frequent updates)
 	AutosaveNote(ctx context.Context, in *AutosaveNoteRequest, opts ...grpc.CallOption) (*AutosaveNoteResponse, error)
 	// Move note between spaces (personal, group, organization)
-	MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*MoveNoteResponse, error)
 	// Copy note to another space
-	CopyNote(ctx context.Context, in *CopyNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error)
+	CopyNote(ctx context.Context, in *CopyNoteRequest, opts ...grpc.CallOption) (*CopyNoteResponse, error)
 	// Share note with group(s)
-	ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteResponse, error)
+	ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteWithGroupResponse, error)
 	// Unshare note from group
-	UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*ShareNoteResponse, error)
+	UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*UnshareNoteFromGroupResponse, error)
 	// Get sharing info for a note
-	GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*NoteSharingResponse, error)
+	GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*GetNoteSharingResponse, error)
 	// Grant permission to user/group for a note
-	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*PermissionResponse, error)
+	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
 	// Revoke permission from user/group for a note
-	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*PermissionResponse, error)
+	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 }
 
 type notesServiceClient struct {
@@ -88,9 +88,9 @@ func NewNotesServiceClient(cc grpc.ClientConnInterface) NotesServiceClient {
 	return &notesServiceClient{cc}
 }
 
-func (c *notesServiceClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(CreateNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_CreateNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -98,9 +98,9 @@ func (c *notesServiceClient) CreateNote(ctx context.Context, in *CreateNoteReque
 	return out, nil
 }
 
-func (c *notesServiceClient) GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(GetNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_GetNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -108,9 +108,9 @@ func (c *notesServiceClient) GetNote(ctx context.Context, in *GetNoteRequest, op
 	return out, nil
 }
 
-func (c *notesServiceClient) UpdateNote(ctx context.Context, in *UpdateNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) UpdateNote(ctx context.Context, in *UpdateNoteRequest, opts ...grpc.CallOption) (*UpdateNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(UpdateNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_UpdateNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -148,9 +148,9 @@ func (c *notesServiceClient) SearchNotes(ctx context.Context, in *SearchNotesReq
 	return out, nil
 }
 
-func (c *notesServiceClient) GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*BacklinksResponse, error) {
+func (c *notesServiceClient) GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*GetBacklinksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BacklinksResponse)
+	out := new(GetBacklinksResponse)
 	err := c.cc.Invoke(ctx, NotesService_GetBacklinks_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -158,9 +158,9 @@ func (c *notesServiceClient) GetBacklinks(ctx context.Context, in *GetBacklinksR
 	return out, nil
 }
 
-func (c *notesServiceClient) RestoreNote(ctx context.Context, in *RestoreNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) RestoreNote(ctx context.Context, in *RestoreNoteRequest, opts ...grpc.CallOption) (*RestoreNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(RestoreNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_RestoreNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -188,9 +188,9 @@ func (c *notesServiceClient) AutosaveNote(ctx context.Context, in *AutosaveNoteR
 	return out, nil
 }
 
-func (c *notesServiceClient) MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*MoveNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(MoveNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_MoveNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -198,9 +198,9 @@ func (c *notesServiceClient) MoveNote(ctx context.Context, in *MoveNoteRequest, 
 	return out, nil
 }
 
-func (c *notesServiceClient) CopyNote(ctx context.Context, in *CopyNoteRequest, opts ...grpc.CallOption) (*NoteResponse, error) {
+func (c *notesServiceClient) CopyNote(ctx context.Context, in *CopyNoteRequest, opts ...grpc.CallOption) (*CopyNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteResponse)
+	out := new(CopyNoteResponse)
 	err := c.cc.Invoke(ctx, NotesService_CopyNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -208,9 +208,9 @@ func (c *notesServiceClient) CopyNote(ctx context.Context, in *CopyNoteRequest, 
 	return out, nil
 }
 
-func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteResponse, error) {
+func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteWithGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ShareNoteResponse)
+	out := new(ShareNoteWithGroupResponse)
 	err := c.cc.Invoke(ctx, NotesService_ShareNoteWithGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -218,9 +218,9 @@ func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, in *ShareNo
 	return out, nil
 }
 
-func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*ShareNoteResponse, error) {
+func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*UnshareNoteFromGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ShareNoteResponse)
+	out := new(UnshareNoteFromGroupResponse)
 	err := c.cc.Invoke(ctx, NotesService_UnshareNoteFromGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -228,9 +228,9 @@ func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, in *Unsha
 	return out, nil
 }
 
-func (c *notesServiceClient) GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*NoteSharingResponse, error) {
+func (c *notesServiceClient) GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*GetNoteSharingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoteSharingResponse)
+	out := new(GetNoteSharingResponse)
 	err := c.cc.Invoke(ctx, NotesService_GetNoteSharing_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -238,9 +238,9 @@ func (c *notesServiceClient) GetNoteSharing(ctx context.Context, in *GetNoteShar
 	return out, nil
 }
 
-func (c *notesServiceClient) GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*PermissionResponse, error) {
+func (c *notesServiceClient) GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionResponse)
+	out := new(GrantPermissionResponse)
 	err := c.cc.Invoke(ctx, NotesService_GrantPermission_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -248,9 +248,9 @@ func (c *notesServiceClient) GrantPermission(ctx context.Context, in *GrantPermi
 	return out, nil
 }
 
-func (c *notesServiceClient) RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*PermissionResponse, error) {
+func (c *notesServiceClient) RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionResponse)
+	out := new(RevokePermissionResponse)
 	err := c.cc.Invoke(ctx, NotesService_RevokePermission_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -265,11 +265,11 @@ func (c *notesServiceClient) RevokePermission(ctx context.Context, in *RevokePer
 // NotesService provides note management functionality
 type NotesServiceServer interface {
 	// Create a new note
-	CreateNote(context.Context, *CreateNoteRequest) (*NoteResponse, error)
+	CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error)
 	// Get a note by ID
-	GetNote(context.Context, *GetNoteRequest) (*NoteResponse, error)
+	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
 	// Update an existing note
-	UpdateNote(context.Context, *UpdateNoteRequest) (*NoteResponse, error)
+	UpdateNote(context.Context, *UpdateNoteRequest) (*UpdateNoteResponse, error)
 	// Delete a note (soft delete)
 	DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	// List notes in organization with pagination and filters
@@ -277,27 +277,27 @@ type NotesServiceServer interface {
 	// Search notes using full-text search
 	SearchNotes(context.Context, *SearchNotesRequest) (*SearchNotesResponse, error)
 	// Get backlinks for a note (other notes that reference this note)
-	GetBacklinks(context.Context, *GetBacklinksRequest) (*BacklinksResponse, error)
+	GetBacklinks(context.Context, *GetBacklinksRequest) (*GetBacklinksResponse, error)
 	// Restore a deleted note
-	RestoreNote(context.Context, *RestoreNoteRequest) (*NoteResponse, error)
+	RestoreNote(context.Context, *RestoreNoteRequest) (*RestoreNoteResponse, error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error)
 	// Autosave note content (optimized for frequent updates)
 	AutosaveNote(context.Context, *AutosaveNoteRequest) (*AutosaveNoteResponse, error)
 	// Move note between spaces (personal, group, organization)
-	MoveNote(context.Context, *MoveNoteRequest) (*NoteResponse, error)
+	MoveNote(context.Context, *MoveNoteRequest) (*MoveNoteResponse, error)
 	// Copy note to another space
-	CopyNote(context.Context, *CopyNoteRequest) (*NoteResponse, error)
+	CopyNote(context.Context, *CopyNoteRequest) (*CopyNoteResponse, error)
 	// Share note with group(s)
-	ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteResponse, error)
+	ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteWithGroupResponse, error)
 	// Unshare note from group
-	UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*ShareNoteResponse, error)
+	UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*UnshareNoteFromGroupResponse, error)
 	// Get sharing info for a note
-	GetNoteSharing(context.Context, *GetNoteSharingRequest) (*NoteSharingResponse, error)
+	GetNoteSharing(context.Context, *GetNoteSharingRequest) (*GetNoteSharingResponse, error)
 	// Grant permission to user/group for a note
-	GrantPermission(context.Context, *GrantPermissionRequest) (*PermissionResponse, error)
+	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
 	// Revoke permission from user/group for a note
-	RevokePermission(context.Context, *RevokePermissionRequest) (*PermissionResponse, error)
+	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	mustEmbedUnimplementedNotesServiceServer()
 }
 
@@ -308,13 +308,13 @@ type NotesServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNotesServiceServer struct{}
 
-func (UnimplementedNotesServiceServer) CreateNote(context.Context, *CreateNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateNote not implemented")
 }
-func (UnimplementedNotesServiceServer) GetNote(context.Context, *GetNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetNote not implemented")
 }
-func (UnimplementedNotesServiceServer) UpdateNote(context.Context, *UpdateNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) UpdateNote(context.Context, *UpdateNoteRequest) (*UpdateNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateNote not implemented")
 }
 func (UnimplementedNotesServiceServer) DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error) {
@@ -326,10 +326,10 @@ func (UnimplementedNotesServiceServer) ListNotes(context.Context, *ListNotesRequ
 func (UnimplementedNotesServiceServer) SearchNotes(context.Context, *SearchNotesRequest) (*SearchNotesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SearchNotes not implemented")
 }
-func (UnimplementedNotesServiceServer) GetBacklinks(context.Context, *GetBacklinksRequest) (*BacklinksResponse, error) {
+func (UnimplementedNotesServiceServer) GetBacklinks(context.Context, *GetBacklinksRequest) (*GetBacklinksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBacklinks not implemented")
 }
-func (UnimplementedNotesServiceServer) RestoreNote(context.Context, *RestoreNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) RestoreNote(context.Context, *RestoreNoteRequest) (*RestoreNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreNote not implemented")
 }
 func (UnimplementedNotesServiceServer) EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error) {
@@ -338,25 +338,25 @@ func (UnimplementedNotesServiceServer) EmptyTrash(context.Context, *EmptyTrashRe
 func (UnimplementedNotesServiceServer) AutosaveNote(context.Context, *AutosaveNoteRequest) (*AutosaveNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AutosaveNote not implemented")
 }
-func (UnimplementedNotesServiceServer) MoveNote(context.Context, *MoveNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) MoveNote(context.Context, *MoveNoteRequest) (*MoveNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveNote not implemented")
 }
-func (UnimplementedNotesServiceServer) CopyNote(context.Context, *CopyNoteRequest) (*NoteResponse, error) {
+func (UnimplementedNotesServiceServer) CopyNote(context.Context, *CopyNoteRequest) (*CopyNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CopyNote not implemented")
 }
-func (UnimplementedNotesServiceServer) ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteResponse, error) {
+func (UnimplementedNotesServiceServer) ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteWithGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ShareNoteWithGroup not implemented")
 }
-func (UnimplementedNotesServiceServer) UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*ShareNoteResponse, error) {
+func (UnimplementedNotesServiceServer) UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*UnshareNoteFromGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UnshareNoteFromGroup not implemented")
 }
-func (UnimplementedNotesServiceServer) GetNoteSharing(context.Context, *GetNoteSharingRequest) (*NoteSharingResponse, error) {
+func (UnimplementedNotesServiceServer) GetNoteSharing(context.Context, *GetNoteSharingRequest) (*GetNoteSharingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetNoteSharing not implemented")
 }
-func (UnimplementedNotesServiceServer) GrantPermission(context.Context, *GrantPermissionRequest) (*PermissionResponse, error) {
+func (UnimplementedNotesServiceServer) GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantPermission not implemented")
 }
-func (UnimplementedNotesServiceServer) RevokePermission(context.Context, *RevokePermissionRequest) (*PermissionResponse, error) {
+func (UnimplementedNotesServiceServer) RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokePermission not implemented")
 }
 func (UnimplementedNotesServiceServer) mustEmbedUnimplementedNotesServiceServer() {}

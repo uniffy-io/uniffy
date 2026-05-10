@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package projects.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
 
 // ============================================================================
 // Service Definition
@@ -14,40 +14,40 @@ import "tags/v1/tags.proto";
 
 service ProjectsService {
   // ----- Projects -----
-  rpc CreateProject(CreateProjectRequest) returns (ProjectResponse);
-  rpc GetProject(GetProjectRequest) returns (ProjectResponse);
-  rpc UpdateProject(UpdateProjectRequest) returns (ProjectResponse);
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 
   // ----- Tasks -----
-  rpc CreateTask(CreateTaskRequest) returns (TaskResponse);
-  rpc GetTask(GetTaskRequest) returns (TaskResponse);
-  rpc UpdateTask(UpdateTaskRequest) returns (TaskResponse);
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
   rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
   rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
-  rpc MoveTask(MoveTaskRequest) returns (TaskResponse);
+  rpc MoveTask(MoveTaskRequest) returns (MoveTaskResponse);
   rpc BulkUpdateTasks(BulkUpdateTasksRequest) returns (BulkUpdateTasksResponse);
   rpc DeleteTasks(DeleteTasksRequest) returns (DeleteTasksResponse);
 
   // ----- Field Definitions -----
-  rpc CreateField(CreateFieldRequest) returns (FieldResponse);
-  rpc UpdateField(UpdateFieldRequest) returns (FieldResponse);
+  rpc CreateField(CreateFieldRequest) returns (CreateFieldResponse);
+  rpc UpdateField(UpdateFieldRequest) returns (UpdateFieldResponse);
   rpc DeleteField(DeleteFieldRequest) returns (DeleteFieldResponse);
 
   // ----- View Configs -----
-  rpc CreateView(CreateViewRequest) returns (ViewResponse);
-  rpc UpdateView(UpdateViewRequest) returns (ViewResponse);
+  rpc CreateView(CreateViewRequest) returns (CreateViewResponse);
+  rpc UpdateView(UpdateViewRequest) returns (UpdateViewResponse);
   rpc DeleteView(DeleteViewRequest) returns (DeleteViewResponse);
 
   // ----- Activities -----
   rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
 
   // ----- Sprints -----
-  rpc CreateSprint(CreateSprintRequest) returns (SprintResponse);
-  rpc UpdateSprint(UpdateSprintRequest) returns (SprintResponse);
-  rpc StartSprint(StartSprintRequest) returns (SprintResponse);
-  rpc CompleteSprint(CompleteSprintRequest) returns (SprintResponse);
+  rpc CreateSprint(CreateSprintRequest) returns (CreateSprintResponse);
+  rpc UpdateSprint(UpdateSprintRequest) returns (UpdateSprintResponse);
+  rpc StartSprint(StartSprintRequest) returns (StartSprintResponse);
+  rpc CompleteSprint(CompleteSprintRequest) returns (CompleteSprintResponse);
   rpc DeleteSprint(DeleteSprintRequest) returns (DeleteSprintResponse);
   rpc ListSprints(ListSprintsRequest) returns (ListSprintsResponse);
 
@@ -62,43 +62,45 @@ service ProjectsService {
 // ============================================================================
 
 enum FieldType {
-  FIELD_TYPE_UNSPECIFIED   = 0;
-  FIELD_TYPE_TEXT          = 1;
-  FIELD_TYPE_NUMBER        = 2;
+  FIELD_TYPE_UNSPECIFIED = 0;
+  FIELD_TYPE_TEXT = 1;
+  FIELD_TYPE_NUMBER = 2;
   FIELD_TYPE_SINGLE_SELECT = 3;
-  FIELD_TYPE_MULTI_SELECT  = 4;
-  FIELD_TYPE_DATE          = 5;
-  FIELD_TYPE_PERSON        = 6;
-  FIELD_TYPE_REFERENCE     = 7;
+  FIELD_TYPE_MULTI_SELECT = 4;
+  FIELD_TYPE_DATE = 5;
+  FIELD_TYPE_PERSON = 6;
+  FIELD_TYPE_REFERENCE = 7;
 }
 
 enum ViewType {
   VIEW_TYPE_UNSPECIFIED = 0;
-  VIEW_TYPE_TABLE       = 1;
-  VIEW_TYPE_BOARD       = 2;
-  VIEW_TYPE_ROADMAP     = 3;
+  VIEW_TYPE_TABLE = 1;
+  VIEW_TYPE_BOARD = 2;
+  VIEW_TYPE_ROADMAP = 3;
 }
 
 // Filter mode for tag list-tasks queries. ALL = task carries every tag id
 // in the request (intersection); ANY = task carries at least one
 // (union); NONE = task carries none (anti-join). Mirrors Jira labels.
+// UNSPECIFIED is treated as ALL by the server (default behaviour).
 enum TagFilterMode {
-  TAG_FILTER_MODE_ALL  = 0;
-  TAG_FILTER_MODE_ANY  = 1;
-  TAG_FILTER_MODE_NONE = 2;
+  TAG_FILTER_MODE_UNSPECIFIED = 0;
+  TAG_FILTER_MODE_ALL = 1;
+  TAG_FILTER_MODE_ANY = 2;
+  TAG_FILTER_MODE_NONE = 3;
 }
 
 enum ActivityAction {
-  ACTIVITY_ACTION_UNSPECIFIED        = 0;
-  ACTIVITY_ACTION_CREATED            = 1;
-  ACTIVITY_ACTION_STATUS_CHANGED     = 2;
-  ACTIVITY_ACTION_PRIORITY_CHANGED   = 3;
-  ACTIVITY_ACTION_FIELD_UPDATED      = 4;
-  ACTIVITY_ACTION_BLOCKED_BY_ADDED   = 5;
+  ACTIVITY_ACTION_UNSPECIFIED = 0;
+  ACTIVITY_ACTION_CREATED = 1;
+  ACTIVITY_ACTION_STATUS_CHANGED = 2;
+  ACTIVITY_ACTION_PRIORITY_CHANGED = 3;
+  ACTIVITY_ACTION_FIELD_UPDATED = 4;
+  ACTIVITY_ACTION_BLOCKED_BY_ADDED = 5;
   ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 6;
-  ACTIVITY_ACTION_ASSIGNED           = 7;
-  ACTIVITY_ACTION_TYPE_CHANGED       = 8;
-  ACTIVITY_ACTION_SPRINT_CHANGED     = 9;
+  ACTIVITY_ACTION_ASSIGNED = 7;
+  ACTIVITY_ACTION_TYPE_CHANGED = 8;
+  ACTIVITY_ACTION_SPRINT_CHANGED = 9;
 }
 
 // ============================================================================
@@ -106,127 +108,124 @@ enum ActivityAction {
 // ============================================================================
 
 message Project {
-  string                             id                    = 1;
-  string                             organization_id       = 2;
-  string                             owner_id              = 3;
-  string                             name                  = 4;
-  string                             description           = 5;
-  string                             icon                  = 6;
-  string                             color                 = 7;
-  common.v1.AccessMode               access_mode           = 8;
-  repeated FieldDefinition           field_definitions     = 9;
-  repeated ViewConfig                views                 = 10;
-  string                             default_view_id       = 11;
-  reserved 12;
-  reserved "member_ids";
-  google.protobuf.Timestamp          created_at            = 13;
-  google.protobuf.Timestamp          updated_at            = 14;
-  optional google.protobuf.Timestamp deleted_at            = 15;
-  string                             urn                   = 16;
-  common.v1.ContentRole              user_role             = 17;
-  string                             slug                  = 18;
-  map<string, TypeFieldSchema>       type_field_schemas    = 19;
-  optional common.v1.ContentRole     baseline_role         = 20;
-  repeated tags.v1.Tag               tags                  = 21;
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  string icon = 6;
+  string color = 7;
+  common.v1.AccessMode access_mode = 8;
+  repeated FieldDefinition field_definitions = 9;
+  repeated ViewConfig views = 10;
+  string default_view_id = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  optional google.protobuf.Timestamp deleted_at = 14;
+  string urn = 15;
+  common.v1.ContentRole user_role = 16;
+  string slug = 17;
+  map<string, TypeFieldSchema> type_field_schemas = 18;
+  optional common.v1.ContentRole baseline_role = 19;
+  repeated tags.v1.Tag tags = 20;
 }
 
 message Task {
-  string                             id                    = 1;
-  string                             project_id            = 2;
-  string                             organization_id       = 3;
-  string                             owner_id              = 4;
-  string                             title                 = 5;
-  string                             description           = 6;
-  string                             status                = 7;
-  string                             priority              = 8;
-  repeated string                    assignee_ids          = 9;
-  optional string                    start_date            = 10;
-  optional string                    due_date              = 11;
-  optional google.protobuf.Timestamp completed_at          = 12;
-  optional string                    parent_id             = 13;
-  repeated string                    blocked_by_task_ids   = 14;
-  bool                               is_milestone          = 15;
-  optional string                    recurrence_rule       = 16;
-  int32                              sort_order            = 17;
-  map<string, string>                field_values          = 18;
-  repeated string                    outgoing_references   = 19;
-  google.protobuf.Timestamp          created_at            = 20;
-  google.protobuf.Timestamp          updated_at            = 21;
-  optional google.protobuf.Timestamp deleted_at            = 22;
-  string                             urn                   = 23;
-  int32                              number                = 24;
-  string                             task_type             = 25;
-  optional string                    sprint_id             = 26;
-  common.v1.ContentRole              user_role             = 27;
-  int32                              subtask_total         = 28;
-  int32                              subtask_completed     = 29;
-  optional int32                     estimated_minutes     = 30;
-  optional int32                     time_spent_minutes    = 31;
-  repeated tags.v1.Tag               tags                  = 32;
+  string id = 1;
+  string project_id = 2;
+  string organization_id = 3;
+  string owner_id = 4;
+  string title = 5;
+  string description = 6;
+  string status = 7;
+  string priority = 8;
+  repeated string assignee_ids = 9;
+  optional string start_date = 10;
+  optional string due_date = 11;
+  optional google.protobuf.Timestamp completed_at = 12;
+  optional string parent_id = 13;
+  repeated string blocked_by_task_ids = 14;
+  bool is_milestone = 15;
+  optional string recurrence_rule = 16;
+  int32 sort_order = 17;
+  map<string, string> field_values = 18;
+  repeated string outgoing_references = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+  optional google.protobuf.Timestamp deleted_at = 22;
+  string urn = 23;
+  int32 number = 24;
+  string task_type = 25;
+  optional string sprint_id = 26;
+  common.v1.ContentRole user_role = 27;
+  int32 subtask_total = 28;
+  int32 subtask_completed = 29;
+  optional int32 estimated_minutes = 30;
+  optional int32 time_spent_minutes = 31;
+  repeated tags.v1.Tag tags = 32;
 }
 
 message FieldDefinition {
-  string                    id          = 1;
-  string                    project_id  = 2;
-  string                    name        = 3;
-  FieldType                 type        = 4;
-  bool                      is_required = 5;
-  bool                      is_system   = 6;
-  int32                     sort_order  = 7;
-  string                    config_json = 8;
-  google.protobuf.Timestamp created_at  = 9;
-  google.protobuf.Timestamp updated_at  = 10;
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  FieldType type = 4;
+  bool is_required = 5;
+  bool is_system = 6;
+  int32 sort_order = 7;
+  string config_json = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
 message TypeFieldSchema {
-  repeated string shown_field_ids    = 1;
+  repeated string shown_field_ids = 1;
   repeated string required_field_ids = 2;
 }
 
 message ViewConfig {
-  string                    id          = 1;
-  string                    project_id  = 2;
-  string                    name        = 3;
-  ViewType                  type        = 4;
-  bool                      is_default  = 5;
-  string                    config_json = 6;
-  google.protobuf.Timestamp created_at  = 7;
-  google.protobuf.Timestamp updated_at  = 8;
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  ViewType type = 4;
+  bool is_default = 5;
+  string config_json = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
 message TaskActivity {
-  string                    id             = 1;
-  string                    task_id        = 2;
-  string                    actor_id       = 3;
-  ActivityAction            action         = 4;
-  google.protobuf.Timestamp timestamp      = 5;
-  optional string           field_id       = 6;
-  optional string           previous_value = 7;
-  optional string           new_value      = 8;
-  reserved 9;
+  string id = 1;
+  string task_id = 2;
+  string actor_id = 3;
+  ActivityAction action = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  optional string field_id = 6;
+  optional string previous_value = 7;
+  optional string new_value = 8;
 }
 
 message SelectOption {
-  string id         = 1;
-  string label      = 2;
-  string color      = 3;
-  int32  sort_order = 4;
+  string id = 1;
+  string label = 2;
+  string color = 3;
+  int32 sort_order = 4;
 }
 
 message Sprint {
-  string                    id                   = 1;
-  string                    project_id           = 2;
-  string                    organization_id      = 3;
-  string                    name                 = 4;
-  string                    goal                 = 5;
-  string                    status               = 6;
-  optional string           start_date           = 7;
-  optional string           end_date             = 8;
-  int32                     sort_order           = 9;
-  int32                     task_count           = 10;
-  int32                     completed_task_count = 11;
-  google.protobuf.Timestamp created_at           = 12;
-  google.protobuf.Timestamp updated_at           = 13;
+  string id = 1;
+  string project_id = 2;
+  string organization_id = 3;
+  string name = 4;
+  string goal = 5;
+  string status = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+  int32 sort_order = 9;
+  int32 task_count = 10;
+  int32 completed_task_count = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
 }
 
 // ============================================================================
@@ -234,41 +233,39 @@ message Sprint {
 // ============================================================================
 
 message CreateProjectRequest {
-  string                             organization_id = 1;
-  string                             name            = 2;
-  optional string                    description     = 3;
-  optional string                    icon            = 4;
-  optional string                    color           = 5;
-  optional common.v1.AccessMode      access_mode     = 6;
-  optional string                    slug            = 7;
-  optional common.v1.ContentRole     baseline_role   = 8;
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional string icon = 4;
+  optional string color = 5;
+  optional common.v1.AccessMode access_mode = 6;
+  optional string slug = 7;
+  optional common.v1.ContentRole baseline_role = 8;
   // Optional unified-tag ids to assign on create.
-  repeated string                    tag_ids         = 9;
+  repeated string tag_ids = 9;
 }
 
 message GetProjectRequest {
   string organization_id = 1;
-  string project_id      = 2;
+  string project_id = 2;
 }
 
 message UpdateProjectRequest {
-  string                             organization_id    = 1;
-  string                             project_id         = 2;
-  optional string                    name               = 3;
-  optional string                    description        = 4;
-  optional string                    icon               = 5;
-  optional string                    color              = 6;
-  optional common.v1.AccessMode      access_mode        = 7;
-  reserved 8;
-  reserved "member_ids";
-  optional string                    default_view_id    = 9;
-  optional string                    slug               = 10;
-  map<string, TypeFieldSchema>       type_field_schemas  = 11;
-  optional common.v1.ContentRole     baseline_role      = 12;
+  string organization_id = 1;
+  string project_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string icon = 5;
+  optional string color = 6;
+  optional common.v1.AccessMode access_mode = 7;
+  optional string default_view_id = 8;
+  optional string slug = 9;
+  map<string, TypeFieldSchema> type_field_schemas = 10;
+  optional common.v1.ContentRole baseline_role = 11;
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched. Mirrors
   // the NoteTagIds / FileTagIds / EventTagIds wrapper pattern.
-  optional ProjectTagIds             tag_ids            = 13;
+  optional ProjectTagIds tag_ids = 12;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -279,28 +276,36 @@ message ProjectTagIds {
 
 message DeleteProjectRequest {
   string organization_id = 1;
-  string project_id      = 2;
-  bool   permanent       = 3;
+  string project_id = 2;
+  bool permanent = 3;
 }
 
 message ListProjectsRequest {
-  string                               organization_id = 1;
-  optional common.v1.PaginationRequest pagination      = 2;
-  optional common.v1.AccessMode        access_mode     = 3;
-  optional bool                        include_deleted = 4;
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional common.v1.AccessMode access_mode = 3;
+  optional bool include_deleted = 4;
 }
 
-message ProjectResponse {
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message UpdateProjectResponse {
   Project project = 1;
 }
 
 message DeleteProjectResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
 message ListProjectsResponse {
-  repeated Project             projects   = 1;
+  repeated Project projects = 1;
   common.v1.PaginationResponse pagination = 2;
 }
 
@@ -309,56 +314,56 @@ message ListProjectsResponse {
 // ============================================================================
 
 message CreateTaskRequest {
-  string              organization_id     = 1;
-  string              project_id          = 2;
-  string              title               = 3;
-  optional string     description         = 4;
-  optional string     status              = 5;
-  optional string     priority            = 6;
-  repeated string     assignee_ids        = 7;
-  optional string     start_date          = 8;
-  optional string     due_date            = 9;
-  optional string     parent_id           = 10;
-  repeated string     blocked_by_task_ids = 11;
-  optional bool       is_milestone        = 12;
-  optional string     recurrence_rule     = 13;
-  map<string, string> field_values        = 14;
-  optional string     task_type           = 15;
-  optional string     sprint_id           = 16;
-  optional int32      estimated_minutes   = 17;
-  optional int32      time_spent_minutes  = 18;
+  string organization_id = 1;
+  string project_id = 2;
+  string title = 3;
+  optional string description = 4;
+  optional string status = 5;
+  optional string priority = 6;
+  repeated string assignee_ids = 7;
+  optional string start_date = 8;
+  optional string due_date = 9;
+  optional string parent_id = 10;
+  repeated string blocked_by_task_ids = 11;
+  optional bool is_milestone = 12;
+  optional string recurrence_rule = 13;
+  map<string, string> field_values = 14;
+  optional string task_type = 15;
+  optional string sprint_id = 16;
+  optional int32 estimated_minutes = 17;
+  optional int32 time_spent_minutes = 18;
   // Optional unified-tag ids to assign on create.
-  repeated string     tag_ids             = 19;
+  repeated string tag_ids = 19;
 }
 
 message GetTaskRequest {
   string organization_id = 1;
-  string task_id         = 2;
+  string task_id = 2;
 }
 
 message UpdateTaskRequest {
-  string              organization_id     = 1;
-  string              task_id             = 2;
-  optional string     title               = 3;
-  optional string     description         = 4;
-  optional string     status              = 5;
-  optional string     priority            = 6;
-  repeated string     assignee_ids        = 7;
-  optional string     start_date          = 8;
-  optional string     due_date            = 9;
-  optional string     parent_id           = 10;
-  repeated string     blocked_by_task_ids = 11;
-  optional bool       is_milestone        = 12;
-  optional string     recurrence_rule     = 13;
-  optional int32      sort_order          = 14;
-  map<string, string> field_values        = 15;
-  optional string     task_type           = 16;
-  optional string     sprint_id           = 17;
-  optional int32      estimated_minutes   = 18;
-  optional int32      time_spent_minutes  = 19;
+  string organization_id = 1;
+  string task_id = 2;
+  optional string title = 3;
+  optional string description = 4;
+  optional string status = 5;
+  optional string priority = 6;
+  repeated string assignee_ids = 7;
+  optional string start_date = 8;
+  optional string due_date = 9;
+  optional string parent_id = 10;
+  repeated string blocked_by_task_ids = 11;
+  optional bool is_milestone = 12;
+  optional string recurrence_rule = 13;
+  optional int32 sort_order = 14;
+  map<string, string> field_values = 15;
+  optional string task_type = 16;
+  optional string sprint_id = 17;
+  optional int32 estimated_minutes = 18;
+  optional int32 time_spent_minutes = 19;
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched.
-  optional TaskTagIds tag_ids             = 20;
+  optional TaskTagIds tag_ids = 20;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -369,69 +374,87 @@ message TaskTagIds {
 
 message MoveTaskRequest {
   string organization_id = 1;
-  string task_id         = 2;
-  string status          = 3;
-  int32  sort_order      = 4;
+  string task_id = 2;
+  string status = 3;
+  int32 sort_order = 4;
 }
 
 message BulkUpdateTasksRequest {
-  string          organization_id = 1;
-  repeated string task_ids        = 2;
-  optional string status          = 3;
-  optional string priority        = 4;
-  repeated string assignee_ids    = 5;
-  optional string sprint_id       = 6;
+  string organization_id = 1;
+  repeated string task_ids = 2;
+  optional string status = 3;
+  optional string priority = 4;
+  repeated string assignee_ids = 5;
+  optional string sprint_id = 6;
 }
 
 message DeleteTaskRequest {
   string organization_id = 1;
-  string task_id         = 2;
-  bool   permanent       = 3;
+  string task_id = 2;
+  bool permanent = 3;
 }
 
 message DeleteTasksRequest {
-  string          organization_id = 1;
-  repeated string task_ids        = 2;
-  bool            permanent       = 3;
+  string organization_id = 1;
+  repeated string task_ids = 2;
+  bool permanent = 3;
 }
 
 message ListTasksRequest {
-  string                               organization_id = 1;
-  string                               project_id      = 2;
-  optional common.v1.PaginationRequest pagination      = 3;
-  optional bool                        include_deleted = 4;
-  optional string                      parent_id       = 5;
-  optional string                      sprint_id       = 6;
-  optional bool                        backlog_only    = 7;
+  string organization_id = 1;
+  string project_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+  optional bool include_deleted = 4;
+  optional string parent_id = 5;
+  optional string sprint_id = 6;
+  optional bool backlog_only = 7;
   // Filter tasks by unified-tag ids. Combined with ``tag_filter_mode``
   // for ALL / ANY / NONE semantics. Empty = no tag filter.
-  repeated string                      tag_ids         = 8;
-  optional TagFilterMode               tag_filter_mode = 9;
+  repeated string tag_ids = 8;
+  optional TagFilterMode tag_filter_mode = 9;
 }
 
-message TaskResponse {
+message CreateTaskResponse {
   Task task = 1;
   optional Task updated_parent = 2;
-  optional Task spawned_task   = 3;
+  optional Task spawned_task = 3;
+}
+
+message GetTaskResponse {
+  Task task = 1;
+  optional Task updated_parent = 2;
+  optional Task spawned_task = 3;
+}
+
+message UpdateTaskResponse {
+  Task task = 1;
+  optional Task updated_parent = 2;
+  optional Task spawned_task = 3;
+}
+
+message MoveTaskResponse {
+  Task task = 1;
+  optional Task updated_parent = 2;
+  optional Task spawned_task = 3;
 }
 
 message DeleteTaskResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
 message DeleteTasksResponse {
-  bool  success       = 1;
+  bool success = 1;
   int32 deleted_count = 2;
 }
 
 message BulkUpdateTasksResponse {
-  repeated Task tasks         = 1;
-  int32         updated_count = 2;
+  repeated Task tasks = 1;
+  int32 updated_count = 2;
 }
 
 message ListTasksResponse {
-  repeated Task                tasks      = 1;
+  repeated Task tasks = 1;
   common.v1.PaginationResponse pagination = 2;
 }
 
@@ -440,32 +463,36 @@ message ListTasksResponse {
 // ============================================================================
 
 message CreateFieldRequest {
-  string          organization_id = 1;
-  string          project_id      = 2;
-  string          name            = 3;
-  FieldType       type            = 4;
-  optional bool   is_required     = 5;
-  optional int32  sort_order      = 6;
-  optional string config_json     = 7;
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  FieldType type = 4;
+  optional bool is_required = 5;
+  optional int32 sort_order = 6;
+  optional string config_json = 7;
 }
 
 message UpdateFieldRequest {
-  string          organization_id = 1;
-  string          project_id      = 2;
-  string          field_id        = 3;
-  optional string name            = 4;
-  optional bool   is_required     = 5;
-  optional int32  sort_order      = 6;
-  optional string config_json     = 7;
+  string organization_id = 1;
+  string project_id = 2;
+  string field_id = 3;
+  optional string name = 4;
+  optional bool is_required = 5;
+  optional int32 sort_order = 6;
+  optional string config_json = 7;
 }
 
 message DeleteFieldRequest {
   string organization_id = 1;
-  string project_id      = 2;
-  string field_id        = 3;
+  string project_id = 2;
+  string field_id = 3;
 }
 
-message FieldResponse {
+message CreateFieldResponse {
+  FieldDefinition field = 1;
+}
+
+message UpdateFieldResponse {
   FieldDefinition field = 1;
 }
 
@@ -478,30 +505,34 @@ message DeleteFieldResponse {
 // ============================================================================
 
 message CreateViewRequest {
-  string          organization_id = 1;
-  string          project_id      = 2;
-  string          name            = 3;
-  ViewType        type            = 4;
-  optional bool   is_default      = 5;
-  optional string config_json     = 6;
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  ViewType type = 4;
+  optional bool is_default = 5;
+  optional string config_json = 6;
 }
 
 message UpdateViewRequest {
-  string          organization_id = 1;
-  string          project_id      = 2;
-  string          view_id         = 3;
-  optional string name            = 4;
-  optional bool   is_default      = 5;
-  optional string config_json     = 6;
+  string organization_id = 1;
+  string project_id = 2;
+  string view_id = 3;
+  optional string name = 4;
+  optional bool is_default = 5;
+  optional string config_json = 6;
 }
 
 message DeleteViewRequest {
   string organization_id = 1;
-  string project_id      = 2;
-  string view_id         = 3;
+  string project_id = 2;
+  string view_id = 3;
 }
 
-message ViewResponse {
+message CreateViewResponse {
+  ViewConfig view = 1;
+}
+
+message UpdateViewResponse {
   ViewConfig view = 1;
 }
 
@@ -514,47 +545,59 @@ message DeleteViewResponse {
 // ============================================================================
 
 message CreateSprintRequest {
-  string          organization_id = 1;
-  string          project_id      = 2;
-  string          name            = 3;
-  optional string goal            = 4;
-  optional string start_date      = 5;
-  optional string end_date        = 6;
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  optional string goal = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
 }
 
 message UpdateSprintRequest {
-  string          organization_id = 1;
-  string          sprint_id       = 2;
-  optional string name            = 3;
-  optional string goal            = 4;
-  optional string start_date      = 5;
-  optional string end_date        = 6;
+  string organization_id = 1;
+  string sprint_id = 2;
+  optional string name = 3;
+  optional string goal = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
 }
 
 message StartSprintRequest {
-  string          organization_id = 1;
-  string          sprint_id       = 2;
-  optional string start_date      = 3;
-  optional string end_date        = 4;
+  string organization_id = 1;
+  string sprint_id = 2;
+  optional string start_date = 3;
+  optional string end_date = 4;
 }
 
 message CompleteSprintRequest {
   string organization_id = 1;
-  string sprint_id       = 2;
+  string sprint_id = 2;
 }
 
 message DeleteSprintRequest {
   string organization_id = 1;
-  string sprint_id       = 2;
+  string sprint_id = 2;
 }
 
 message ListSprintsRequest {
-  string        organization_id = 1;
-  string        project_id      = 2;
-  optional bool include_closed  = 3;
+  string organization_id = 1;
+  string project_id = 2;
+  optional bool include_closed = 3;
 }
 
-message SprintResponse {
+message CreateSprintResponse {
+  Sprint sprint = 1;
+}
+
+message UpdateSprintResponse {
+  Sprint sprint = 1;
+}
+
+message StartSprintResponse {
+  Sprint sprint = 1;
+}
+
+message CompleteSprintResponse {
   Sprint sprint = 1;
 }
 
@@ -571,13 +614,13 @@ message ListSprintsResponse {
 // ============================================================================
 
 message ListActivitiesRequest {
-  string                               organization_id = 1;
-  string                               task_id         = 2;
-  optional common.v1.PaginationRequest pagination      = 3;
+  string organization_id = 1;
+  string task_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
 }
 
 message ListActivitiesResponse {
-  repeated TaskActivity        activities = 1;
+  repeated TaskActivity activities = 1;
   common.v1.PaginationResponse pagination = 2;
 }
 
@@ -587,7 +630,7 @@ message ListActivitiesResponse {
 
 message ToggleTaskWatcherRequest {
   string organization_id = 1;
-  string task_id         = 2;
+  string task_id = 2;
 }
 
 message ToggleTaskWatcherResponse {
@@ -596,17 +639,17 @@ message ToggleTaskWatcherResponse {
 
 message ListTaskWatchersRequest {
   string organization_id = 1;
-  string task_id         = 2;
+  string task_id = 2;
 }
 
 message ListTaskWatchersResponse {
   repeated string watcher_user_ids = 1;
-  int32           watcher_count    = 2;
+  int32 watcher_count = 2;
 }
 
 message BulkCheckTaskWatchersRequest {
-  string          organization_id = 1;
-  repeated string task_ids        = 2;
+  string organization_id = 1;
+  repeated string task_ids = 2;
 }
 
 message BulkCheckTaskWatchersResponse {

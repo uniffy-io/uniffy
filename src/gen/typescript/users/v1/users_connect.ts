@@ -3,9 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddUserToOrganizationRequest, CreateUserRequest, DeleteAvatarRequest, DeleteUserRequest, DeleteUserResponse, GetMyProfileRequest, GetUserRequest, ListUserOrganizationsRequest, ListUserOrganizationsResponse, ListUsersRequest, ListUsersResponse, RemoveUserFromOrganizationRequest, RemoveUserFromOrganizationResponse, UpdateMyProfileRequest, UpdateUserRequest, UploadAvatarRequest, UserProfile } from "./users_pb.js";
+import { AddUserToOrganizationRequest, AddUserToOrganizationResponse, CreateUserRequest, CreateUserResponse, DeleteAvatarRequest, DeleteAvatarResponse, DeleteUserRequest, DeleteUserResponse, GetMyProfileRequest, GetMyProfileResponse, GetUserRequest, GetUserResponse, ListUserOrganizationsRequest, ListUserOrganizationsResponse, ListUsersRequest, ListUsersResponse, RemoveUserFromOrganizationRequest, RemoveUserFromOrganizationResponse, UpdateMyProfileRequest, UpdateMyProfileResponse, UpdateUserRequest, UpdateUserResponse, UploadAvatarRequest, UploadAvatarResponse } from "./users_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import { MemberInfo } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from service users.v1.UsersService
@@ -21,7 +20,7 @@ export const UsersService = {
     getMyProfile: {
       name: "GetMyProfile",
       I: GetMyProfileRequest,
-      O: UserProfile,
+      O: GetMyProfileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -30,7 +29,7 @@ export const UsersService = {
     updateMyProfile: {
       name: "UpdateMyProfile",
       I: UpdateMyProfileRequest,
-      O: UserProfile,
+      O: UpdateMyProfileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -50,7 +49,7 @@ export const UsersService = {
     getUser: {
       name: "GetUser",
       I: GetUserRequest,
-      O: UserProfile,
+      O: GetUserResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -59,7 +58,7 @@ export const UsersService = {
     createUser: {
       name: "CreateUser",
       I: CreateUserRequest,
-      O: UserProfile,
+      O: CreateUserResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -68,7 +67,7 @@ export const UsersService = {
     updateUser: {
       name: "UpdateUser",
       I: UpdateUserRequest,
-      O: UserProfile,
+      O: UpdateUserResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +87,7 @@ export const UsersService = {
     uploadAvatar: {
       name: "UploadAvatar",
       I: UploadAvatarRequest,
-      O: UserProfile,
+      O: UploadAvatarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -97,7 +96,7 @@ export const UsersService = {
     deleteAvatar: {
       name: "DeleteAvatar",
       I: DeleteAvatarRequest,
-      O: UserProfile,
+      O: DeleteAvatarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -117,7 +116,7 @@ export const UsersService = {
     addUserToOrganization: {
       name: "AddUserToOrganization",
       I: AddUserToOrganizationRequest,
-      O: MemberInfo,
+      O: AddUserToOrganizationResponse,
       kind: MethodKind.Unary,
     },
     /**

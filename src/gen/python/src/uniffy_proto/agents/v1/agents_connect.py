@@ -16,25 +16,25 @@ import agents.v1.agents_pb2 as agents_dot_v1_dot_agents__pb2
 
 
 class AgentsService(Protocol):
-    async def create_agent(self, request: agents_dot_v1_dot_agents__pb2.CreateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    async def create_agent(self, request: agents_dot_v1_dot_agents__pb2.CreateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.CreateAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_agent(self, request: agents_dot_v1_dot_agents__pb2.GetAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    async def get_agent(self, request: agents_dot_v1_dot_agents__pb2.GetAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.GetAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_agents(self, request: agents_dot_v1_dot_agents__pb2.ListAgentsRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.ListAgentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_agent(self, request: agents_dot_v1_dot_agents__pb2.UpdateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    async def update_agent(self, request: agents_dot_v1_dot_agents__pb2.UpdateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UpdateAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_agent(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    async def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    async def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def preview_system_prompt(self, request: agents_dot_v1_dot_agents__pb2.PreviewSystemPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.PreviewSystemPromptResponse:
@@ -51,7 +51,7 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         name="CreateAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.CreateAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.CreateAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_agent,
@@ -61,7 +61,7 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         name="GetAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.GetAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.GetAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_agent,
@@ -81,7 +81,7 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         name="UpdateAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.UpdateAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.UpdateAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_agent,
@@ -101,7 +101,7 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         name="UploadAgentAvatar",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.upload_agent_avatar,
@@ -111,7 +111,7 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         name="DeleteAgentAvatar",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_agent_avatar,
@@ -144,14 +144,14 @@ class AgentsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.CreateAgentResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.CreateAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.CreateAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -164,14 +164,14 @@ class AgentsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.GetAgentResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.GetAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.GetAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -204,14 +204,14 @@ class AgentsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.UpdateAgentResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.UpdateAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.UpdateAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -244,14 +244,14 @@ class AgentsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UploadAgentAvatar",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -264,14 +264,14 @@ class AgentsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteAgentAvatar",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -300,19 +300,19 @@ class AgentsServiceClient(ConnectClient):
 
 
 class AgentsServiceSync(Protocol):
-    def create_agent(self, request: agents_dot_v1_dot_agents__pb2.CreateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    def create_agent(self, request: agents_dot_v1_dot_agents__pb2.CreateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.CreateAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_agent(self, request: agents_dot_v1_dot_agents__pb2.GetAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    def get_agent(self, request: agents_dot_v1_dot_agents__pb2.GetAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.GetAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_agents(self, request: agents_dot_v1_dot_agents__pb2.ListAgentsRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.ListAgentsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_agent(self, request: agents_dot_v1_dot_agents__pb2.UpdateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    def update_agent(self, request: agents_dot_v1_dot_agents__pb2.UpdateAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UpdateAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_agent(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def preview_system_prompt(self, request: agents_dot_v1_dot_agents__pb2.PreviewSystemPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.PreviewSystemPromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -327,7 +327,7 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.CreateAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.CreateAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_agent,
@@ -337,7 +337,7 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.GetAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.GetAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_agent,
@@ -357,7 +357,7 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateAgent",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.UpdateAgentRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.UpdateAgentResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_agent,
@@ -377,7 +377,7 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UploadAgentAvatar",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.upload_agent_avatar,
@@ -387,7 +387,7 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         name="DeleteAgentAvatar",
                         service_name="agents.v1.AgentsService",
                         input=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest,
-                        output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                        output=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_agent_avatar,
@@ -420,14 +420,14 @@ class AgentsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.CreateAgentResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.CreateAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.CreateAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -440,14 +440,14 @@ class AgentsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.GetAgentResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.GetAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.GetAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -480,14 +480,14 @@ class AgentsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.UpdateAgentResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateAgent",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.UpdateAgentRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.UpdateAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -520,14 +520,14 @@ class AgentsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UploadAgentAvatar",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -540,14 +540,14 @@ class AgentsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_agents__pb2.AgentResponse:
+    ) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteAgentAvatar",
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest,
-                output=agents_dot_v1_dot_agents__pb2.AgentResponse,
+                output=agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

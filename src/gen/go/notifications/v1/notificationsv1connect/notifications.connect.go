@@ -91,7 +91,7 @@ type NotificationsServiceClient interface {
 	// Unregister a Web Push subscription
 	UnregisterPushSubscription(context.Context, *connect.Request[v1.UnregisterPushSubscriptionRequest]) (*connect.Response[v1.UnregisterPushSubscriptionResponse], error)
 	// Server streaming: real-time notification feed via Valkey Pub/Sub
-	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest]) (*connect.ServerStreamForClient[v1.StreamNotificationEvent], error)
+	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest]) (*connect.ServerStreamForClient[v1.StreamNotificationsResponse], error)
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *connect.Request[v1.GetVapidPublicKeyRequest]) (*connect.Response[v1.GetVapidPublicKeyResponse], error)
 	// Search notifications with full-text search and advanced filters
@@ -157,7 +157,7 @@ func NewNotificationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(notificationsServiceMethods.ByName("UnregisterPushSubscription")),
 			connect.WithClientOptions(opts...),
 		),
-		streamNotifications: connect.NewClient[v1.StreamNotificationsRequest, v1.StreamNotificationEvent](
+		streamNotifications: connect.NewClient[v1.StreamNotificationsRequest, v1.StreamNotificationsResponse](
 			httpClient,
 			baseURL+NotificationsServiceStreamNotificationsProcedure,
 			connect.WithSchema(notificationsServiceMethods.ByName("StreamNotifications")),
@@ -205,7 +205,7 @@ type notificationsServiceClient struct {
 	deleteNotification         *connect.Client[v1.DeleteNotificationRequest, v1.DeleteNotificationResponse]
 	registerPushSubscription   *connect.Client[v1.RegisterPushSubscriptionRequest, v1.RegisterPushSubscriptionResponse]
 	unregisterPushSubscription *connect.Client[v1.UnregisterPushSubscriptionRequest, v1.UnregisterPushSubscriptionResponse]
-	streamNotifications        *connect.Client[v1.StreamNotificationsRequest, v1.StreamNotificationEvent]
+	streamNotifications        *connect.Client[v1.StreamNotificationsRequest, v1.StreamNotificationsResponse]
 	getVapidPublicKey          *connect.Client[v1.GetVapidPublicKeyRequest, v1.GetVapidPublicKeyResponse]
 	searchNotifications        *connect.Client[v1.SearchNotificationsRequest, v1.SearchNotificationsResponse]
 	getNotificationStats       *connect.Client[v1.GetNotificationStatsRequest, v1.GetNotificationStatsResponse]
@@ -250,7 +250,7 @@ func (c *notificationsServiceClient) UnregisterPushSubscription(ctx context.Cont
 }
 
 // StreamNotifications calls notifications.v1.NotificationsService.StreamNotifications.
-func (c *notificationsServiceClient) StreamNotifications(ctx context.Context, req *connect.Request[v1.StreamNotificationsRequest]) (*connect.ServerStreamForClient[v1.StreamNotificationEvent], error) {
+func (c *notificationsServiceClient) StreamNotifications(ctx context.Context, req *connect.Request[v1.StreamNotificationsRequest]) (*connect.ServerStreamForClient[v1.StreamNotificationsResponse], error) {
 	return c.streamNotifications.CallServerStream(ctx, req)
 }
 
@@ -297,7 +297,7 @@ type NotificationsServiceHandler interface {
 	// Unregister a Web Push subscription
 	UnregisterPushSubscription(context.Context, *connect.Request[v1.UnregisterPushSubscriptionRequest]) (*connect.Response[v1.UnregisterPushSubscriptionResponse], error)
 	// Server streaming: real-time notification feed via Valkey Pub/Sub
-	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest], *connect.ServerStream[v1.StreamNotificationEvent]) error
+	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest], *connect.ServerStream[v1.StreamNotificationsResponse]) error
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *connect.Request[v1.GetVapidPublicKeyRequest]) (*connect.Response[v1.GetVapidPublicKeyResponse], error)
 	// Search notifications with full-text search and advanced filters
@@ -460,7 +460,7 @@ func (UnimplementedNotificationsServiceHandler) UnregisterPushSubscription(conte
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.UnregisterPushSubscription is not implemented"))
 }
 
-func (UnimplementedNotificationsServiceHandler) StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest], *connect.ServerStream[v1.StreamNotificationEvent]) error {
+func (UnimplementedNotificationsServiceHandler) StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest], *connect.ServerStream[v1.StreamNotificationsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.StreamNotifications is not implemented"))
 }
 

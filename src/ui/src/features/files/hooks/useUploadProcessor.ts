@@ -35,24 +35,15 @@ async function processUpload(
     dispatch: ReturnType<typeof useAppDispatch>
     // TODO: Integrate abort signal with worker operations
 ): Promise<void> {
-    console.log('[Upload] Starting upload for:', item.filename, 'org:', organizationId);
-
     // 1. Initiate upload to get upload_id and chunk parameters (main thread - uses auth interceptor)
-    let initResponse;
-    try {
-        initResponse = await filesApi.initiateUpload({
-            organizationId,
-            filename: item.filename,
-            mimeType: item.mimeType,
-            totalSize: BigInt(item.totalSize),
-            folderId: item.folderId,
-            accessMode: item.accessMode,
-        });
-        console.log('[Upload] Initiated:', initResponse);
-    } catch (error) {
-        console.error('[Upload] Failed to initiate upload:', error);
-        throw error;
-    }
+    const initResponse = await filesApi.initiateUpload({
+        organizationId,
+        filename: item.filename,
+        mimeType: item.mimeType,
+        totalSize: BigInt(item.totalSize),
+        folderId: item.folderId,
+        accessMode: item.accessMode,
+    });
 
     const { uploadId, chunkSize, totalChunks } = initResponse;
 
@@ -65,40 +56,25 @@ async function processUpload(
     }));
 
     // 2. Upload file chunks in worker (off main thread)
-    console.log('[Upload] Starting worker upload, total chunks:', totalChunks);
+    await fileWorkerManager.uploadChunks({
+        file,
+        uploadId,
+        chunkSize,
+        totalChunks,
+        apiUrl: env.apiBaseUrl,
+        onProgress: (uploadedChunks, uploadedBytes) => {
+            dispatch(updateProgress({
+                itemId: item.id,
+                uploadedChunks,
+                uploadedBytes,
+            }));
+        },
+    });
 
-    try {
-        await fileWorkerManager.uploadChunks({
-            file,
-            uploadId,
-            chunkSize,
-            totalChunks,
-            apiUrl: env.apiBaseUrl,
-            onProgress: (uploadedChunks, uploadedBytes) => {
-                dispatch(updateProgress({
-                    itemId: item.id,
-                    uploadedChunks,
-                    uploadedBytes,
-                }));
-            },
-        });
-    } catch (error) {
-        console.error('[Upload] Worker chunk upload failed:', error);
-        throw error;
-    }
-
-    console.log('[Upload] All chunks uploaded, completing...');
     dispatch(setCompleting(item.id));
 
     // 3. Complete the upload (main thread - uses auth interceptor)
-    let response;
-    try {
-        response = await filesApi.completeUpload({ uploadId });
-        console.log('[Upload] completeUpload response:', response);
-    } catch (error) {
-        console.error('[Upload] completeUpload failed:', error);
-        throw error;
-    }
+    const response = await filesApi.completeUpload({ uploadId });
 
     // 4. Handle completion - add file to state
     if (response.file) {
@@ -108,12 +84,6 @@ async function processUpload(
         if (protoFile.tags.length > 0) {
             dispatch(bulkUpsertTags(protoFile.tags.map(tagToPlain)));
         }
-        console.log('[Upload] Completed file:', {
-            id: protoFile.id,
-            filename: protoFile.filename,
-            folderId: protoFile.folderId,
-            originalFolderId: item.folderId,
-        });
 
         // Helper to convert bigint to number
         const toNumber = (val: bigint | number | undefined): number =>
@@ -203,10 +173,7 @@ export function useUploadProcessor() {
 
     // Process next items in queue
     const processQueue = useCallback(async () => {
-        console.log('[Upload] processQueue called', { organizationId, queueLength: queue.length, activeCount: Object.keys(activeUploads).length });
-
         if (!organizationId) {
-            console.log('[Upload] No organizationId, skipping');
             return;
         }
 
@@ -214,7 +181,6 @@ export function useUploadProcessor() {
         const availableSlots = maxConcurrentUploads - activeCount;
 
         if (availableSlots <= 0 || queue.length === 0) {
-            console.log('[Upload] No slots available or queue empty', { availableSlots, queueLength: queue.length });
             return;
         }
 
@@ -244,11 +210,7 @@ export function useUploadProcessor() {
 
             // Process upload (don't await - let it run concurrently)
             processUpload(item, file, organizationId, dispatch)
-                .then(() => {
-                    console.log('[Upload] processUpload completed successfully for:', item.filename);
-                })
                 .catch((error) => {
-                    console.error('[Upload] processUpload failed for:', item.filename, error);
                     if (error.message !== 'Upload aborted') {
                         dispatch(failUpload({
                             itemId: item.id,

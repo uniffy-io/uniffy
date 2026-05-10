@@ -38,17 +38,17 @@ const (
 // SessionsService manages conversation sessions between users and agents.
 type SessionsServiceClient interface {
 	// Create a new session (find-or-create for DIRECT kind)
-	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error)
+	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
 	// Get a session by ID
-	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error)
+	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
 	// List sessions for the user in an organization
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	// Update session settings (display name, model override)
-	UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error)
+	UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*UpdateSessionResponse, error)
 	// Archive a session (soft delete)
 	ArchiveSession(ctx context.Context, in *ArchiveSessionRequest, opts ...grpc.CallOption) (*ArchiveSessionResponse, error)
 	// Add a message to a session
-	AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*MessageResponse, error)
+	AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*AddMessageResponse, error)
 	// List messages in a session
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
 	// Get recent messages for LLM context assembly
@@ -67,9 +67,9 @@ func NewSessionsServiceClient(cc grpc.ClientConnInterface) SessionsServiceClient
 	return &sessionsServiceClient{cc}
 }
 
-func (c *sessionsServiceClient) CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error) {
+func (c *sessionsServiceClient) CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SessionResponse)
+	out := new(CreateSessionResponse)
 	err := c.cc.Invoke(ctx, SessionsService_CreateSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -77,9 +77,9 @@ func (c *sessionsServiceClient) CreateSession(ctx context.Context, in *CreateSes
 	return out, nil
 }
 
-func (c *sessionsServiceClient) GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error) {
+func (c *sessionsServiceClient) GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SessionResponse)
+	out := new(GetSessionResponse)
 	err := c.cc.Invoke(ctx, SessionsService_GetSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -97,9 +97,9 @@ func (c *sessionsServiceClient) ListSessions(ctx context.Context, in *ListSessio
 	return out, nil
 }
 
-func (c *sessionsServiceClient) UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*SessionResponse, error) {
+func (c *sessionsServiceClient) UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*UpdateSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SessionResponse)
+	out := new(UpdateSessionResponse)
 	err := c.cc.Invoke(ctx, SessionsService_UpdateSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -117,9 +117,9 @@ func (c *sessionsServiceClient) ArchiveSession(ctx context.Context, in *ArchiveS
 	return out, nil
 }
 
-func (c *sessionsServiceClient) AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*MessageResponse, error) {
+func (c *sessionsServiceClient) AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*AddMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MessageResponse)
+	out := new(AddMessageResponse)
 	err := c.cc.Invoke(ctx, SessionsService_AddMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -174,17 +174,17 @@ func (c *sessionsServiceClient) CompactSession(ctx context.Context, in *CompactS
 // SessionsService manages conversation sessions between users and agents.
 type SessionsServiceServer interface {
 	// Create a new session (find-or-create for DIRECT kind)
-	CreateSession(context.Context, *CreateSessionRequest) (*SessionResponse, error)
+	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
 	// Get a session by ID
-	GetSession(context.Context, *GetSessionRequest) (*SessionResponse, error)
+	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
 	// List sessions for the user in an organization
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *UpdateSessionRequest) (*SessionResponse, error)
+	UpdateSession(context.Context, *UpdateSessionRequest) (*UpdateSessionResponse, error)
 	// Archive a session (soft delete)
 	ArchiveSession(context.Context, *ArchiveSessionRequest) (*ArchiveSessionResponse, error)
 	// Add a message to a session
-	AddMessage(context.Context, *AddMessageRequest) (*MessageResponse, error)
+	AddMessage(context.Context, *AddMessageRequest) (*AddMessageResponse, error)
 	// List messages in a session
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
 	// Get recent messages for LLM context assembly
@@ -203,22 +203,22 @@ type SessionsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSessionsServiceServer struct{}
 
-func (UnimplementedSessionsServiceServer) CreateSession(context.Context, *CreateSessionRequest) (*SessionResponse, error) {
+func (UnimplementedSessionsServiceServer) CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSession not implemented")
 }
-func (UnimplementedSessionsServiceServer) GetSession(context.Context, *GetSessionRequest) (*SessionResponse, error) {
+func (UnimplementedSessionsServiceServer) GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSession not implemented")
 }
 func (UnimplementedSessionsServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
 }
-func (UnimplementedSessionsServiceServer) UpdateSession(context.Context, *UpdateSessionRequest) (*SessionResponse, error) {
+func (UnimplementedSessionsServiceServer) UpdateSession(context.Context, *UpdateSessionRequest) (*UpdateSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSession not implemented")
 }
 func (UnimplementedSessionsServiceServer) ArchiveSession(context.Context, *ArchiveSessionRequest) (*ArchiveSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ArchiveSession not implemented")
 }
-func (UnimplementedSessionsServiceServer) AddMessage(context.Context, *AddMessageRequest) (*MessageResponse, error) {
+func (UnimplementedSessionsServiceServer) AddMessage(context.Context, *AddMessageRequest) (*AddMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddMessage not implemented")
 }
 func (UnimplementedSessionsServiceServer) ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error) {

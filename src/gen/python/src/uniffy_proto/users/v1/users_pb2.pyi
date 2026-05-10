@@ -42,6 +42,54 @@ class GetMyProfileRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class GetMyProfileResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class UpdateMyProfileResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class GetUserResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class CreateUserResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class UpdateUserResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class UploadAvatarResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class DeleteAvatarResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: UserProfile
+    def __init__(self, user: _Optional[_Union[UserProfile, _Mapping]] = ...) -> None: ...
+
+class AddUserToOrganizationResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: _common_pb2.MemberInfo
+    def __init__(self, member: _Optional[_Union[_common_pb2.MemberInfo, _Mapping]] = ...) -> None: ...
+
 class UpdateMyProfileRequest(_message.Message):
     __slots__ = ("full_name", "username", "avatar_url", "accent_color", "font_family")
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]

@@ -59,10 +59,10 @@ const (
 // MembersServiceClient is a client for the permissions.v1.MembersService service.
 type MembersServiceClient interface {
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error)
-	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error)
+	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
-	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error)
+	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error)
 	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
 	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
 }
@@ -84,13 +84,13 @@ func NewMembersServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(membersServiceMethods.ByName("ListMembers")),
 			connect.WithClientOptions(opts...),
 		),
-		addMember: connect.NewClient[v1.AddMemberRequest, v1.MemberResponse](
+		addMember: connect.NewClient[v1.AddMemberRequest, v1.AddMemberResponse](
 			httpClient,
 			baseURL+MembersServiceAddMemberProcedure,
 			connect.WithSchema(membersServiceMethods.ByName("AddMember")),
 			connect.WithClientOptions(opts...),
 		),
-		updateMemberRole: connect.NewClient[v1.UpdateMemberRoleRequest, v1.MemberResponse](
+		updateMemberRole: connect.NewClient[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse](
 			httpClient,
 			baseURL+MembersServiceUpdateMemberRoleProcedure,
 			connect.WithSchema(membersServiceMethods.ByName("UpdateMemberRole")),
@@ -102,7 +102,7 @@ func NewMembersServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(membersServiceMethods.ByName("RemoveMember")),
 			connect.WithClientOptions(opts...),
 		),
-		setAccessMode: connect.NewClient[v1.SetAccessModeRequest, v1.AccessModeResponse](
+		setAccessMode: connect.NewClient[v1.SetAccessModeRequest, v1.SetAccessModeResponse](
 			httpClient,
 			baseURL+MembersServiceSetAccessModeProcedure,
 			connect.WithSchema(membersServiceMethods.ByName("SetAccessMode")),
@@ -126,10 +126,10 @@ func NewMembersServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 // membersServiceClient implements MembersServiceClient.
 type membersServiceClient struct {
 	listMembers       *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	addMember         *connect.Client[v1.AddMemberRequest, v1.MemberResponse]
-	updateMemberRole  *connect.Client[v1.UpdateMemberRoleRequest, v1.MemberResponse]
+	addMember         *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
+	updateMemberRole  *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
 	removeMember      *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
-	setAccessMode     *connect.Client[v1.SetAccessModeRequest, v1.AccessModeResponse]
+	setAccessMode     *connect.Client[v1.SetAccessModeRequest, v1.SetAccessModeResponse]
 	transferOwnership *connect.Client[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse]
 	listMemberEvents  *connect.Client[v1.ListMemberEventsRequest, v1.ListMemberEventsResponse]
 }
@@ -140,12 +140,12 @@ func (c *membersServiceClient) ListMembers(ctx context.Context, req *connect.Req
 }
 
 // AddMember calls permissions.v1.MembersService.AddMember.
-func (c *membersServiceClient) AddMember(ctx context.Context, req *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error) {
+func (c *membersServiceClient) AddMember(ctx context.Context, req *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error) {
 	return c.addMember.CallUnary(ctx, req)
 }
 
 // UpdateMemberRole calls permissions.v1.MembersService.UpdateMemberRole.
-func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, req *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error) {
+func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, req *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error) {
 	return c.updateMemberRole.CallUnary(ctx, req)
 }
 
@@ -155,7 +155,7 @@ func (c *membersServiceClient) RemoveMember(ctx context.Context, req *connect.Re
 }
 
 // SetAccessMode calls permissions.v1.MembersService.SetAccessMode.
-func (c *membersServiceClient) SetAccessMode(ctx context.Context, req *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error) {
+func (c *membersServiceClient) SetAccessMode(ctx context.Context, req *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error) {
 	return c.setAccessMode.CallUnary(ctx, req)
 }
 
@@ -172,10 +172,10 @@ func (c *membersServiceClient) ListMemberEvents(ctx context.Context, req *connec
 // MembersServiceHandler is an implementation of the permissions.v1.MembersService service.
 type MembersServiceHandler interface {
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error)
-	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error)
+	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
-	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error)
+	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error)
 	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
 	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
 }
@@ -258,11 +258,11 @@ func (UnimplementedMembersServiceHandler) ListMembers(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.ListMembers is not implemented"))
 }
 
-func (UnimplementedMembersServiceHandler) AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error) {
+func (UnimplementedMembersServiceHandler) AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.AddMember is not implemented"))
 }
 
-func (UnimplementedMembersServiceHandler) UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error) {
+func (UnimplementedMembersServiceHandler) UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.UpdateMemberRole is not implemented"))
 }
 
@@ -270,7 +270,7 @@ func (UnimplementedMembersServiceHandler) RemoveMember(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.RemoveMember is not implemented"))
 }
 
-func (UnimplementedMembersServiceHandler) SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error) {
+func (UnimplementedMembersServiceHandler) SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.SetAccessMode is not implemented"))
 }
 

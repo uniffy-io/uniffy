@@ -10,11 +10,15 @@ import { cn } from "@/shared/utils/cn";
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, id, name, ...props }, ref) => {
+    const reactId = React.useId();
+    const resolvedId = id ?? (name ? undefined : reactId);
     return (
       <input
         ref={ref}
         type={type}
+        id={resolvedId}
+        name={name}
         className={cn(
           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
           "ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium",

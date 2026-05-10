@@ -149,7 +149,6 @@ export function EditorCanvas({
 
     // Show loading state
     if (loading || !imageUrl) {
-        console.log('[EditorCanvas] Showing loading spinner');
         return (
             <div className="flex-1 flex items-center justify-center">
                 <Spinner size={48} className="animate-spin text-white/50" />

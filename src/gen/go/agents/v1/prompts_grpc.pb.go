@@ -34,13 +34,13 @@ const (
 // Prompts are reusable instruction sets that define agent behavior.
 type PromptsServiceClient interface {
 	// Create a new prompt
-	CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*PromptResponse, error)
+	CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*CreatePromptResponse, error)
 	// Get a prompt by ID
-	GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*PromptResponse, error)
+	GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*GetPromptResponse, error)
 	// List prompts (bundled + organization + personal)
 	ListPrompts(ctx context.Context, in *ListPromptsRequest, opts ...grpc.CallOption) (*ListPromptsResponse, error)
 	// Update a prompt
-	UpdatePrompt(ctx context.Context, in *UpdatePromptRequest, opts ...grpc.CallOption) (*PromptResponse, error)
+	UpdatePrompt(ctx context.Context, in *UpdatePromptRequest, opts ...grpc.CallOption) (*UpdatePromptResponse, error)
 	// Delete a prompt
 	DeletePrompt(ctx context.Context, in *DeletePromptRequest, opts ...grpc.CallOption) (*DeletePromptResponse, error)
 }
@@ -53,9 +53,9 @@ func NewPromptsServiceClient(cc grpc.ClientConnInterface) PromptsServiceClient {
 	return &promptsServiceClient{cc}
 }
 
-func (c *promptsServiceClient) CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*PromptResponse, error) {
+func (c *promptsServiceClient) CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*CreatePromptResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PromptResponse)
+	out := new(CreatePromptResponse)
 	err := c.cc.Invoke(ctx, PromptsService_CreatePrompt_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -63,9 +63,9 @@ func (c *promptsServiceClient) CreatePrompt(ctx context.Context, in *CreatePromp
 	return out, nil
 }
 
-func (c *promptsServiceClient) GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*PromptResponse, error) {
+func (c *promptsServiceClient) GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*GetPromptResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PromptResponse)
+	out := new(GetPromptResponse)
 	err := c.cc.Invoke(ctx, PromptsService_GetPrompt_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ func (c *promptsServiceClient) ListPrompts(ctx context.Context, in *ListPromptsR
 	return out, nil
 }
 
-func (c *promptsServiceClient) UpdatePrompt(ctx context.Context, in *UpdatePromptRequest, opts ...grpc.CallOption) (*PromptResponse, error) {
+func (c *promptsServiceClient) UpdatePrompt(ctx context.Context, in *UpdatePromptRequest, opts ...grpc.CallOption) (*UpdatePromptResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PromptResponse)
+	out := new(UpdatePromptResponse)
 	err := c.cc.Invoke(ctx, PromptsService_UpdatePrompt_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,13 +111,13 @@ func (c *promptsServiceClient) DeletePrompt(ctx context.Context, in *DeletePromp
 // Prompts are reusable instruction sets that define agent behavior.
 type PromptsServiceServer interface {
 	// Create a new prompt
-	CreatePrompt(context.Context, *CreatePromptRequest) (*PromptResponse, error)
+	CreatePrompt(context.Context, *CreatePromptRequest) (*CreatePromptResponse, error)
 	// Get a prompt by ID
-	GetPrompt(context.Context, *GetPromptRequest) (*PromptResponse, error)
+	GetPrompt(context.Context, *GetPromptRequest) (*GetPromptResponse, error)
 	// List prompts (bundled + organization + personal)
 	ListPrompts(context.Context, *ListPromptsRequest) (*ListPromptsResponse, error)
 	// Update a prompt
-	UpdatePrompt(context.Context, *UpdatePromptRequest) (*PromptResponse, error)
+	UpdatePrompt(context.Context, *UpdatePromptRequest) (*UpdatePromptResponse, error)
 	// Delete a prompt
 	DeletePrompt(context.Context, *DeletePromptRequest) (*DeletePromptResponse, error)
 	mustEmbedUnimplementedPromptsServiceServer()
@@ -130,16 +130,16 @@ type PromptsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPromptsServiceServer struct{}
 
-func (UnimplementedPromptsServiceServer) CreatePrompt(context.Context, *CreatePromptRequest) (*PromptResponse, error) {
+func (UnimplementedPromptsServiceServer) CreatePrompt(context.Context, *CreatePromptRequest) (*CreatePromptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreatePrompt not implemented")
 }
-func (UnimplementedPromptsServiceServer) GetPrompt(context.Context, *GetPromptRequest) (*PromptResponse, error) {
+func (UnimplementedPromptsServiceServer) GetPrompt(context.Context, *GetPromptRequest) (*GetPromptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPrompt not implemented")
 }
 func (UnimplementedPromptsServiceServer) ListPrompts(context.Context, *ListPromptsRequest) (*ListPromptsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPrompts not implemented")
 }
-func (UnimplementedPromptsServiceServer) UpdatePrompt(context.Context, *UpdatePromptRequest) (*PromptResponse, error) {
+func (UnimplementedPromptsServiceServer) UpdatePrompt(context.Context, *UpdatePromptRequest) (*UpdatePromptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePrompt not implemented")
 }
 func (UnimplementedPromptsServiceServer) DeletePrompt(context.Context, *DeletePromptRequest) (*DeletePromptResponse, error) {

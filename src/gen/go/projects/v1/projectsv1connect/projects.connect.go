@@ -124,35 +124,35 @@ const (
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
 type ProjectsServiceClient interface {
 	// ----- Projects -----
-	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
-	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
-	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	// ----- Tasks -----
-	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.TaskResponse], error)
-	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.TaskResponse], error)
-	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.TaskResponse], error)
+	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
+	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
-	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.TaskResponse], error)
+	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error)
 	BulkUpdateTasks(context.Context, *connect.Request[v1.BulkUpdateTasksRequest]) (*connect.Response[v1.BulkUpdateTasksResponse], error)
 	DeleteTasks(context.Context, *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error)
 	// ----- Field Definitions -----
-	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.FieldResponse], error)
-	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.FieldResponse], error)
+	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error)
+	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error)
 	DeleteField(context.Context, *connect.Request[v1.DeleteFieldRequest]) (*connect.Response[v1.DeleteFieldResponse], error)
 	// ----- View Configs -----
-	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.ViewResponse], error)
-	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.ViewResponse], error)
+	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error)
+	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
-	CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.SprintResponse], error)
+	CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.CreateSprintResponse], error)
+	UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.UpdateSprintResponse], error)
+	StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.StartSprintResponse], error)
+	CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.CompleteSprintResponse], error)
 	DeleteSprint(context.Context, *connect.Request[v1.DeleteSprintRequest]) (*connect.Response[v1.DeleteSprintResponse], error)
 	ListSprints(context.Context, *connect.Request[v1.ListSprintsRequest]) (*connect.Response[v1.ListSprintsResponse], error)
 	// ----- Task Watchers -----
@@ -172,19 +172,19 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	projectsServiceMethods := v1.File_projects_v1_projects_proto.Services().ByName("ProjectsService").Methods()
 	return &projectsServiceClient{
-		createProject: connect.NewClient[v1.CreateProjectRequest, v1.ProjectResponse](
+		createProject: connect.NewClient[v1.CreateProjectRequest, v1.CreateProjectResponse](
 			httpClient,
 			baseURL+ProjectsServiceCreateProjectProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CreateProject")),
 			connect.WithClientOptions(opts...),
 		),
-		getProject: connect.NewClient[v1.GetProjectRequest, v1.ProjectResponse](
+		getProject: connect.NewClient[v1.GetProjectRequest, v1.GetProjectResponse](
 			httpClient,
 			baseURL+ProjectsServiceGetProjectProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("GetProject")),
 			connect.WithClientOptions(opts...),
 		),
-		updateProject: connect.NewClient[v1.UpdateProjectRequest, v1.ProjectResponse](
+		updateProject: connect.NewClient[v1.UpdateProjectRequest, v1.UpdateProjectResponse](
 			httpClient,
 			baseURL+ProjectsServiceUpdateProjectProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("UpdateProject")),
@@ -202,19 +202,19 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("ListProjects")),
 			connect.WithClientOptions(opts...),
 		),
-		createTask: connect.NewClient[v1.CreateTaskRequest, v1.TaskResponse](
+		createTask: connect.NewClient[v1.CreateTaskRequest, v1.CreateTaskResponse](
 			httpClient,
 			baseURL+ProjectsServiceCreateTaskProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CreateTask")),
 			connect.WithClientOptions(opts...),
 		),
-		getTask: connect.NewClient[v1.GetTaskRequest, v1.TaskResponse](
+		getTask: connect.NewClient[v1.GetTaskRequest, v1.GetTaskResponse](
 			httpClient,
 			baseURL+ProjectsServiceGetTaskProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("GetTask")),
 			connect.WithClientOptions(opts...),
 		),
-		updateTask: connect.NewClient[v1.UpdateTaskRequest, v1.TaskResponse](
+		updateTask: connect.NewClient[v1.UpdateTaskRequest, v1.UpdateTaskResponse](
 			httpClient,
 			baseURL+ProjectsServiceUpdateTaskProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("UpdateTask")),
@@ -232,7 +232,7 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("ListTasks")),
 			connect.WithClientOptions(opts...),
 		),
-		moveTask: connect.NewClient[v1.MoveTaskRequest, v1.TaskResponse](
+		moveTask: connect.NewClient[v1.MoveTaskRequest, v1.MoveTaskResponse](
 			httpClient,
 			baseURL+ProjectsServiceMoveTaskProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("MoveTask")),
@@ -250,13 +250,13 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("DeleteTasks")),
 			connect.WithClientOptions(opts...),
 		),
-		createField: connect.NewClient[v1.CreateFieldRequest, v1.FieldResponse](
+		createField: connect.NewClient[v1.CreateFieldRequest, v1.CreateFieldResponse](
 			httpClient,
 			baseURL+ProjectsServiceCreateFieldProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CreateField")),
 			connect.WithClientOptions(opts...),
 		),
-		updateField: connect.NewClient[v1.UpdateFieldRequest, v1.FieldResponse](
+		updateField: connect.NewClient[v1.UpdateFieldRequest, v1.UpdateFieldResponse](
 			httpClient,
 			baseURL+ProjectsServiceUpdateFieldProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("UpdateField")),
@@ -268,13 +268,13 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("DeleteField")),
 			connect.WithClientOptions(opts...),
 		),
-		createView: connect.NewClient[v1.CreateViewRequest, v1.ViewResponse](
+		createView: connect.NewClient[v1.CreateViewRequest, v1.CreateViewResponse](
 			httpClient,
 			baseURL+ProjectsServiceCreateViewProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CreateView")),
 			connect.WithClientOptions(opts...),
 		),
-		updateView: connect.NewClient[v1.UpdateViewRequest, v1.ViewResponse](
+		updateView: connect.NewClient[v1.UpdateViewRequest, v1.UpdateViewResponse](
 			httpClient,
 			baseURL+ProjectsServiceUpdateViewProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("UpdateView")),
@@ -292,25 +292,25 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("ListActivities")),
 			connect.WithClientOptions(opts...),
 		),
-		createSprint: connect.NewClient[v1.CreateSprintRequest, v1.SprintResponse](
+		createSprint: connect.NewClient[v1.CreateSprintRequest, v1.CreateSprintResponse](
 			httpClient,
 			baseURL+ProjectsServiceCreateSprintProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CreateSprint")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSprint: connect.NewClient[v1.UpdateSprintRequest, v1.SprintResponse](
+		updateSprint: connect.NewClient[v1.UpdateSprintRequest, v1.UpdateSprintResponse](
 			httpClient,
 			baseURL+ProjectsServiceUpdateSprintProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("UpdateSprint")),
 			connect.WithClientOptions(opts...),
 		),
-		startSprint: connect.NewClient[v1.StartSprintRequest, v1.SprintResponse](
+		startSprint: connect.NewClient[v1.StartSprintRequest, v1.StartSprintResponse](
 			httpClient,
 			baseURL+ProjectsServiceStartSprintProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("StartSprint")),
 			connect.WithClientOptions(opts...),
 		),
-		completeSprint: connect.NewClient[v1.CompleteSprintRequest, v1.SprintResponse](
+		completeSprint: connect.NewClient[v1.CompleteSprintRequest, v1.CompleteSprintResponse](
 			httpClient,
 			baseURL+ProjectsServiceCompleteSprintProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("CompleteSprint")),
@@ -351,30 +351,30 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // projectsServiceClient implements ProjectsServiceClient.
 type projectsServiceClient struct {
-	createProject         *connect.Client[v1.CreateProjectRequest, v1.ProjectResponse]
-	getProject            *connect.Client[v1.GetProjectRequest, v1.ProjectResponse]
-	updateProject         *connect.Client[v1.UpdateProjectRequest, v1.ProjectResponse]
+	createProject         *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	getProject            *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	updateProject         *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
 	deleteProject         *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
 	listProjects          *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	createTask            *connect.Client[v1.CreateTaskRequest, v1.TaskResponse]
-	getTask               *connect.Client[v1.GetTaskRequest, v1.TaskResponse]
-	updateTask            *connect.Client[v1.UpdateTaskRequest, v1.TaskResponse]
+	createTask            *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	getTask               *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	updateTask            *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
 	deleteTask            *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
 	listTasks             *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	moveTask              *connect.Client[v1.MoveTaskRequest, v1.TaskResponse]
+	moveTask              *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
 	bulkUpdateTasks       *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
 	deleteTasks           *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
-	createField           *connect.Client[v1.CreateFieldRequest, v1.FieldResponse]
-	updateField           *connect.Client[v1.UpdateFieldRequest, v1.FieldResponse]
+	createField           *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
+	updateField           *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
 	deleteField           *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
-	createView            *connect.Client[v1.CreateViewRequest, v1.ViewResponse]
-	updateView            *connect.Client[v1.UpdateViewRequest, v1.ViewResponse]
+	createView            *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
+	updateView            *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
 	deleteView            *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
 	listActivities        *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
-	createSprint          *connect.Client[v1.CreateSprintRequest, v1.SprintResponse]
-	updateSprint          *connect.Client[v1.UpdateSprintRequest, v1.SprintResponse]
-	startSprint           *connect.Client[v1.StartSprintRequest, v1.SprintResponse]
-	completeSprint        *connect.Client[v1.CompleteSprintRequest, v1.SprintResponse]
+	createSprint          *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
+	updateSprint          *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
+	startSprint           *connect.Client[v1.StartSprintRequest, v1.StartSprintResponse]
+	completeSprint        *connect.Client[v1.CompleteSprintRequest, v1.CompleteSprintResponse]
 	deleteSprint          *connect.Client[v1.DeleteSprintRequest, v1.DeleteSprintResponse]
 	listSprints           *connect.Client[v1.ListSprintsRequest, v1.ListSprintsResponse]
 	toggleTaskWatcher     *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
@@ -383,17 +383,17 @@ type projectsServiceClient struct {
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
-func (c *projectsServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (c *projectsServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
 	return c.createProject.CallUnary(ctx, req)
 }
 
 // GetProject calls projects.v1.ProjectsService.GetProject.
-func (c *projectsServiceClient) GetProject(ctx context.Context, req *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (c *projectsServiceClient) GetProject(ctx context.Context, req *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
 	return c.getProject.CallUnary(ctx, req)
 }
 
 // UpdateProject calls projects.v1.ProjectsService.UpdateProject.
-func (c *projectsServiceClient) UpdateProject(ctx context.Context, req *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (c *projectsServiceClient) UpdateProject(ctx context.Context, req *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
 	return c.updateProject.CallUnary(ctx, req)
 }
 
@@ -408,17 +408,17 @@ func (c *projectsServiceClient) ListProjects(ctx context.Context, req *connect.R
 }
 
 // CreateTask calls projects.v1.ProjectsService.CreateTask.
-func (c *projectsServiceClient) CreateTask(ctx context.Context, req *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (c *projectsServiceClient) CreateTask(ctx context.Context, req *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error) {
 	return c.createTask.CallUnary(ctx, req)
 }
 
 // GetTask calls projects.v1.ProjectsService.GetTask.
-func (c *projectsServiceClient) GetTask(ctx context.Context, req *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (c *projectsServiceClient) GetTask(ctx context.Context, req *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error) {
 	return c.getTask.CallUnary(ctx, req)
 }
 
 // UpdateTask calls projects.v1.ProjectsService.UpdateTask.
-func (c *projectsServiceClient) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (c *projectsServiceClient) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
 	return c.updateTask.CallUnary(ctx, req)
 }
 
@@ -433,7 +433,7 @@ func (c *projectsServiceClient) ListTasks(ctx context.Context, req *connect.Requ
 }
 
 // MoveTask calls projects.v1.ProjectsService.MoveTask.
-func (c *projectsServiceClient) MoveTask(ctx context.Context, req *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (c *projectsServiceClient) MoveTask(ctx context.Context, req *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error) {
 	return c.moveTask.CallUnary(ctx, req)
 }
 
@@ -448,12 +448,12 @@ func (c *projectsServiceClient) DeleteTasks(ctx context.Context, req *connect.Re
 }
 
 // CreateField calls projects.v1.ProjectsService.CreateField.
-func (c *projectsServiceClient) CreateField(ctx context.Context, req *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.FieldResponse], error) {
+func (c *projectsServiceClient) CreateField(ctx context.Context, req *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error) {
 	return c.createField.CallUnary(ctx, req)
 }
 
 // UpdateField calls projects.v1.ProjectsService.UpdateField.
-func (c *projectsServiceClient) UpdateField(ctx context.Context, req *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.FieldResponse], error) {
+func (c *projectsServiceClient) UpdateField(ctx context.Context, req *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error) {
 	return c.updateField.CallUnary(ctx, req)
 }
 
@@ -463,12 +463,12 @@ func (c *projectsServiceClient) DeleteField(ctx context.Context, req *connect.Re
 }
 
 // CreateView calls projects.v1.ProjectsService.CreateView.
-func (c *projectsServiceClient) CreateView(ctx context.Context, req *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.ViewResponse], error) {
+func (c *projectsServiceClient) CreateView(ctx context.Context, req *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error) {
 	return c.createView.CallUnary(ctx, req)
 }
 
 // UpdateView calls projects.v1.ProjectsService.UpdateView.
-func (c *projectsServiceClient) UpdateView(ctx context.Context, req *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.ViewResponse], error) {
+func (c *projectsServiceClient) UpdateView(ctx context.Context, req *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error) {
 	return c.updateView.CallUnary(ctx, req)
 }
 
@@ -483,22 +483,22 @@ func (c *projectsServiceClient) ListActivities(ctx context.Context, req *connect
 }
 
 // CreateSprint calls projects.v1.ProjectsService.CreateSprint.
-func (c *projectsServiceClient) CreateSprint(ctx context.Context, req *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (c *projectsServiceClient) CreateSprint(ctx context.Context, req *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.CreateSprintResponse], error) {
 	return c.createSprint.CallUnary(ctx, req)
 }
 
 // UpdateSprint calls projects.v1.ProjectsService.UpdateSprint.
-func (c *projectsServiceClient) UpdateSprint(ctx context.Context, req *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (c *projectsServiceClient) UpdateSprint(ctx context.Context, req *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.UpdateSprintResponse], error) {
 	return c.updateSprint.CallUnary(ctx, req)
 }
 
 // StartSprint calls projects.v1.ProjectsService.StartSprint.
-func (c *projectsServiceClient) StartSprint(ctx context.Context, req *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (c *projectsServiceClient) StartSprint(ctx context.Context, req *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.StartSprintResponse], error) {
 	return c.startSprint.CallUnary(ctx, req)
 }
 
 // CompleteSprint calls projects.v1.ProjectsService.CompleteSprint.
-func (c *projectsServiceClient) CompleteSprint(ctx context.Context, req *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (c *projectsServiceClient) CompleteSprint(ctx context.Context, req *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.CompleteSprintResponse], error) {
 	return c.completeSprint.CallUnary(ctx, req)
 }
 
@@ -530,35 +530,35 @@ func (c *projectsServiceClient) BulkCheckTaskWatchers(ctx context.Context, req *
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
-	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
-	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
-	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.ProjectResponse], error)
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
+	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	// ----- Tasks -----
-	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.TaskResponse], error)
-	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.TaskResponse], error)
-	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.TaskResponse], error)
+	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
+	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
-	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.TaskResponse], error)
+	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error)
 	BulkUpdateTasks(context.Context, *connect.Request[v1.BulkUpdateTasksRequest]) (*connect.Response[v1.BulkUpdateTasksResponse], error)
 	DeleteTasks(context.Context, *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error)
 	// ----- Field Definitions -----
-	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.FieldResponse], error)
-	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.FieldResponse], error)
+	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error)
+	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error)
 	DeleteField(context.Context, *connect.Request[v1.DeleteFieldRequest]) (*connect.Response[v1.DeleteFieldResponse], error)
 	// ----- View Configs -----
-	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.ViewResponse], error)
-	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.ViewResponse], error)
+	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error)
+	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
-	CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.SprintResponse], error)
-	CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.SprintResponse], error)
+	CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.CreateSprintResponse], error)
+	UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.UpdateSprintResponse], error)
+	StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.StartSprintResponse], error)
+	CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.CompleteSprintResponse], error)
 	DeleteSprint(context.Context, *connect.Request[v1.DeleteSprintRequest]) (*connect.Response[v1.DeleteSprintResponse], error)
 	ListSprints(context.Context, *connect.Request[v1.ListSprintsRequest]) (*connect.Response[v1.ListSprintsResponse], error)
 	// ----- Task Watchers -----
@@ -817,15 +817,15 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 // UnimplementedProjectsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedProjectsServiceHandler struct{}
 
-func (UnimplementedProjectsServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (UnimplementedProjectsServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateProject is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (UnimplementedProjectsServiceHandler) GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetProject is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.ProjectResponse], error) {
+func (UnimplementedProjectsServiceHandler) UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateProject is not implemented"))
 }
 
@@ -837,15 +837,15 @@ func (UnimplementedProjectsServiceHandler) ListProjects(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListProjects is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (UnimplementedProjectsServiceHandler) CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateTask is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (UnimplementedProjectsServiceHandler) GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetTask is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (UnimplementedProjectsServiceHandler) UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateTask is not implemented"))
 }
 
@@ -857,7 +857,7 @@ func (UnimplementedProjectsServiceHandler) ListTasks(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListTasks is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.TaskResponse], error) {
+func (UnimplementedProjectsServiceHandler) MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.MoveTask is not implemented"))
 }
 
@@ -869,11 +869,11 @@ func (UnimplementedProjectsServiceHandler) DeleteTasks(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.DeleteTasks is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.FieldResponse], error) {
+func (UnimplementedProjectsServiceHandler) CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateField is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.FieldResponse], error) {
+func (UnimplementedProjectsServiceHandler) UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateField is not implemented"))
 }
 
@@ -881,11 +881,11 @@ func (UnimplementedProjectsServiceHandler) DeleteField(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.DeleteField is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.ViewResponse], error) {
+func (UnimplementedProjectsServiceHandler) CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateView is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.ViewResponse], error) {
+func (UnimplementedProjectsServiceHandler) UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateView is not implemented"))
 }
 
@@ -897,19 +897,19 @@ func (UnimplementedProjectsServiceHandler) ListActivities(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListActivities is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (UnimplementedProjectsServiceHandler) CreateSprint(context.Context, *connect.Request[v1.CreateSprintRequest]) (*connect.Response[v1.CreateSprintResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateSprint is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (UnimplementedProjectsServiceHandler) UpdateSprint(context.Context, *connect.Request[v1.UpdateSprintRequest]) (*connect.Response[v1.UpdateSprintResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateSprint is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (UnimplementedProjectsServiceHandler) StartSprint(context.Context, *connect.Request[v1.StartSprintRequest]) (*connect.Response[v1.StartSprintResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.StartSprint is not implemented"))
 }
 
-func (UnimplementedProjectsServiceHandler) CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.SprintResponse], error) {
+func (UnimplementedProjectsServiceHandler) CompleteSprint(context.Context, *connect.Request[v1.CompleteSprintRequest]) (*connect.Response[v1.CompleteSprintResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CompleteSprint is not implemented"))
 }
 

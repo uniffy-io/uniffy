@@ -445,8 +445,8 @@ func (x *AddProviderKeyRequest) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
-// Response containing a single provider key
-type ProviderKeyResponse struct {
+// Response containing a single provider key (Add)
+type AddProviderKeyResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The provider key info (credential is never included)
 	Key           *ProviderKeyInfo `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
@@ -454,20 +454,20 @@ type ProviderKeyResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ProviderKeyResponse) Reset() {
-	*x = ProviderKeyResponse{}
+func (x *AddProviderKeyResponse) Reset() {
+	*x = AddProviderKeyResponse{}
 	mi := &file_agents_v1_providers_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ProviderKeyResponse) String() string {
+func (x *AddProviderKeyResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ProviderKeyResponse) ProtoMessage() {}
+func (*AddProviderKeyResponse) ProtoMessage() {}
 
-func (x *ProviderKeyResponse) ProtoReflect() protoreflect.Message {
+func (x *AddProviderKeyResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_providers_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -479,12 +479,58 @@ func (x *ProviderKeyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ProviderKeyResponse.ProtoReflect.Descriptor instead.
-func (*ProviderKeyResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use AddProviderKeyResponse.ProtoReflect.Descriptor instead.
+func (*AddProviderKeyResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_providers_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ProviderKeyResponse) GetKey() *ProviderKeyInfo {
+func (x *AddProviderKeyResponse) GetKey() *ProviderKeyInfo {
+	if x != nil {
+		return x.Key
+	}
+	return nil
+}
+
+// Response containing a single provider key (Toggle)
+type ToggleProviderKeyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The provider key info (credential is never included)
+	Key           *ProviderKeyInfo `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ToggleProviderKeyResponse) Reset() {
+	*x = ToggleProviderKeyResponse{}
+	mi := &file_agents_v1_providers_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToggleProviderKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToggleProviderKeyResponse) ProtoMessage() {}
+
+func (x *ToggleProviderKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_providers_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToggleProviderKeyResponse.ProtoReflect.Descriptor instead.
+func (*ToggleProviderKeyResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ToggleProviderKeyResponse) GetKey() *ProviderKeyInfo {
 	if x != nil {
 		return x.Key
 	}
@@ -504,7 +550,7 @@ type ListProviderKeysRequest struct {
 
 func (x *ListProviderKeysRequest) Reset() {
 	*x = ListProviderKeysRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[4]
+	mi := &file_agents_v1_providers_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -516,7 +562,7 @@ func (x *ListProviderKeysRequest) String() string {
 func (*ListProviderKeysRequest) ProtoMessage() {}
 
 func (x *ListProviderKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[4]
+	mi := &file_agents_v1_providers_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -529,7 +575,7 @@ func (x *ListProviderKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProviderKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListProviderKeysRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{4}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListProviderKeysRequest) GetOrganizationId() string {
@@ -557,7 +603,7 @@ type ListProviderKeysResponse struct {
 
 func (x *ListProviderKeysResponse) Reset() {
 	*x = ListProviderKeysResponse{}
-	mi := &file_agents_v1_providers_proto_msgTypes[5]
+	mi := &file_agents_v1_providers_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +615,7 @@ func (x *ListProviderKeysResponse) String() string {
 func (*ListProviderKeysResponse) ProtoMessage() {}
 
 func (x *ListProviderKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[5]
+	mi := &file_agents_v1_providers_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +628,7 @@ func (x *ListProviderKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProviderKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListProviderKeysResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{5}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListProviderKeysResponse) GetKeys() []*ProviderKeyInfo {
@@ -605,7 +651,7 @@ type RemoveProviderKeyRequest struct {
 
 func (x *RemoveProviderKeyRequest) Reset() {
 	*x = RemoveProviderKeyRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[6]
+	mi := &file_agents_v1_providers_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -617,7 +663,7 @@ func (x *RemoveProviderKeyRequest) String() string {
 func (*RemoveProviderKeyRequest) ProtoMessage() {}
 
 func (x *RemoveProviderKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[6]
+	mi := &file_agents_v1_providers_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -630,7 +676,7 @@ func (x *RemoveProviderKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveProviderKeyRequest.ProtoReflect.Descriptor instead.
 func (*RemoveProviderKeyRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RemoveProviderKeyRequest) GetOrganizationId() string {
@@ -657,7 +703,7 @@ type RemoveProviderKeyResponse struct {
 
 func (x *RemoveProviderKeyResponse) Reset() {
 	*x = RemoveProviderKeyResponse{}
-	mi := &file_agents_v1_providers_proto_msgTypes[7]
+	mi := &file_agents_v1_providers_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -669,7 +715,7 @@ func (x *RemoveProviderKeyResponse) String() string {
 func (*RemoveProviderKeyResponse) ProtoMessage() {}
 
 func (x *RemoveProviderKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[7]
+	mi := &file_agents_v1_providers_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -682,7 +728,7 @@ func (x *RemoveProviderKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveProviderKeyResponse.ProtoReflect.Descriptor instead.
 func (*RemoveProviderKeyResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RemoveProviderKeyResponse) GetSuccess() bool {
@@ -705,7 +751,7 @@ type ValidateProviderKeyRequest struct {
 
 func (x *ValidateProviderKeyRequest) Reset() {
 	*x = ValidateProviderKeyRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[8]
+	mi := &file_agents_v1_providers_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +763,7 @@ func (x *ValidateProviderKeyRequest) String() string {
 func (*ValidateProviderKeyRequest) ProtoMessage() {}
 
 func (x *ValidateProviderKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[8]
+	mi := &file_agents_v1_providers_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +776,7 @@ func (x *ValidateProviderKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateProviderKeyRequest.ProtoReflect.Descriptor instead.
 func (*ValidateProviderKeyRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{8}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ValidateProviderKeyRequest) GetOrganizationId() string {
@@ -760,7 +806,7 @@ type ValidateProviderKeyResponse struct {
 
 func (x *ValidateProviderKeyResponse) Reset() {
 	*x = ValidateProviderKeyResponse{}
-	mi := &file_agents_v1_providers_proto_msgTypes[9]
+	mi := &file_agents_v1_providers_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -772,7 +818,7 @@ func (x *ValidateProviderKeyResponse) String() string {
 func (*ValidateProviderKeyResponse) ProtoMessage() {}
 
 func (x *ValidateProviderKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[9]
+	mi := &file_agents_v1_providers_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -785,7 +831,7 @@ func (x *ValidateProviderKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateProviderKeyResponse.ProtoReflect.Descriptor instead.
 func (*ValidateProviderKeyResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{9}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ValidateProviderKeyResponse) GetIsValid() bool {
@@ -817,7 +863,7 @@ type ListAvailableModelsRequest struct {
 
 func (x *ListAvailableModelsRequest) Reset() {
 	*x = ListAvailableModelsRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[10]
+	mi := &file_agents_v1_providers_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -829,7 +875,7 @@ func (x *ListAvailableModelsRequest) String() string {
 func (*ListAvailableModelsRequest) ProtoMessage() {}
 
 func (x *ListAvailableModelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[10]
+	mi := &file_agents_v1_providers_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -842,7 +888,7 @@ func (x *ListAvailableModelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAvailableModelsRequest.ProtoReflect.Descriptor instead.
 func (*ListAvailableModelsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{10}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListAvailableModelsRequest) GetOrganizationId() string {
@@ -877,7 +923,7 @@ type ListAvailableModelsResponse struct {
 
 func (x *ListAvailableModelsResponse) Reset() {
 	*x = ListAvailableModelsResponse{}
-	mi := &file_agents_v1_providers_proto_msgTypes[11]
+	mi := &file_agents_v1_providers_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -889,7 +935,7 @@ func (x *ListAvailableModelsResponse) String() string {
 func (*ListAvailableModelsResponse) ProtoMessage() {}
 
 func (x *ListAvailableModelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[11]
+	mi := &file_agents_v1_providers_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -902,10 +948,56 @@ func (x *ListAvailableModelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAvailableModelsResponse.ProtoReflect.Descriptor instead.
 func (*ListAvailableModelsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{11}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListAvailableModelsResponse) GetModels() []*ModelInfo {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+// Response with models for a specific provider key
+type ListModelsForKeyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Available models
+	Models        []*ModelInfo `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModelsForKeyResponse) Reset() {
+	*x = ListModelsForKeyResponse{}
+	mi := &file_agents_v1_providers_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModelsForKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModelsForKeyResponse) ProtoMessage() {}
+
+func (x *ListModelsForKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_providers_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModelsForKeyResponse.ProtoReflect.Descriptor instead.
+func (*ListModelsForKeyResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListModelsForKeyResponse) GetModels() []*ModelInfo {
 	if x != nil {
 		return x.Models
 	}
@@ -927,7 +1019,7 @@ type ListModelsForKeyRequest struct {
 
 func (x *ListModelsForKeyRequest) Reset() {
 	*x = ListModelsForKeyRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[12]
+	mi := &file_agents_v1_providers_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -939,7 +1031,7 @@ func (x *ListModelsForKeyRequest) String() string {
 func (*ListModelsForKeyRequest) ProtoMessage() {}
 
 func (x *ListModelsForKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[12]
+	mi := &file_agents_v1_providers_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -952,7 +1044,7 @@ func (x *ListModelsForKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelsForKeyRequest.ProtoReflect.Descriptor instead.
 func (*ListModelsForKeyRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{12}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListModelsForKeyRequest) GetOrganizationId() string {
@@ -991,7 +1083,7 @@ type ToggleProviderKeyRequest struct {
 
 func (x *ToggleProviderKeyRequest) Reset() {
 	*x = ToggleProviderKeyRequest{}
-	mi := &file_agents_v1_providers_proto_msgTypes[13]
+	mi := &file_agents_v1_providers_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1003,7 +1095,7 @@ func (x *ToggleProviderKeyRequest) String() string {
 func (*ToggleProviderKeyRequest) ProtoMessage() {}
 
 func (x *ToggleProviderKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_providers_proto_msgTypes[13]
+	mi := &file_agents_v1_providers_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1016,7 +1108,7 @@ func (x *ToggleProviderKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleProviderKeyRequest.ProtoReflect.Descriptor instead.
 func (*ToggleProviderKeyRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{13}
+	return file_agents_v1_providers_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ToggleProviderKeyRequest) GetOrganizationId() string {
@@ -1044,7 +1136,7 @@ var File_agents_v1_providers_proto protoreflect.FileDescriptor
 
 const file_agents_v1_providers_proto_rawDesc = "" +
 	"\n" +
-	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xf7\x05\n" +
+	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf7\x05\n" +
 	"\x0fProviderKeyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +
@@ -1093,8 +1185,10 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"accessMode\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\x0e\n" +
 	"\f_access_modeB\x10\n" +
-	"\x0e_baseline_role\"C\n" +
-	"\x13ProviderKeyResponse\x12,\n" +
+	"\x0e_baseline_role\"F\n" +
+	"\x16AddProviderKeyResponse\x12,\n" +
+	"\x03key\x18\x01 \x01(\v2\x1a.agents.v1.ProviderKeyInfoR\x03key\"I\n" +
+	"\x19ToggleProviderKeyResponse\x12,\n" +
 	"\x03key\x18\x01 \x01(\v2\x1a.agents.v1.ProviderKeyInfoR\x03key\"p\n" +
 	"\x17ListProviderKeysRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n" +
@@ -1120,6 +1214,8 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\rforce_refresh\x18\x03 \x01(\bR\fforceRefreshB\v\n" +
 	"\t_provider\"K\n" +
 	"\x1bListAvailableModelsResponse\x12,\n" +
+	"\x06models\x18\x01 \x03(\v2\x14.agents.v1.ModelInfoR\x06models\"H\n" +
+	"\x18ListModelsForKeyResponse\x12,\n" +
 	"\x06models\x18\x01 \x03(\v2\x14.agents.v1.ModelInfoR\x06models\"~\n" +
 	"\x17ListModelsForKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x15\n" +
@@ -1132,15 +1228,15 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x0eCredentialType\x12\x1f\n" +
 	"\x1bCREDENTIAL_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CREDENTIAL_TYPE_API_KEY\x10\x01\x12\x1f\n" +
-	"\x1bCREDENTIAL_TYPE_SETUP_TOKEN\x10\x022\xb7\x05\n" +
-	"\x10ProvidersService\x12T\n" +
-	"\x0eAddProviderKey\x12 .agents.v1.AddProviderKeyRequest\x1a\x1e.agents.v1.ProviderKeyResponse\"\x00\x12]\n" +
+	"\x1bCREDENTIAL_TYPE_SETUP_TOKEN\x10\x022\xbd\x05\n" +
+	"\x10ProvidersService\x12W\n" +
+	"\x0eAddProviderKey\x12 .agents.v1.AddProviderKeyRequest\x1a!.agents.v1.AddProviderKeyResponse\"\x00\x12]\n" +
 	"\x10ListProviderKeys\x12\".agents.v1.ListProviderKeysRequest\x1a#.agents.v1.ListProviderKeysResponse\"\x00\x12`\n" +
 	"\x11RemoveProviderKey\x12#.agents.v1.RemoveProviderKeyRequest\x1a$.agents.v1.RemoveProviderKeyResponse\"\x00\x12f\n" +
 	"\x13ValidateProviderKey\x12%.agents.v1.ValidateProviderKeyRequest\x1a&.agents.v1.ValidateProviderKeyResponse\"\x00\x12f\n" +
-	"\x13ListAvailableModels\x12%.agents.v1.ListAvailableModelsRequest\x1a&.agents.v1.ListAvailableModelsResponse\"\x00\x12Z\n" +
-	"\x11ToggleProviderKey\x12#.agents.v1.ToggleProviderKeyRequest\x1a\x1e.agents.v1.ProviderKeyResponse\"\x00\x12`\n" +
-	"\x10ListModelsForKey\x12\".agents.v1.ListModelsForKeyRequest\x1a&.agents.v1.ListAvailableModelsResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x13ListAvailableModels\x12%.agents.v1.ListAvailableModelsRequest\x1a&.agents.v1.ListAvailableModelsResponse\"\x00\x12`\n" +
+	"\x11ToggleProviderKey\x12#.agents.v1.ToggleProviderKeyRequest\x1a$.agents.v1.ToggleProviderKeyResponse\"\x00\x12]\n" +
+	"\x10ListModelsForKey\x12\".agents.v1.ListModelsForKeyRequest\x1a#.agents.v1.ListModelsForKeyResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_providers_proto_rawDescOnce sync.Once
@@ -1155,60 +1251,64 @@ func file_agents_v1_providers_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_providers_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agents_v1_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agents_v1_providers_proto_goTypes = []any{
 	(CredentialType)(0),                 // 0: agents.v1.CredentialType
 	(*ProviderKeyInfo)(nil),             // 1: agents.v1.ProviderKeyInfo
 	(*ModelInfo)(nil),                   // 2: agents.v1.ModelInfo
 	(*AddProviderKeyRequest)(nil),       // 3: agents.v1.AddProviderKeyRequest
-	(*ProviderKeyResponse)(nil),         // 4: agents.v1.ProviderKeyResponse
-	(*ListProviderKeysRequest)(nil),     // 5: agents.v1.ListProviderKeysRequest
-	(*ListProviderKeysResponse)(nil),    // 6: agents.v1.ListProviderKeysResponse
-	(*RemoveProviderKeyRequest)(nil),    // 7: agents.v1.RemoveProviderKeyRequest
-	(*RemoveProviderKeyResponse)(nil),   // 8: agents.v1.RemoveProviderKeyResponse
-	(*ValidateProviderKeyRequest)(nil),  // 9: agents.v1.ValidateProviderKeyRequest
-	(*ValidateProviderKeyResponse)(nil), // 10: agents.v1.ValidateProviderKeyResponse
-	(*ListAvailableModelsRequest)(nil),  // 11: agents.v1.ListAvailableModelsRequest
-	(*ListAvailableModelsResponse)(nil), // 12: agents.v1.ListAvailableModelsResponse
-	(*ListModelsForKeyRequest)(nil),     // 13: agents.v1.ListModelsForKeyRequest
-	(*ToggleProviderKeyRequest)(nil),    // 14: agents.v1.ToggleProviderKeyRequest
-	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                  // 16: common.v1.AccessMode
-	(v1.ContentRole)(0),                 // 17: common.v1.ContentRole
+	(*AddProviderKeyResponse)(nil),      // 4: agents.v1.AddProviderKeyResponse
+	(*ToggleProviderKeyResponse)(nil),   // 5: agents.v1.ToggleProviderKeyResponse
+	(*ListProviderKeysRequest)(nil),     // 6: agents.v1.ListProviderKeysRequest
+	(*ListProviderKeysResponse)(nil),    // 7: agents.v1.ListProviderKeysResponse
+	(*RemoveProviderKeyRequest)(nil),    // 8: agents.v1.RemoveProviderKeyRequest
+	(*RemoveProviderKeyResponse)(nil),   // 9: agents.v1.RemoveProviderKeyResponse
+	(*ValidateProviderKeyRequest)(nil),  // 10: agents.v1.ValidateProviderKeyRequest
+	(*ValidateProviderKeyResponse)(nil), // 11: agents.v1.ValidateProviderKeyResponse
+	(*ListAvailableModelsRequest)(nil),  // 12: agents.v1.ListAvailableModelsRequest
+	(*ListAvailableModelsResponse)(nil), // 13: agents.v1.ListAvailableModelsResponse
+	(*ListModelsForKeyResponse)(nil),    // 14: agents.v1.ListModelsForKeyResponse
+	(*ListModelsForKeyRequest)(nil),     // 15: agents.v1.ListModelsForKeyRequest
+	(*ToggleProviderKeyRequest)(nil),    // 16: agents.v1.ToggleProviderKeyRequest
+	(*timestamppb.Timestamp)(nil),       // 17: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                  // 18: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 19: common.v1.ContentRole
 }
 var file_agents_v1_providers_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.ProviderKeyInfo.credential_type:type_name -> agents.v1.CredentialType
-	15, // 1: agents.v1.ProviderKeyInfo.last_validated_at:type_name -> google.protobuf.Timestamp
-	15, // 2: agents.v1.ProviderKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	15, // 3: agents.v1.ProviderKeyInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 4: agents.v1.ProviderKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 5: agents.v1.ProviderKeyInfo.access_mode:type_name -> common.v1.AccessMode
-	17, // 6: agents.v1.ProviderKeyInfo.baseline_role:type_name -> common.v1.ContentRole
+	17, // 1: agents.v1.ProviderKeyInfo.last_validated_at:type_name -> google.protobuf.Timestamp
+	17, // 2: agents.v1.ProviderKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	17, // 3: agents.v1.ProviderKeyInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 4: agents.v1.ProviderKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 5: agents.v1.ProviderKeyInfo.access_mode:type_name -> common.v1.AccessMode
+	19, // 6: agents.v1.ProviderKeyInfo.baseline_role:type_name -> common.v1.ContentRole
 	0,  // 7: agents.v1.AddProviderKeyRequest.credential_type:type_name -> agents.v1.CredentialType
-	16, // 8: agents.v1.AddProviderKeyRequest.access_mode:type_name -> common.v1.AccessMode
-	17, // 9: agents.v1.AddProviderKeyRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 10: agents.v1.ProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
-	1,  // 11: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
-	2,  // 12: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
-	3,  // 13: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
-	5,  // 14: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
-	7,  // 15: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
-	9,  // 16: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
-	11, // 17: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
-	14, // 18: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
-	13, // 19: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
-	4,  // 20: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.ProviderKeyResponse
-	6,  // 21: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
-	8,  // 22: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
-	10, // 23: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
-	12, // 24: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
-	4,  // 25: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ProviderKeyResponse
-	12, // 26: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListAvailableModelsResponse
-	20, // [20:27] is the sub-list for method output_type
-	13, // [13:20] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	18, // 8: agents.v1.AddProviderKeyRequest.access_mode:type_name -> common.v1.AccessMode
+	19, // 9: agents.v1.AddProviderKeyRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 10: agents.v1.AddProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
+	1,  // 11: agents.v1.ToggleProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
+	1,  // 12: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
+	2,  // 13: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
+	2,  // 14: agents.v1.ListModelsForKeyResponse.models:type_name -> agents.v1.ModelInfo
+	3,  // 15: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
+	6,  // 16: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
+	8,  // 17: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
+	10, // 18: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
+	12, // 19: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
+	16, // 20: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
+	15, // 21: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
+	4,  // 22: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.AddProviderKeyResponse
+	7,  // 23: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
+	9,  // 24: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
+	11, // 25: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
+	13, // 26: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
+	5,  // 27: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ToggleProviderKeyResponse
+	14, // 28: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListModelsForKeyResponse
+	22, // [22:29] is the sub-list for method output_type
+	15, // [15:22] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_providers_proto_init() }
@@ -1218,16 +1318,16 @@ func file_agents_v1_providers_proto_init() {
 	}
 	file_agents_v1_providers_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_providers_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agents_v1_providers_proto_msgTypes[4].OneofWrappers = []any{}
-	file_agents_v1_providers_proto_msgTypes[9].OneofWrappers = []any{}
+	file_agents_v1_providers_proto_msgTypes[5].OneofWrappers = []any{}
 	file_agents_v1_providers_proto_msgTypes[10].OneofWrappers = []any{}
+	file_agents_v1_providers_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_providers_proto_rawDesc), len(file_agents_v1_providers_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

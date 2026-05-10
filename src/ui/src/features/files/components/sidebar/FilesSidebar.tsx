@@ -460,8 +460,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                 if (parentId && !expandedNodes.includes(parentId)) {
                     dispatch(toggleNodeExpanded(parentId));
                 }
-            } catch (err) {
-                console.error('Failed to create folder:', err);
+            } catch {
             }
         },
         [dispatch, expandedNodes]
@@ -485,8 +484,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                         name: newName,
                     })
                 ).unwrap();
-            } catch (err) {
-                console.error('Failed to rename folder:', err);
+            } catch {
             }
         },
         [dispatch]
@@ -507,8 +505,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                     handleSelectFolder(null);
                 }
                 dispatch(fetchFilesTree({ includeFiles: false }));
-            } catch (err) {
-                console.error('Failed to delete folder:', err);
+            } catch {
             }
         },
         [dispatch, selectedFolderId, handleSelectFolder]

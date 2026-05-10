@@ -64,6 +64,24 @@ class GetOrganizationRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
+class GetOrganizationResponse(_message.Message):
+    __slots__ = ("organization",)
+    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
+    organization: OrganizationDetail
+    def __init__(self, organization: _Optional[_Union[OrganizationDetail, _Mapping]] = ...) -> None: ...
+
+class CreateOrganizationResponse(_message.Message):
+    __slots__ = ("organization",)
+    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
+    organization: _common_pb2.OrganizationInfo
+    def __init__(self, organization: _Optional[_Union[_common_pb2.OrganizationInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateOrganizationResponse(_message.Message):
+    __slots__ = ("organization",)
+    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
+    organization: _common_pb2.OrganizationInfo
+    def __init__(self, organization: _Optional[_Union[_common_pb2.OrganizationInfo, _Mapping]] = ...) -> None: ...
+
 class CreateOrganizationRequest(_message.Message):
     __slots__ = ("name", "slug", "logo_url", "owner_user_id")
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -107,6 +125,12 @@ class GetOrganizationOverviewRequest(_message.Message):
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetOrganizationOverviewResponse(_message.Message):
+    __slots__ = ("overview",)
+    OVERVIEW_FIELD_NUMBER: _ClassVar[int]
+    overview: OrganizationOverview
+    def __init__(self, overview: _Optional[_Union[OrganizationOverview, _Mapping]] = ...) -> None: ...
 
 class OrganizationOverview(_message.Message):
     __slots__ = ("organization", "member_count", "group_count", "content_counts")
@@ -160,6 +184,12 @@ class AddMemberRequest(_message.Message):
     role: _common_pb2.OrganizationRole
     def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ...) -> None: ...
 
+class AddMemberResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: _common_pb2.MemberInfo
+    def __init__(self, member: _Optional[_Union[_common_pb2.MemberInfo, _Mapping]] = ...) -> None: ...
+
 class UpdateMemberRoleRequest(_message.Message):
     __slots__ = ("organization_id", "user_id", "role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -169,6 +199,12 @@ class UpdateMemberRoleRequest(_message.Message):
     user_id: str
     role: _common_pb2.OrganizationRole
     def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ...) -> None: ...
+
+class UpdateMemberRoleResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: _common_pb2.MemberInfo
+    def __init__(self, member: _Optional[_Union[_common_pb2.MemberInfo, _Mapping]] = ...) -> None: ...
 
 class RemoveMemberRequest(_message.Message):
     __slots__ = ("organization_id", "user_id")
@@ -190,11 +226,17 @@ class GetPermissionDefaultsRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
-class PermissionDefaultsResponse(_message.Message):
+class GetPermissionDefaultsResponse(_message.Message):
     __slots__ = ("defaults",)
     DEFAULTS_FIELD_NUMBER: _ClassVar[int]
     defaults: _containers.RepeatedCompositeFieldContainer[ContentTypeDefaults]
     def __init__(self, defaults: _Optional[_Iterable[_Union[ContentTypeDefaults, _Mapping]]] = ...) -> None: ...
+
+class UpdatePermissionDefaultsResponse(_message.Message):
+    __slots__ = ("defaults",)
+    DEFAULTS_FIELD_NUMBER: _ClassVar[int]
+    defaults: ContentTypeDefaults
+    def __init__(self, defaults: _Optional[_Union[ContentTypeDefaults, _Mapping]] = ...) -> None: ...
 
 class UpdatePermissionDefaultsRequest(_message.Message):
     __slots__ = ("organization_id", "content_type", "default_access_mode", "default_baseline_role")
@@ -238,6 +280,12 @@ class GetOrganizationSettingsRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
+class GetOrganizationSettingsResponse(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: OrganizationSettings
+    def __init__(self, settings: _Optional[_Union[OrganizationSettings, _Mapping]] = ...) -> None: ...
+
 class UpdateOrganizationSettingsRequest(_message.Message):
     __slots__ = ("organization_id", "chat")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -245,6 +293,12 @@ class UpdateOrganizationSettingsRequest(_message.Message):
     organization_id: str
     chat: ChatSettings
     def __init__(self, organization_id: _Optional[str] = ..., chat: _Optional[_Union[ChatSettings, _Mapping]] = ...) -> None: ...
+
+class UpdateOrganizationSettingsResponse(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: OrganizationSettings
+    def __init__(self, settings: _Optional[_Union[OrganizationSettings, _Mapping]] = ...) -> None: ...
 
 class GrantDomainAdminRequest(_message.Message):
     __slots__ = ("organization_id", "user_id", "domain")
@@ -255,6 +309,12 @@ class GrantDomainAdminRequest(_message.Message):
     user_id: str
     domain: _common_pb2.DomainType
     def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., domain: _Optional[_Union[_common_pb2.DomainType, str]] = ...) -> None: ...
+
+class GrantDomainAdminResponse(_message.Message):
+    __slots__ = ("domain_admin",)
+    DOMAIN_ADMIN_FIELD_NUMBER: _ClassVar[int]
+    domain_admin: _common_pb2.DomainAdminInfo
+    def __init__(self, domain_admin: _Optional[_Union[_common_pb2.DomainAdminInfo, _Mapping]] = ...) -> None: ...
 
 class RevokeDomainAdminRequest(_message.Message):
     __slots__ = ("organization_id", "user_id", "domain")

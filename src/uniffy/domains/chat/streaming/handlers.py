@@ -1,6 +1,6 @@
 """Chat streaming RPC handler.
 
-StreamUserChatEvents: unified stream delivering both user-level events
+StreamStreamUserChatEventsResponses: unified stream delivering both user-level events
 (unread counts, thread activity, mentions) and channel-level events
 (messages, typing, reactions) through a single persistent connection.
 
@@ -42,11 +42,11 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
     MessageDeletedPayload,
     ReactionPayload,
     StreamUserChatEventsRequest,
+    StreamUserChatEventsResponse,
     ThreadActivityPayload,
     ThreadUpdatedPayload,
     TypingPayload,
     UnreadCountPayload,
-    UserChatEvent,
     UserChatEventType,
 )
 
@@ -373,12 +373,12 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
     return msg
 
 
-def _payload_to_user_event(payload: dict) -> UserChatEvent | None:
-    """Convert a Valkey payload dict to a UserChatEvent proto."""
+def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None:
+    """Convert a Valkey payload dict to a StreamUserChatEventsResponse proto."""
     event_type = payload.get("_type")
 
     if event_type == evt.UNREAD_COUNT_CHANGED:
-        return UserChatEvent(
+        return StreamUserChatEventsResponse(
             event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED,
             timestamp=_now_ts(),
             unread_count=UnreadCountPayload(
@@ -389,7 +389,7 @@ def _payload_to_user_event(payload: dict) -> UserChatEvent | None:
         )
 
     if event_type == evt.THREAD_ACTIVITY:
-        event = UserChatEvent(
+        event = StreamUserChatEventsResponse(
             event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY,
             timestamp=_now_ts(),
             thread_activity=ThreadActivityPayload(
@@ -406,7 +406,7 @@ def _payload_to_user_event(payload: dict) -> UserChatEvent | None:
         return event
 
     if event_type == evt.MENTION_RECEIVED:
-        return UserChatEvent(
+        return StreamUserChatEventsResponse(
             event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_MENTION_RECEIVED,
             timestamp=_now_ts(),
             mention_received=MentionReceivedPayload(
@@ -452,7 +452,7 @@ class ChatStreamHandlers:
         self,
         request: StreamUserChatEventsRequest,
         ctx: RequestContext,
-    ) -> AsyncIterator[UserChatEvent]:
+    ) -> AsyncIterator[StreamUserChatEventsResponse]:
         """Unified chat event stream.
 
         Subscribes to the user's single Valkey channel `chat:user:{user_id}`.
@@ -482,7 +482,7 @@ class ChatStreamHandlers:
 
                     if payload is None:
                         if now - last_send >= HEARTBEAT_INTERVAL:
-                            yield UserChatEvent(
+                            yield StreamUserChatEventsResponse(
                                 event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_HEARTBEAT,
                                 timestamp=_now_ts(),
                             )
@@ -495,7 +495,7 @@ class ChatStreamHandlers:
                     if event_type in _CHANNEL_EVENT_TYPES:
                         channel_event = _payload_to_channel_event(payload)
                         if channel_event:
-                            yield UserChatEvent(
+                            yield StreamUserChatEventsResponse(
                                 event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_CHANNEL_EVENT,
                                 timestamp=_now_ts(),
                                 channel_event=channel_event,

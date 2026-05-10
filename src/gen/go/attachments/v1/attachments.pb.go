@@ -1047,7 +1047,7 @@ var File_attachments_v1_attachments_proto protoreflect.FileDescriptor
 
 const file_attachments_v1_attachments_proto_rawDesc = "" +
 	"\n" +
-	" attachments/v1/attachments.proto\x12\x0eattachments.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xd2\x03\n" +
+	" attachments/v1/attachments.proto\x12\x0eattachments.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd2\x03\n" +
 	"\n" +
 	"Attachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +

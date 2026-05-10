@@ -19,7 +19,7 @@ import { updatePresenceWithCustomStatus } from '@/features/presence/store/presen
 import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
 import { adminApi } from '@/features/admin/api/adminApi';
 import { emitMentionStateChange } from '@/components/mention';
-import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
+import { StreamNotificationsResponse_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
 import { getState } from '@/app/storeRef';
 import { NotificationToast } from '@/features/notifications/components/NotificationToast';
 
@@ -74,7 +74,7 @@ export function useNotificationStream() {
                     for await (const event of stream) {
                         if (!mounted) break;
 
-                        if (event.eventType === StreamNotificationEvent_EventType.NEW_NOTIFICATION && event.notification) {
+                        if (event.eventType === StreamNotificationsResponse_EventType.NEW_NOTIFICATION && event.notification) {
                             const n = event.notification;
                             const serialized: SerializedNotification = {
                                 id: n.id,
@@ -121,7 +121,7 @@ export function useNotificationStream() {
                         }
 
                         // File processing completed -- debounce per file
-                        if (event.eventType === StreamNotificationEvent_EventType.FILE_UPDATED && event.fileUpdate) {
+                        if (event.eventType === StreamNotificationsResponse_EventType.FILE_UPDATED && event.fileUpdate) {
                             const fileId = event.fileUpdate.fileId;
                             if (fileId) {
                                 const existing = pendingFileUpdates.get(fileId);
@@ -135,7 +135,7 @@ export function useNotificationStream() {
                         // Presence state changed
                         if (
                             event.eventType ===
-                                StreamNotificationEvent_EventType.PRESENCE_CHANGED &&
+                                StreamNotificationsResponse_EventType.PRESENCE_CHANGED &&
                             event.presenceChanged
                         ) {
                             const pc = event.presenceChanged;
@@ -161,7 +161,7 @@ export function useNotificationStream() {
                         // Mention state changed (live mentions)
                         if (
                             event.eventType ===
-                                StreamNotificationEvent_EventType.MENTION_STATE_CHANGED &&
+                                StreamNotificationsResponse_EventType.MENTION_STATE_CHANGED &&
                             event.mentionStateChanged
                         ) {
                             const mc = event.mentionStateChanged;
@@ -173,7 +173,7 @@ export function useNotificationStream() {
                         // Permissions changed - refetch domain admin domains
                         if (
                             event.eventType ===
-                                StreamNotificationEvent_EventType.PERMISSIONS_CHANGED &&
+                                StreamNotificationsResponse_EventType.PERMISSIONS_CHANGED &&
                             userId
                         ) {
                             try {

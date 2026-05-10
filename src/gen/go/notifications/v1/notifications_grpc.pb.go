@@ -55,7 +55,7 @@ type NotificationsServiceClient interface {
 	// Unregister a Web Push subscription
 	UnregisterPushSubscription(ctx context.Context, in *UnregisterPushSubscriptionRequest, opts ...grpc.CallOption) (*UnregisterPushSubscriptionResponse, error)
 	// Server streaming: real-time notification feed via Valkey Pub/Sub
-	StreamNotifications(ctx context.Context, in *StreamNotificationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamNotificationEvent], error)
+	StreamNotifications(ctx context.Context, in *StreamNotificationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamNotificationsResponse], error)
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(ctx context.Context, in *GetVapidPublicKeyRequest, opts ...grpc.CallOption) (*GetVapidPublicKeyResponse, error)
 	// Search notifications with full-text search and advanced filters
@@ -146,13 +146,13 @@ func (c *notificationsServiceClient) UnregisterPushSubscription(ctx context.Cont
 	return out, nil
 }
 
-func (c *notificationsServiceClient) StreamNotifications(ctx context.Context, in *StreamNotificationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamNotificationEvent], error) {
+func (c *notificationsServiceClient) StreamNotifications(ctx context.Context, in *StreamNotificationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamNotificationsResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &NotificationsService_ServiceDesc.Streams[0], NotificationsService_StreamNotifications_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[StreamNotificationsRequest, StreamNotificationEvent]{ClientStream: stream}
+	x := &grpc.GenericClientStream[StreamNotificationsRequest, StreamNotificationsResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *notificationsServiceClient) StreamNotifications(ctx context.Context, in
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type NotificationsService_StreamNotificationsClient = grpc.ServerStreamingClient[StreamNotificationEvent]
+type NotificationsService_StreamNotificationsClient = grpc.ServerStreamingClient[StreamNotificationsResponse]
 
 func (c *notificationsServiceClient) GetVapidPublicKey(ctx context.Context, in *GetVapidPublicKeyRequest, opts ...grpc.CallOption) (*GetVapidPublicKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -236,7 +236,7 @@ type NotificationsServiceServer interface {
 	// Unregister a Web Push subscription
 	UnregisterPushSubscription(context.Context, *UnregisterPushSubscriptionRequest) (*UnregisterPushSubscriptionResponse, error)
 	// Server streaming: real-time notification feed via Valkey Pub/Sub
-	StreamNotifications(*StreamNotificationsRequest, grpc.ServerStreamingServer[StreamNotificationEvent]) error
+	StreamNotifications(*StreamNotificationsRequest, grpc.ServerStreamingServer[StreamNotificationsResponse]) error
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *GetVapidPublicKeyRequest) (*GetVapidPublicKeyResponse, error)
 	// Search notifications with full-text search and advanced filters
@@ -278,7 +278,7 @@ func (UnimplementedNotificationsServiceServer) RegisterPushSubscription(context.
 func (UnimplementedNotificationsServiceServer) UnregisterPushSubscription(context.Context, *UnregisterPushSubscriptionRequest) (*UnregisterPushSubscriptionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UnregisterPushSubscription not implemented")
 }
-func (UnimplementedNotificationsServiceServer) StreamNotifications(*StreamNotificationsRequest, grpc.ServerStreamingServer[StreamNotificationEvent]) error {
+func (UnimplementedNotificationsServiceServer) StreamNotifications(*StreamNotificationsRequest, grpc.ServerStreamingServer[StreamNotificationsResponse]) error {
 	return status.Error(codes.Unimplemented, "method StreamNotifications not implemented")
 }
 func (UnimplementedNotificationsServiceServer) GetVapidPublicKey(context.Context, *GetVapidPublicKeyRequest) (*GetVapidPublicKeyResponse, error) {
@@ -448,11 +448,11 @@ func _NotificationsService_StreamNotifications_Handler(srv interface{}, stream g
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(NotificationsServiceServer).StreamNotifications(m, &grpc.GenericServerStream[StreamNotificationsRequest, StreamNotificationEvent]{ServerStream: stream})
+	return srv.(NotificationsServiceServer).StreamNotifications(m, &grpc.GenericServerStream[StreamNotificationsRequest, StreamNotificationsResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type NotificationsService_StreamNotificationsServer = grpc.ServerStreamingServer[StreamNotificationEvent]
+type NotificationsService_StreamNotificationsServer = grpc.ServerStreamingServer[StreamNotificationsResponse]
 
 func _NotificationsService_GetVapidPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetVapidPublicKeyRequest)

@@ -16,7 +16,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamDoneEvent,
     StreamErrorEvent,
     StreamMessageStoredEvent,
-    StreamSendMessageEvent,
+    StreamSendMessageResponse,
     StreamTokenEvent,
     StreamToolCallEvent,
     StreamToolResultEvent,
@@ -69,7 +69,7 @@ def send_message_response_to_proto(
 
 def runtime_stream_event_to_proto(
     event: RuntimeStreamEvent,
-) -> StreamSendMessageEvent:
+) -> StreamSendMessageResponse:
     """Convert a domain runtime stream event to proto.
 
     Parameters
@@ -79,7 +79,7 @@ def runtime_stream_event_to_proto(
 
     Returns
     -------
-    StreamSendMessageEvent
+    StreamSendMessageResponse
         Proto stream event wrapper.
 
     Raises
@@ -89,12 +89,12 @@ def runtime_stream_event_to_proto(
 
     """
     if isinstance(event, RuntimeTokenEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             token=StreamTokenEvent(text=event.text),
         )
 
     if isinstance(event, RuntimeToolCallEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             tool_call=StreamToolCallEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -103,7 +103,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeToolResultEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             tool_result=StreamToolResultEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -113,14 +113,14 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeMessageStoredEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             message_stored=StreamMessageStoredEvent(
                 message=message_to_proto(event.message),
             ),
         )
 
     if isinstance(event, RuntimeDoneEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             done=StreamDoneEvent(
                 assistant_message=message_to_proto(event.assistant_message),
                 model_used=event.model_used,
@@ -128,7 +128,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeConfirmationRequiredEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             confirmation_required=StreamConfirmationRequiredEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -138,7 +138,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeErrorEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             error=StreamErrorEvent(message=event.error),
         )
 

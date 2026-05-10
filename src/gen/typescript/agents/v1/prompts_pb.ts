@@ -248,39 +248,113 @@ export class CreatePromptRequest extends Message<CreatePromptRequest> {
 }
 
 /**
- * @generated from message agents.v1.PromptResponse
+ * @generated from message agents.v1.CreatePromptResponse
  */
-export class PromptResponse extends Message<PromptResponse> {
+export class CreatePromptResponse extends Message<CreatePromptResponse> {
   /**
    * @generated from field: agents.v1.PromptInfo prompt = 1;
    */
   prompt?: PromptInfo;
 
-  constructor(data?: PartialMessage<PromptResponse>) {
+  constructor(data?: PartialMessage<CreatePromptResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.PromptResponse";
+  static readonly typeName = "agents.v1.CreatePromptResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "prompt", kind: "message", T: PromptInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromptResponse {
-    return new PromptResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatePromptResponse {
+    return new CreatePromptResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromptResponse {
-    return new PromptResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreatePromptResponse {
+    return new CreatePromptResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromptResponse {
-    return new PromptResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreatePromptResponse {
+    return new CreatePromptResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PromptResponse | PlainMessage<PromptResponse> | undefined, b: PromptResponse | PlainMessage<PromptResponse> | undefined): boolean {
-    return proto3.util.equals(PromptResponse, a, b);
+  static equals(a: CreatePromptResponse | PlainMessage<CreatePromptResponse> | undefined, b: CreatePromptResponse | PlainMessage<CreatePromptResponse> | undefined): boolean {
+    return proto3.util.equals(CreatePromptResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetPromptResponse
+ */
+export class GetPromptResponse extends Message<GetPromptResponse> {
+  /**
+   * @generated from field: agents.v1.PromptInfo prompt = 1;
+   */
+  prompt?: PromptInfo;
+
+  constructor(data?: PartialMessage<GetPromptResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetPromptResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "prompt", kind: "message", T: PromptInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPromptResponse {
+    return new GetPromptResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPromptResponse {
+    return new GetPromptResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPromptResponse {
+    return new GetPromptResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPromptResponse | PlainMessage<GetPromptResponse> | undefined, b: GetPromptResponse | PlainMessage<GetPromptResponse> | undefined): boolean {
+    return proto3.util.equals(GetPromptResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdatePromptResponse
+ */
+export class UpdatePromptResponse extends Message<UpdatePromptResponse> {
+  /**
+   * @generated from field: agents.v1.PromptInfo prompt = 1;
+   */
+  prompt?: PromptInfo;
+
+  constructor(data?: PartialMessage<UpdatePromptResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdatePromptResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "prompt", kind: "message", T: PromptInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePromptResponse {
+    return new UpdatePromptResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdatePromptResponse {
+    return new UpdatePromptResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdatePromptResponse {
+    return new UpdatePromptResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdatePromptResponse | PlainMessage<UpdatePromptResponse> | undefined, b: UpdatePromptResponse | PlainMessage<UpdatePromptResponse> | undefined): boolean {
+    return proto3.util.equals(UpdatePromptResponse, a, b);
   }
 }
 

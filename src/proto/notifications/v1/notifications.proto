@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package notifications.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
 
 // NotificationsService provides notification management and real-time streaming
 service NotificationsService {
@@ -30,7 +30,7 @@ service NotificationsService {
   rpc UnregisterPushSubscription(UnregisterPushSubscriptionRequest) returns (UnregisterPushSubscriptionResponse) {}
 
   // Server streaming: real-time notification feed via Valkey Pub/Sub
-  rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationEvent) {}
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationsResponse) {}
 
   // Get the VAPID public key for Web Push subscription
   rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse) {}
@@ -219,7 +219,7 @@ message FileUpdatePayload {
 }
 
 // Event sent via the streaming RPC
-message StreamNotificationEvent {
+message StreamNotificationsResponse {
   // Event type
   enum EventType {
     EVENT_TYPE_UNSPECIFIED = 0;

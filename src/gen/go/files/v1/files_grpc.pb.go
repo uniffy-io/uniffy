@@ -75,33 +75,33 @@ type FilesServiceClient interface {
 	// Call this for each chunk, then call CompleteUpload when done.
 	UploadChunk(ctx context.Context, in *UploadChunkRequest, opts ...grpc.CallOption) (*UploadChunkResponse, error)
 	// Complete an upload after all chunks have been sent.
-	CompleteUpload(ctx context.Context, in *CompleteUploadRequest, opts ...grpc.CallOption) (*UploadChunksResponse, error)
+	CompleteUpload(ctx context.Context, in *CompleteUploadRequest, opts ...grpc.CallOption) (*CompleteUploadResponse, error)
 	// Stream file chunks to backend (client streaming RPC - server-to-server only).
 	// NOTE: This does not work in browsers due to Fetch API limitations.
-	UploadChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadChunkRequest, UploadChunksResponse], error)
+	UploadChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadChunksRequest, UploadChunksResponse], error)
 	// Get status of an in-progress upload (for resuming after disconnect).
 	GetUploadStatus(ctx context.Context, in *GetUploadStatusRequest, opts ...grpc.CallOption) (*GetUploadStatusResponse, error)
 	// Abort an in-progress upload.
 	AbortUpload(ctx context.Context, in *AbortUploadRequest, opts ...grpc.CallOption) (*AbortUploadResponse, error)
 	// Stream file content from backend to client (server streaming RPC).
-	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadChunkResponse], error)
+	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileResponse], error)
 	// Stream file with byte range support for Service Worker media streaming.
 	// This RPC supports HTTP Range-like semantics for video/audio seeking.
 	StreamFileRange(ctx context.Context, in *StreamFileRangeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamFileRangeResponse], error)
 	// Get a file by ID.
-	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
 	// Update file metadata (rename, tags, description).
-	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error)
 	// Delete a file (soft delete by default).
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	// Restore a soft-deleted file.
-	RestoreFile(ctx context.Context, in *RestoreFileRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	RestoreFile(ctx context.Context, in *RestoreFileRequest, opts ...grpc.CallOption) (*RestoreFileResponse, error)
 	// List files with pagination and filters.
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
 	// Create a new folder.
-	CreateFolder(ctx context.Context, in *CreateFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
+	CreateFolder(ctx context.Context, in *CreateFolderRequest, opts ...grpc.CallOption) (*CreateFolderResponse, error)
 	// Update a folder.
-	UpdateFolder(ctx context.Context, in *UpdateFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
+	UpdateFolder(ctx context.Context, in *UpdateFolderRequest, opts ...grpc.CallOption) (*UpdateFolderResponse, error)
 	// Delete a folder.
 	DeleteFolder(ctx context.Context, in *DeleteFolderRequest, opts ...grpc.CallOption) (*DeleteFolderResponse, error)
 	// Get the full file/folder tree.
@@ -111,7 +111,7 @@ type FilesServiceClient interface {
 	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
 	// concurrent invocations across backend instances. Used by the screen
 	// recording feature to resolve the upload destination on first record.
-	EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
+	EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*EnsureRecordingsFolderResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(ctx context.Context, in *MoveItemsRequest, opts ...grpc.CallOption) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -123,11 +123,11 @@ type FilesServiceClient interface {
 	// List deleted files and folders (trash).
 	ListTrash(ctx context.Context, in *ListTrashRequest, opts ...grpc.CallOption) (*ListTrashResponse, error)
 	// Restore a soft-deleted folder (and its contents) back to its parent.
-	RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
+	RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*RestoreFolderResponse, error)
 	// List version history for a file.
 	ListFileVersions(ctx context.Context, in *ListFileVersionsRequest, opts ...grpc.CallOption) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
-	RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*RestoreFileVersionResponse, error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(ctx context.Context, in *GetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*GetOrgStorageQuotaResponse, error)
 	// Set or update the organization storage quota configuration.
@@ -149,11 +149,11 @@ type FilesServiceClient interface {
 	// Pre-check whether an upload of a given size is allowed under quota.
 	CheckStorageQuota(ctx context.Context, in *CheckStorageQuotaRequest, opts ...grpc.CallOption) (*CheckStorageQuotaResponse, error)
 	// Create a new saved filter.
-	CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error)
+	CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*CreateSavedFilterResponse, error)
 	// Get a saved filter by ID.
-	GetSavedFilter(ctx context.Context, in *GetSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error)
+	GetSavedFilter(ctx context.Context, in *GetSavedFilterRequest, opts ...grpc.CallOption) (*GetSavedFilterResponse, error)
 	// Update a saved filter.
-	UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error)
+	UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*UpdateSavedFilterResponse, error)
 	// Delete a saved filter.
 	DeleteSavedFilter(ctx context.Context, in *DeleteSavedFilterRequest, opts ...grpc.CallOption) (*DeleteSavedFilterResponse, error)
 	// List saved filters for the current user.
@@ -188,9 +188,9 @@ func (c *filesServiceClient) UploadChunk(ctx context.Context, in *UploadChunkReq
 	return out, nil
 }
 
-func (c *filesServiceClient) CompleteUpload(ctx context.Context, in *CompleteUploadRequest, opts ...grpc.CallOption) (*UploadChunksResponse, error) {
+func (c *filesServiceClient) CompleteUpload(ctx context.Context, in *CompleteUploadRequest, opts ...grpc.CallOption) (*CompleteUploadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UploadChunksResponse)
+	out := new(CompleteUploadResponse)
 	err := c.cc.Invoke(ctx, FilesService_CompleteUpload_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -198,18 +198,18 @@ func (c *filesServiceClient) CompleteUpload(ctx context.Context, in *CompleteUpl
 	return out, nil
 }
 
-func (c *filesServiceClient) UploadChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadChunkRequest, UploadChunksResponse], error) {
+func (c *filesServiceClient) UploadChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadChunksRequest, UploadChunksResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &FilesService_ServiceDesc.Streams[0], FilesService_UploadChunks_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[UploadChunkRequest, UploadChunksResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[UploadChunksRequest, UploadChunksResponse]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_UploadChunksClient = grpc.ClientStreamingClient[UploadChunkRequest, UploadChunksResponse]
+type FilesService_UploadChunksClient = grpc.ClientStreamingClient[UploadChunksRequest, UploadChunksResponse]
 
 func (c *filesServiceClient) GetUploadStatus(ctx context.Context, in *GetUploadStatusRequest, opts ...grpc.CallOption) (*GetUploadStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -231,13 +231,13 @@ func (c *filesServiceClient) AbortUpload(ctx context.Context, in *AbortUploadReq
 	return out, nil
 }
 
-func (c *filesServiceClient) DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadChunkResponse], error) {
+func (c *filesServiceClient) DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &FilesService_ServiceDesc.Streams[1], FilesService_DownloadFile_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[DownloadFileRequest, DownloadChunkResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[DownloadFileRequest, DownloadFileResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (c *filesServiceClient) DownloadFile(ctx context.Context, in *DownloadFileR
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_DownloadFileClient = grpc.ServerStreamingClient[DownloadChunkResponse]
+type FilesService_DownloadFileClient = grpc.ServerStreamingClient[DownloadFileResponse]
 
 func (c *filesServiceClient) StreamFileRange(ctx context.Context, in *StreamFileRangeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamFileRangeResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -269,9 +269,9 @@ func (c *filesServiceClient) StreamFileRange(ctx context.Context, in *StreamFile
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FilesService_StreamFileRangeClient = grpc.ServerStreamingClient[StreamFileRangeResponse]
 
-func (c *filesServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*FileResponse, error) {
+func (c *filesServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileResponse)
+	out := new(GetFileResponse)
 	err := c.cc.Invoke(ctx, FilesService_GetFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -279,9 +279,9 @@ func (c *filesServiceClient) GetFile(ctx context.Context, in *GetFileRequest, op
 	return out, nil
 }
 
-func (c *filesServiceClient) UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*FileResponse, error) {
+func (c *filesServiceClient) UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileResponse)
+	out := new(UpdateFileResponse)
 	err := c.cc.Invoke(ctx, FilesService_UpdateFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -299,9 +299,9 @@ func (c *filesServiceClient) DeleteFile(ctx context.Context, in *DeleteFileReque
 	return out, nil
 }
 
-func (c *filesServiceClient) RestoreFile(ctx context.Context, in *RestoreFileRequest, opts ...grpc.CallOption) (*FileResponse, error) {
+func (c *filesServiceClient) RestoreFile(ctx context.Context, in *RestoreFileRequest, opts ...grpc.CallOption) (*RestoreFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileResponse)
+	out := new(RestoreFileResponse)
 	err := c.cc.Invoke(ctx, FilesService_RestoreFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -319,9 +319,9 @@ func (c *filesServiceClient) ListFiles(ctx context.Context, in *ListFilesRequest
 	return out, nil
 }
 
-func (c *filesServiceClient) CreateFolder(ctx context.Context, in *CreateFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+func (c *filesServiceClient) CreateFolder(ctx context.Context, in *CreateFolderRequest, opts ...grpc.CallOption) (*CreateFolderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FolderResponse)
+	out := new(CreateFolderResponse)
 	err := c.cc.Invoke(ctx, FilesService_CreateFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -329,9 +329,9 @@ func (c *filesServiceClient) CreateFolder(ctx context.Context, in *CreateFolderR
 	return out, nil
 }
 
-func (c *filesServiceClient) UpdateFolder(ctx context.Context, in *UpdateFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+func (c *filesServiceClient) UpdateFolder(ctx context.Context, in *UpdateFolderRequest, opts ...grpc.CallOption) (*UpdateFolderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FolderResponse)
+	out := new(UpdateFolderResponse)
 	err := c.cc.Invoke(ctx, FilesService_UpdateFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -369,9 +369,9 @@ func (c *filesServiceClient) CreateFolderTree(ctx context.Context, in *CreateFol
 	return out, nil
 }
 
-func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, in *EnsureRecordingsFolderRequest, opts ...grpc.CallOption) (*EnsureRecordingsFolderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FolderResponse)
+	out := new(EnsureRecordingsFolderResponse)
 	err := c.cc.Invoke(ctx, FilesService_EnsureRecordingsFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -429,9 +429,9 @@ func (c *filesServiceClient) ListTrash(ctx context.Context, in *ListTrashRequest
 	return out, nil
 }
 
-func (c *filesServiceClient) RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+func (c *filesServiceClient) RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*RestoreFolderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FolderResponse)
+	out := new(RestoreFolderResponse)
 	err := c.cc.Invoke(ctx, FilesService_RestoreFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -449,9 +449,9 @@ func (c *filesServiceClient) ListFileVersions(ctx context.Context, in *ListFileV
 	return out, nil
 }
 
-func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*FileResponse, error) {
+func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*RestoreFileVersionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileResponse)
+	out := new(RestoreFileVersionResponse)
 	err := c.cc.Invoke(ctx, FilesService_RestoreFileVersion_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -559,9 +559,9 @@ func (c *filesServiceClient) CheckStorageQuota(ctx context.Context, in *CheckSto
 	return out, nil
 }
 
-func (c *filesServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error) {
+func (c *filesServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*CreateSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SavedFilterResponse)
+	out := new(CreateSavedFilterResponse)
 	err := c.cc.Invoke(ctx, FilesService_CreateSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -569,9 +569,9 @@ func (c *filesServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSa
 	return out, nil
 }
 
-func (c *filesServiceClient) GetSavedFilter(ctx context.Context, in *GetSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error) {
+func (c *filesServiceClient) GetSavedFilter(ctx context.Context, in *GetSavedFilterRequest, opts ...grpc.CallOption) (*GetSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SavedFilterResponse)
+	out := new(GetSavedFilterResponse)
 	err := c.cc.Invoke(ctx, FilesService_GetSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -579,9 +579,9 @@ func (c *filesServiceClient) GetSavedFilter(ctx context.Context, in *GetSavedFil
 	return out, nil
 }
 
-func (c *filesServiceClient) UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error) {
+func (c *filesServiceClient) UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*UpdateSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SavedFilterResponse)
+	out := new(UpdateSavedFilterResponse)
 	err := c.cc.Invoke(ctx, FilesService_UpdateSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -621,33 +621,33 @@ type FilesServiceServer interface {
 	// Call this for each chunk, then call CompleteUpload when done.
 	UploadChunk(context.Context, *UploadChunkRequest) (*UploadChunkResponse, error)
 	// Complete an upload after all chunks have been sent.
-	CompleteUpload(context.Context, *CompleteUploadRequest) (*UploadChunksResponse, error)
+	CompleteUpload(context.Context, *CompleteUploadRequest) (*CompleteUploadResponse, error)
 	// Stream file chunks to backend (client streaming RPC - server-to-server only).
 	// NOTE: This does not work in browsers due to Fetch API limitations.
-	UploadChunks(grpc.ClientStreamingServer[UploadChunkRequest, UploadChunksResponse]) error
+	UploadChunks(grpc.ClientStreamingServer[UploadChunksRequest, UploadChunksResponse]) error
 	// Get status of an in-progress upload (for resuming after disconnect).
 	GetUploadStatus(context.Context, *GetUploadStatusRequest) (*GetUploadStatusResponse, error)
 	// Abort an in-progress upload.
 	AbortUpload(context.Context, *AbortUploadRequest) (*AbortUploadResponse, error)
 	// Stream file content from backend to client (server streaming RPC).
-	DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadChunkResponse]) error
+	DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileResponse]) error
 	// Stream file with byte range support for Service Worker media streaming.
 	// This RPC supports HTTP Range-like semantics for video/audio seeking.
 	StreamFileRange(*StreamFileRangeRequest, grpc.ServerStreamingServer[StreamFileRangeResponse]) error
 	// Get a file by ID.
-	GetFile(context.Context, *GetFileRequest) (*FileResponse, error)
+	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
 	// Update file metadata (rename, tags, description).
-	UpdateFile(context.Context, *UpdateFileRequest) (*FileResponse, error)
+	UpdateFile(context.Context, *UpdateFileRequest) (*UpdateFileResponse, error)
 	// Delete a file (soft delete by default).
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	// Restore a soft-deleted file.
-	RestoreFile(context.Context, *RestoreFileRequest) (*FileResponse, error)
+	RestoreFile(context.Context, *RestoreFileRequest) (*RestoreFileResponse, error)
 	// List files with pagination and filters.
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)
 	// Create a new folder.
-	CreateFolder(context.Context, *CreateFolderRequest) (*FolderResponse, error)
+	CreateFolder(context.Context, *CreateFolderRequest) (*CreateFolderResponse, error)
 	// Update a folder.
-	UpdateFolder(context.Context, *UpdateFolderRequest) (*FolderResponse, error)
+	UpdateFolder(context.Context, *UpdateFolderRequest) (*UpdateFolderResponse, error)
 	// Delete a folder.
 	DeleteFolder(context.Context, *DeleteFolderRequest) (*DeleteFolderResponse, error)
 	// Get the full file/folder tree.
@@ -657,7 +657,7 @@ type FilesServiceServer interface {
 	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
 	// concurrent invocations across backend instances. Used by the screen
 	// recording feature to resolve the upload destination on first record.
-	EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*FolderResponse, error)
+	EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*EnsureRecordingsFolderResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -669,11 +669,11 @@ type FilesServiceServer interface {
 	// List deleted files and folders (trash).
 	ListTrash(context.Context, *ListTrashRequest) (*ListTrashResponse, error)
 	// Restore a soft-deleted folder (and its contents) back to its parent.
-	RestoreFolder(context.Context, *RestoreFolderRequest) (*FolderResponse, error)
+	RestoreFolder(context.Context, *RestoreFolderRequest) (*RestoreFolderResponse, error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *ListFileVersionsRequest) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
-	RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*FileResponse, error)
+	RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*RestoreFileVersionResponse, error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error)
 	// Set or update the organization storage quota configuration.
@@ -695,11 +695,11 @@ type FilesServiceServer interface {
 	// Pre-check whether an upload of a given size is allowed under quota.
 	CheckStorageQuota(context.Context, *CheckStorageQuotaRequest) (*CheckStorageQuotaResponse, error)
 	// Create a new saved filter.
-	CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*SavedFilterResponse, error)
+	CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*CreateSavedFilterResponse, error)
 	// Get a saved filter by ID.
-	GetSavedFilter(context.Context, *GetSavedFilterRequest) (*SavedFilterResponse, error)
+	GetSavedFilter(context.Context, *GetSavedFilterRequest) (*GetSavedFilterResponse, error)
 	// Update a saved filter.
-	UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*SavedFilterResponse, error)
+	UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*UpdateSavedFilterResponse, error)
 	// Delete a saved filter.
 	DeleteSavedFilter(context.Context, *DeleteSavedFilterRequest) (*DeleteSavedFilterResponse, error)
 	// List saved filters for the current user.
@@ -720,10 +720,10 @@ func (UnimplementedFilesServiceServer) InitiateUpload(context.Context, *Initiate
 func (UnimplementedFilesServiceServer) UploadChunk(context.Context, *UploadChunkRequest) (*UploadChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadChunk not implemented")
 }
-func (UnimplementedFilesServiceServer) CompleteUpload(context.Context, *CompleteUploadRequest) (*UploadChunksResponse, error) {
+func (UnimplementedFilesServiceServer) CompleteUpload(context.Context, *CompleteUploadRequest) (*CompleteUploadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteUpload not implemented")
 }
-func (UnimplementedFilesServiceServer) UploadChunks(grpc.ClientStreamingServer[UploadChunkRequest, UploadChunksResponse]) error {
+func (UnimplementedFilesServiceServer) UploadChunks(grpc.ClientStreamingServer[UploadChunksRequest, UploadChunksResponse]) error {
 	return status.Error(codes.Unimplemented, "method UploadChunks not implemented")
 }
 func (UnimplementedFilesServiceServer) GetUploadStatus(context.Context, *GetUploadStatusRequest) (*GetUploadStatusResponse, error) {
@@ -732,31 +732,31 @@ func (UnimplementedFilesServiceServer) GetUploadStatus(context.Context, *GetUplo
 func (UnimplementedFilesServiceServer) AbortUpload(context.Context, *AbortUploadRequest) (*AbortUploadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AbortUpload not implemented")
 }
-func (UnimplementedFilesServiceServer) DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadChunkResponse]) error {
+func (UnimplementedFilesServiceServer) DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method DownloadFile not implemented")
 }
 func (UnimplementedFilesServiceServer) StreamFileRange(*StreamFileRangeRequest, grpc.ServerStreamingServer[StreamFileRangeResponse]) error {
 	return status.Error(codes.Unimplemented, "method StreamFileRange not implemented")
 }
-func (UnimplementedFilesServiceServer) GetFile(context.Context, *GetFileRequest) (*FileResponse, error) {
+func (UnimplementedFilesServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFile not implemented")
 }
-func (UnimplementedFilesServiceServer) UpdateFile(context.Context, *UpdateFileRequest) (*FileResponse, error) {
+func (UnimplementedFilesServiceServer) UpdateFile(context.Context, *UpdateFileRequest) (*UpdateFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateFile not implemented")
 }
 func (UnimplementedFilesServiceServer) DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteFile not implemented")
 }
-func (UnimplementedFilesServiceServer) RestoreFile(context.Context, *RestoreFileRequest) (*FileResponse, error) {
+func (UnimplementedFilesServiceServer) RestoreFile(context.Context, *RestoreFileRequest) (*RestoreFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreFile not implemented")
 }
 func (UnimplementedFilesServiceServer) ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFiles not implemented")
 }
-func (UnimplementedFilesServiceServer) CreateFolder(context.Context, *CreateFolderRequest) (*FolderResponse, error) {
+func (UnimplementedFilesServiceServer) CreateFolder(context.Context, *CreateFolderRequest) (*CreateFolderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateFolder not implemented")
 }
-func (UnimplementedFilesServiceServer) UpdateFolder(context.Context, *UpdateFolderRequest) (*FolderResponse, error) {
+func (UnimplementedFilesServiceServer) UpdateFolder(context.Context, *UpdateFolderRequest) (*UpdateFolderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateFolder not implemented")
 }
 func (UnimplementedFilesServiceServer) DeleteFolder(context.Context, *DeleteFolderRequest) (*DeleteFolderResponse, error) {
@@ -768,7 +768,7 @@ func (UnimplementedFilesServiceServer) GetFilesTree(context.Context, *GetFilesTr
 func (UnimplementedFilesServiceServer) CreateFolderTree(context.Context, *CreateFolderTreeRequest) (*CreateFolderTreeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateFolderTree not implemented")
 }
-func (UnimplementedFilesServiceServer) EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*FolderResponse, error) {
+func (UnimplementedFilesServiceServer) EnsureRecordingsFolder(context.Context, *EnsureRecordingsFolderRequest) (*EnsureRecordingsFolderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EnsureRecordingsFolder not implemented")
 }
 func (UnimplementedFilesServiceServer) MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error) {
@@ -786,13 +786,13 @@ func (UnimplementedFilesServiceServer) EmptyTrash(context.Context, *EmptyTrashRe
 func (UnimplementedFilesServiceServer) ListTrash(context.Context, *ListTrashRequest) (*ListTrashResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTrash not implemented")
 }
-func (UnimplementedFilesServiceServer) RestoreFolder(context.Context, *RestoreFolderRequest) (*FolderResponse, error) {
+func (UnimplementedFilesServiceServer) RestoreFolder(context.Context, *RestoreFolderRequest) (*RestoreFolderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreFolder not implemented")
 }
 func (UnimplementedFilesServiceServer) ListFileVersions(context.Context, *ListFileVersionsRequest) (*ListFileVersionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFileVersions not implemented")
 }
-func (UnimplementedFilesServiceServer) RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*FileResponse, error) {
+func (UnimplementedFilesServiceServer) RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*RestoreFileVersionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreFileVersion not implemented")
 }
 func (UnimplementedFilesServiceServer) GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error) {
@@ -825,13 +825,13 @@ func (UnimplementedFilesServiceServer) RecalculateStorageUsage(context.Context, 
 func (UnimplementedFilesServiceServer) CheckStorageQuota(context.Context, *CheckStorageQuotaRequest) (*CheckStorageQuotaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckStorageQuota not implemented")
 }
-func (UnimplementedFilesServiceServer) CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*SavedFilterResponse, error) {
+func (UnimplementedFilesServiceServer) CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*CreateSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSavedFilter not implemented")
 }
-func (UnimplementedFilesServiceServer) GetSavedFilter(context.Context, *GetSavedFilterRequest) (*SavedFilterResponse, error) {
+func (UnimplementedFilesServiceServer) GetSavedFilter(context.Context, *GetSavedFilterRequest) (*GetSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSavedFilter not implemented")
 }
-func (UnimplementedFilesServiceServer) UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*SavedFilterResponse, error) {
+func (UnimplementedFilesServiceServer) UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*UpdateSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSavedFilter not implemented")
 }
 func (UnimplementedFilesServiceServer) DeleteSavedFilter(context.Context, *DeleteSavedFilterRequest) (*DeleteSavedFilterResponse, error) {
@@ -916,11 +916,11 @@ func _FilesService_CompleteUpload_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _FilesService_UploadChunks_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(FilesServiceServer).UploadChunks(&grpc.GenericServerStream[UploadChunkRequest, UploadChunksResponse]{ServerStream: stream})
+	return srv.(FilesServiceServer).UploadChunks(&grpc.GenericServerStream[UploadChunksRequest, UploadChunksResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_UploadChunksServer = grpc.ClientStreamingServer[UploadChunkRequest, UploadChunksResponse]
+type FilesService_UploadChunksServer = grpc.ClientStreamingServer[UploadChunksRequest, UploadChunksResponse]
 
 func _FilesService_GetUploadStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUploadStatusRequest)
@@ -963,11 +963,11 @@ func _FilesService_DownloadFile_Handler(srv interface{}, stream grpc.ServerStrea
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(FilesServiceServer).DownloadFile(m, &grpc.GenericServerStream[DownloadFileRequest, DownloadChunkResponse]{ServerStream: stream})
+	return srv.(FilesServiceServer).DownloadFile(m, &grpc.GenericServerStream[DownloadFileRequest, DownloadFileResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_DownloadFileServer = grpc.ServerStreamingServer[DownloadChunkResponse]
+type FilesService_DownloadFileServer = grpc.ServerStreamingServer[DownloadFileResponse]
 
 func _FilesService_StreamFileRange_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamFileRangeRequest)

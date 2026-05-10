@@ -7,24 +7,27 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.common.v1.common_pb2 import (
-    DomainAdminInfo,
-    MemberInfo,
-    OrganizationInfo,
     PaginationResponse,
 )
 from uniffy_proto.organizations.v1.organizations_pb2 import (
     AddMemberRequest,
-    ContentTypeDefaults,
+    AddMemberResponse,
     CreateOrganizationRequest,
+    CreateOrganizationResponse,
     DeleteOrganizationRequest,
     DeleteOrganizationResponse,
     GetOrganizationOverviewRequest,
+    GetOrganizationOverviewResponse,
     GetOrganizationRequest,
+    GetOrganizationResponse,
     GetOrganizationSettingsRequest,
+    GetOrganizationSettingsResponse,
     GetPermissionDefaultsRequest,
+    GetPermissionDefaultsResponse,
     GetUserDomainAdminsRequest,
     GetUserDomainAdminsResponse,
     GrantDomainAdminRequest,
+    GrantDomainAdminResponse,
     ListDomainAdminsRequest,
     ListDomainAdminsResponse,
     ListMembersRequest,
@@ -33,18 +36,18 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     ListMyOrganizationsResponse,
     ListOrganizationsRequest,
     ListOrganizationsResponse,
-    OrganizationDetail,
-    OrganizationOverview,
-    OrganizationSettings,
-    PermissionDefaultsResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
     RevokeDomainAdminRequest,
     RevokeDomainAdminResponse,
     UpdateMemberRoleRequest,
+    UpdateMemberRoleResponse,
     UpdateOrganizationRequest,
+    UpdateOrganizationResponse,
     UpdateOrganizationSettingsRequest,
+    UpdateOrganizationSettingsResponse,
     UpdatePermissionDefaultsRequest,
+    UpdatePermissionDefaultsResponse,
 )
 
 from uniffy.core.converters import (
@@ -163,7 +166,7 @@ class OrganizationsHandlers:
         self,
         request: GetOrganizationRequest,
         ctx: RequestContext,
-    ) -> OrganizationDetail:
+    ) -> GetOrganizationResponse:
         """Get organization by ID."""
         user_id = get_user_id_from_context(ctx)
 
@@ -189,10 +192,12 @@ class OrganizationsHandlers:
                 overview = await ops.get_overview(org_id)
                 org = overview["organization"]
 
-                return organization_detail_to_proto(
-                    org,
-                    overview["member_count"],
-                    overview["group_count"],
+                return GetOrganizationResponse(
+                    organization=organization_detail_to_proto(
+                        org,
+                        overview["member_count"],
+                        overview["group_count"],
+                    )
                 )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
@@ -206,7 +211,7 @@ class OrganizationsHandlers:
         self,
         request: CreateOrganizationRequest,
         ctx: RequestContext,
-    ) -> OrganizationInfo:
+    ) -> CreateOrganizationResponse:
         """Create a new organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -238,7 +243,7 @@ class OrganizationsHandlers:
                     owner_user_id=owner_id,
                 )
 
-                return org_info_to_proto(org)
+                return CreateOrganizationResponse(organization=org_info_to_proto(org))
         except ConnectError:
             raise
         except PermissionDeniedError as e:
@@ -251,7 +256,7 @@ class OrganizationsHandlers:
         self,
         request: UpdateOrganizationRequest,
         ctx: RequestContext,
-    ) -> OrganizationInfo:
+    ) -> UpdateOrganizationResponse:
         """Update organization details."""
         user_id = get_user_id_from_context(ctx)
 
@@ -279,7 +284,7 @@ class OrganizationsHandlers:
                     is_active=request.is_active if request.HasField("is_active") else None,
                 )
 
-                return org_info_to_proto(org)
+                return UpdateOrganizationResponse(organization=org_info_to_proto(org))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -328,7 +333,7 @@ class OrganizationsHandlers:
         self,
         request: GetOrganizationOverviewRequest,
         ctx: RequestContext,
-    ) -> OrganizationOverview:
+    ) -> GetOrganizationOverviewResponse:
         """Get organization overview (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -344,10 +349,12 @@ class OrganizationsHandlers:
 
                 overview = await ops.get_overview(org_id)
 
-                return organization_overview_to_proto(
-                    overview["organization"],
-                    overview["member_count"],
-                    overview["group_count"],
+                return GetOrganizationOverviewResponse(
+                    overview=organization_overview_to_proto(
+                        overview["organization"],
+                        overview["member_count"],
+                        overview["group_count"],
+                    )
                 )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
@@ -425,7 +432,7 @@ class OrganizationsHandlers:
         self,
         request: AddMemberRequest,
         ctx: RequestContext,
-    ) -> MemberInfo:
+    ) -> AddMemberResponse:
         """Add a member to the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -453,7 +460,7 @@ class OrganizationsHandlers:
 
                 membership = await ops.add_member(target_user_id, org_id, role)
 
-                return member_info_to_proto(target_user, membership)
+                return AddMemberResponse(member=member_info_to_proto(target_user, membership))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -466,7 +473,7 @@ class OrganizationsHandlers:
         self,
         request: UpdateMemberRoleRequest,
         ctx: RequestContext,
-    ) -> MemberInfo:
+    ) -> UpdateMemberRoleResponse:
         """Update a member's role (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -492,7 +499,9 @@ class OrganizationsHandlers:
                     new_role=new_role,
                 )
 
-                return member_info_to_proto(target_user, membership)
+                return UpdateMemberRoleResponse(
+                    member=member_info_to_proto(target_user, membership)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -542,7 +551,7 @@ class OrganizationsHandlers:
         self,
         request: GetPermissionDefaultsRequest,
         ctx: RequestContext,
-    ) -> PermissionDefaultsResponse:
+    ) -> GetPermissionDefaultsResponse:
         """Get permission defaults for the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -558,7 +567,7 @@ class OrganizationsHandlers:
 
                 defaults = await ops.get_permission_defaults(org_id)
 
-                return PermissionDefaultsResponse(
+                return GetPermissionDefaultsResponse(
                     defaults=[permission_defaults_to_proto(d) for d in defaults]
                 )
         except PermissionDeniedError as e:
@@ -571,7 +580,7 @@ class OrganizationsHandlers:
         self,
         request: UpdatePermissionDefaultsRequest,
         ctx: RequestContext,
-    ) -> ContentTypeDefaults:
+    ) -> UpdatePermissionDefaultsResponse:
         """Update permission defaults for a content type (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -604,7 +613,9 @@ class OrganizationsHandlers:
                     default_baseline_role=default_baseline_role,
                 )
 
-                return permission_defaults_to_proto(defaults)
+                return UpdatePermissionDefaultsResponse(
+                    defaults=permission_defaults_to_proto(defaults)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
@@ -615,7 +626,7 @@ class OrganizationsHandlers:
         self,
         request: GetOrganizationSettingsRequest,
         ctx: RequestContext,
-    ) -> OrganizationSettings:
+    ) -> GetOrganizationSettingsResponse:
         """Get the organization settings blob (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -629,7 +640,9 @@ class OrganizationsHandlers:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
                 settings = await ops.get_organization_settings(org_id)
-                return organization_settings_to_proto(settings)
+                return GetOrganizationSettingsResponse(
+                    settings=organization_settings_to_proto(settings)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -642,7 +655,7 @@ class OrganizationsHandlers:
         self,
         request: UpdateOrganizationSettingsRequest,
         ctx: RequestContext,
-    ) -> OrganizationSettings:
+    ) -> UpdateOrganizationSettingsResponse:
         """Merge-update the organization settings blob (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -663,7 +676,9 @@ class OrganizationsHandlers:
                     org_id=org_id,
                     chat_agents_enabled=chat_agents_enabled,
                 )
-                return organization_settings_to_proto(settings)
+                return UpdateOrganizationSettingsResponse(
+                    settings=organization_settings_to_proto(settings)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -680,7 +695,7 @@ class OrganizationsHandlers:
         self,
         request: GrantDomainAdminRequest,
         ctx: RequestContext,
-    ) -> DomainAdminInfo:
+    ) -> GrantDomainAdminResponse:
         """Grant domain admin to a user (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -703,7 +718,9 @@ class OrganizationsHandlers:
                     target_user_id=target_user_id,
                     domain=domain,
                 )
-                return domain_admin_info_to_proto(da, target_user)
+                return GrantDomainAdminResponse(
+                    domain_admin=domain_admin_info_to_proto(da, target_user)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:

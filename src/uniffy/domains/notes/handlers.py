@@ -10,20 +10,24 @@ from loguru import logger
 from uniffy_proto.notes.v1.notes_pb2 import (
     AutosaveNoteRequest,
     AutosaveNoteResponse,
-    BacklinksResponse,
     CreateNoteRequest,
+    CreateNoteResponse,
     DeleteNoteRequest,
     DeleteNoteResponse,
     EmptyTrashRequest,
     EmptyTrashResponse,
     GetBacklinksRequest,
+    GetBacklinksResponse,
     GetNoteRequest,
+    GetNoteResponse,
     ListNotesRequest,
     ListNotesResponse,
-    NoteResponse,
+    MoveNoteResponse,
     RestoreNoteRequest,
+    RestoreNoteResponse,
     SearchNotesRequest,
     UpdateNoteRequest,
+    UpdateNoteResponse,
 )
 
 from uniffy.core.converters import datetime_to_timestamp
@@ -100,7 +104,7 @@ class NotesHandlers:
         self,
         request: CreateNoteRequest,
         ctx: RequestContext,
-    ) -> NoteResponse:
+    ) -> CreateNoteResponse:
         """Create a new note."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -155,7 +159,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
-                return NoteResponse(
+                return CreateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
@@ -170,7 +174,7 @@ class NotesHandlers:
         self,
         request: GetNoteRequest,
         ctx: RequestContext,
-    ) -> NoteResponse:
+    ) -> GetNoteResponse:
         """Get a single note (with sharing info for the UI)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -185,7 +189,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
-                return NoteResponse(
+                return GetNoteResponse(
                     note=note_to_proto(
                         note,
                         owner_info=sharing.owner_info if sharing else None,
@@ -202,7 +206,7 @@ class NotesHandlers:
         self,
         request: UpdateNoteRequest,
         ctx: RequestContext,
-    ) -> NoteResponse:
+    ) -> UpdateNoteResponse:
         """Update note metadata and/or body."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -248,7 +252,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
-                return NoteResponse(
+                return UpdateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
@@ -289,7 +293,7 @@ class NotesHandlers:
         self,
         request: RestoreNoteRequest,
         ctx: RequestContext,
-    ) -> NoteResponse:
+    ) -> RestoreNoteResponse:
         """Restore a soft-deleted note."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -303,7 +307,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
-                return NoteResponse(
+                return RestoreNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
@@ -434,7 +438,7 @@ class NotesHandlers:
         self,
         request: GetBacklinksRequest,
         ctx: RequestContext,
-    ) -> BacklinksResponse:
+    ) -> GetBacklinksResponse:
         """Return notes that reference the target note (the user can see)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -444,7 +448,7 @@ class NotesHandlers:
             async with open_session() as session:
                 ops = NoteOperations(session)
                 backlinks = await ops.get_backlinks(user_id, organization_id, note_id)
-                return BacklinksResponse(
+                return GetBacklinksResponse(
                     backlinks=[note_to_reference(n) for n in backlinks],
                     total_count=len(backlinks),
                 )
@@ -476,7 +480,7 @@ class NotesHandlers:
         except Exception as exc:
             raise _map_domain_error("empty_trash", exc) from exc
 
-    async def move_note(self, request, ctx: RequestContext) -> NoteResponse:
+    async def move_note(self, request, ctx: RequestContext) -> MoveNoteResponse:
         """Change a note's access mode (and optional baseline role / groups)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -512,7 +516,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
-                return NoteResponse(
+                return MoveNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),

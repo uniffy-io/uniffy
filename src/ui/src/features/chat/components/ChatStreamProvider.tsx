@@ -40,7 +40,7 @@ import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
 import type { AppDispatch } from '@/app/store';
-import type { UserChatEvent } from '@uniffy/proto/chat/v1/chat_stream_pb';
+import type { StreamUserChatEventsResponse } from '@uniffy/proto/chat/v1/chat_stream_pb';
 
 // Module-level singleton: guarantees at most one active stream connection.
 let _activeController: AbortController | null = null;
@@ -54,7 +54,7 @@ const INITIAL_BACKOFF_MS = 1_000;
  * events for the currently active channel.
  */
 function handleChannelEvent(
-  event: UserChatEvent,
+  event: StreamUserChatEventsResponse,
   activeChannelId: string | null,
   currentUserId: string,
   organizationId: string,

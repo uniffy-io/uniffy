@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateProfileRequest, DeleteProfileRequest, DeleteProfileResponse, EffectiveSettingsResponse, GetEffectiveSettingsRequest, GetProfileRequest, GetSettingsSchemaRequest, ListProfilesRequest, ListProfilesResponse, ProfileResponse, SetDefaultProfileRequest, SettingsSchemaResponse, UpdateProfileRequest } from "./settings_pb.js";
+import { CreateProfileRequest, CreateProfileResponse, DeleteProfileRequest, DeleteProfileResponse, GetEffectiveSettingsRequest, GetEffectiveSettingsResponse, GetProfileRequest, GetProfileResponse, GetSettingsSchemaRequest, GetSettingsSchemaResponse, ListProfilesRequest, ListProfilesResponse, SetDefaultProfileRequest, SetDefaultProfileResponse, UpdateProfileRequest, UpdateProfileResponse } from "./settings_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const SettingsService = {
     createProfile: {
       name: "CreateProfile",
       I: CreateProfileRequest,
-      O: ProfileResponse,
+      O: CreateProfileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -33,7 +33,7 @@ export const SettingsService = {
     getProfile: {
       name: "GetProfile",
       I: GetProfileRequest,
-      O: ProfileResponse,
+      O: GetProfileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -44,7 +44,7 @@ export const SettingsService = {
     updateProfile: {
       name: "UpdateProfile",
       I: UpdateProfileRequest,
-      O: ProfileResponse,
+      O: UpdateProfileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,7 +77,7 @@ export const SettingsService = {
     getEffectiveSettings: {
       name: "GetEffectiveSettings",
       I: GetEffectiveSettingsRequest,
-      O: EffectiveSettingsResponse,
+      O: GetEffectiveSettingsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +88,7 @@ export const SettingsService = {
     getSettingsSchema: {
       name: "GetSettingsSchema",
       I: GetSettingsSchemaRequest,
-      O: SettingsSchemaResponse,
+      O: GetSettingsSchemaResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -99,7 +99,7 @@ export const SettingsService = {
     setDefaultProfile: {
       name: "SetDefaultProfile",
       I: SetDefaultProfileRequest,
-      O: ProfileResponse,
+      O: SetDefaultProfileResponse,
       kind: MethodKind.Unary,
     },
   }

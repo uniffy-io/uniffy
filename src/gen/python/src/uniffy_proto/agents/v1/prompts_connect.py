@@ -16,16 +16,16 @@ import agents.v1.prompts_pb2 as agents_dot_v1_dot_prompts__pb2
 
 
 class PromptsService(Protocol):
-    async def create_prompt(self, request: agents_dot_v1_dot_prompts__pb2.CreatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    async def create_prompt(self, request: agents_dot_v1_dot_prompts__pb2.CreatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.CreatePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_prompt(self, request: agents_dot_v1_dot_prompts__pb2.GetPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    async def get_prompt(self, request: agents_dot_v1_dot_prompts__pb2.GetPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.GetPromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_prompts(self, request: agents_dot_v1_dot_prompts__pb2.ListPromptsRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.ListPromptsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_prompt(self, request: agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    async def update_prompt(self, request: agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_prompt(self, request: agents_dot_v1_dot_prompts__pb2.DeletePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.DeletePromptResponse:
@@ -42,7 +42,7 @@ class PromptsServiceASGIApplication(ConnectASGIApplication[PromptsService]):
                         name="CreatePrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.CreatePromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.CreatePromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_prompt,
@@ -52,7 +52,7 @@ class PromptsServiceASGIApplication(ConnectASGIApplication[PromptsService]):
                         name="GetPrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.GetPromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.GetPromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_prompt,
@@ -72,7 +72,7 @@ class PromptsServiceASGIApplication(ConnectASGIApplication[PromptsService]):
                         name="UpdatePrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_prompt,
@@ -105,14 +105,14 @@ class PromptsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.CreatePromptResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreatePrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.CreatePromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.CreatePromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -125,14 +125,14 @@ class PromptsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.GetPromptResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetPrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.GetPromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.GetPromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -165,14 +165,14 @@ class PromptsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdatePrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -201,13 +201,13 @@ class PromptsServiceClient(ConnectClient):
 
 
 class PromptsServiceSync(Protocol):
-    def create_prompt(self, request: agents_dot_v1_dot_prompts__pb2.CreatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    def create_prompt(self, request: agents_dot_v1_dot_prompts__pb2.CreatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.CreatePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_prompt(self, request: agents_dot_v1_dot_prompts__pb2.GetPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    def get_prompt(self, request: agents_dot_v1_dot_prompts__pb2.GetPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.GetPromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_prompts(self, request: agents_dot_v1_dot_prompts__pb2.ListPromptsRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.ListPromptsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_prompt(self, request: agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    def update_prompt(self, request: agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_prompt(self, request: agents_dot_v1_dot_prompts__pb2.DeletePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.DeletePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -222,7 +222,7 @@ class PromptsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreatePrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.CreatePromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.CreatePromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_prompt,
@@ -232,7 +232,7 @@ class PromptsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetPrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.GetPromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.GetPromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_prompt,
@@ -252,7 +252,7 @@ class PromptsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdatePrompt",
                         service_name="agents.v1.PromptsService",
                         input=agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest,
-                        output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                        output=agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_prompt,
@@ -285,14 +285,14 @@ class PromptsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.CreatePromptResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreatePrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.CreatePromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.CreatePromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -305,14 +305,14 @@ class PromptsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.GetPromptResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetPrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.GetPromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.GetPromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -345,14 +345,14 @@ class PromptsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_prompts__pb2.PromptResponse:
+    ) -> agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdatePrompt",
                 service_name="agents.v1.PromptsService",
                 input=agents_dot_v1_dot_prompts__pb2.UpdatePromptRequest,
-                output=agents_dot_v1_dot_prompts__pb2.PromptResponse,
+                output=agents_dot_v1_dot_prompts__pb2.UpdatePromptResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

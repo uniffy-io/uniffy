@@ -33,7 +33,7 @@ type ChatStreamServiceClient interface {
 	// Opens a single persistent connection per user. Channel events are fanned out
 	// server-side to each member's Valkey channel, so no reconnection is needed
 	// when switching channels - the frontend filters by channel_id.
-	StreamUserChatEvents(ctx context.Context, in *StreamUserChatEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserChatEvent], error)
+	StreamUserChatEvents(ctx context.Context, in *StreamUserChatEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamUserChatEventsResponse], error)
 }
 
 type chatStreamServiceClient struct {
@@ -44,13 +44,13 @@ func NewChatStreamServiceClient(cc grpc.ClientConnInterface) ChatStreamServiceCl
 	return &chatStreamServiceClient{cc}
 }
 
-func (c *chatStreamServiceClient) StreamUserChatEvents(ctx context.Context, in *StreamUserChatEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserChatEvent], error) {
+func (c *chatStreamServiceClient) StreamUserChatEvents(ctx context.Context, in *StreamUserChatEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamUserChatEventsResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &ChatStreamService_ServiceDesc.Streams[0], ChatStreamService_StreamUserChatEvents_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[StreamUserChatEventsRequest, UserChatEvent]{ClientStream: stream}
+	x := &grpc.GenericClientStream[StreamUserChatEventsRequest, StreamUserChatEventsResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (c *chatStreamServiceClient) StreamUserChatEvents(ctx context.Context, in *
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChatStreamService_StreamUserChatEventsClient = grpc.ServerStreamingClient[UserChatEvent]
+type ChatStreamService_StreamUserChatEventsClient = grpc.ServerStreamingClient[StreamUserChatEventsResponse]
 
 // ChatStreamServiceServer is the server API for ChatStreamService service.
 // All implementations must embed UnimplementedChatStreamServiceServer
@@ -74,7 +74,7 @@ type ChatStreamServiceServer interface {
 	// Opens a single persistent connection per user. Channel events are fanned out
 	// server-side to each member's Valkey channel, so no reconnection is needed
 	// when switching channels - the frontend filters by channel_id.
-	StreamUserChatEvents(*StreamUserChatEventsRequest, grpc.ServerStreamingServer[UserChatEvent]) error
+	StreamUserChatEvents(*StreamUserChatEventsRequest, grpc.ServerStreamingServer[StreamUserChatEventsResponse]) error
 	mustEmbedUnimplementedChatStreamServiceServer()
 }
 
@@ -85,7 +85,7 @@ type ChatStreamServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChatStreamServiceServer struct{}
 
-func (UnimplementedChatStreamServiceServer) StreamUserChatEvents(*StreamUserChatEventsRequest, grpc.ServerStreamingServer[UserChatEvent]) error {
+func (UnimplementedChatStreamServiceServer) StreamUserChatEvents(*StreamUserChatEventsRequest, grpc.ServerStreamingServer[StreamUserChatEventsResponse]) error {
 	return status.Error(codes.Unimplemented, "method StreamUserChatEvents not implemented")
 }
 func (UnimplementedChatStreamServiceServer) mustEmbedUnimplementedChatStreamServiceServer() {}
@@ -114,11 +114,11 @@ func _ChatStreamService_StreamUserChatEvents_Handler(srv interface{}, stream grp
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ChatStreamServiceServer).StreamUserChatEvents(m, &grpc.GenericServerStream[StreamUserChatEventsRequest, UserChatEvent]{ServerStream: stream})
+	return srv.(ChatStreamServiceServer).StreamUserChatEvents(m, &grpc.GenericServerStream[StreamUserChatEventsRequest, StreamUserChatEventsResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChatStreamService_StreamUserChatEventsServer = grpc.ServerStreamingServer[UserChatEvent]
+type ChatStreamService_StreamUserChatEventsServer = grpc.ServerStreamingServer[StreamUserChatEventsResponse]
 
 // ChatStreamService_ServiceDesc is the grpc.ServiceDesc for ChatStreamService service.
 // It's only intended for direct use with grpc.RegisterService,

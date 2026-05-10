@@ -1051,27 +1051,27 @@ func (x *DeleteRoomResponse) GetMessage() string {
 	return ""
 }
 
-type RoomResponse struct {
+type CreateRoomResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Room          *Room                  `protobuf:"bytes,1,opt,name=room,proto3" json:"room,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RoomResponse) Reset() {
-	*x = RoomResponse{}
+func (x *CreateRoomResponse) Reset() {
+	*x = CreateRoomResponse{}
 	mi := &file_rooms_v1_rooms_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RoomResponse) String() string {
+func (x *CreateRoomResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RoomResponse) ProtoMessage() {}
+func (*CreateRoomResponse) ProtoMessage() {}
 
-func (x *RoomResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateRoomResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_rooms_v1_rooms_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1083,12 +1083,100 @@ func (x *RoomResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RoomResponse.ProtoReflect.Descriptor instead.
-func (*RoomResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateRoomResponse.ProtoReflect.Descriptor instead.
+func (*CreateRoomResponse) Descriptor() ([]byte, []int) {
 	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *RoomResponse) GetRoom() *Room {
+func (x *CreateRoomResponse) GetRoom() *Room {
+	if x != nil {
+		return x.Room
+	}
+	return nil
+}
+
+type GetRoomResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Room          *Room                  `protobuf:"bytes,1,opt,name=room,proto3" json:"room,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRoomResponse) Reset() {
+	*x = GetRoomResponse{}
+	mi := &file_rooms_v1_rooms_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRoomResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRoomResponse) ProtoMessage() {}
+
+func (x *GetRoomResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rooms_v1_rooms_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRoomResponse.ProtoReflect.Descriptor instead.
+func (*GetRoomResponse) Descriptor() ([]byte, []int) {
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetRoomResponse) GetRoom() *Room {
+	if x != nil {
+		return x.Room
+	}
+	return nil
+}
+
+type UpdateRoomResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Room          *Room                  `protobuf:"bytes,1,opt,name=room,proto3" json:"room,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateRoomResponse) Reset() {
+	*x = UpdateRoomResponse{}
+	mi := &file_rooms_v1_rooms_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateRoomResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateRoomResponse) ProtoMessage() {}
+
+func (x *UpdateRoomResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rooms_v1_rooms_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateRoomResponse.ProtoReflect.Descriptor instead.
+func (*UpdateRoomResponse) Descriptor() ([]byte, []int) {
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UpdateRoomResponse) GetRoom() *Room {
 	if x != nil {
 		return x.Room
 	}
@@ -1113,7 +1201,7 @@ type ListRoomsRequest struct {
 
 func (x *ListRoomsRequest) Reset() {
 	*x = ListRoomsRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[9]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1125,7 +1213,7 @@ func (x *ListRoomsRequest) String() string {
 func (*ListRoomsRequest) ProtoMessage() {}
 
 func (x *ListRoomsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[9]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1138,7 +1226,7 @@ func (x *ListRoomsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRoomsRequest.ProtoReflect.Descriptor instead.
 func (*ListRoomsRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{9}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListRoomsRequest) GetOrganizationId() string {
@@ -1224,7 +1312,7 @@ type ListRoomsResponse struct {
 
 func (x *ListRoomsResponse) Reset() {
 	*x = ListRoomsResponse{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[10]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1236,7 +1324,7 @@ func (x *ListRoomsResponse) String() string {
 func (*ListRoomsResponse) ProtoMessage() {}
 
 func (x *ListRoomsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[10]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1249,7 +1337,7 @@ func (x *ListRoomsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRoomsResponse.ProtoReflect.Descriptor instead.
 func (*ListRoomsResponse) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{10}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListRoomsResponse) GetRooms() []*Room {
@@ -1302,7 +1390,7 @@ type CreateBookingRequest struct {
 
 func (x *CreateBookingRequest) Reset() {
 	*x = CreateBookingRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[11]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1402,7 @@ func (x *CreateBookingRequest) String() string {
 func (*CreateBookingRequest) ProtoMessage() {}
 
 func (x *CreateBookingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[11]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1415,7 @@ func (x *CreateBookingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBookingRequest.ProtoReflect.Descriptor instead.
 func (*CreateBookingRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{11}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateBookingRequest) GetOrganizationId() string {
@@ -1389,7 +1477,7 @@ type GetBookingRequest struct {
 
 func (x *GetBookingRequest) Reset() {
 	*x = GetBookingRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[12]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1401,7 +1489,7 @@ func (x *GetBookingRequest) String() string {
 func (*GetBookingRequest) ProtoMessage() {}
 
 func (x *GetBookingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[12]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1414,7 +1502,7 @@ func (x *GetBookingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBookingRequest.ProtoReflect.Descriptor instead.
 func (*GetBookingRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{12}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetBookingRequest) GetBookingId() string {
@@ -1441,7 +1529,7 @@ type CancelBookingRequest struct {
 
 func (x *CancelBookingRequest) Reset() {
 	*x = CancelBookingRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[13]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1453,7 +1541,7 @@ func (x *CancelBookingRequest) String() string {
 func (*CancelBookingRequest) ProtoMessage() {}
 
 func (x *CancelBookingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[13]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1466,7 +1554,7 @@ func (x *CancelBookingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelBookingRequest.ProtoReflect.Descriptor instead.
 func (*CancelBookingRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{13}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CancelBookingRequest) GetBookingId() string {
@@ -1483,28 +1571,28 @@ func (x *CancelBookingRequest) GetOrganizationId() string {
 	return ""
 }
 
-type BookingResponse struct {
+type CreateBookingResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Booking       *RoomBooking           `protobuf:"bytes,1,opt,name=booking,proto3" json:"booking,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *BookingResponse) Reset() {
-	*x = BookingResponse{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[14]
+func (x *CreateBookingResponse) Reset() {
+	*x = CreateBookingResponse{}
+	mi := &file_rooms_v1_rooms_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *BookingResponse) String() string {
+func (x *CreateBookingResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BookingResponse) ProtoMessage() {}
+func (*CreateBookingResponse) ProtoMessage() {}
 
-func (x *BookingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[14]
+func (x *CreateBookingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rooms_v1_rooms_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1515,12 +1603,100 @@ func (x *BookingResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BookingResponse.ProtoReflect.Descriptor instead.
-func (*BookingResponse) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{14}
+// Deprecated: Use CreateBookingResponse.ProtoReflect.Descriptor instead.
+func (*CreateBookingResponse) Descriptor() ([]byte, []int) {
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *BookingResponse) GetBooking() *RoomBooking {
+func (x *CreateBookingResponse) GetBooking() *RoomBooking {
+	if x != nil {
+		return x.Booking
+	}
+	return nil
+}
+
+type GetBookingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Booking       *RoomBooking           `protobuf:"bytes,1,opt,name=booking,proto3" json:"booking,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBookingResponse) Reset() {
+	*x = GetBookingResponse{}
+	mi := &file_rooms_v1_rooms_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBookingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBookingResponse) ProtoMessage() {}
+
+func (x *GetBookingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rooms_v1_rooms_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBookingResponse.ProtoReflect.Descriptor instead.
+func (*GetBookingResponse) Descriptor() ([]byte, []int) {
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetBookingResponse) GetBooking() *RoomBooking {
+	if x != nil {
+		return x.Booking
+	}
+	return nil
+}
+
+type CancelBookingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Booking       *RoomBooking           `protobuf:"bytes,1,opt,name=booking,proto3" json:"booking,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelBookingResponse) Reset() {
+	*x = CancelBookingResponse{}
+	mi := &file_rooms_v1_rooms_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelBookingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelBookingResponse) ProtoMessage() {}
+
+func (x *CancelBookingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rooms_v1_rooms_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelBookingResponse.ProtoReflect.Descriptor instead.
+func (*CancelBookingResponse) Descriptor() ([]byte, []int) {
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CancelBookingResponse) GetBooking() *RoomBooking {
 	if x != nil {
 		return x.Booking
 	}
@@ -1543,7 +1719,7 @@ type ListBookingsRequest struct {
 
 func (x *ListBookingsRequest) Reset() {
 	*x = ListBookingsRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[15]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1555,7 +1731,7 @@ func (x *ListBookingsRequest) String() string {
 func (*ListBookingsRequest) ProtoMessage() {}
 
 func (x *ListBookingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[15]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1568,7 +1744,7 @@ func (x *ListBookingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBookingsRequest.ProtoReflect.Descriptor instead.
 func (*ListBookingsRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{15}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListBookingsRequest) GetOrganizationId() string {
@@ -1640,7 +1816,7 @@ type ListBookingsResponse struct {
 
 func (x *ListBookingsResponse) Reset() {
 	*x = ListBookingsResponse{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[16]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1652,7 +1828,7 @@ func (x *ListBookingsResponse) String() string {
 func (*ListBookingsResponse) ProtoMessage() {}
 
 func (x *ListBookingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[16]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1665,7 +1841,7 @@ func (x *ListBookingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBookingsResponse.ProtoReflect.Descriptor instead.
 func (*ListBookingsResponse) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{16}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListBookingsResponse) GetBookings() []*RoomBooking {
@@ -1715,7 +1891,7 @@ type CheckAvailabilityRequest struct {
 
 func (x *CheckAvailabilityRequest) Reset() {
 	*x = CheckAvailabilityRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[17]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1727,7 +1903,7 @@ func (x *CheckAvailabilityRequest) String() string {
 func (*CheckAvailabilityRequest) ProtoMessage() {}
 
 func (x *CheckAvailabilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[17]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1740,7 +1916,7 @@ func (x *CheckAvailabilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckAvailabilityRequest.ProtoReflect.Descriptor instead.
 func (*CheckAvailabilityRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{17}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CheckAvailabilityRequest) GetOrganizationId() string {
@@ -1780,7 +1956,7 @@ type CheckAvailabilityResponse struct {
 
 func (x *CheckAvailabilityResponse) Reset() {
 	*x = CheckAvailabilityResponse{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[18]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1792,7 +1968,7 @@ func (x *CheckAvailabilityResponse) String() string {
 func (*CheckAvailabilityResponse) ProtoMessage() {}
 
 func (x *CheckAvailabilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[18]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1805,7 +1981,7 @@ func (x *CheckAvailabilityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckAvailabilityResponse.ProtoReflect.Descriptor instead.
 func (*CheckAvailabilityResponse) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{18}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CheckAvailabilityResponse) GetSlots() []*TimeSlot {
@@ -1829,7 +2005,7 @@ type FindAvailableRoomsRequest struct {
 
 func (x *FindAvailableRoomsRequest) Reset() {
 	*x = FindAvailableRoomsRequest{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[19]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1841,7 +2017,7 @@ func (x *FindAvailableRoomsRequest) String() string {
 func (*FindAvailableRoomsRequest) ProtoMessage() {}
 
 func (x *FindAvailableRoomsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[19]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1854,7 +2030,7 @@ func (x *FindAvailableRoomsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindAvailableRoomsRequest.ProtoReflect.Descriptor instead.
 func (*FindAvailableRoomsRequest) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{19}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *FindAvailableRoomsRequest) GetOrganizationId() string {
@@ -1908,7 +2084,7 @@ type FindAvailableRoomsResponse struct {
 
 func (x *FindAvailableRoomsResponse) Reset() {
 	*x = FindAvailableRoomsResponse{}
-	mi := &file_rooms_v1_rooms_proto_msgTypes[20]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1920,7 +2096,7 @@ func (x *FindAvailableRoomsResponse) String() string {
 func (*FindAvailableRoomsResponse) ProtoMessage() {}
 
 func (x *FindAvailableRoomsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rooms_v1_rooms_proto_msgTypes[20]
+	mi := &file_rooms_v1_rooms_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1933,7 +2109,7 @@ func (x *FindAvailableRoomsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindAvailableRoomsResponse.ProtoReflect.Descriptor instead.
 func (*FindAvailableRoomsResponse) Descriptor() ([]byte, []int) {
-	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{20}
+	return file_rooms_v1_rooms_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FindAvailableRoomsResponse) GetRooms() []*Room {
@@ -1947,7 +2123,7 @@ var File_rooms_v1_rooms_proto protoreflect.FileDescriptor
 
 const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\n" +
-	"\x14rooms/v1/rooms.proto\x12\brooms.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xb4\x05\n" +
+	"\x14rooms/v1/rooms.proto\x12\brooms.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb4\x05\n" +
 	"\x04Room\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2068,8 +2244,12 @@ const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\tpermanent\x18\x03 \x01(\bR\tpermanent\"H\n" +
 	"\x12DeleteRoomResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"2\n" +
-	"\fRoomResponse\x12\"\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"8\n" +
+	"\x12CreateRoomResponse\x12\"\n" +
+	"\x04room\x18\x01 \x01(\v2\x0e.rooms.v1.RoomR\x04room\"5\n" +
+	"\x0fGetRoomResponse\x12\"\n" +
+	"\x04room\x18\x01 \x01(\v2\x0e.rooms.v1.RoomR\x04room\"8\n" +
+	"\x12UpdateRoomResponse\x12\"\n" +
 	"\x04room\x18\x01 \x01(\v2\x0e.rooms.v1.RoomR\x04room\"\xd1\x03\n" +
 	"\x10ListRoomsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x124\n" +
@@ -2117,8 +2297,12 @@ const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\x14CancelBookingRequest\x12\x1d\n" +
 	"\n" +
 	"booking_id\x18\x01 \x01(\tR\tbookingId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"B\n" +
-	"\x0fBookingResponse\x12/\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"H\n" +
+	"\x15CreateBookingResponse\x12/\n" +
+	"\abooking\x18\x01 \x01(\v2\x15.rooms.v1.RoomBookingR\abooking\"E\n" +
+	"\x12GetBookingResponse\x12/\n" +
+	"\abooking\x18\x01 \x01(\v2\x15.rooms.v1.RoomBookingR\abooking\"H\n" +
+	"\x15CancelBookingResponse\x12/\n" +
 	"\abooking\x18\x01 \x01(\v2\x15.rooms.v1.RoomBookingR\abooking\"\x9c\x03\n" +
 	"\x13ListBookingsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
@@ -2181,20 +2365,20 @@ const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\rBookingStatus\x12\x1e\n" +
 	"\x1aBOOKING_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18BOOKING_STATUS_CONFIRMED\x10\x01\x12\x1c\n" +
-	"\x18BOOKING_STATUS_CANCELLED\x10\x022\xcc\x06\n" +
-	"\fRoomsService\x12A\n" +
+	"\x18BOOKING_STATUS_CANCELLED\x10\x022\xea\x06\n" +
+	"\fRoomsService\x12G\n" +
 	"\n" +
-	"CreateRoom\x12\x1b.rooms.v1.CreateRoomRequest\x1a\x16.rooms.v1.RoomResponse\x12;\n" +
-	"\aGetRoom\x12\x18.rooms.v1.GetRoomRequest\x1a\x16.rooms.v1.RoomResponse\x12A\n" +
+	"CreateRoom\x12\x1b.rooms.v1.CreateRoomRequest\x1a\x1c.rooms.v1.CreateRoomResponse\x12>\n" +
+	"\aGetRoom\x12\x18.rooms.v1.GetRoomRequest\x1a\x19.rooms.v1.GetRoomResponse\x12G\n" +
 	"\n" +
-	"UpdateRoom\x12\x1b.rooms.v1.UpdateRoomRequest\x1a\x16.rooms.v1.RoomResponse\x12G\n" +
+	"UpdateRoom\x12\x1b.rooms.v1.UpdateRoomRequest\x1a\x1c.rooms.v1.UpdateRoomResponse\x12G\n" +
 	"\n" +
 	"DeleteRoom\x12\x1b.rooms.v1.DeleteRoomRequest\x1a\x1c.rooms.v1.DeleteRoomResponse\x12D\n" +
-	"\tListRooms\x12\x1a.rooms.v1.ListRoomsRequest\x1a\x1b.rooms.v1.ListRoomsResponse\x12J\n" +
-	"\rCreateBooking\x12\x1e.rooms.v1.CreateBookingRequest\x1a\x19.rooms.v1.BookingResponse\x12D\n" +
+	"\tListRooms\x12\x1a.rooms.v1.ListRoomsRequest\x1a\x1b.rooms.v1.ListRoomsResponse\x12P\n" +
+	"\rCreateBooking\x12\x1e.rooms.v1.CreateBookingRequest\x1a\x1f.rooms.v1.CreateBookingResponse\x12G\n" +
 	"\n" +
-	"GetBooking\x12\x1b.rooms.v1.GetBookingRequest\x1a\x19.rooms.v1.BookingResponse\x12J\n" +
-	"\rCancelBooking\x12\x1e.rooms.v1.CancelBookingRequest\x1a\x19.rooms.v1.BookingResponse\x12M\n" +
+	"GetBooking\x12\x1b.rooms.v1.GetBookingRequest\x1a\x1c.rooms.v1.GetBookingResponse\x12P\n" +
+	"\rCancelBooking\x12\x1e.rooms.v1.CancelBookingRequest\x1a\x1f.rooms.v1.CancelBookingResponse\x12M\n" +
 	"\fListBookings\x12\x1d.rooms.v1.ListBookingsRequest\x1a\x1e.rooms.v1.ListBookingsResponse\x12\\\n" +
 	"\x11CheckAvailability\x12\".rooms.v1.CheckAvailabilityRequest\x1a#.rooms.v1.CheckAvailabilityResponse\x12_\n" +
 	"\x12FindAvailableRooms\x12#.rooms.v1.FindAvailableRoomsRequest\x1a$.rooms.v1.FindAvailableRoomsResponseB9Z7github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1b\x06proto3"
@@ -2212,7 +2396,7 @@ func file_rooms_v1_rooms_proto_rawDescGZIP() []byte {
 }
 
 var file_rooms_v1_rooms_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_rooms_v1_rooms_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_rooms_v1_rooms_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_rooms_v1_rooms_proto_goTypes = []any{
 	(RoomType)(0),                      // 0: rooms.v1.RoomType
 	(RoomStatus)(0),                    // 1: rooms.v1.RoomStatus
@@ -2225,89 +2409,97 @@ var file_rooms_v1_rooms_proto_goTypes = []any{
 	(*UpdateRoomRequest)(nil),          // 8: rooms.v1.UpdateRoomRequest
 	(*DeleteRoomRequest)(nil),          // 9: rooms.v1.DeleteRoomRequest
 	(*DeleteRoomResponse)(nil),         // 10: rooms.v1.DeleteRoomResponse
-	(*RoomResponse)(nil),               // 11: rooms.v1.RoomResponse
-	(*ListRoomsRequest)(nil),           // 12: rooms.v1.ListRoomsRequest
-	(*ListRoomsResponse)(nil),          // 13: rooms.v1.ListRoomsResponse
-	(*CreateBookingRequest)(nil),       // 14: rooms.v1.CreateBookingRequest
-	(*GetBookingRequest)(nil),          // 15: rooms.v1.GetBookingRequest
-	(*CancelBookingRequest)(nil),       // 16: rooms.v1.CancelBookingRequest
-	(*BookingResponse)(nil),            // 17: rooms.v1.BookingResponse
-	(*ListBookingsRequest)(nil),        // 18: rooms.v1.ListBookingsRequest
-	(*ListBookingsResponse)(nil),       // 19: rooms.v1.ListBookingsResponse
-	(*CheckAvailabilityRequest)(nil),   // 20: rooms.v1.CheckAvailabilityRequest
-	(*CheckAvailabilityResponse)(nil),  // 21: rooms.v1.CheckAvailabilityResponse
-	(*FindAvailableRoomsRequest)(nil),  // 22: rooms.v1.FindAvailableRoomsRequest
-	(*FindAvailableRoomsResponse)(nil), // 23: rooms.v1.FindAvailableRoomsResponse
-	(v1.AccessMode)(0),                 // 24: common.v1.AccessMode
-	(*timestamppb.Timestamp)(nil),      // 25: google.protobuf.Timestamp
-	(v1.ContentRole)(0),                // 26: common.v1.ContentRole
+	(*CreateRoomResponse)(nil),         // 11: rooms.v1.CreateRoomResponse
+	(*GetRoomResponse)(nil),            // 12: rooms.v1.GetRoomResponse
+	(*UpdateRoomResponse)(nil),         // 13: rooms.v1.UpdateRoomResponse
+	(*ListRoomsRequest)(nil),           // 14: rooms.v1.ListRoomsRequest
+	(*ListRoomsResponse)(nil),          // 15: rooms.v1.ListRoomsResponse
+	(*CreateBookingRequest)(nil),       // 16: rooms.v1.CreateBookingRequest
+	(*GetBookingRequest)(nil),          // 17: rooms.v1.GetBookingRequest
+	(*CancelBookingRequest)(nil),       // 18: rooms.v1.CancelBookingRequest
+	(*CreateBookingResponse)(nil),      // 19: rooms.v1.CreateBookingResponse
+	(*GetBookingResponse)(nil),         // 20: rooms.v1.GetBookingResponse
+	(*CancelBookingResponse)(nil),      // 21: rooms.v1.CancelBookingResponse
+	(*ListBookingsRequest)(nil),        // 22: rooms.v1.ListBookingsRequest
+	(*ListBookingsResponse)(nil),       // 23: rooms.v1.ListBookingsResponse
+	(*CheckAvailabilityRequest)(nil),   // 24: rooms.v1.CheckAvailabilityRequest
+	(*CheckAvailabilityResponse)(nil),  // 25: rooms.v1.CheckAvailabilityResponse
+	(*FindAvailableRoomsRequest)(nil),  // 26: rooms.v1.FindAvailableRoomsRequest
+	(*FindAvailableRoomsResponse)(nil), // 27: rooms.v1.FindAvailableRoomsResponse
+	(v1.AccessMode)(0),                 // 28: common.v1.AccessMode
+	(*timestamppb.Timestamp)(nil),      // 29: google.protobuf.Timestamp
+	(v1.ContentRole)(0),                // 30: common.v1.ContentRole
 }
 var file_rooms_v1_rooms_proto_depIdxs = []int32{
 	0,  // 0: rooms.v1.Room.room_type:type_name -> rooms.v1.RoomType
 	1,  // 1: rooms.v1.Room.status:type_name -> rooms.v1.RoomStatus
-	24, // 2: rooms.v1.Room.access_mode:type_name -> common.v1.AccessMode
-	25, // 3: rooms.v1.Room.created_at:type_name -> google.protobuf.Timestamp
-	25, // 4: rooms.v1.Room.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 5: rooms.v1.Room.baseline_role:type_name -> common.v1.ContentRole
-	25, // 6: rooms.v1.RoomBooking.start_time:type_name -> google.protobuf.Timestamp
-	25, // 7: rooms.v1.RoomBooking.end_time:type_name -> google.protobuf.Timestamp
+	28, // 2: rooms.v1.Room.access_mode:type_name -> common.v1.AccessMode
+	29, // 3: rooms.v1.Room.created_at:type_name -> google.protobuf.Timestamp
+	29, // 4: rooms.v1.Room.updated_at:type_name -> google.protobuf.Timestamp
+	30, // 5: rooms.v1.Room.baseline_role:type_name -> common.v1.ContentRole
+	29, // 6: rooms.v1.RoomBooking.start_time:type_name -> google.protobuf.Timestamp
+	29, // 7: rooms.v1.RoomBooking.end_time:type_name -> google.protobuf.Timestamp
 	2,  // 8: rooms.v1.RoomBooking.status:type_name -> rooms.v1.BookingStatus
-	25, // 9: rooms.v1.RoomBooking.created_at:type_name -> google.protobuf.Timestamp
-	25, // 10: rooms.v1.RoomBooking.updated_at:type_name -> google.protobuf.Timestamp
-	25, // 11: rooms.v1.TimeSlot.start_time:type_name -> google.protobuf.Timestamp
-	25, // 12: rooms.v1.TimeSlot.end_time:type_name -> google.protobuf.Timestamp
+	29, // 9: rooms.v1.RoomBooking.created_at:type_name -> google.protobuf.Timestamp
+	29, // 10: rooms.v1.RoomBooking.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 11: rooms.v1.TimeSlot.start_time:type_name -> google.protobuf.Timestamp
+	29, // 12: rooms.v1.TimeSlot.end_time:type_name -> google.protobuf.Timestamp
 	0,  // 13: rooms.v1.CreateRoomRequest.room_type:type_name -> rooms.v1.RoomType
-	24, // 14: rooms.v1.CreateRoomRequest.access_mode:type_name -> common.v1.AccessMode
-	26, // 15: rooms.v1.CreateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
+	28, // 14: rooms.v1.CreateRoomRequest.access_mode:type_name -> common.v1.AccessMode
+	30, // 15: rooms.v1.CreateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
 	0,  // 16: rooms.v1.UpdateRoomRequest.room_type:type_name -> rooms.v1.RoomType
 	1,  // 17: rooms.v1.UpdateRoomRequest.status:type_name -> rooms.v1.RoomStatus
-	24, // 18: rooms.v1.UpdateRoomRequest.access_mode:type_name -> common.v1.AccessMode
-	26, // 19: rooms.v1.UpdateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
-	3,  // 20: rooms.v1.RoomResponse.room:type_name -> rooms.v1.Room
-	0,  // 21: rooms.v1.ListRoomsRequest.room_type:type_name -> rooms.v1.RoomType
-	1,  // 22: rooms.v1.ListRoomsRequest.status:type_name -> rooms.v1.RoomStatus
-	3,  // 23: rooms.v1.ListRoomsResponse.rooms:type_name -> rooms.v1.Room
-	25, // 24: rooms.v1.CreateBookingRequest.start_time:type_name -> google.protobuf.Timestamp
-	25, // 25: rooms.v1.CreateBookingRequest.end_time:type_name -> google.protobuf.Timestamp
-	4,  // 26: rooms.v1.BookingResponse.booking:type_name -> rooms.v1.RoomBooking
-	25, // 27: rooms.v1.ListBookingsRequest.start_date:type_name -> google.protobuf.Timestamp
-	25, // 28: rooms.v1.ListBookingsRequest.end_date:type_name -> google.protobuf.Timestamp
-	2,  // 29: rooms.v1.ListBookingsRequest.status:type_name -> rooms.v1.BookingStatus
-	4,  // 30: rooms.v1.ListBookingsResponse.bookings:type_name -> rooms.v1.RoomBooking
-	25, // 31: rooms.v1.CheckAvailabilityRequest.start_date:type_name -> google.protobuf.Timestamp
-	25, // 32: rooms.v1.CheckAvailabilityRequest.end_date:type_name -> google.protobuf.Timestamp
-	5,  // 33: rooms.v1.CheckAvailabilityResponse.slots:type_name -> rooms.v1.TimeSlot
-	25, // 34: rooms.v1.FindAvailableRoomsRequest.start_time:type_name -> google.protobuf.Timestamp
-	25, // 35: rooms.v1.FindAvailableRoomsRequest.end_time:type_name -> google.protobuf.Timestamp
-	0,  // 36: rooms.v1.FindAvailableRoomsRequest.room_type:type_name -> rooms.v1.RoomType
-	3,  // 37: rooms.v1.FindAvailableRoomsResponse.rooms:type_name -> rooms.v1.Room
-	6,  // 38: rooms.v1.RoomsService.CreateRoom:input_type -> rooms.v1.CreateRoomRequest
-	7,  // 39: rooms.v1.RoomsService.GetRoom:input_type -> rooms.v1.GetRoomRequest
-	8,  // 40: rooms.v1.RoomsService.UpdateRoom:input_type -> rooms.v1.UpdateRoomRequest
-	9,  // 41: rooms.v1.RoomsService.DeleteRoom:input_type -> rooms.v1.DeleteRoomRequest
-	12, // 42: rooms.v1.RoomsService.ListRooms:input_type -> rooms.v1.ListRoomsRequest
-	14, // 43: rooms.v1.RoomsService.CreateBooking:input_type -> rooms.v1.CreateBookingRequest
-	15, // 44: rooms.v1.RoomsService.GetBooking:input_type -> rooms.v1.GetBookingRequest
-	16, // 45: rooms.v1.RoomsService.CancelBooking:input_type -> rooms.v1.CancelBookingRequest
-	18, // 46: rooms.v1.RoomsService.ListBookings:input_type -> rooms.v1.ListBookingsRequest
-	20, // 47: rooms.v1.RoomsService.CheckAvailability:input_type -> rooms.v1.CheckAvailabilityRequest
-	22, // 48: rooms.v1.RoomsService.FindAvailableRooms:input_type -> rooms.v1.FindAvailableRoomsRequest
-	11, // 49: rooms.v1.RoomsService.CreateRoom:output_type -> rooms.v1.RoomResponse
-	11, // 50: rooms.v1.RoomsService.GetRoom:output_type -> rooms.v1.RoomResponse
-	11, // 51: rooms.v1.RoomsService.UpdateRoom:output_type -> rooms.v1.RoomResponse
-	10, // 52: rooms.v1.RoomsService.DeleteRoom:output_type -> rooms.v1.DeleteRoomResponse
-	13, // 53: rooms.v1.RoomsService.ListRooms:output_type -> rooms.v1.ListRoomsResponse
-	17, // 54: rooms.v1.RoomsService.CreateBooking:output_type -> rooms.v1.BookingResponse
-	17, // 55: rooms.v1.RoomsService.GetBooking:output_type -> rooms.v1.BookingResponse
-	17, // 56: rooms.v1.RoomsService.CancelBooking:output_type -> rooms.v1.BookingResponse
-	19, // 57: rooms.v1.RoomsService.ListBookings:output_type -> rooms.v1.ListBookingsResponse
-	21, // 58: rooms.v1.RoomsService.CheckAvailability:output_type -> rooms.v1.CheckAvailabilityResponse
-	23, // 59: rooms.v1.RoomsService.FindAvailableRooms:output_type -> rooms.v1.FindAvailableRoomsResponse
-	49, // [49:60] is the sub-list for method output_type
-	38, // [38:49] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	28, // 18: rooms.v1.UpdateRoomRequest.access_mode:type_name -> common.v1.AccessMode
+	30, // 19: rooms.v1.UpdateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
+	3,  // 20: rooms.v1.CreateRoomResponse.room:type_name -> rooms.v1.Room
+	3,  // 21: rooms.v1.GetRoomResponse.room:type_name -> rooms.v1.Room
+	3,  // 22: rooms.v1.UpdateRoomResponse.room:type_name -> rooms.v1.Room
+	0,  // 23: rooms.v1.ListRoomsRequest.room_type:type_name -> rooms.v1.RoomType
+	1,  // 24: rooms.v1.ListRoomsRequest.status:type_name -> rooms.v1.RoomStatus
+	3,  // 25: rooms.v1.ListRoomsResponse.rooms:type_name -> rooms.v1.Room
+	29, // 26: rooms.v1.CreateBookingRequest.start_time:type_name -> google.protobuf.Timestamp
+	29, // 27: rooms.v1.CreateBookingRequest.end_time:type_name -> google.protobuf.Timestamp
+	4,  // 28: rooms.v1.CreateBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	4,  // 29: rooms.v1.GetBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	4,  // 30: rooms.v1.CancelBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	29, // 31: rooms.v1.ListBookingsRequest.start_date:type_name -> google.protobuf.Timestamp
+	29, // 32: rooms.v1.ListBookingsRequest.end_date:type_name -> google.protobuf.Timestamp
+	2,  // 33: rooms.v1.ListBookingsRequest.status:type_name -> rooms.v1.BookingStatus
+	4,  // 34: rooms.v1.ListBookingsResponse.bookings:type_name -> rooms.v1.RoomBooking
+	29, // 35: rooms.v1.CheckAvailabilityRequest.start_date:type_name -> google.protobuf.Timestamp
+	29, // 36: rooms.v1.CheckAvailabilityRequest.end_date:type_name -> google.protobuf.Timestamp
+	5,  // 37: rooms.v1.CheckAvailabilityResponse.slots:type_name -> rooms.v1.TimeSlot
+	29, // 38: rooms.v1.FindAvailableRoomsRequest.start_time:type_name -> google.protobuf.Timestamp
+	29, // 39: rooms.v1.FindAvailableRoomsRequest.end_time:type_name -> google.protobuf.Timestamp
+	0,  // 40: rooms.v1.FindAvailableRoomsRequest.room_type:type_name -> rooms.v1.RoomType
+	3,  // 41: rooms.v1.FindAvailableRoomsResponse.rooms:type_name -> rooms.v1.Room
+	6,  // 42: rooms.v1.RoomsService.CreateRoom:input_type -> rooms.v1.CreateRoomRequest
+	7,  // 43: rooms.v1.RoomsService.GetRoom:input_type -> rooms.v1.GetRoomRequest
+	8,  // 44: rooms.v1.RoomsService.UpdateRoom:input_type -> rooms.v1.UpdateRoomRequest
+	9,  // 45: rooms.v1.RoomsService.DeleteRoom:input_type -> rooms.v1.DeleteRoomRequest
+	14, // 46: rooms.v1.RoomsService.ListRooms:input_type -> rooms.v1.ListRoomsRequest
+	16, // 47: rooms.v1.RoomsService.CreateBooking:input_type -> rooms.v1.CreateBookingRequest
+	17, // 48: rooms.v1.RoomsService.GetBooking:input_type -> rooms.v1.GetBookingRequest
+	18, // 49: rooms.v1.RoomsService.CancelBooking:input_type -> rooms.v1.CancelBookingRequest
+	22, // 50: rooms.v1.RoomsService.ListBookings:input_type -> rooms.v1.ListBookingsRequest
+	24, // 51: rooms.v1.RoomsService.CheckAvailability:input_type -> rooms.v1.CheckAvailabilityRequest
+	26, // 52: rooms.v1.RoomsService.FindAvailableRooms:input_type -> rooms.v1.FindAvailableRoomsRequest
+	11, // 53: rooms.v1.RoomsService.CreateRoom:output_type -> rooms.v1.CreateRoomResponse
+	12, // 54: rooms.v1.RoomsService.GetRoom:output_type -> rooms.v1.GetRoomResponse
+	13, // 55: rooms.v1.RoomsService.UpdateRoom:output_type -> rooms.v1.UpdateRoomResponse
+	10, // 56: rooms.v1.RoomsService.DeleteRoom:output_type -> rooms.v1.DeleteRoomResponse
+	15, // 57: rooms.v1.RoomsService.ListRooms:output_type -> rooms.v1.ListRoomsResponse
+	19, // 58: rooms.v1.RoomsService.CreateBooking:output_type -> rooms.v1.CreateBookingResponse
+	20, // 59: rooms.v1.RoomsService.GetBooking:output_type -> rooms.v1.GetBookingResponse
+	21, // 60: rooms.v1.RoomsService.CancelBooking:output_type -> rooms.v1.CancelBookingResponse
+	23, // 61: rooms.v1.RoomsService.ListBookings:output_type -> rooms.v1.ListBookingsResponse
+	25, // 62: rooms.v1.RoomsService.CheckAvailability:output_type -> rooms.v1.CheckAvailabilityResponse
+	27, // 63: rooms.v1.RoomsService.FindAvailableRooms:output_type -> rooms.v1.FindAvailableRoomsResponse
+	53, // [53:64] is the sub-list for method output_type
+	42, // [42:53] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_rooms_v1_rooms_proto_init() }
@@ -2320,17 +2512,17 @@ func file_rooms_v1_rooms_proto_init() {
 	file_rooms_v1_rooms_proto_msgTypes[2].OneofWrappers = []any{}
 	file_rooms_v1_rooms_proto_msgTypes[3].OneofWrappers = []any{}
 	file_rooms_v1_rooms_proto_msgTypes[5].OneofWrappers = []any{}
-	file_rooms_v1_rooms_proto_msgTypes[9].OneofWrappers = []any{}
 	file_rooms_v1_rooms_proto_msgTypes[11].OneofWrappers = []any{}
-	file_rooms_v1_rooms_proto_msgTypes[15].OneofWrappers = []any{}
+	file_rooms_v1_rooms_proto_msgTypes[13].OneofWrappers = []any{}
 	file_rooms_v1_rooms_proto_msgTypes[19].OneofWrappers = []any{}
+	file_rooms_v1_rooms_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rooms_v1_rooms_proto_rawDesc), len(file_rooms_v1_rooms_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   21,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

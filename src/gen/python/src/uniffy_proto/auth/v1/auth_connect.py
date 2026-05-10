@@ -16,16 +16,16 @@ import auth.v1.auth_pb2 as auth_dot_v1_dot_auth__pb2
 
 
 class AuthService(Protocol):
-    async def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    async def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RegisterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def login(self, request: auth_dot_v1_dot_auth__pb2.LoginRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    async def login(self, request: auth_dot_v1_dot_auth__pb2.LoginRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LoginResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def refresh_token(self, request: auth_dot_v1_dot_auth__pb2.RefreshTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    async def refresh_token(self, request: auth_dot_v1_dot_auth__pb2.RefreshTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RefreshTokenResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.CurrentUserResponse:
+    async def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def logout(self, request: auth_dot_v1_dot_auth__pb2.LogoutRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LogoutResponse:
@@ -57,7 +57,7 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         name="Register",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.RegisterRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.RegisterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.register,
@@ -67,7 +67,7 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         name="Login",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.LoginRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.LoginResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.login,
@@ -77,7 +77,7 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         name="RefreshToken",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.refresh_token,
@@ -87,7 +87,7 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         name="GetCurrentUser",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
-                        output=auth_dot_v1_dot_auth__pb2.CurrentUserResponse,
+                        output=auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_current_user,
@@ -170,14 +170,14 @@ class AuthServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.RegisterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="Register",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RegisterRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.RegisterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -190,14 +190,14 @@ class AuthServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.LoginResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="Login",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.LoginRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.LoginResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -210,14 +210,14 @@ class AuthServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.RefreshTokenResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RefreshToken",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -230,14 +230,14 @@ class AuthServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.CurrentUserResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCurrentUser",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
-                output=auth_dot_v1_dot_auth__pb2.CurrentUserResponse,
+                output=auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -366,13 +366,13 @@ class AuthServiceClient(ConnectClient):
 
 
 class AuthServiceSync(Protocol):
-    def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RegisterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def login(self, request: auth_dot_v1_dot_auth__pb2.LoginRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    def login(self, request: auth_dot_v1_dot_auth__pb2.LoginRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LoginResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def refresh_token(self, request: auth_dot_v1_dot_auth__pb2.RefreshTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    def refresh_token(self, request: auth_dot_v1_dot_auth__pb2.RefreshTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RefreshTokenResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.CurrentUserResponse:
+    def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def logout(self, request: auth_dot_v1_dot_auth__pb2.LogoutRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LogoutResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -397,7 +397,7 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         name="Register",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.RegisterRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.RegisterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.register,
@@ -407,7 +407,7 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         name="Login",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.LoginRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.LoginResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.login,
@@ -417,7 +417,7 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         name="RefreshToken",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest,
-                        output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                        output=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.refresh_token,
@@ -427,7 +427,7 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetCurrentUser",
                         service_name="auth.v1.AuthService",
                         input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
-                        output=auth_dot_v1_dot_auth__pb2.CurrentUserResponse,
+                        output=auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_current_user,
@@ -510,14 +510,14 @@ class AuthServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.RegisterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="Register",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RegisterRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.RegisterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -530,14 +530,14 @@ class AuthServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.LoginResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="Login",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.LoginRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.LoginResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -550,14 +550,14 @@ class AuthServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.RefreshTokenResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RefreshToken",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest,
-                output=auth_dot_v1_dot_auth__pb2.AuthResponse,
+                output=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -570,14 +570,14 @@ class AuthServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_auth__pb2.CurrentUserResponse:
+    ) -> auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCurrentUser",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
-                output=auth_dot_v1_dot_auth__pb2.CurrentUserResponse,
+                output=auth_dot_v1_dot_auth__pb2.GetCurrentUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

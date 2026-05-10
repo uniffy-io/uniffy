@@ -45,21 +45,21 @@ const (
 // content. Inline note tags route through the same store via the
 // "inline" source on assignments.
 type TagsServiceClient interface {
-	CreateTag(ctx context.Context, in *CreateTagRequest, opts ...grpc.CallOption) (*TagResponse, error)
-	UpdateTag(ctx context.Context, in *UpdateTagRequest, opts ...grpc.CallOption) (*TagResponse, error)
+	CreateTag(ctx context.Context, in *CreateTagRequest, opts ...grpc.CallOption) (*CreateTagResponse, error)
+	UpdateTag(ctx context.Context, in *UpdateTagRequest, opts ...grpc.CallOption) (*UpdateTagResponse, error)
 	DeleteTag(ctx context.Context, in *DeleteTagRequest, opts ...grpc.CallOption) (*DeleteTagResponse, error)
-	GetTag(ctx context.Context, in *GetTagRequest, opts ...grpc.CallOption) (*TagResponse, error)
+	GetTag(ctx context.Context, in *GetTagRequest, opts ...grpc.CallOption) (*GetTagResponse, error)
 	ListTags(ctx context.Context, in *ListTagsRequest, opts ...grpc.CallOption) (*ListTagsResponse, error)
 	SuggestTags(ctx context.Context, in *SuggestTagsRequest, opts ...grpc.CallOption) (*SuggestTagsResponse, error)
 	AssignTags(ctx context.Context, in *AssignTagsRequest, opts ...grpc.CallOption) (*AssignTagsResponse, error)
 	UnassignTags(ctx context.Context, in *UnassignTagsRequest, opts ...grpc.CallOption) (*UnassignTagsResponse, error)
 	GetTagsForUrns(ctx context.Context, in *GetTagsForUrnsRequest, opts ...grpc.CallOption) (*GetTagsForUrnsResponse, error)
 	ListContentByTag(ctx context.Context, in *ListContentByTagRequest, opts ...grpc.CallOption) (*ListContentByTagResponse, error)
-	MergeTags(ctx context.Context, in *MergeTagsRequest, opts ...grpc.CallOption) (*TagResponse, error)
-	CreateSavedFilter(ctx context.Context, in *CreateSavedTagFilterRequest, opts ...grpc.CallOption) (*SavedTagFilterResponse, error)
-	UpdateSavedFilter(ctx context.Context, in *UpdateSavedTagFilterRequest, opts ...grpc.CallOption) (*SavedTagFilterResponse, error)
-	DeleteSavedFilter(ctx context.Context, in *DeleteSavedTagFilterRequest, opts ...grpc.CallOption) (*DeleteSavedTagFilterResponse, error)
-	ListSavedFilters(ctx context.Context, in *ListSavedTagFiltersRequest, opts ...grpc.CallOption) (*ListSavedTagFiltersResponse, error)
+	MergeTags(ctx context.Context, in *MergeTagsRequest, opts ...grpc.CallOption) (*MergeTagsResponse, error)
+	CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*CreateSavedFilterResponse, error)
+	UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*UpdateSavedFilterResponse, error)
+	DeleteSavedFilter(ctx context.Context, in *DeleteSavedFilterRequest, opts ...grpc.CallOption) (*DeleteSavedFilterResponse, error)
+	ListSavedFilters(ctx context.Context, in *ListSavedFiltersRequest, opts ...grpc.CallOption) (*ListSavedFiltersResponse, error)
 }
 
 type tagsServiceClient struct {
@@ -70,9 +70,9 @@ func NewTagsServiceClient(cc grpc.ClientConnInterface) TagsServiceClient {
 	return &tagsServiceClient{cc}
 }
 
-func (c *tagsServiceClient) CreateTag(ctx context.Context, in *CreateTagRequest, opts ...grpc.CallOption) (*TagResponse, error) {
+func (c *tagsServiceClient) CreateTag(ctx context.Context, in *CreateTagRequest, opts ...grpc.CallOption) (*CreateTagResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TagResponse)
+	out := new(CreateTagResponse)
 	err := c.cc.Invoke(ctx, TagsService_CreateTag_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -80,9 +80,9 @@ func (c *tagsServiceClient) CreateTag(ctx context.Context, in *CreateTagRequest,
 	return out, nil
 }
 
-func (c *tagsServiceClient) UpdateTag(ctx context.Context, in *UpdateTagRequest, opts ...grpc.CallOption) (*TagResponse, error) {
+func (c *tagsServiceClient) UpdateTag(ctx context.Context, in *UpdateTagRequest, opts ...grpc.CallOption) (*UpdateTagResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TagResponse)
+	out := new(UpdateTagResponse)
 	err := c.cc.Invoke(ctx, TagsService_UpdateTag_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -100,9 +100,9 @@ func (c *tagsServiceClient) DeleteTag(ctx context.Context, in *DeleteTagRequest,
 	return out, nil
 }
 
-func (c *tagsServiceClient) GetTag(ctx context.Context, in *GetTagRequest, opts ...grpc.CallOption) (*TagResponse, error) {
+func (c *tagsServiceClient) GetTag(ctx context.Context, in *GetTagRequest, opts ...grpc.CallOption) (*GetTagResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TagResponse)
+	out := new(GetTagResponse)
 	err := c.cc.Invoke(ctx, TagsService_GetTag_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -170,9 +170,9 @@ func (c *tagsServiceClient) ListContentByTag(ctx context.Context, in *ListConten
 	return out, nil
 }
 
-func (c *tagsServiceClient) MergeTags(ctx context.Context, in *MergeTagsRequest, opts ...grpc.CallOption) (*TagResponse, error) {
+func (c *tagsServiceClient) MergeTags(ctx context.Context, in *MergeTagsRequest, opts ...grpc.CallOption) (*MergeTagsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TagResponse)
+	out := new(MergeTagsResponse)
 	err := c.cc.Invoke(ctx, TagsService_MergeTags_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -180,9 +180,9 @@ func (c *tagsServiceClient) MergeTags(ctx context.Context, in *MergeTagsRequest,
 	return out, nil
 }
 
-func (c *tagsServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSavedTagFilterRequest, opts ...grpc.CallOption) (*SavedTagFilterResponse, error) {
+func (c *tagsServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*CreateSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SavedTagFilterResponse)
+	out := new(CreateSavedFilterResponse)
 	err := c.cc.Invoke(ctx, TagsService_CreateSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -190,9 +190,9 @@ func (c *tagsServiceClient) CreateSavedFilter(ctx context.Context, in *CreateSav
 	return out, nil
 }
 
-func (c *tagsServiceClient) UpdateSavedFilter(ctx context.Context, in *UpdateSavedTagFilterRequest, opts ...grpc.CallOption) (*SavedTagFilterResponse, error) {
+func (c *tagsServiceClient) UpdateSavedFilter(ctx context.Context, in *UpdateSavedFilterRequest, opts ...grpc.CallOption) (*UpdateSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SavedTagFilterResponse)
+	out := new(UpdateSavedFilterResponse)
 	err := c.cc.Invoke(ctx, TagsService_UpdateSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -200,9 +200,9 @@ func (c *tagsServiceClient) UpdateSavedFilter(ctx context.Context, in *UpdateSav
 	return out, nil
 }
 
-func (c *tagsServiceClient) DeleteSavedFilter(ctx context.Context, in *DeleteSavedTagFilterRequest, opts ...grpc.CallOption) (*DeleteSavedTagFilterResponse, error) {
+func (c *tagsServiceClient) DeleteSavedFilter(ctx context.Context, in *DeleteSavedFilterRequest, opts ...grpc.CallOption) (*DeleteSavedFilterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteSavedTagFilterResponse)
+	out := new(DeleteSavedFilterResponse)
 	err := c.cc.Invoke(ctx, TagsService_DeleteSavedFilter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -210,9 +210,9 @@ func (c *tagsServiceClient) DeleteSavedFilter(ctx context.Context, in *DeleteSav
 	return out, nil
 }
 
-func (c *tagsServiceClient) ListSavedFilters(ctx context.Context, in *ListSavedTagFiltersRequest, opts ...grpc.CallOption) (*ListSavedTagFiltersResponse, error) {
+func (c *tagsServiceClient) ListSavedFilters(ctx context.Context, in *ListSavedFiltersRequest, opts ...grpc.CallOption) (*ListSavedFiltersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListSavedTagFiltersResponse)
+	out := new(ListSavedFiltersResponse)
 	err := c.cc.Invoke(ctx, TagsService_ListSavedFilters_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -229,21 +229,21 @@ func (c *tagsServiceClient) ListSavedFilters(ctx context.Context, in *ListSavedT
 // content. Inline note tags route through the same store via the
 // "inline" source on assignments.
 type TagsServiceServer interface {
-	CreateTag(context.Context, *CreateTagRequest) (*TagResponse, error)
-	UpdateTag(context.Context, *UpdateTagRequest) (*TagResponse, error)
+	CreateTag(context.Context, *CreateTagRequest) (*CreateTagResponse, error)
+	UpdateTag(context.Context, *UpdateTagRequest) (*UpdateTagResponse, error)
 	DeleteTag(context.Context, *DeleteTagRequest) (*DeleteTagResponse, error)
-	GetTag(context.Context, *GetTagRequest) (*TagResponse, error)
+	GetTag(context.Context, *GetTagRequest) (*GetTagResponse, error)
 	ListTags(context.Context, *ListTagsRequest) (*ListTagsResponse, error)
 	SuggestTags(context.Context, *SuggestTagsRequest) (*SuggestTagsResponse, error)
 	AssignTags(context.Context, *AssignTagsRequest) (*AssignTagsResponse, error)
 	UnassignTags(context.Context, *UnassignTagsRequest) (*UnassignTagsResponse, error)
 	GetTagsForUrns(context.Context, *GetTagsForUrnsRequest) (*GetTagsForUrnsResponse, error)
 	ListContentByTag(context.Context, *ListContentByTagRequest) (*ListContentByTagResponse, error)
-	MergeTags(context.Context, *MergeTagsRequest) (*TagResponse, error)
-	CreateSavedFilter(context.Context, *CreateSavedTagFilterRequest) (*SavedTagFilterResponse, error)
-	UpdateSavedFilter(context.Context, *UpdateSavedTagFilterRequest) (*SavedTagFilterResponse, error)
-	DeleteSavedFilter(context.Context, *DeleteSavedTagFilterRequest) (*DeleteSavedTagFilterResponse, error)
-	ListSavedFilters(context.Context, *ListSavedTagFiltersRequest) (*ListSavedTagFiltersResponse, error)
+	MergeTags(context.Context, *MergeTagsRequest) (*MergeTagsResponse, error)
+	CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*CreateSavedFilterResponse, error)
+	UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*UpdateSavedFilterResponse, error)
+	DeleteSavedFilter(context.Context, *DeleteSavedFilterRequest) (*DeleteSavedFilterResponse, error)
+	ListSavedFilters(context.Context, *ListSavedFiltersRequest) (*ListSavedFiltersResponse, error)
 	mustEmbedUnimplementedTagsServiceServer()
 }
 
@@ -254,16 +254,16 @@ type TagsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedTagsServiceServer struct{}
 
-func (UnimplementedTagsServiceServer) CreateTag(context.Context, *CreateTagRequest) (*TagResponse, error) {
+func (UnimplementedTagsServiceServer) CreateTag(context.Context, *CreateTagRequest) (*CreateTagResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTag not implemented")
 }
-func (UnimplementedTagsServiceServer) UpdateTag(context.Context, *UpdateTagRequest) (*TagResponse, error) {
+func (UnimplementedTagsServiceServer) UpdateTag(context.Context, *UpdateTagRequest) (*UpdateTagResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateTag not implemented")
 }
 func (UnimplementedTagsServiceServer) DeleteTag(context.Context, *DeleteTagRequest) (*DeleteTagResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTag not implemented")
 }
-func (UnimplementedTagsServiceServer) GetTag(context.Context, *GetTagRequest) (*TagResponse, error) {
+func (UnimplementedTagsServiceServer) GetTag(context.Context, *GetTagRequest) (*GetTagResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTag not implemented")
 }
 func (UnimplementedTagsServiceServer) ListTags(context.Context, *ListTagsRequest) (*ListTagsResponse, error) {
@@ -284,19 +284,19 @@ func (UnimplementedTagsServiceServer) GetTagsForUrns(context.Context, *GetTagsFo
 func (UnimplementedTagsServiceServer) ListContentByTag(context.Context, *ListContentByTagRequest) (*ListContentByTagResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListContentByTag not implemented")
 }
-func (UnimplementedTagsServiceServer) MergeTags(context.Context, *MergeTagsRequest) (*TagResponse, error) {
+func (UnimplementedTagsServiceServer) MergeTags(context.Context, *MergeTagsRequest) (*MergeTagsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MergeTags not implemented")
 }
-func (UnimplementedTagsServiceServer) CreateSavedFilter(context.Context, *CreateSavedTagFilterRequest) (*SavedTagFilterResponse, error) {
+func (UnimplementedTagsServiceServer) CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*CreateSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSavedFilter not implemented")
 }
-func (UnimplementedTagsServiceServer) UpdateSavedFilter(context.Context, *UpdateSavedTagFilterRequest) (*SavedTagFilterResponse, error) {
+func (UnimplementedTagsServiceServer) UpdateSavedFilter(context.Context, *UpdateSavedFilterRequest) (*UpdateSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSavedFilter not implemented")
 }
-func (UnimplementedTagsServiceServer) DeleteSavedFilter(context.Context, *DeleteSavedTagFilterRequest) (*DeleteSavedTagFilterResponse, error) {
+func (UnimplementedTagsServiceServer) DeleteSavedFilter(context.Context, *DeleteSavedFilterRequest) (*DeleteSavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSavedFilter not implemented")
 }
-func (UnimplementedTagsServiceServer) ListSavedFilters(context.Context, *ListSavedTagFiltersRequest) (*ListSavedTagFiltersResponse, error) {
+func (UnimplementedTagsServiceServer) ListSavedFilters(context.Context, *ListSavedFiltersRequest) (*ListSavedFiltersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSavedFilters not implemented")
 }
 func (UnimplementedTagsServiceServer) mustEmbedUnimplementedTagsServiceServer() {}
@@ -519,7 +519,7 @@ func _TagsService_MergeTags_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _TagsService_CreateSavedFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSavedTagFilterRequest)
+	in := new(CreateSavedFilterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -531,13 +531,13 @@ func _TagsService_CreateSavedFilter_Handler(srv interface{}, ctx context.Context
 		FullMethod: TagsService_CreateSavedFilter_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagsServiceServer).CreateSavedFilter(ctx, req.(*CreateSavedTagFilterRequest))
+		return srv.(TagsServiceServer).CreateSavedFilter(ctx, req.(*CreateSavedFilterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _TagsService_UpdateSavedFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSavedTagFilterRequest)
+	in := new(UpdateSavedFilterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -549,13 +549,13 @@ func _TagsService_UpdateSavedFilter_Handler(srv interface{}, ctx context.Context
 		FullMethod: TagsService_UpdateSavedFilter_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagsServiceServer).UpdateSavedFilter(ctx, req.(*UpdateSavedTagFilterRequest))
+		return srv.(TagsServiceServer).UpdateSavedFilter(ctx, req.(*UpdateSavedFilterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _TagsService_DeleteSavedFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteSavedTagFilterRequest)
+	in := new(DeleteSavedFilterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -567,13 +567,13 @@ func _TagsService_DeleteSavedFilter_Handler(srv interface{}, ctx context.Context
 		FullMethod: TagsService_DeleteSavedFilter_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagsServiceServer).DeleteSavedFilter(ctx, req.(*DeleteSavedTagFilterRequest))
+		return srv.(TagsServiceServer).DeleteSavedFilter(ctx, req.(*DeleteSavedFilterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _TagsService_ListSavedFilters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListSavedTagFiltersRequest)
+	in := new(ListSavedFiltersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -585,7 +585,7 @@ func _TagsService_ListSavedFilters_Handler(srv interface{}, ctx context.Context,
 		FullMethod: TagsService_ListSavedFilters_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagsServiceServer).ListSavedFilters(ctx, req.(*ListSavedTagFiltersRequest))
+		return srv.(TagsServiceServer).ListSavedFilters(ctx, req.(*ListSavedFiltersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

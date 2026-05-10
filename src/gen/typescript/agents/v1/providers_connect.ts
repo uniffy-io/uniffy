@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddProviderKeyRequest, ListAvailableModelsRequest, ListAvailableModelsResponse, ListModelsForKeyRequest, ListProviderKeysRequest, ListProviderKeysResponse, ProviderKeyResponse, RemoveProviderKeyRequest, RemoveProviderKeyResponse, ToggleProviderKeyRequest, ValidateProviderKeyRequest, ValidateProviderKeyResponse } from "./providers_pb.js";
+import { AddProviderKeyRequest, AddProviderKeyResponse, ListAvailableModelsRequest, ListAvailableModelsResponse, ListModelsForKeyRequest, ListModelsForKeyResponse, ListProviderKeysRequest, ListProviderKeysResponse, RemoveProviderKeyRequest, RemoveProviderKeyResponse, ToggleProviderKeyRequest, ToggleProviderKeyResponse, ValidateProviderKeyRequest, ValidateProviderKeyResponse } from "./providers_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const ProvidersService = {
     addProviderKey: {
       name: "AddProviderKey",
       I: AddProviderKeyRequest,
-      O: ProviderKeyResponse,
+      O: AddProviderKeyResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,7 +77,7 @@ export const ProvidersService = {
     toggleProviderKey: {
       name: "ToggleProviderKey",
       I: ToggleProviderKeyRequest,
-      O: ProviderKeyResponse,
+      O: ToggleProviderKeyResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +88,7 @@ export const ProvidersService = {
     listModelsForKey: {
       name: "ListModelsForKey",
       I: ListModelsForKeyRequest,
-      O: ListAvailableModelsResponse,
+      O: ListModelsForKeyResponse,
       kind: MethodKind.Unary,
     },
   }

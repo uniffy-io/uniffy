@@ -2,25 +2,25 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // PromptsService manages prompt templates for agents.
 // Prompts are reusable instruction sets that define agent behavior.
 service PromptsService {
   // Create a new prompt
-  rpc CreatePrompt(CreatePromptRequest) returns (PromptResponse) {}
+  rpc CreatePrompt(CreatePromptRequest) returns (CreatePromptResponse) {}
 
   // Get a prompt by ID
-  rpc GetPrompt(GetPromptRequest) returns (PromptResponse) {}
+  rpc GetPrompt(GetPromptRequest) returns (GetPromptResponse) {}
 
   // List prompts (bundled + organization + personal)
   rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse) {}
 
   // Update a prompt
-  rpc UpdatePrompt(UpdatePromptRequest) returns (PromptResponse) {}
+  rpc UpdatePrompt(UpdatePromptRequest) returns (UpdatePromptResponse) {}
 
   // Delete a prompt
   rpc DeletePrompt(DeletePromptRequest) returns (DeletePromptResponse) {}
@@ -29,19 +29,19 @@ service PromptsService {
 // Source of a prompt definition
 enum PromptSource {
   PROMPT_SOURCE_UNSPECIFIED = 0;
-  PROMPT_SOURCE_BUNDLED = 1;       // shipped with the app, org_id is null
-  PROMPT_SOURCE_ORGANIZATION = 2;  // created by an org admin
-  PROMPT_SOURCE_PERSONAL = 3;      // created by a user for personal use
+  PROMPT_SOURCE_BUNDLED = 1; // shipped with the app, org_id is null
+  PROMPT_SOURCE_ORGANIZATION = 2; // created by an org admin
+  PROMPT_SOURCE_PERSONAL = 3; // created by a user for personal use
 }
 
 // Prompt definition returned to clients
 message PromptInfo {
   string id = 1;
-  optional string organization_id = 2;  // null for bundled prompts
+  optional string organization_id = 2; // null for bundled prompts
   string name = 3;
   string display_name = 4;
   string description = 5;
-  string content = 6;                   // markdown instructions
+  string content = 6; // markdown instructions
   PromptSource source = 7;
   // Owner user ID for personal prompts (null for org/bundled prompts)
   optional string owner_id = 8;
@@ -56,7 +56,7 @@ message PromptInfo {
 
 message CreatePromptRequest {
   string organization_id = 1;
-  optional string name = 2;  // auto-generated from display_name if not provided
+  optional string name = 2; // auto-generated from display_name if not provided
   string display_name = 3;
   string description = 4;
   string content = 5;
@@ -66,7 +66,15 @@ message CreatePromptRequest {
   optional common.v1.ContentRole baseline_role = 8;
 }
 
-message PromptResponse {
+message CreatePromptResponse {
+  PromptInfo prompt = 1;
+}
+
+message GetPromptResponse {
+  PromptInfo prompt = 1;
+}
+
+message UpdatePromptResponse {
   PromptInfo prompt = 1;
 }
 

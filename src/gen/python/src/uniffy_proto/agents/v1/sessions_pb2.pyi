@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -117,7 +117,19 @@ class CreateSessionRequest(_message.Message):
     model_override: str
     def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., kind: _Optional[_Union[SessionKind, str]] = ..., display_name: _Optional[str] = ..., model_override: _Optional[str] = ...) -> None: ...
 
-class SessionResponse(_message.Message):
+class CreateSessionResponse(_message.Message):
+    __slots__ = ("session",)
+    SESSION_FIELD_NUMBER: _ClassVar[int]
+    session: SessionInfo
+    def __init__(self, session: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+
+class GetSessionResponse(_message.Message):
+    __slots__ = ("session",)
+    SESSION_FIELD_NUMBER: _ClassVar[int]
+    session: SessionInfo
+    def __init__(self, session: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateSessionResponse(_message.Message):
     __slots__ = ("session",)
     SESSION_FIELD_NUMBER: _ClassVar[int]
     session: SessionInfo
@@ -207,7 +219,7 @@ class AddMessageRequest(_message.Message):
     is_thinking: bool
     def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ...) -> None: ...
 
-class MessageResponse(_message.Message):
+class AddMessageResponse(_message.Message):
     __slots__ = ("message",)
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: MessageInfo

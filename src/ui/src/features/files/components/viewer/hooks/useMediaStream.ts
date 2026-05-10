@@ -27,7 +27,6 @@ function pushTokenToServiceWorker(): void {
     const token = getAccessToken();
     if (token) {
         updateWorkerAuthToken(token);
-        console.log('[useMediaStream] Token pushed to SW');
     }
 }
 
@@ -44,12 +43,9 @@ async function waitForServiceWorker(timeoutMs = 5000): Promise<boolean> {
 
     // Already controlling - push token and return
     if (navigator.serviceWorker.controller) {
-        console.log('[useMediaStream] SW already controlling');
         pushTokenToServiceWorker();
         return true;
     }
-
-    console.log('[useMediaStream] Waiting for SW to take control...');
 
     return new Promise((resolve) => {
         const timeout = setTimeout(() => {
@@ -58,7 +54,6 @@ async function waitForServiceWorker(timeoutMs = 5000): Promise<boolean> {
         }, timeoutMs);
 
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[useMediaStream] SW controller changed - now controlling');
             clearTimeout(timeout);
             // Push token when SW becomes ready
             pushTokenToServiceWorker();

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AgentResponse, CreateAgentRequest, DeleteAgentAvatarRequest, DeleteAgentRequest, DeleteAgentResponse, GetAgentRequest, ListAgentsRequest, ListAgentsResponse, PreviewSystemPromptRequest, PreviewSystemPromptResponse, UpdateAgentRequest, UploadAgentAvatarRequest } from "./agents_pb.js";
+import { CreateAgentRequest, CreateAgentResponse, DeleteAgentAvatarRequest, DeleteAgentAvatarResponse, DeleteAgentRequest, DeleteAgentResponse, GetAgentRequest, GetAgentResponse, ListAgentsRequest, ListAgentsResponse, PreviewSystemPromptRequest, PreviewSystemPromptResponse, UpdateAgentRequest, UpdateAgentResponse, UploadAgentAvatarRequest, UploadAgentAvatarResponse } from "./agents_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const AgentsService = {
     createAgent: {
       name: "CreateAgent",
       I: CreateAgentRequest,
-      O: AgentResponse,
+      O: CreateAgentResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -33,7 +33,7 @@ export const AgentsService = {
     getAgent: {
       name: "GetAgent",
       I: GetAgentRequest,
-      O: AgentResponse,
+      O: GetAgentResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -55,7 +55,7 @@ export const AgentsService = {
     updateAgent: {
       name: "UpdateAgent",
       I: UpdateAgentRequest,
-      O: AgentResponse,
+      O: UpdateAgentResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,7 +77,7 @@ export const AgentsService = {
     uploadAgentAvatar: {
       name: "UploadAgentAvatar",
       I: UploadAgentAvatarRequest,
-      O: AgentResponse,
+      O: UploadAgentAvatarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +88,7 @@ export const AgentsService = {
     deleteAgentAvatar: {
       name: "DeleteAgentAvatar",
       I: DeleteAgentAvatarRequest,
-      O: AgentResponse,
+      O: DeleteAgentAvatarResponse,
       kind: MethodKind.Unary,
     },
     /**

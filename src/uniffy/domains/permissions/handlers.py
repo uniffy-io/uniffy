@@ -23,19 +23,20 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 from uniffy_proto.permissions.v1.permissions_pb2 import (
-    AccessModeResponse,
     AddMemberRequest,
+    AddMemberResponse,
     ListMemberEventsRequest,
     ListMemberEventsResponse,
     ListMembersRequest,
     ListMembersResponse,
-    MemberResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
     SetAccessModeRequest,
+    SetAccessModeResponse,
     TransferOwnershipRequest,
     TransferOwnershipResponse,
     UpdateMemberRoleRequest,
+    UpdateMemberRoleResponse,
 )
 
 from uniffy.core.content.members import (
@@ -165,7 +166,7 @@ class MembersHandlers:
         self,
         request: AddMemberRequest,
         ctx: RequestContext,
-    ) -> MemberResponse:
+    ) -> AddMemberResponse:
         """Add a new explicit member to a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -193,7 +194,7 @@ class MembersHandlers:
                     expires_at=expires_at,
                     note=request.note,
                 )
-                return MemberResponse(member=content_member_to_proto(member))
+                return AddMemberResponse(member=content_member_to_proto(member))
         except ConnectError:
             raise
         except Exception as exc:
@@ -203,7 +204,7 @@ class MembersHandlers:
         self,
         request: UpdateMemberRoleRequest,
         ctx: RequestContext,
-    ) -> MemberResponse:
+    ) -> UpdateMemberRoleResponse:
         """Change the role of an existing explicit member."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -226,7 +227,7 @@ class MembersHandlers:
                     new_role=new_role,
                     note=request.note,
                 )
-                return MemberResponse(member=content_member_to_proto(member))
+                return UpdateMemberRoleResponse(member=content_member_to_proto(member))
         except ConnectError:
             raise
         except Exception as exc:
@@ -267,7 +268,7 @@ class MembersHandlers:
         self,
         request: SetAccessModeRequest,
         ctx: RequestContext,
-    ) -> AccessModeResponse:
+    ) -> SetAccessModeResponse:
         """Change the access mode and/or baseline role of a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -299,7 +300,7 @@ class MembersHandlers:
                 if content is None:
                     raise ConnectError(Code.NOT_FOUND, "Content not found")
 
-                return AccessModeResponse(
+                return SetAccessModeResponse(
                     policy=content_access_policy_to_proto(
                         owner_id=content.owner_id,
                         access_mode=content.access_mode,

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -90,7 +90,13 @@ class AddProviderKeyRequest(_message.Message):
     baseline_role: _common_pb2.ContentRole
     def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., credential: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
-class ProviderKeyResponse(_message.Message):
+class AddProviderKeyResponse(_message.Message):
+    __slots__ = ("key",)
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    key: ProviderKeyInfo
+    def __init__(self, key: _Optional[_Union[ProviderKeyInfo, _Mapping]] = ...) -> None: ...
+
+class ToggleProviderKeyResponse(_message.Message):
     __slots__ = ("key",)
     KEY_FIELD_NUMBER: _ClassVar[int]
     key: ProviderKeyInfo
@@ -151,6 +157,12 @@ class ListAvailableModelsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ..., force_refresh: _Optional[bool] = ...) -> None: ...
 
 class ListAvailableModelsResponse(_message.Message):
+    __slots__ = ("models",)
+    MODELS_FIELD_NUMBER: _ClassVar[int]
+    models: _containers.RepeatedCompositeFieldContainer[ModelInfo]
+    def __init__(self, models: _Optional[_Iterable[_Union[ModelInfo, _Mapping]]] = ...) -> None: ...
+
+class ListModelsForKeyResponse(_message.Message):
     __slots__ = ("models",)
     MODELS_FIELD_NUMBER: _ClassVar[int]
     models: _containers.RepeatedCompositeFieldContainer[ModelInfo]

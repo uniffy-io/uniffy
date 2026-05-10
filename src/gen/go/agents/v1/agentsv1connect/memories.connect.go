@@ -52,9 +52,9 @@ type MemoriesServiceClient interface {
 	// List memories for a specific agent (scoped to current user)
 	ListMemories(context.Context, *connect.Request[v1.ListMemoriesRequest]) (*connect.Response[v1.ListMemoriesResponse], error)
 	// Create a new memory entry
-	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error)
+	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error)
 	// Update a memory entry (content, category, importance)
-	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error)
+	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *connect.Request[v1.DeleteMemoryRequest]) (*connect.Response[v1.DeleteMemoryResponse], error)
 }
@@ -76,13 +76,13 @@ func NewMemoriesServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(memoriesServiceMethods.ByName("ListMemories")),
 			connect.WithClientOptions(opts...),
 		),
-		createMemory: connect.NewClient[v1.CreateMemoryRequest, v1.MemoryResponse](
+		createMemory: connect.NewClient[v1.CreateMemoryRequest, v1.CreateMemoryResponse](
 			httpClient,
 			baseURL+MemoriesServiceCreateMemoryProcedure,
 			connect.WithSchema(memoriesServiceMethods.ByName("CreateMemory")),
 			connect.WithClientOptions(opts...),
 		),
-		updateMemory: connect.NewClient[v1.UpdateMemoryRequest, v1.MemoryResponse](
+		updateMemory: connect.NewClient[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse](
 			httpClient,
 			baseURL+MemoriesServiceUpdateMemoryProcedure,
 			connect.WithSchema(memoriesServiceMethods.ByName("UpdateMemory")),
@@ -100,8 +100,8 @@ func NewMemoriesServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 // memoriesServiceClient implements MemoriesServiceClient.
 type memoriesServiceClient struct {
 	listMemories *connect.Client[v1.ListMemoriesRequest, v1.ListMemoriesResponse]
-	createMemory *connect.Client[v1.CreateMemoryRequest, v1.MemoryResponse]
-	updateMemory *connect.Client[v1.UpdateMemoryRequest, v1.MemoryResponse]
+	createMemory *connect.Client[v1.CreateMemoryRequest, v1.CreateMemoryResponse]
+	updateMemory *connect.Client[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse]
 	deleteMemory *connect.Client[v1.DeleteMemoryRequest, v1.DeleteMemoryResponse]
 }
 
@@ -111,12 +111,12 @@ func (c *memoriesServiceClient) ListMemories(ctx context.Context, req *connect.R
 }
 
 // CreateMemory calls agents.v1.MemoriesService.CreateMemory.
-func (c *memoriesServiceClient) CreateMemory(ctx context.Context, req *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error) {
+func (c *memoriesServiceClient) CreateMemory(ctx context.Context, req *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error) {
 	return c.createMemory.CallUnary(ctx, req)
 }
 
 // UpdateMemory calls agents.v1.MemoriesService.UpdateMemory.
-func (c *memoriesServiceClient) UpdateMemory(ctx context.Context, req *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error) {
+func (c *memoriesServiceClient) UpdateMemory(ctx context.Context, req *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error) {
 	return c.updateMemory.CallUnary(ctx, req)
 }
 
@@ -130,9 +130,9 @@ type MemoriesServiceHandler interface {
 	// List memories for a specific agent (scoped to current user)
 	ListMemories(context.Context, *connect.Request[v1.ListMemoriesRequest]) (*connect.Response[v1.ListMemoriesResponse], error)
 	// Create a new memory entry
-	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error)
+	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error)
 	// Update a memory entry (content, category, importance)
-	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error)
+	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *connect.Request[v1.DeleteMemoryRequest]) (*connect.Response[v1.DeleteMemoryResponse], error)
 }
@@ -191,11 +191,11 @@ func (UnimplementedMemoriesServiceHandler) ListMemories(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.ListMemories is not implemented"))
 }
 
-func (UnimplementedMemoriesServiceHandler) CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error) {
+func (UnimplementedMemoriesServiceHandler) CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.CreateMemory is not implemented"))
 }
 
-func (UnimplementedMemoriesServiceHandler) UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.MemoryResponse], error) {
+func (UnimplementedMemoriesServiceHandler) UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.UpdateMemory is not implemented"))
 }
 

@@ -41,8 +41,7 @@ export function OrganizationsPage() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setOrganizations(response.organizations);
-    } catch (err: unknown) {
-      console.error('Failed to list organizations:', err);
+    } catch {
       setError('Failed to load organizations');
     } finally {
       setLoading(false);
@@ -94,8 +93,8 @@ export function OrganizationsPage() {
         setCopiedId(id);
         setTimeout(() => setCopiedId(null), 2000);
       }
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } catch {
+      // copy failed silently
     }
   };
 

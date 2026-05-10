@@ -41,8 +41,7 @@ export function UsersPage() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setUsers(response.users);
-    } catch (err: unknown) {
-      console.error('Failed to list users:', err);
+    } catch {
       setError('Failed to load users');
     } finally {
       setLoading(false);

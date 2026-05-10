@@ -16,13 +16,13 @@ import cal.v1.calendar_pb2 as cal_dot_v1_dot_calendar__pb2
 
 
 class CalendarService(Protocol):
-    async def create_event(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    async def create_event(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_event(self, request: cal_dot_v1_dot_calendar__pb2.GetEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    async def get_event(self, request: cal_dot_v1_dot_calendar__pb2.GetEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_event(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    async def update_event(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_event(self, request: cal_dot_v1_dot_calendar__pb2.DeleteEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteEventResponse:
@@ -34,13 +34,13 @@ class CalendarService(Protocol):
     async def get_events_in_range(self, request: cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_calendar(self, request: cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    async def create_calendar(self, request: cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_calendar(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    async def get_calendar(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_calendar(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    async def update_calendar(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_calendar(self, request: cal_dot_v1_dot_calendar__pb2.DeleteCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteCalendarResponse:
@@ -49,13 +49,13 @@ class CalendarService(Protocol):
     async def list_calendars(self, request: cal_dot_v1_dot_calendar__pb2.ListCalendarsRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ListCalendarsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    async def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_category(self, request: cal_dot_v1_dot_calendar__pb2.GetCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    async def get_category(self, request: cal_dot_v1_dot_calendar__pb2.GetCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_category(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    async def update_category(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_category(self, request: cal_dot_v1_dot_calendar__pb2.DeleteCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteCategoryResponse:
@@ -67,19 +67,19 @@ class CalendarService(Protocol):
     async def update_attendee_status(self, request: cal_dot_v1_dot_calendar__pb2.UpdateAttendeeStatusRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateAttendeeStatusResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_attendees(self, request: cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    async def add_attendees(self, request: cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    async def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_event_template(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    async def create_event_template(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_event_template(self, request: cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    async def get_event_template(self, request: cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_event_template(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    async def update_event_template(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_event_template(self, request: cal_dot_v1_dot_calendar__pb2.DeleteEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteEventTemplateResponse:
@@ -99,7 +99,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="CreateEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_event,
@@ -109,7 +109,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="GetEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_event,
@@ -119,7 +119,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="UpdateEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_event,
@@ -159,7 +159,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="CreateCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_calendar,
@@ -169,7 +169,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="GetCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_calendar,
@@ -179,7 +179,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="UpdateCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_calendar,
@@ -209,7 +209,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="CreateCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_category,
@@ -219,7 +219,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="GetCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_category,
@@ -229,7 +229,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="UpdateCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_category,
@@ -269,7 +269,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="AddAttendees",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_attendees,
@@ -279,7 +279,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="RemoveAttendees",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.remove_attendees,
@@ -289,7 +289,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="CreateEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_event_template,
@@ -299,7 +299,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="GetEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_event_template,
@@ -309,7 +309,7 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         name="UpdateEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_event_template,
@@ -352,14 +352,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateEventResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -372,14 +372,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetEventResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -392,14 +392,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateEventResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -472,14 +472,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -492,14 +492,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCalendarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -512,14 +512,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -572,14 +572,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -592,14 +592,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCategoryResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -612,14 +612,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -692,14 +692,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddAttendees",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -712,14 +712,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RemoveAttendees",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -732,14 +732,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -752,14 +752,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -772,14 +772,14 @@ class CalendarServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -828,11 +828,11 @@ class CalendarServiceClient(ConnectClient):
 
 
 class CalendarServiceSync(Protocol):
-    def create_event(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    def create_event(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_event(self, request: cal_dot_v1_dot_calendar__pb2.GetEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    def get_event(self, request: cal_dot_v1_dot_calendar__pb2.GetEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_event(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    def update_event(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_event(self, request: cal_dot_v1_dot_calendar__pb2.DeleteEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -840,21 +840,21 @@ class CalendarServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_events_in_range(self, request: cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_calendar(self, request: cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    def create_calendar(self, request: cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_calendar(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    def get_calendar(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_calendar(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    def update_calendar(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_calendar(self, request: cal_dot_v1_dot_calendar__pb2.DeleteCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteCalendarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_calendars(self, request: cal_dot_v1_dot_calendar__pb2.ListCalendarsRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ListCalendarsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_category(self, request: cal_dot_v1_dot_calendar__pb2.GetCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    def get_category(self, request: cal_dot_v1_dot_calendar__pb2.GetCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_category(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    def update_category(self, request: cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_category(self, request: cal_dot_v1_dot_calendar__pb2.DeleteCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -862,15 +862,15 @@ class CalendarServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_attendee_status(self, request: cal_dot_v1_dot_calendar__pb2.UpdateAttendeeStatusRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateAttendeeStatusResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_attendees(self, request: cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    def add_attendees(self, request: cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_event_template(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    def create_event_template(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_event_template(self, request: cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    def get_event_template(self, request: cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_event_template(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    def update_event_template(self, request: cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_event_template(self, request: cal_dot_v1_dot_calendar__pb2.DeleteEventTemplateRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.DeleteEventTemplateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -887,7 +887,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_event,
@@ -897,7 +897,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_event,
@@ -907,7 +907,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateEvent",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateEventRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateEventResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_event,
@@ -947,7 +947,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_calendar,
@@ -957,7 +957,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_calendar,
@@ -967,7 +967,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateCalendar",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_calendar,
@@ -997,7 +997,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_category,
@@ -1007,7 +1007,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_category,
@@ -1017,7 +1017,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateCategory",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_category,
@@ -1057,7 +1057,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddAttendees",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_attendees,
@@ -1067,7 +1067,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="RemoveAttendees",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.remove_attendees,
@@ -1077,7 +1077,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_event_template,
@@ -1087,7 +1087,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_event_template,
@@ -1097,7 +1097,7 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateEventTemplate",
                         service_name="cal.v1.CalendarService",
                         input=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest,
-                        output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                        output=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_event_template,
@@ -1140,14 +1140,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateEventResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1160,14 +1160,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetEventResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1180,14 +1180,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateEventResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateEvent",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateEventRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateEventResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1260,14 +1260,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1280,14 +1280,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCalendarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1300,14 +1300,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CalendarResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCalendar",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateCalendarRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CalendarResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateCalendarResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1360,14 +1360,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1380,14 +1380,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCategoryResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1400,14 +1400,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.CategoryResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCategory",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateCategoryRequest,
-                output=cal_dot_v1_dot_calendar__pb2.CategoryResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateCategoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1480,14 +1480,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddAttendees",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1500,14 +1500,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RemoveAttendees",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventResponse,
+                output=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1520,14 +1520,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.CreateEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1540,14 +1540,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.GetEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1560,14 +1560,14 @@ class CalendarServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> cal_dot_v1_dot_calendar__pb2.EventTemplateResponse:
+    ) -> cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateEventTemplate",
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateRequest,
-                output=cal_dot_v1_dot_calendar__pb2.EventTemplateResponse,
+                output=cal_dot_v1_dot_calendar__pb2.UpdateEventTemplateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

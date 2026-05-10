@@ -35,14 +35,14 @@ type RuntimeServiceClient interface {
 	// Send a user message and get the assistant response
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	// Send a user message and stream tokens, tool events, and the final response
-	StreamSendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error)
+	StreamSendMessage(ctx context.Context, in *StreamSendMessageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageResponse], error)
 	// Resume an in-flight run by run_id. Replays the full event stream from
 	// the start, then tails live until Done/Error or the 120s wall budget.
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
-	SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error)
+	SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeToRunResponse], error)
 	// Approve or reject a destructive tool call that requires confirmation
-	RespondToConfirmation(ctx context.Context, in *ConfirmationResponse, opts ...grpc.CallOption) (*ConfirmationResponseAck, error)
+	RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(ctx context.Context, in *GetUsageStatsRequest, opts ...grpc.CallOption) (*GetUsageStatsResponse, error)
 }
@@ -65,13 +65,13 @@ func (c *runtimeServiceClient) SendMessage(ctx context.Context, in *SendMessageR
 	return out, nil
 }
 
-func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error) {
+func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, in *StreamSendMessageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &RuntimeService_ServiceDesc.Streams[0], RuntimeService_StreamSendMessage_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[SendMessageRequest, StreamSendMessageEvent]{ClientStream: stream}
+	x := &grpc.GenericClientStream[StreamSendMessageRequest, StreamSendMessageResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -82,15 +82,15 @@ func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, in *SendMe
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type RuntimeService_StreamSendMessageClient = grpc.ServerStreamingClient[StreamSendMessageEvent]
+type RuntimeService_StreamSendMessageClient = grpc.ServerStreamingClient[StreamSendMessageResponse]
 
-func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamSendMessageEvent], error) {
+func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, in *SubscribeToRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeToRunResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &RuntimeService_ServiceDesc.Streams[1], RuntimeService_SubscribeToRun_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[SubscribeToRunRequest, StreamSendMessageEvent]{ClientStream: stream}
+	x := &grpc.GenericClientStream[SubscribeToRunRequest, SubscribeToRunResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -101,11 +101,11 @@ func (c *runtimeServiceClient) SubscribeToRun(ctx context.Context, in *Subscribe
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type RuntimeService_SubscribeToRunClient = grpc.ServerStreamingClient[StreamSendMessageEvent]
+type RuntimeService_SubscribeToRunClient = grpc.ServerStreamingClient[SubscribeToRunResponse]
 
-func (c *runtimeServiceClient) RespondToConfirmation(ctx context.Context, in *ConfirmationResponse, opts ...grpc.CallOption) (*ConfirmationResponseAck, error) {
+func (c *runtimeServiceClient) RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ConfirmationResponseAck)
+	out := new(RespondToConfirmationResponse)
 	err := c.cc.Invoke(ctx, RuntimeService_RespondToConfirmation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -132,14 +132,14 @@ type RuntimeServiceServer interface {
 	// Send a user message and get the assistant response
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	// Send a user message and stream tokens, tool events, and the final response
-	StreamSendMessage(*SendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error
+	StreamSendMessage(*StreamSendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageResponse]) error
 	// Resume an in-flight run by run_id. Replays the full event stream from
 	// the start, then tails live until Done/Error or the 120s wall budget.
 	// Used by the frontend after a tab reload to reconnect without
 	// re-driving the LLM.
-	SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error
+	SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[SubscribeToRunResponse]) error
 	// Approve or reject a destructive tool call that requires confirmation
-	RespondToConfirmation(context.Context, *ConfirmationResponse) (*ConfirmationResponseAck, error)
+	RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error)
 	mustEmbedUnimplementedRuntimeServiceServer()
@@ -155,13 +155,13 @@ type UnimplementedRuntimeServiceServer struct{}
 func (UnimplementedRuntimeServiceServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendMessage not implemented")
 }
-func (UnimplementedRuntimeServiceServer) StreamSendMessage(*SendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error {
+func (UnimplementedRuntimeServiceServer) StreamSendMessage(*StreamSendMessageRequest, grpc.ServerStreamingServer[StreamSendMessageResponse]) error {
 	return status.Error(codes.Unimplemented, "method StreamSendMessage not implemented")
 }
-func (UnimplementedRuntimeServiceServer) SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[StreamSendMessageEvent]) error {
+func (UnimplementedRuntimeServiceServer) SubscribeToRun(*SubscribeToRunRequest, grpc.ServerStreamingServer[SubscribeToRunResponse]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeToRun not implemented")
 }
-func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, *ConfirmationResponse) (*ConfirmationResponseAck, error) {
+func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RespondToConfirmation not implemented")
 }
 func (UnimplementedRuntimeServiceServer) GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error) {
@@ -207,29 +207,29 @@ func _RuntimeService_SendMessage_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _RuntimeService_StreamSendMessage_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SendMessageRequest)
+	m := new(StreamSendMessageRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(RuntimeServiceServer).StreamSendMessage(m, &grpc.GenericServerStream[SendMessageRequest, StreamSendMessageEvent]{ServerStream: stream})
+	return srv.(RuntimeServiceServer).StreamSendMessage(m, &grpc.GenericServerStream[StreamSendMessageRequest, StreamSendMessageResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type RuntimeService_StreamSendMessageServer = grpc.ServerStreamingServer[StreamSendMessageEvent]
+type RuntimeService_StreamSendMessageServer = grpc.ServerStreamingServer[StreamSendMessageResponse]
 
 func _RuntimeService_SubscribeToRun_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(SubscribeToRunRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(RuntimeServiceServer).SubscribeToRun(m, &grpc.GenericServerStream[SubscribeToRunRequest, StreamSendMessageEvent]{ServerStream: stream})
+	return srv.(RuntimeServiceServer).SubscribeToRun(m, &grpc.GenericServerStream[SubscribeToRunRequest, SubscribeToRunResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type RuntimeService_SubscribeToRunServer = grpc.ServerStreamingServer[StreamSendMessageEvent]
+type RuntimeService_SubscribeToRunServer = grpc.ServerStreamingServer[SubscribeToRunResponse]
 
 func _RuntimeService_RespondToConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfirmationResponse)
+	in := new(RespondToConfirmationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func _RuntimeService_RespondToConfirmation_Handler(srv interface{}, ctx context.
 		FullMethod: RuntimeService_RespondToConfirmation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RuntimeServiceServer).RespondToConfirmation(ctx, req.(*ConfirmationResponse))
+		return srv.(RuntimeServiceServer).RespondToConfirmation(ctx, req.(*RespondToConfirmationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

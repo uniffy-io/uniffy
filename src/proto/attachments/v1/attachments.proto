@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package attachments.v1;
 
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/attachments/v1;attachmentsv1";
 
@@ -67,9 +67,9 @@ message AttachedFileOwner {
 
 message AttachFileRequest {
   string organization_id = 1;
-  string source_file_id = 2;         // File to copy and attach
+  string source_file_id = 2; // File to copy and attach
   common.v1.ContentType content_type = 3;
-  string content_id = 4;             // Content to attach to
+  string content_id = 4; // Content to attach to
 }
 
 message AttachFileResponse {
@@ -80,7 +80,7 @@ message AttachFileResponse {
 
 message DetachFileRequest {
   string organization_id = 1;
-  string attachment_id = 2;          // Attachment to remove
+  string attachment_id = 2; // Attachment to remove
 }
 
 message DetachFileResponse {
@@ -126,7 +126,7 @@ message BatchListAttachmentsResponse {
 
 message ListSharedAttachmentsRequest {
   string organization_id = 1;
-  optional common.v1.ContentType content_type_filter = 2;  // Filter by content type
+  optional common.v1.ContentType content_type_filter = 2; // Filter by content type
   int32 page = 3;
   int32 page_size = 4;
 }
@@ -148,8 +148,8 @@ message SharedAttachmentGroup {
 // Attachment with parent content info.
 message SharedAttachment {
   Attachment attachment = 1;
-  string content_title = 2;          // Title of the parent content (note title, etc.)
-  string content_owner_name = 3;     // Owner of the parent content
+  string content_title = 2; // Title of the parent content (note title, etc.)
+  string content_owner_name = 3; // Owner of the parent content
 }
 
 // GET ATTACHMENTS FOLDER

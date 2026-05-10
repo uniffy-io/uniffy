@@ -72,8 +72,7 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
       }
       onSave();
       onClose();
-    } catch (err) {
-      console.error('Failed to save organization:', err);
+    } catch {
       alert('Failed to save organization');
     } finally {
       setLoading(false);

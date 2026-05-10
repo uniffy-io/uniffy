@@ -2,34 +2,34 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // AgentsService manages agent configurations for an organization.
 service AgentsService {
   // Create a new agent configuration
-  rpc CreateAgent(CreateAgentRequest) returns (AgentResponse) {}
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse) {}
 
   // Get an agent by ID
-  rpc GetAgent(GetAgentRequest) returns (AgentResponse) {}
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse) {}
 
   // List agents for an organization
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) {}
 
   // Update an agent configuration
-  rpc UpdateAgent(UpdateAgentRequest) returns (AgentResponse) {}
+  rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse) {}
 
   // Delete an agent
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse) {}
 
   // Upload agent avatar image (synchronous processing)
-  rpc UploadAgentAvatar(UploadAgentAvatarRequest) returns (AgentResponse) {}
+  rpc UploadAgentAvatar(UploadAgentAvatarRequest) returns (UploadAgentAvatarResponse) {}
 
   // Delete agent avatar
-  rpc DeleteAgentAvatar(DeleteAgentAvatarRequest) returns (AgentResponse) {}
+  rpc DeleteAgentAvatar(DeleteAgentAvatarRequest) returns (DeleteAgentAvatarResponse) {}
 
   // Preview the fully assembled system prompt for an agent
   rpc PreviewSystemPrompt(PreviewSystemPromptRequest) returns (PreviewSystemPromptResponse) {}
@@ -44,37 +44,33 @@ message AgentInfo {
   string soul_prompt = 5;
   string primary_model = 6;
   repeated string fallback_models = 7;
-  reserved 8; // was temperature
-  reserved 9; // was max_tokens
-  repeated string enabled_tools = 10;
-  string avatar_emoji = 11;
-  string theme_color = 12;
-  bool is_default = 13;
-  google.protobuf.Timestamp created_at = 14;
-  google.protobuf.Timestamp updated_at = 15;
-  repeated string enabled_skills = 16;
-  common.v1.AccessMode access_mode = 17;
-  reserved 18;
+  repeated string enabled_tools = 8;
+  string avatar_emoji = 9;
+  string theme_color = 10;
+  bool is_default = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  repeated string enabled_skills = 14;
+  common.v1.AccessMode access_mode = 15;
   // S3 key prefix for avatar images (empty string if none)
-  string avatar_key = 19;
-  reserved 20; // was thinking_budget_tokens
+  string avatar_key = 16;
   // Image generation model (empty string = disabled)
-  string image_model = 21;
+  string image_model = 17;
   // Provider key ID for the primary model (empty = not assigned)
-  string primary_provider_key_id = 22;
+  string primary_provider_key_id = 18;
   // Provider key ID for the image model (empty = not assigned)
-  string image_provider_key_id = 23;
+  string image_provider_key_id = 19;
   // Prompt template ID (empty = no template, uses soul_prompt directly)
-  string prompt_id = 24;
+  string prompt_id = 20;
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 25;
+  optional common.v1.ContentRole baseline_role = 21;
   // Effective role of the requesting user on this agent (if known).
   // Set by the server so the UI can render edit/share affordances
   // without re-resolving permissions client-side.
-  optional common.v1.ContentRole user_role = 26;
+  optional common.v1.ContentRole user_role = 22;
   // Hydrated unified-tag rows assigned to this agent. Server-populated
   // via ``TagOperations.get_for_urns``; clients should treat as read-only.
-  repeated tags.v1.Tag tags = 27;
+  repeated tags.v1.Tag tags = 23;
 }
 
 // --- Requests and Responses ---
@@ -85,31 +81,42 @@ message CreateAgentRequest {
   optional string soul_prompt = 3;
   optional string primary_model = 4;
   repeated string fallback_models = 5;
-  reserved 6; // was temperature
-  reserved 7; // was max_tokens
-  optional string avatar_emoji = 8;
-  optional string theme_color = 9;
-  optional bool is_default = 10;
-  repeated string enabled_skills = 11;
-  optional common.v1.AccessMode access_mode = 12;
-  repeated string group_ids = 13;
-  reserved 14;
-  reserved 15;
-  reserved 16; // was thinking_budget_tokens
+  optional string avatar_emoji = 6;
+  optional string theme_color = 7;
+  optional bool is_default = 8;
+  repeated string enabled_skills = 9;
+  optional common.v1.AccessMode access_mode = 10;
+  repeated string group_ids = 11;
   // Image generation model (empty string = disabled)
-  optional string image_model = 17;
+  optional string image_model = 12;
   // Provider key ID for the primary model
-  optional string primary_provider_key_id = 18;
+  optional string primary_provider_key_id = 13;
   // Provider key ID for the image model
-  optional string image_provider_key_id = 19;
+  optional string image_provider_key_id = 14;
   // Prompt template ID
-  optional string prompt_id = 20;
-  optional common.v1.ContentRole baseline_role = 21;
+  optional string prompt_id = 15;
+  optional common.v1.ContentRole baseline_role = 16;
   // Optional unified-tag ids to assign on create.
-  repeated string tag_ids = 22;
+  repeated string tag_ids = 17;
 }
 
-message AgentResponse {
+message CreateAgentResponse {
+  AgentInfo agent = 1;
+}
+
+message GetAgentResponse {
+  AgentInfo agent = 1;
+}
+
+message UpdateAgentResponse {
+  AgentInfo agent = 1;
+}
+
+message UploadAgentAvatarResponse {
+  AgentInfo agent = 1;
+}
+
+message DeleteAgentAvatarResponse {
   AgentInfo agent = 1;
 }
 
@@ -141,33 +148,29 @@ message UpdateAgentRequest {
   optional string soul_prompt = 4;
   optional string primary_model = 5;
   repeated string fallback_models = 6;
-  reserved 7; // was temperature
-  reserved 8; // was max_tokens
-  optional string avatar_emoji = 9;
-  optional string theme_color = 10;
-  optional bool is_default = 11;
-  repeated string enabled_skills = 12;
-  optional common.v1.AccessMode access_mode = 13;
-  repeated string group_ids = 14;
-  repeated string enabled_tools = 15;
-  reserved 16;
-  reserved 17; // was thinking_budget_tokens
+  optional string avatar_emoji = 7;
+  optional string theme_color = 8;
+  optional bool is_default = 9;
+  repeated string enabled_skills = 10;
+  optional common.v1.AccessMode access_mode = 11;
+  repeated string group_ids = 12;
+  repeated string enabled_tools = 13;
   // Image generation model (empty string = disabled)
-  optional string image_model = 18;
+  optional string image_model = 14;
   // Provider key ID for the primary model
-  optional string primary_provider_key_id = 19;
+  optional string primary_provider_key_id = 15;
   // Provider key ID for the image model
-  optional string image_provider_key_id = 20;
+  optional string image_provider_key_id = 16;
   // Prompt template ID
-  optional string prompt_id = 21;
+  optional string prompt_id = 17;
   // Clear the prompt template (set to null)
-  optional bool clear_prompt = 22;
-  optional common.v1.ContentRole baseline_role = 23;
+  optional bool clear_prompt = 18;
+  optional common.v1.ContentRole baseline_role = 19;
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched. Mirrors
   // the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
   // pattern.
-  optional AgentTagIds tag_ids = 24;
+  optional AgentTagIds tag_ids = 20;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from

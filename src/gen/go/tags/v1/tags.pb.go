@@ -641,27 +641,27 @@ func (x *GetTagRequest) GetTag() string {
 	return ""
 }
 
-type TagResponse struct {
+type CreateTagResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tag           *Tag                   `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *TagResponse) Reset() {
-	*x = TagResponse{}
+func (x *CreateTagResponse) Reset() {
+	*x = CreateTagResponse{}
 	mi := &file_tags_v1_tags_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TagResponse) String() string {
+func (x *CreateTagResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TagResponse) ProtoMessage() {}
+func (*CreateTagResponse) ProtoMessage() {}
 
-func (x *TagResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateTagResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_tags_v1_tags_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -673,12 +673,144 @@ func (x *TagResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TagResponse.ProtoReflect.Descriptor instead.
-func (*TagResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateTagResponse.ProtoReflect.Descriptor instead.
+func (*CreateTagResponse) Descriptor() ([]byte, []int) {
 	return file_tags_v1_tags_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *TagResponse) GetTag() *Tag {
+func (x *CreateTagResponse) GetTag() *Tag {
+	if x != nil {
+		return x.Tag
+	}
+	return nil
+}
+
+type UpdateTagResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           *Tag                   `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTagResponse) Reset() {
+	*x = UpdateTagResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTagResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTagResponse) ProtoMessage() {}
+
+func (x *UpdateTagResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTagResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTagResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UpdateTagResponse) GetTag() *Tag {
+	if x != nil {
+		return x.Tag
+	}
+	return nil
+}
+
+type GetTagResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           *Tag                   `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTagResponse) Reset() {
+	*x = GetTagResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTagResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTagResponse) ProtoMessage() {}
+
+func (x *GetTagResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTagResponse.ProtoReflect.Descriptor instead.
+func (*GetTagResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetTagResponse) GetTag() *Tag {
+	if x != nil {
+		return x.Tag
+	}
+	return nil
+}
+
+type MergeTagsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           *Tag                   `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MergeTagsResponse) Reset() {
+	*x = MergeTagsResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MergeTagsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MergeTagsResponse) ProtoMessage() {}
+
+func (x *MergeTagsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MergeTagsResponse.ProtoReflect.Descriptor instead.
+func (*MergeTagsResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *MergeTagsResponse) GetTag() *Tag {
 	if x != nil {
 		return x.Tag
 	}
@@ -701,7 +833,7 @@ type ListTagsRequest struct {
 
 func (x *ListTagsRequest) Reset() {
 	*x = ListTagsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[8]
+	mi := &file_tags_v1_tags_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -713,7 +845,7 @@ func (x *ListTagsRequest) String() string {
 func (*ListTagsRequest) ProtoMessage() {}
 
 func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[8]
+	mi := &file_tags_v1_tags_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -726,7 +858,7 @@ func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsRequest.ProtoReflect.Descriptor instead.
 func (*ListTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{8}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListTagsRequest) GetOrganizationId() string {
@@ -781,7 +913,7 @@ type ListTagsResponse struct {
 
 func (x *ListTagsResponse) Reset() {
 	*x = ListTagsResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[9]
+	mi := &file_tags_v1_tags_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -793,7 +925,7 @@ func (x *ListTagsResponse) String() string {
 func (*ListTagsResponse) ProtoMessage() {}
 
 func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[9]
+	mi := &file_tags_v1_tags_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -806,7 +938,7 @@ func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsResponse.ProtoReflect.Descriptor instead.
 func (*ListTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{9}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListTagsResponse) GetTags() []*Tag {
@@ -834,7 +966,7 @@ type SuggestTagsRequest struct {
 
 func (x *SuggestTagsRequest) Reset() {
 	*x = SuggestTagsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[10]
+	mi := &file_tags_v1_tags_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -846,7 +978,7 @@ func (x *SuggestTagsRequest) String() string {
 func (*SuggestTagsRequest) ProtoMessage() {}
 
 func (x *SuggestTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[10]
+	mi := &file_tags_v1_tags_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +991,7 @@ func (x *SuggestTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestTagsRequest.ProtoReflect.Descriptor instead.
 func (*SuggestTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{10}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SuggestTagsRequest) GetOrganizationId() string {
@@ -892,7 +1024,7 @@ type SuggestTagsResponse struct {
 
 func (x *SuggestTagsResponse) Reset() {
 	*x = SuggestTagsResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[11]
+	mi := &file_tags_v1_tags_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -904,7 +1036,7 @@ func (x *SuggestTagsResponse) String() string {
 func (*SuggestTagsResponse) ProtoMessage() {}
 
 func (x *SuggestTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[11]
+	mi := &file_tags_v1_tags_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -917,7 +1049,7 @@ func (x *SuggestTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestTagsResponse.ProtoReflect.Descriptor instead.
 func (*SuggestTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{11}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SuggestTagsResponse) GetTags() []*Tag {
@@ -939,7 +1071,7 @@ type AssignTagsRequest struct {
 
 func (x *AssignTagsRequest) Reset() {
 	*x = AssignTagsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[12]
+	mi := &file_tags_v1_tags_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1083,7 @@ func (x *AssignTagsRequest) String() string {
 func (*AssignTagsRequest) ProtoMessage() {}
 
 func (x *AssignTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[12]
+	mi := &file_tags_v1_tags_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1096,7 @@ func (x *AssignTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTagsRequest.ProtoReflect.Descriptor instead.
 func (*AssignTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{12}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AssignTagsRequest) GetOrganizationId() string {
@@ -1004,7 +1136,7 @@ type AssignTagsResponse struct {
 
 func (x *AssignTagsResponse) Reset() {
 	*x = AssignTagsResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[13]
+	mi := &file_tags_v1_tags_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1016,7 +1148,7 @@ func (x *AssignTagsResponse) String() string {
 func (*AssignTagsResponse) ProtoMessage() {}
 
 func (x *AssignTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[13]
+	mi := &file_tags_v1_tags_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1029,7 +1161,7 @@ func (x *AssignTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTagsResponse.ProtoReflect.Descriptor instead.
 func (*AssignTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{13}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AssignTagsResponse) GetAssignments() []*TagAssignment {
@@ -1053,7 +1185,7 @@ type UnassignTagsRequest struct {
 
 func (x *UnassignTagsRequest) Reset() {
 	*x = UnassignTagsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[14]
+	mi := &file_tags_v1_tags_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1065,7 +1197,7 @@ func (x *UnassignTagsRequest) String() string {
 func (*UnassignTagsRequest) ProtoMessage() {}
 
 func (x *UnassignTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[14]
+	mi := &file_tags_v1_tags_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1078,7 +1210,7 @@ func (x *UnassignTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnassignTagsRequest.ProtoReflect.Descriptor instead.
 func (*UnassignTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{14}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UnassignTagsRequest) GetOrganizationId() string {
@@ -1118,7 +1250,7 @@ type UnassignTagsResponse struct {
 
 func (x *UnassignTagsResponse) Reset() {
 	*x = UnassignTagsResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[15]
+	mi := &file_tags_v1_tags_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1262,7 @@ func (x *UnassignTagsResponse) String() string {
 func (*UnassignTagsResponse) ProtoMessage() {}
 
 func (x *UnassignTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[15]
+	mi := &file_tags_v1_tags_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1275,7 @@ func (x *UnassignTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnassignTagsResponse.ProtoReflect.Descriptor instead.
 func (*UnassignTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{15}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UnassignTagsResponse) GetSuccess() bool {
@@ -1163,7 +1295,7 @@ type GetTagsForUrnsRequest struct {
 
 func (x *GetTagsForUrnsRequest) Reset() {
 	*x = GetTagsForUrnsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[16]
+	mi := &file_tags_v1_tags_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1307,7 @@ func (x *GetTagsForUrnsRequest) String() string {
 func (*GetTagsForUrnsRequest) ProtoMessage() {}
 
 func (x *GetTagsForUrnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[16]
+	mi := &file_tags_v1_tags_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1320,7 @@ func (x *GetTagsForUrnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTagsForUrnsRequest.ProtoReflect.Descriptor instead.
 func (*GetTagsForUrnsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{16}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetTagsForUrnsRequest) GetOrganizationId() string {
@@ -1215,7 +1347,7 @@ type UrnTags struct {
 
 func (x *UrnTags) Reset() {
 	*x = UrnTags{}
-	mi := &file_tags_v1_tags_proto_msgTypes[17]
+	mi := &file_tags_v1_tags_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1227,7 +1359,7 @@ func (x *UrnTags) String() string {
 func (*UrnTags) ProtoMessage() {}
 
 func (x *UrnTags) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[17]
+	mi := &file_tags_v1_tags_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1240,7 +1372,7 @@ func (x *UrnTags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UrnTags.ProtoReflect.Descriptor instead.
 func (*UrnTags) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{17}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UrnTags) GetContentUrn() string {
@@ -1266,7 +1398,7 @@ type GetTagsForUrnsResponse struct {
 
 func (x *GetTagsForUrnsResponse) Reset() {
 	*x = GetTagsForUrnsResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[18]
+	mi := &file_tags_v1_tags_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1278,7 +1410,7 @@ func (x *GetTagsForUrnsResponse) String() string {
 func (*GetTagsForUrnsResponse) ProtoMessage() {}
 
 func (x *GetTagsForUrnsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[18]
+	mi := &file_tags_v1_tags_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1291,7 +1423,7 @@ func (x *GetTagsForUrnsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTagsForUrnsResponse.ProtoReflect.Descriptor instead.
 func (*GetTagsForUrnsResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{18}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetTagsForUrnsResponse) GetEntries() []*UrnTags {
@@ -1319,7 +1451,7 @@ type ListContentByTagRequest struct {
 
 func (x *ListContentByTagRequest) Reset() {
 	*x = ListContentByTagRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[19]
+	mi := &file_tags_v1_tags_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1331,7 +1463,7 @@ func (x *ListContentByTagRequest) String() string {
 func (*ListContentByTagRequest) ProtoMessage() {}
 
 func (x *ListContentByTagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[19]
+	mi := &file_tags_v1_tags_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1344,7 +1476,7 @@ func (x *ListContentByTagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContentByTagRequest.ProtoReflect.Descriptor instead.
 func (*ListContentByTagRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{19}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListContentByTagRequest) GetOrganizationId() string {
@@ -1403,7 +1535,7 @@ type TaggedContentItem struct {
 
 func (x *TaggedContentItem) Reset() {
 	*x = TaggedContentItem{}
-	mi := &file_tags_v1_tags_proto_msgTypes[20]
+	mi := &file_tags_v1_tags_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1415,7 +1547,7 @@ func (x *TaggedContentItem) String() string {
 func (*TaggedContentItem) ProtoMessage() {}
 
 func (x *TaggedContentItem) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[20]
+	mi := &file_tags_v1_tags_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1428,7 +1560,7 @@ func (x *TaggedContentItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaggedContentItem.ProtoReflect.Descriptor instead.
 func (*TaggedContentItem) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{20}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *TaggedContentItem) GetUrn() string {
@@ -1483,7 +1615,7 @@ type ListContentByTagResponse struct {
 
 func (x *ListContentByTagResponse) Reset() {
 	*x = ListContentByTagResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[21]
+	mi := &file_tags_v1_tags_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1495,7 +1627,7 @@ func (x *ListContentByTagResponse) String() string {
 func (*ListContentByTagResponse) ProtoMessage() {}
 
 func (x *ListContentByTagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[21]
+	mi := &file_tags_v1_tags_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1508,7 +1640,7 @@ func (x *ListContentByTagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContentByTagResponse.ProtoReflect.Descriptor instead.
 func (*ListContentByTagResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{21}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListContentByTagResponse) GetResults() []*TaggedContentItem {
@@ -1536,7 +1668,7 @@ type MergeTagsRequest struct {
 
 func (x *MergeTagsRequest) Reset() {
 	*x = MergeTagsRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[22]
+	mi := &file_tags_v1_tags_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1548,7 +1680,7 @@ func (x *MergeTagsRequest) String() string {
 func (*MergeTagsRequest) ProtoMessage() {}
 
 func (x *MergeTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[22]
+	mi := &file_tags_v1_tags_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1561,7 +1693,7 @@ func (x *MergeTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeTagsRequest.ProtoReflect.Descriptor instead.
 func (*MergeTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{22}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *MergeTagsRequest) GetOrganizationId() string {
@@ -1599,7 +1731,7 @@ type IconValue struct {
 
 func (x *IconValue) Reset() {
 	*x = IconValue{}
-	mi := &file_tags_v1_tags_proto_msgTypes[23]
+	mi := &file_tags_v1_tags_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1611,7 +1743,7 @@ func (x *IconValue) String() string {
 func (*IconValue) ProtoMessage() {}
 
 func (x *IconValue) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[23]
+	mi := &file_tags_v1_tags_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1624,7 +1756,7 @@ func (x *IconValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IconValue.ProtoReflect.Descriptor instead.
 func (*IconValue) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{23}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *IconValue) GetType() string {
@@ -1670,7 +1802,7 @@ type TagFilterCriteria struct {
 
 func (x *TagFilterCriteria) Reset() {
 	*x = TagFilterCriteria{}
-	mi := &file_tags_v1_tags_proto_msgTypes[24]
+	mi := &file_tags_v1_tags_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1682,7 +1814,7 @@ func (x *TagFilterCriteria) String() string {
 func (*TagFilterCriteria) ProtoMessage() {}
 
 func (x *TagFilterCriteria) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[24]
+	mi := &file_tags_v1_tags_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1695,7 +1827,7 @@ func (x *TagFilterCriteria) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagFilterCriteria.ProtoReflect.Descriptor instead.
 func (*TagFilterCriteria) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{24}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *TagFilterCriteria) GetTagIds() []string {
@@ -1795,7 +1927,7 @@ type SavedTagFilter struct {
 
 func (x *SavedTagFilter) Reset() {
 	*x = SavedTagFilter{}
-	mi := &file_tags_v1_tags_proto_msgTypes[25]
+	mi := &file_tags_v1_tags_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1807,7 +1939,7 @@ func (x *SavedTagFilter) String() string {
 func (*SavedTagFilter) ProtoMessage() {}
 
 func (x *SavedTagFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[25]
+	mi := &file_tags_v1_tags_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1820,7 +1952,7 @@ func (x *SavedTagFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavedTagFilter.ProtoReflect.Descriptor instead.
 func (*SavedTagFilter) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{25}
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *SavedTagFilter) GetId() string {
@@ -1914,28 +2046,28 @@ func (x *SavedTagFilter) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type SavedTagFilterResponse struct {
+type CreateSavedFilterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filter        *SavedTagFilter        `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SavedTagFilterResponse) Reset() {
-	*x = SavedTagFilterResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[26]
+func (x *CreateSavedFilterResponse) Reset() {
+	*x = CreateSavedFilterResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SavedTagFilterResponse) String() string {
+func (x *CreateSavedFilterResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SavedTagFilterResponse) ProtoMessage() {}
+func (*CreateSavedFilterResponse) ProtoMessage() {}
 
-func (x *SavedTagFilterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[26]
+func (x *CreateSavedFilterResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1946,19 +2078,63 @@ func (x *SavedTagFilterResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SavedTagFilterResponse.ProtoReflect.Descriptor instead.
-func (*SavedTagFilterResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{26}
+// Deprecated: Use CreateSavedFilterResponse.ProtoReflect.Descriptor instead.
+func (*CreateSavedFilterResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{29}
 }
 
-func (x *SavedTagFilterResponse) GetFilter() *SavedTagFilter {
+func (x *CreateSavedFilterResponse) GetFilter() *SavedTagFilter {
 	if x != nil {
 		return x.Filter
 	}
 	return nil
 }
 
-type CreateSavedTagFilterRequest struct {
+type UpdateSavedFilterResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filter        *SavedTagFilter        `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSavedFilterResponse) Reset() {
+	*x = UpdateSavedFilterResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSavedFilterResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSavedFilterResponse) ProtoMessage() {}
+
+func (x *UpdateSavedFilterResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSavedFilterResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSavedFilterResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *UpdateSavedFilterResponse) GetFilter() *SavedTagFilter {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+type CreateSavedFilterRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -1971,21 +2147,21 @@ type CreateSavedTagFilterRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *CreateSavedTagFilterRequest) Reset() {
-	*x = CreateSavedTagFilterRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[27]
+func (x *CreateSavedFilterRequest) Reset() {
+	*x = CreateSavedFilterRequest{}
+	mi := &file_tags_v1_tags_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateSavedTagFilterRequest) String() string {
+func (x *CreateSavedFilterRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateSavedTagFilterRequest) ProtoMessage() {}
+func (*CreateSavedFilterRequest) ProtoMessage() {}
 
-func (x *CreateSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[27]
+func (x *CreateSavedFilterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1996,61 +2172,61 @@ func (x *CreateSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateSavedTagFilterRequest.ProtoReflect.Descriptor instead.
-func (*CreateSavedTagFilterRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{27}
+// Deprecated: Use CreateSavedFilterRequest.ProtoReflect.Descriptor instead.
+func (*CreateSavedFilterRequest) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{31}
 }
 
-func (x *CreateSavedTagFilterRequest) GetOrganizationId() string {
+func (x *CreateSavedFilterRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *CreateSavedTagFilterRequest) GetName() string {
+func (x *CreateSavedFilterRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *CreateSavedTagFilterRequest) GetDescription() string {
+func (x *CreateSavedFilterRequest) GetDescription() string {
 	if x != nil && x.Description != nil {
 		return *x.Description
 	}
 	return ""
 }
 
-func (x *CreateSavedTagFilterRequest) GetIcon() *IconValue {
+func (x *CreateSavedFilterRequest) GetIcon() *IconValue {
 	if x != nil {
 		return x.Icon
 	}
 	return nil
 }
 
-func (x *CreateSavedTagFilterRequest) GetCriteria() *TagFilterCriteria {
+func (x *CreateSavedFilterRequest) GetCriteria() *TagFilterCriteria {
 	if x != nil {
 		return x.Criteria
 	}
 	return nil
 }
 
-func (x *CreateSavedTagFilterRequest) GetSortBy() string {
+func (x *CreateSavedFilterRequest) GetSortBy() string {
 	if x != nil && x.SortBy != nil {
 		return *x.SortBy
 	}
 	return ""
 }
 
-func (x *CreateSavedTagFilterRequest) GetSortOrder() string {
+func (x *CreateSavedFilterRequest) GetSortOrder() string {
 	if x != nil && x.SortOrder != nil {
 		return *x.SortOrder
 	}
 	return ""
 }
 
-type UpdateSavedTagFilterRequest struct {
+type UpdateSavedFilterRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	FilterId       string                 `protobuf:"bytes,2,opt,name=filter_id,json=filterId,proto3" json:"filter_id,omitempty"`
@@ -2064,21 +2240,21 @@ type UpdateSavedTagFilterRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *UpdateSavedTagFilterRequest) Reset() {
-	*x = UpdateSavedTagFilterRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[28]
+func (x *UpdateSavedFilterRequest) Reset() {
+	*x = UpdateSavedFilterRequest{}
+	mi := &file_tags_v1_tags_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateSavedTagFilterRequest) String() string {
+func (x *UpdateSavedFilterRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateSavedTagFilterRequest) ProtoMessage() {}
+func (*UpdateSavedFilterRequest) ProtoMessage() {}
 
-func (x *UpdateSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[28]
+func (x *UpdateSavedFilterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2089,68 +2265,68 @@ func (x *UpdateSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateSavedTagFilterRequest.ProtoReflect.Descriptor instead.
-func (*UpdateSavedTagFilterRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{28}
+// Deprecated: Use UpdateSavedFilterRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSavedFilterRequest) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{32}
 }
 
-func (x *UpdateSavedTagFilterRequest) GetOrganizationId() string {
+func (x *UpdateSavedFilterRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *UpdateSavedTagFilterRequest) GetFilterId() string {
+func (x *UpdateSavedFilterRequest) GetFilterId() string {
 	if x != nil {
 		return x.FilterId
 	}
 	return ""
 }
 
-func (x *UpdateSavedTagFilterRequest) GetName() string {
+func (x *UpdateSavedFilterRequest) GetName() string {
 	if x != nil && x.Name != nil {
 		return *x.Name
 	}
 	return ""
 }
 
-func (x *UpdateSavedTagFilterRequest) GetDescription() string {
+func (x *UpdateSavedFilterRequest) GetDescription() string {
 	if x != nil && x.Description != nil {
 		return *x.Description
 	}
 	return ""
 }
 
-func (x *UpdateSavedTagFilterRequest) GetIcon() *IconValue {
+func (x *UpdateSavedFilterRequest) GetIcon() *IconValue {
 	if x != nil {
 		return x.Icon
 	}
 	return nil
 }
 
-func (x *UpdateSavedTagFilterRequest) GetCriteria() *TagFilterCriteria {
+func (x *UpdateSavedFilterRequest) GetCriteria() *TagFilterCriteria {
 	if x != nil {
 		return x.Criteria
 	}
 	return nil
 }
 
-func (x *UpdateSavedTagFilterRequest) GetSortBy() string {
+func (x *UpdateSavedFilterRequest) GetSortBy() string {
 	if x != nil && x.SortBy != nil {
 		return *x.SortBy
 	}
 	return ""
 }
 
-func (x *UpdateSavedTagFilterRequest) GetSortOrder() string {
+func (x *UpdateSavedFilterRequest) GetSortOrder() string {
 	if x != nil && x.SortOrder != nil {
 		return *x.SortOrder
 	}
 	return ""
 }
 
-type DeleteSavedTagFilterRequest struct {
+type DeleteSavedFilterRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	FilterId       string                 `protobuf:"bytes,2,opt,name=filter_id,json=filterId,proto3" json:"filter_id,omitempty"`
@@ -2158,21 +2334,21 @@ type DeleteSavedTagFilterRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *DeleteSavedTagFilterRequest) Reset() {
-	*x = DeleteSavedTagFilterRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[29]
+func (x *DeleteSavedFilterRequest) Reset() {
+	*x = DeleteSavedFilterRequest{}
+	mi := &file_tags_v1_tags_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteSavedTagFilterRequest) String() string {
+func (x *DeleteSavedFilterRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteSavedTagFilterRequest) ProtoMessage() {}
+func (*DeleteSavedFilterRequest) ProtoMessage() {}
 
-func (x *DeleteSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[29]
+func (x *DeleteSavedFilterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2183,47 +2359,47 @@ func (x *DeleteSavedTagFilterRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteSavedTagFilterRequest.ProtoReflect.Descriptor instead.
-func (*DeleteSavedTagFilterRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{29}
+// Deprecated: Use DeleteSavedFilterRequest.ProtoReflect.Descriptor instead.
+func (*DeleteSavedFilterRequest) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{33}
 }
 
-func (x *DeleteSavedTagFilterRequest) GetOrganizationId() string {
+func (x *DeleteSavedFilterRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *DeleteSavedTagFilterRequest) GetFilterId() string {
+func (x *DeleteSavedFilterRequest) GetFilterId() string {
 	if x != nil {
 		return x.FilterId
 	}
 	return ""
 }
 
-type DeleteSavedTagFilterResponse struct {
+type DeleteSavedFilterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteSavedTagFilterResponse) Reset() {
-	*x = DeleteSavedTagFilterResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[30]
+func (x *DeleteSavedFilterResponse) Reset() {
+	*x = DeleteSavedFilterResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteSavedTagFilterResponse) String() string {
+func (x *DeleteSavedFilterResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteSavedTagFilterResponse) ProtoMessage() {}
+func (*DeleteSavedFilterResponse) ProtoMessage() {}
 
-func (x *DeleteSavedTagFilterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[30]
+func (x *DeleteSavedFilterResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2234,19 +2410,19 @@ func (x *DeleteSavedTagFilterResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteSavedTagFilterResponse.ProtoReflect.Descriptor instead.
-func (*DeleteSavedTagFilterResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{30}
+// Deprecated: Use DeleteSavedFilterResponse.ProtoReflect.Descriptor instead.
+func (*DeleteSavedFilterResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{34}
 }
 
-func (x *DeleteSavedTagFilterResponse) GetSuccess() bool {
+func (x *DeleteSavedFilterResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-type ListSavedTagFiltersRequest struct {
+type ListSavedFiltersRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Include system-seeded presets in the response. Defaults true.
@@ -2255,21 +2431,21 @@ type ListSavedTagFiltersRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *ListSavedTagFiltersRequest) Reset() {
-	*x = ListSavedTagFiltersRequest{}
-	mi := &file_tags_v1_tags_proto_msgTypes[31]
+func (x *ListSavedFiltersRequest) Reset() {
+	*x = ListSavedFiltersRequest{}
+	mi := &file_tags_v1_tags_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSavedTagFiltersRequest) String() string {
+func (x *ListSavedFiltersRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSavedTagFiltersRequest) ProtoMessage() {}
+func (*ListSavedFiltersRequest) ProtoMessage() {}
 
-func (x *ListSavedTagFiltersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[31]
+func (x *ListSavedFiltersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2280,47 +2456,47 @@ func (x *ListSavedTagFiltersRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSavedTagFiltersRequest.ProtoReflect.Descriptor instead.
-func (*ListSavedTagFiltersRequest) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{31}
+// Deprecated: Use ListSavedFiltersRequest.ProtoReflect.Descriptor instead.
+func (*ListSavedFiltersRequest) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{35}
 }
 
-func (x *ListSavedTagFiltersRequest) GetOrganizationId() string {
+func (x *ListSavedFiltersRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *ListSavedTagFiltersRequest) GetIncludePresets() bool {
+func (x *ListSavedFiltersRequest) GetIncludePresets() bool {
 	if x != nil {
 		return x.IncludePresets
 	}
 	return false
 }
 
-type ListSavedTagFiltersResponse struct {
+type ListSavedFiltersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filters       []*SavedTagFilter      `protobuf:"bytes,1,rep,name=filters,proto3" json:"filters,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSavedTagFiltersResponse) Reset() {
-	*x = ListSavedTagFiltersResponse{}
-	mi := &file_tags_v1_tags_proto_msgTypes[32]
+func (x *ListSavedFiltersResponse) Reset() {
+	*x = ListSavedFiltersResponse{}
+	mi := &file_tags_v1_tags_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSavedTagFiltersResponse) String() string {
+func (x *ListSavedFiltersResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSavedTagFiltersResponse) ProtoMessage() {}
+func (*ListSavedFiltersResponse) ProtoMessage() {}
 
-func (x *ListSavedTagFiltersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tags_v1_tags_proto_msgTypes[32]
+func (x *ListSavedFiltersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tags_v1_tags_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2331,12 +2507,12 @@ func (x *ListSavedTagFiltersResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSavedTagFiltersResponse.ProtoReflect.Descriptor instead.
-func (*ListSavedTagFiltersResponse) Descriptor() ([]byte, []int) {
-	return file_tags_v1_tags_proto_rawDescGZIP(), []int{32}
+// Deprecated: Use ListSavedFiltersResponse.ProtoReflect.Descriptor instead.
+func (*ListSavedFiltersResponse) Descriptor() ([]byte, []int) {
+	return file_tags_v1_tags_proto_rawDescGZIP(), []int{36}
 }
 
-func (x *ListSavedTagFiltersResponse) GetFilters() []*SavedTagFilter {
+func (x *ListSavedFiltersResponse) GetFilters() []*SavedTagFilter {
 	if x != nil {
 		return x.Filters
 	}
@@ -2398,8 +2574,14 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"J\n" +
 	"\rGetTagRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x10\n" +
-	"\x03tag\x18\x02 \x01(\tR\x03tag\"-\n" +
-	"\vTagResponse\x12\x1e\n" +
+	"\x03tag\x18\x02 \x01(\tR\x03tag\"3\n" +
+	"\x11CreateTagResponse\x12\x1e\n" +
+	"\x03tag\x18\x01 \x01(\v2\f.tags.v1.TagR\x03tag\"3\n" +
+	"\x11UpdateTagResponse\x12\x1e\n" +
+	"\x03tag\x18\x01 \x01(\v2\f.tags.v1.TagR\x03tag\"0\n" +
+	"\x0eGetTagResponse\x12\x1e\n" +
+	"\x03tag\x18\x01 \x01(\v2\f.tags.v1.TagR\x03tag\"3\n" +
+	"\x11MergeTagsResponse\x12\x1e\n" +
 	"\x03tag\x18\x01 \x01(\v2\f.tags.v1.TagR\x03tag\"\xef\x01\n" +
 	"\x0fListTagsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12;\n" +
@@ -2508,10 +2690,12 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
 	"\f_descriptionB\a\n" +
-	"\x05_icon\"I\n" +
-	"\x16SavedTagFilterResponse\x12/\n" +
-	"\x06filter\x18\x01 \x01(\v2\x17.tags.v1.SavedTagFilterR\x06filter\"\xdc\x02\n" +
-	"\x1bCreateSavedTagFilterRequest\x12'\n" +
+	"\x05_icon\"L\n" +
+	"\x19CreateSavedFilterResponse\x12/\n" +
+	"\x06filter\x18\x01 \x01(\v2\x17.tags.v1.SavedTagFilterR\x06filter\"L\n" +
+	"\x19UpdateSavedFilterResponse\x12/\n" +
+	"\x06filter\x18\x01 \x01(\v2\x17.tags.v1.SavedTagFilterR\x06filter\"\xd9\x02\n" +
+	"\x18CreateSavedFilterRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12+\n" +
@@ -2524,8 +2708,8 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\x05_iconB\n" +
 	"\n" +
 	"\b_sort_byB\r\n" +
-	"\v_sort_order\"\x99\x03\n" +
-	"\x1bUpdateSavedTagFilterRequest\x12'\n" +
+	"\v_sort_order\"\x96\x03\n" +
+	"\x18UpdateSavedFilterRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tfilter_id\x18\x02 \x01(\tR\bfilterId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
@@ -2541,16 +2725,16 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\t_criteriaB\n" +
 	"\n" +
 	"\b_sort_byB\r\n" +
-	"\v_sort_order\"c\n" +
-	"\x1bDeleteSavedTagFilterRequest\x12'\n" +
+	"\v_sort_order\"`\n" +
+	"\x18DeleteSavedFilterRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
-	"\tfilter_id\x18\x02 \x01(\tR\bfilterId\"8\n" +
-	"\x1cDeleteSavedTagFilterResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"n\n" +
-	"\x1aListSavedTagFiltersRequest\x12'\n" +
+	"\tfilter_id\x18\x02 \x01(\tR\bfilterId\"5\n" +
+	"\x19DeleteSavedFilterResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"k\n" +
+	"\x17ListSavedFiltersRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12'\n" +
-	"\x0finclude_presets\x18\x02 \x01(\bR\x0eincludePresets\"P\n" +
-	"\x1bListSavedTagFiltersResponse\x121\n" +
+	"\x0finclude_presets\x18\x02 \x01(\bR\x0eincludePresets\"M\n" +
+	"\x18ListSavedFiltersResponse\x121\n" +
 	"\afilters\x18\x01 \x03(\v2\x17.tags.v1.SavedTagFilterR\afilters*U\n" +
 	"\tTagSource\x12\x1a\n" +
 	"\x16TAG_SOURCE_UNSPECIFIED\x10\x00\x12\x15\n" +
@@ -2562,24 +2746,24 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\x12TAG_SORT_COUNT_ASC\x10\x02\x12\x16\n" +
 	"\x12TAG_SORT_ALPHA_ASC\x10\x03\x12\x17\n" +
 	"\x13TAG_SORT_ALPHA_DESC\x10\x04\x12\x18\n" +
-	"\x14TAG_SORT_RECENT_DESC\x10\x052\xa5\t\n" +
-	"\vTagsService\x12>\n" +
-	"\tCreateTag\x12\x19.tags.v1.CreateTagRequest\x1a\x14.tags.v1.TagResponse\"\x00\x12>\n" +
-	"\tUpdateTag\x12\x19.tags.v1.UpdateTagRequest\x1a\x14.tags.v1.TagResponse\"\x00\x12D\n" +
-	"\tDeleteTag\x12\x19.tags.v1.DeleteTagRequest\x1a\x1a.tags.v1.DeleteTagResponse\"\x00\x128\n" +
-	"\x06GetTag\x12\x16.tags.v1.GetTagRequest\x1a\x14.tags.v1.TagResponse\"\x00\x12A\n" +
+	"\x14TAG_SORT_RECENT_DESC\x10\x052\xae\t\n" +
+	"\vTagsService\x12D\n" +
+	"\tCreateTag\x12\x19.tags.v1.CreateTagRequest\x1a\x1a.tags.v1.CreateTagResponse\"\x00\x12D\n" +
+	"\tUpdateTag\x12\x19.tags.v1.UpdateTagRequest\x1a\x1a.tags.v1.UpdateTagResponse\"\x00\x12D\n" +
+	"\tDeleteTag\x12\x19.tags.v1.DeleteTagRequest\x1a\x1a.tags.v1.DeleteTagResponse\"\x00\x12;\n" +
+	"\x06GetTag\x12\x16.tags.v1.GetTagRequest\x1a\x17.tags.v1.GetTagResponse\"\x00\x12A\n" +
 	"\bListTags\x12\x18.tags.v1.ListTagsRequest\x1a\x19.tags.v1.ListTagsResponse\"\x00\x12J\n" +
 	"\vSuggestTags\x12\x1b.tags.v1.SuggestTagsRequest\x1a\x1c.tags.v1.SuggestTagsResponse\"\x00\x12G\n" +
 	"\n" +
 	"AssignTags\x12\x1a.tags.v1.AssignTagsRequest\x1a\x1b.tags.v1.AssignTagsResponse\"\x00\x12M\n" +
 	"\fUnassignTags\x12\x1c.tags.v1.UnassignTagsRequest\x1a\x1d.tags.v1.UnassignTagsResponse\"\x00\x12S\n" +
 	"\x0eGetTagsForUrns\x12\x1e.tags.v1.GetTagsForUrnsRequest\x1a\x1f.tags.v1.GetTagsForUrnsResponse\"\x00\x12Y\n" +
-	"\x10ListContentByTag\x12 .tags.v1.ListContentByTagRequest\x1a!.tags.v1.ListContentByTagResponse\"\x00\x12>\n" +
-	"\tMergeTags\x12\x19.tags.v1.MergeTagsRequest\x1a\x14.tags.v1.TagResponse\"\x00\x12\\\n" +
-	"\x11CreateSavedFilter\x12$.tags.v1.CreateSavedTagFilterRequest\x1a\x1f.tags.v1.SavedTagFilterResponse\"\x00\x12\\\n" +
-	"\x11UpdateSavedFilter\x12$.tags.v1.UpdateSavedTagFilterRequest\x1a\x1f.tags.v1.SavedTagFilterResponse\"\x00\x12b\n" +
-	"\x11DeleteSavedFilter\x12$.tags.v1.DeleteSavedTagFilterRequest\x1a%.tags.v1.DeleteSavedTagFilterResponse\"\x00\x12_\n" +
-	"\x10ListSavedFilters\x12#.tags.v1.ListSavedTagFiltersRequest\x1a$.tags.v1.ListSavedTagFiltersResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1b\x06proto3"
+	"\x10ListContentByTag\x12 .tags.v1.ListContentByTagRequest\x1a!.tags.v1.ListContentByTagResponse\"\x00\x12D\n" +
+	"\tMergeTags\x12\x19.tags.v1.MergeTagsRequest\x1a\x1a.tags.v1.MergeTagsResponse\"\x00\x12\\\n" +
+	"\x11CreateSavedFilter\x12!.tags.v1.CreateSavedFilterRequest\x1a\".tags.v1.CreateSavedFilterResponse\"\x00\x12\\\n" +
+	"\x11UpdateSavedFilter\x12!.tags.v1.UpdateSavedFilterRequest\x1a\".tags.v1.UpdateSavedFilterResponse\"\x00\x12\\\n" +
+	"\x11DeleteSavedFilter\x12!.tags.v1.DeleteSavedFilterRequest\x1a\".tags.v1.DeleteSavedFilterResponse\"\x00\x12Y\n" +
+	"\x10ListSavedFilters\x12 .tags.v1.ListSavedFiltersRequest\x1a!.tags.v1.ListSavedFiltersResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1b\x06proto3"
 
 var (
 	file_tags_v1_tags_proto_rawDescOnce sync.Once
@@ -2594,119 +2778,127 @@ func file_tags_v1_tags_proto_rawDescGZIP() []byte {
 }
 
 var file_tags_v1_tags_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_tags_v1_tags_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_tags_v1_tags_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_tags_v1_tags_proto_goTypes = []any{
-	(TagSource)(0),                       // 0: tags.v1.TagSource
-	(TagSort)(0),                         // 1: tags.v1.TagSort
-	(*Tag)(nil),                          // 2: tags.v1.Tag
-	(*TagAssignment)(nil),                // 3: tags.v1.TagAssignment
-	(*CreateTagRequest)(nil),             // 4: tags.v1.CreateTagRequest
-	(*UpdateTagRequest)(nil),             // 5: tags.v1.UpdateTagRequest
-	(*DeleteTagRequest)(nil),             // 6: tags.v1.DeleteTagRequest
-	(*DeleteTagResponse)(nil),            // 7: tags.v1.DeleteTagResponse
-	(*GetTagRequest)(nil),                // 8: tags.v1.GetTagRequest
-	(*TagResponse)(nil),                  // 9: tags.v1.TagResponse
-	(*ListTagsRequest)(nil),              // 10: tags.v1.ListTagsRequest
-	(*ListTagsResponse)(nil),             // 11: tags.v1.ListTagsResponse
-	(*SuggestTagsRequest)(nil),           // 12: tags.v1.SuggestTagsRequest
-	(*SuggestTagsResponse)(nil),          // 13: tags.v1.SuggestTagsResponse
-	(*AssignTagsRequest)(nil),            // 14: tags.v1.AssignTagsRequest
-	(*AssignTagsResponse)(nil),           // 15: tags.v1.AssignTagsResponse
-	(*UnassignTagsRequest)(nil),          // 16: tags.v1.UnassignTagsRequest
-	(*UnassignTagsResponse)(nil),         // 17: tags.v1.UnassignTagsResponse
-	(*GetTagsForUrnsRequest)(nil),        // 18: tags.v1.GetTagsForUrnsRequest
-	(*UrnTags)(nil),                      // 19: tags.v1.UrnTags
-	(*GetTagsForUrnsResponse)(nil),       // 20: tags.v1.GetTagsForUrnsResponse
-	(*ListContentByTagRequest)(nil),      // 21: tags.v1.ListContentByTagRequest
-	(*TaggedContentItem)(nil),            // 22: tags.v1.TaggedContentItem
-	(*ListContentByTagResponse)(nil),     // 23: tags.v1.ListContentByTagResponse
-	(*MergeTagsRequest)(nil),             // 24: tags.v1.MergeTagsRequest
-	(*IconValue)(nil),                    // 25: tags.v1.IconValue
-	(*TagFilterCriteria)(nil),            // 26: tags.v1.TagFilterCriteria
-	(*SavedTagFilter)(nil),               // 27: tags.v1.SavedTagFilter
-	(*SavedTagFilterResponse)(nil),       // 28: tags.v1.SavedTagFilterResponse
-	(*CreateSavedTagFilterRequest)(nil),  // 29: tags.v1.CreateSavedTagFilterRequest
-	(*UpdateSavedTagFilterRequest)(nil),  // 30: tags.v1.UpdateSavedTagFilterRequest
-	(*DeleteSavedTagFilterRequest)(nil),  // 31: tags.v1.DeleteSavedTagFilterRequest
-	(*DeleteSavedTagFilterResponse)(nil), // 32: tags.v1.DeleteSavedTagFilterResponse
-	(*ListSavedTagFiltersRequest)(nil),   // 33: tags.v1.ListSavedTagFiltersRequest
-	(*ListSavedTagFiltersResponse)(nil),  // 34: tags.v1.ListSavedTagFiltersResponse
-	(*timestamppb.Timestamp)(nil),        // 35: google.protobuf.Timestamp
-	(v1.ContentType)(0),                  // 36: common.v1.ContentType
-	(v1.AccessMode)(0),                   // 37: common.v1.AccessMode
+	(TagSource)(0),                    // 0: tags.v1.TagSource
+	(TagSort)(0),                      // 1: tags.v1.TagSort
+	(*Tag)(nil),                       // 2: tags.v1.Tag
+	(*TagAssignment)(nil),             // 3: tags.v1.TagAssignment
+	(*CreateTagRequest)(nil),          // 4: tags.v1.CreateTagRequest
+	(*UpdateTagRequest)(nil),          // 5: tags.v1.UpdateTagRequest
+	(*DeleteTagRequest)(nil),          // 6: tags.v1.DeleteTagRequest
+	(*DeleteTagResponse)(nil),         // 7: tags.v1.DeleteTagResponse
+	(*GetTagRequest)(nil),             // 8: tags.v1.GetTagRequest
+	(*CreateTagResponse)(nil),         // 9: tags.v1.CreateTagResponse
+	(*UpdateTagResponse)(nil),         // 10: tags.v1.UpdateTagResponse
+	(*GetTagResponse)(nil),            // 11: tags.v1.GetTagResponse
+	(*MergeTagsResponse)(nil),         // 12: tags.v1.MergeTagsResponse
+	(*ListTagsRequest)(nil),           // 13: tags.v1.ListTagsRequest
+	(*ListTagsResponse)(nil),          // 14: tags.v1.ListTagsResponse
+	(*SuggestTagsRequest)(nil),        // 15: tags.v1.SuggestTagsRequest
+	(*SuggestTagsResponse)(nil),       // 16: tags.v1.SuggestTagsResponse
+	(*AssignTagsRequest)(nil),         // 17: tags.v1.AssignTagsRequest
+	(*AssignTagsResponse)(nil),        // 18: tags.v1.AssignTagsResponse
+	(*UnassignTagsRequest)(nil),       // 19: tags.v1.UnassignTagsRequest
+	(*UnassignTagsResponse)(nil),      // 20: tags.v1.UnassignTagsResponse
+	(*GetTagsForUrnsRequest)(nil),     // 21: tags.v1.GetTagsForUrnsRequest
+	(*UrnTags)(nil),                   // 22: tags.v1.UrnTags
+	(*GetTagsForUrnsResponse)(nil),    // 23: tags.v1.GetTagsForUrnsResponse
+	(*ListContentByTagRequest)(nil),   // 24: tags.v1.ListContentByTagRequest
+	(*TaggedContentItem)(nil),         // 25: tags.v1.TaggedContentItem
+	(*ListContentByTagResponse)(nil),  // 26: tags.v1.ListContentByTagResponse
+	(*MergeTagsRequest)(nil),          // 27: tags.v1.MergeTagsRequest
+	(*IconValue)(nil),                 // 28: tags.v1.IconValue
+	(*TagFilterCriteria)(nil),         // 29: tags.v1.TagFilterCriteria
+	(*SavedTagFilter)(nil),            // 30: tags.v1.SavedTagFilter
+	(*CreateSavedFilterResponse)(nil), // 31: tags.v1.CreateSavedFilterResponse
+	(*UpdateSavedFilterResponse)(nil), // 32: tags.v1.UpdateSavedFilterResponse
+	(*CreateSavedFilterRequest)(nil),  // 33: tags.v1.CreateSavedFilterRequest
+	(*UpdateSavedFilterRequest)(nil),  // 34: tags.v1.UpdateSavedFilterRequest
+	(*DeleteSavedFilterRequest)(nil),  // 35: tags.v1.DeleteSavedFilterRequest
+	(*DeleteSavedFilterResponse)(nil), // 36: tags.v1.DeleteSavedFilterResponse
+	(*ListSavedFiltersRequest)(nil),   // 37: tags.v1.ListSavedFiltersRequest
+	(*ListSavedFiltersResponse)(nil),  // 38: tags.v1.ListSavedFiltersResponse
+	(*timestamppb.Timestamp)(nil),     // 39: google.protobuf.Timestamp
+	(v1.ContentType)(0),               // 40: common.v1.ContentType
+	(v1.AccessMode)(0),                // 41: common.v1.AccessMode
 }
 var file_tags_v1_tags_proto_depIdxs = []int32{
-	35, // 0: tags.v1.Tag.created_at:type_name -> google.protobuf.Timestamp
-	35, // 1: tags.v1.Tag.updated_at:type_name -> google.protobuf.Timestamp
-	35, // 2: tags.v1.Tag.last_used_at:type_name -> google.protobuf.Timestamp
-	35, // 3: tags.v1.TagAssignment.assigned_at:type_name -> google.protobuf.Timestamp
-	2,  // 4: tags.v1.TagResponse.tag:type_name -> tags.v1.Tag
-	36, // 5: tags.v1.ListTagsRequest.content_types:type_name -> common.v1.ContentType
-	1,  // 6: tags.v1.ListTagsRequest.sort:type_name -> tags.v1.TagSort
-	2,  // 7: tags.v1.ListTagsResponse.tags:type_name -> tags.v1.Tag
-	2,  // 8: tags.v1.SuggestTagsResponse.tags:type_name -> tags.v1.Tag
-	0,  // 9: tags.v1.AssignTagsRequest.source:type_name -> tags.v1.TagSource
-	3,  // 10: tags.v1.AssignTagsResponse.assignments:type_name -> tags.v1.TagAssignment
-	0,  // 11: tags.v1.UnassignTagsRequest.source:type_name -> tags.v1.TagSource
-	2,  // 12: tags.v1.UrnTags.tags:type_name -> tags.v1.Tag
-	19, // 13: tags.v1.GetTagsForUrnsResponse.entries:type_name -> tags.v1.UrnTags
-	36, // 14: tags.v1.ListContentByTagRequest.content_types:type_name -> common.v1.ContentType
-	26, // 15: tags.v1.ListContentByTagRequest.criteria:type_name -> tags.v1.TagFilterCriteria
-	36, // 16: tags.v1.TaggedContentItem.content_type:type_name -> common.v1.ContentType
-	35, // 17: tags.v1.TaggedContentItem.updated_at:type_name -> google.protobuf.Timestamp
-	35, // 18: tags.v1.TaggedContentItem.assigned_at:type_name -> google.protobuf.Timestamp
-	22, // 19: tags.v1.ListContentByTagResponse.results:type_name -> tags.v1.TaggedContentItem
-	36, // 20: tags.v1.TagFilterCriteria.content_types:type_name -> common.v1.ContentType
-	35, // 21: tags.v1.TagFilterCriteria.created_after:type_name -> google.protobuf.Timestamp
-	35, // 22: tags.v1.TagFilterCriteria.created_before:type_name -> google.protobuf.Timestamp
-	35, // 23: tags.v1.TagFilterCriteria.updated_after:type_name -> google.protobuf.Timestamp
-	35, // 24: tags.v1.TagFilterCriteria.updated_before:type_name -> google.protobuf.Timestamp
-	37, // 25: tags.v1.TagFilterCriteria.access_mode:type_name -> common.v1.AccessMode
-	25, // 26: tags.v1.SavedTagFilter.icon:type_name -> tags.v1.IconValue
-	26, // 27: tags.v1.SavedTagFilter.criteria:type_name -> tags.v1.TagFilterCriteria
-	35, // 28: tags.v1.SavedTagFilter.created_at:type_name -> google.protobuf.Timestamp
-	35, // 29: tags.v1.SavedTagFilter.updated_at:type_name -> google.protobuf.Timestamp
-	27, // 30: tags.v1.SavedTagFilterResponse.filter:type_name -> tags.v1.SavedTagFilter
-	25, // 31: tags.v1.CreateSavedTagFilterRequest.icon:type_name -> tags.v1.IconValue
-	26, // 32: tags.v1.CreateSavedTagFilterRequest.criteria:type_name -> tags.v1.TagFilterCriteria
-	25, // 33: tags.v1.UpdateSavedTagFilterRequest.icon:type_name -> tags.v1.IconValue
-	26, // 34: tags.v1.UpdateSavedTagFilterRequest.criteria:type_name -> tags.v1.TagFilterCriteria
-	27, // 35: tags.v1.ListSavedTagFiltersResponse.filters:type_name -> tags.v1.SavedTagFilter
-	4,  // 36: tags.v1.TagsService.CreateTag:input_type -> tags.v1.CreateTagRequest
-	5,  // 37: tags.v1.TagsService.UpdateTag:input_type -> tags.v1.UpdateTagRequest
-	6,  // 38: tags.v1.TagsService.DeleteTag:input_type -> tags.v1.DeleteTagRequest
-	8,  // 39: tags.v1.TagsService.GetTag:input_type -> tags.v1.GetTagRequest
-	10, // 40: tags.v1.TagsService.ListTags:input_type -> tags.v1.ListTagsRequest
-	12, // 41: tags.v1.TagsService.SuggestTags:input_type -> tags.v1.SuggestTagsRequest
-	14, // 42: tags.v1.TagsService.AssignTags:input_type -> tags.v1.AssignTagsRequest
-	16, // 43: tags.v1.TagsService.UnassignTags:input_type -> tags.v1.UnassignTagsRequest
-	18, // 44: tags.v1.TagsService.GetTagsForUrns:input_type -> tags.v1.GetTagsForUrnsRequest
-	21, // 45: tags.v1.TagsService.ListContentByTag:input_type -> tags.v1.ListContentByTagRequest
-	24, // 46: tags.v1.TagsService.MergeTags:input_type -> tags.v1.MergeTagsRequest
-	29, // 47: tags.v1.TagsService.CreateSavedFilter:input_type -> tags.v1.CreateSavedTagFilterRequest
-	30, // 48: tags.v1.TagsService.UpdateSavedFilter:input_type -> tags.v1.UpdateSavedTagFilterRequest
-	31, // 49: tags.v1.TagsService.DeleteSavedFilter:input_type -> tags.v1.DeleteSavedTagFilterRequest
-	33, // 50: tags.v1.TagsService.ListSavedFilters:input_type -> tags.v1.ListSavedTagFiltersRequest
-	9,  // 51: tags.v1.TagsService.CreateTag:output_type -> tags.v1.TagResponse
-	9,  // 52: tags.v1.TagsService.UpdateTag:output_type -> tags.v1.TagResponse
-	7,  // 53: tags.v1.TagsService.DeleteTag:output_type -> tags.v1.DeleteTagResponse
-	9,  // 54: tags.v1.TagsService.GetTag:output_type -> tags.v1.TagResponse
-	11, // 55: tags.v1.TagsService.ListTags:output_type -> tags.v1.ListTagsResponse
-	13, // 56: tags.v1.TagsService.SuggestTags:output_type -> tags.v1.SuggestTagsResponse
-	15, // 57: tags.v1.TagsService.AssignTags:output_type -> tags.v1.AssignTagsResponse
-	17, // 58: tags.v1.TagsService.UnassignTags:output_type -> tags.v1.UnassignTagsResponse
-	20, // 59: tags.v1.TagsService.GetTagsForUrns:output_type -> tags.v1.GetTagsForUrnsResponse
-	23, // 60: tags.v1.TagsService.ListContentByTag:output_type -> tags.v1.ListContentByTagResponse
-	9,  // 61: tags.v1.TagsService.MergeTags:output_type -> tags.v1.TagResponse
-	28, // 62: tags.v1.TagsService.CreateSavedFilter:output_type -> tags.v1.SavedTagFilterResponse
-	28, // 63: tags.v1.TagsService.UpdateSavedFilter:output_type -> tags.v1.SavedTagFilterResponse
-	32, // 64: tags.v1.TagsService.DeleteSavedFilter:output_type -> tags.v1.DeleteSavedTagFilterResponse
-	34, // 65: tags.v1.TagsService.ListSavedFilters:output_type -> tags.v1.ListSavedTagFiltersResponse
-	51, // [51:66] is the sub-list for method output_type
-	36, // [36:51] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	39, // 0: tags.v1.Tag.created_at:type_name -> google.protobuf.Timestamp
+	39, // 1: tags.v1.Tag.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 2: tags.v1.Tag.last_used_at:type_name -> google.protobuf.Timestamp
+	39, // 3: tags.v1.TagAssignment.assigned_at:type_name -> google.protobuf.Timestamp
+	2,  // 4: tags.v1.CreateTagResponse.tag:type_name -> tags.v1.Tag
+	2,  // 5: tags.v1.UpdateTagResponse.tag:type_name -> tags.v1.Tag
+	2,  // 6: tags.v1.GetTagResponse.tag:type_name -> tags.v1.Tag
+	2,  // 7: tags.v1.MergeTagsResponse.tag:type_name -> tags.v1.Tag
+	40, // 8: tags.v1.ListTagsRequest.content_types:type_name -> common.v1.ContentType
+	1,  // 9: tags.v1.ListTagsRequest.sort:type_name -> tags.v1.TagSort
+	2,  // 10: tags.v1.ListTagsResponse.tags:type_name -> tags.v1.Tag
+	2,  // 11: tags.v1.SuggestTagsResponse.tags:type_name -> tags.v1.Tag
+	0,  // 12: tags.v1.AssignTagsRequest.source:type_name -> tags.v1.TagSource
+	3,  // 13: tags.v1.AssignTagsResponse.assignments:type_name -> tags.v1.TagAssignment
+	0,  // 14: tags.v1.UnassignTagsRequest.source:type_name -> tags.v1.TagSource
+	2,  // 15: tags.v1.UrnTags.tags:type_name -> tags.v1.Tag
+	22, // 16: tags.v1.GetTagsForUrnsResponse.entries:type_name -> tags.v1.UrnTags
+	40, // 17: tags.v1.ListContentByTagRequest.content_types:type_name -> common.v1.ContentType
+	29, // 18: tags.v1.ListContentByTagRequest.criteria:type_name -> tags.v1.TagFilterCriteria
+	40, // 19: tags.v1.TaggedContentItem.content_type:type_name -> common.v1.ContentType
+	39, // 20: tags.v1.TaggedContentItem.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 21: tags.v1.TaggedContentItem.assigned_at:type_name -> google.protobuf.Timestamp
+	25, // 22: tags.v1.ListContentByTagResponse.results:type_name -> tags.v1.TaggedContentItem
+	40, // 23: tags.v1.TagFilterCriteria.content_types:type_name -> common.v1.ContentType
+	39, // 24: tags.v1.TagFilterCriteria.created_after:type_name -> google.protobuf.Timestamp
+	39, // 25: tags.v1.TagFilterCriteria.created_before:type_name -> google.protobuf.Timestamp
+	39, // 26: tags.v1.TagFilterCriteria.updated_after:type_name -> google.protobuf.Timestamp
+	39, // 27: tags.v1.TagFilterCriteria.updated_before:type_name -> google.protobuf.Timestamp
+	41, // 28: tags.v1.TagFilterCriteria.access_mode:type_name -> common.v1.AccessMode
+	28, // 29: tags.v1.SavedTagFilter.icon:type_name -> tags.v1.IconValue
+	29, // 30: tags.v1.SavedTagFilter.criteria:type_name -> tags.v1.TagFilterCriteria
+	39, // 31: tags.v1.SavedTagFilter.created_at:type_name -> google.protobuf.Timestamp
+	39, // 32: tags.v1.SavedTagFilter.updated_at:type_name -> google.protobuf.Timestamp
+	30, // 33: tags.v1.CreateSavedFilterResponse.filter:type_name -> tags.v1.SavedTagFilter
+	30, // 34: tags.v1.UpdateSavedFilterResponse.filter:type_name -> tags.v1.SavedTagFilter
+	28, // 35: tags.v1.CreateSavedFilterRequest.icon:type_name -> tags.v1.IconValue
+	29, // 36: tags.v1.CreateSavedFilterRequest.criteria:type_name -> tags.v1.TagFilterCriteria
+	28, // 37: tags.v1.UpdateSavedFilterRequest.icon:type_name -> tags.v1.IconValue
+	29, // 38: tags.v1.UpdateSavedFilterRequest.criteria:type_name -> tags.v1.TagFilterCriteria
+	30, // 39: tags.v1.ListSavedFiltersResponse.filters:type_name -> tags.v1.SavedTagFilter
+	4,  // 40: tags.v1.TagsService.CreateTag:input_type -> tags.v1.CreateTagRequest
+	5,  // 41: tags.v1.TagsService.UpdateTag:input_type -> tags.v1.UpdateTagRequest
+	6,  // 42: tags.v1.TagsService.DeleteTag:input_type -> tags.v1.DeleteTagRequest
+	8,  // 43: tags.v1.TagsService.GetTag:input_type -> tags.v1.GetTagRequest
+	13, // 44: tags.v1.TagsService.ListTags:input_type -> tags.v1.ListTagsRequest
+	15, // 45: tags.v1.TagsService.SuggestTags:input_type -> tags.v1.SuggestTagsRequest
+	17, // 46: tags.v1.TagsService.AssignTags:input_type -> tags.v1.AssignTagsRequest
+	19, // 47: tags.v1.TagsService.UnassignTags:input_type -> tags.v1.UnassignTagsRequest
+	21, // 48: tags.v1.TagsService.GetTagsForUrns:input_type -> tags.v1.GetTagsForUrnsRequest
+	24, // 49: tags.v1.TagsService.ListContentByTag:input_type -> tags.v1.ListContentByTagRequest
+	27, // 50: tags.v1.TagsService.MergeTags:input_type -> tags.v1.MergeTagsRequest
+	33, // 51: tags.v1.TagsService.CreateSavedFilter:input_type -> tags.v1.CreateSavedFilterRequest
+	34, // 52: tags.v1.TagsService.UpdateSavedFilter:input_type -> tags.v1.UpdateSavedFilterRequest
+	35, // 53: tags.v1.TagsService.DeleteSavedFilter:input_type -> tags.v1.DeleteSavedFilterRequest
+	37, // 54: tags.v1.TagsService.ListSavedFilters:input_type -> tags.v1.ListSavedFiltersRequest
+	9,  // 55: tags.v1.TagsService.CreateTag:output_type -> tags.v1.CreateTagResponse
+	10, // 56: tags.v1.TagsService.UpdateTag:output_type -> tags.v1.UpdateTagResponse
+	7,  // 57: tags.v1.TagsService.DeleteTag:output_type -> tags.v1.DeleteTagResponse
+	11, // 58: tags.v1.TagsService.GetTag:output_type -> tags.v1.GetTagResponse
+	14, // 59: tags.v1.TagsService.ListTags:output_type -> tags.v1.ListTagsResponse
+	16, // 60: tags.v1.TagsService.SuggestTags:output_type -> tags.v1.SuggestTagsResponse
+	18, // 61: tags.v1.TagsService.AssignTags:output_type -> tags.v1.AssignTagsResponse
+	20, // 62: tags.v1.TagsService.UnassignTags:output_type -> tags.v1.UnassignTagsResponse
+	23, // 63: tags.v1.TagsService.GetTagsForUrns:output_type -> tags.v1.GetTagsForUrnsResponse
+	26, // 64: tags.v1.TagsService.ListContentByTag:output_type -> tags.v1.ListContentByTagResponse
+	12, // 65: tags.v1.TagsService.MergeTags:output_type -> tags.v1.MergeTagsResponse
+	31, // 66: tags.v1.TagsService.CreateSavedFilter:output_type -> tags.v1.CreateSavedFilterResponse
+	32, // 67: tags.v1.TagsService.UpdateSavedFilter:output_type -> tags.v1.UpdateSavedFilterResponse
+	36, // 68: tags.v1.TagsService.DeleteSavedFilter:output_type -> tags.v1.DeleteSavedFilterResponse
+	38, // 69: tags.v1.TagsService.ListSavedFilters:output_type -> tags.v1.ListSavedFiltersResponse
+	55, // [55:70] is the sub-list for method output_type
+	40, // [40:55] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_tags_v1_tags_proto_init() }
@@ -2715,18 +2907,18 @@ func file_tags_v1_tags_proto_init() {
 		return
 	}
 	file_tags_v1_tags_proto_msgTypes[3].OneofWrappers = []any{}
-	file_tags_v1_tags_proto_msgTypes[19].OneofWrappers = []any{}
-	file_tags_v1_tags_proto_msgTypes[24].OneofWrappers = []any{}
-	file_tags_v1_tags_proto_msgTypes[25].OneofWrappers = []any{}
+	file_tags_v1_tags_proto_msgTypes[22].OneofWrappers = []any{}
 	file_tags_v1_tags_proto_msgTypes[27].OneofWrappers = []any{}
 	file_tags_v1_tags_proto_msgTypes[28].OneofWrappers = []any{}
+	file_tags_v1_tags_proto_msgTypes[31].OneofWrappers = []any{}
+	file_tags_v1_tags_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tags_v1_tags_proto_rawDesc), len(file_tags_v1_tags_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   33,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1,3 +1,7 @@
+// Must run before any module that constructs zod schemas - zod captures the
+// jitless flag at schema construction time.
+import '@/config/zodConfig'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'

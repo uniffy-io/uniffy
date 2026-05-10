@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package notes.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1";
 
 // Node type for notes hierarchy
 enum NodeType {
@@ -24,55 +24,55 @@ enum NodeType {
 // NotesService provides note management functionality
 service NotesService {
   // Create a new note
-  rpc CreateNote(CreateNoteRequest) returns (NoteResponse) {}
-  
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse) {}
+
   // Get a note by ID
-  rpc GetNote(GetNoteRequest) returns (NoteResponse) {}
-  
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse) {}
+
   // Update an existing note
-  rpc UpdateNote(UpdateNoteRequest) returns (NoteResponse) {}
-  
+  rpc UpdateNote(UpdateNoteRequest) returns (UpdateNoteResponse) {}
+
   // Delete a note (soft delete)
   rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse) {}
-  
+
   // List notes in organization with pagination and filters
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
-  
+
   // Search notes using full-text search
   rpc SearchNotes(SearchNotesRequest) returns (SearchNotesResponse) {}
-  
+
   // Get backlinks for a note (other notes that reference this note)
-  rpc GetBacklinks(GetBacklinksRequest) returns (BacklinksResponse) {}
+  rpc GetBacklinks(GetBacklinksRequest) returns (GetBacklinksResponse) {}
 
   // Restore a deleted note
-  rpc RestoreNote(RestoreNoteRequest) returns (NoteResponse) {}
-  
+  rpc RestoreNote(RestoreNoteRequest) returns (RestoreNoteResponse) {}
+
   // Empty trash (permanently delete all soft-deleted notes)
   rpc EmptyTrash(EmptyTrashRequest) returns (EmptyTrashResponse) {}
-  
+
   // Autosave note content (optimized for frequent updates)
   rpc AutosaveNote(AutosaveNoteRequest) returns (AutosaveNoteResponse) {}
-  
+
   // Move note between spaces (personal, group, organization)
-  rpc MoveNote(MoveNoteRequest) returns (NoteResponse) {}
-  
+  rpc MoveNote(MoveNoteRequest) returns (MoveNoteResponse) {}
+
   // Copy note to another space
-  rpc CopyNote(CopyNoteRequest) returns (NoteResponse) {}
-  
+  rpc CopyNote(CopyNoteRequest) returns (CopyNoteResponse) {}
+
   // Share note with group(s)
-  rpc ShareNoteWithGroup(ShareNoteWithGroupRequest) returns (ShareNoteResponse) {}
-  
+  rpc ShareNoteWithGroup(ShareNoteWithGroupRequest) returns (ShareNoteWithGroupResponse) {}
+
   // Unshare note from group
-  rpc UnshareNoteFromGroup(UnshareNoteFromGroupRequest) returns (ShareNoteResponse) {}
-  
+  rpc UnshareNoteFromGroup(UnshareNoteFromGroupRequest) returns (UnshareNoteFromGroupResponse) {}
+
   // Get sharing info for a note
-  rpc GetNoteSharing(GetNoteSharingRequest) returns (NoteSharingResponse) {}
-  
+  rpc GetNoteSharing(GetNoteSharingRequest) returns (GetNoteSharingResponse) {}
+
   // Grant permission to user/group for a note
-  rpc GrantPermission(GrantPermissionRequest) returns (PermissionResponse) {}
-  
+  rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse) {}
+
   // Revoke permission from user/group for a note
-  rpc RevokePermission(RevokePermissionRequest) returns (PermissionResponse) {}
+  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse) {}
 }
 
 // Request to create a new note
@@ -87,22 +87,20 @@ message CreateNoteRequest {
   optional string slug = 4;
   // Optional parent note ID for hierarchy
   optional string parent_id = 5;
-  reserved 6;
-  reserved "tags";
   // Optional metadata
-  map<string, string> metadata = 7;
+  map<string, string> metadata = 6;
   // Access mode (defaults to OWNER_ONLY)
-  optional common.v1.AccessMode access_mode = 8;
+  optional common.v1.AccessMode access_mode = 7;
   // Optional group ID(s) if using group-based membership
-  repeated string group_ids = 9;
+  repeated string group_ids = 8;
   // Node type (defaults to NOTE)
-  optional NodeType node_type = 10;
+  optional NodeType node_type = 9;
   // Optional custom icon
-  optional NoteIcon icon = 11;
+  optional NoteIcon icon = 10;
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 12;
+  optional common.v1.ContentRole baseline_role = 11;
   // Optional unified-tag ids to assign on create
-  repeated string tag_ids = 13;
+  repeated string tag_ids = 12;
 }
 
 // Request to get a note
@@ -127,15 +125,13 @@ message UpdateNoteRequest {
   optional string slug = 5;
   // Updated parent ID (optional, use empty string to remove parent)
   optional string parent_id = 6;
-  reserved 7;
-  reserved "tags";
   // Updated metadata (optional, merges with existing)
-  map<string, string> metadata = 8;
+  map<string, string> metadata = 7;
   // Updated icon (optional)
-  optional NoteIcon icon = 9;
+  optional NoteIcon icon = 8;
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field is unset (HasField=false) to leave manual tags untouched.
-  optional NoteTagIds tag_ids = 10;
+  optional NoteTagIds tag_ids = 9;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -163,8 +159,38 @@ message DeleteNoteResponse {
   string message = 2;
 }
 
-// Response containing a single note
-message NoteResponse {
+// Response containing a single note (Create)
+message CreateNoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Response containing a single note (Get)
+message GetNoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Response containing a single note (Update)
+message UpdateNoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Response containing a single note (Restore)
+message RestoreNoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Response containing a single note (Move)
+message MoveNoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Response containing a single note (Copy)
+message CopyNoteResponse {
   // The note data
   Note note = 1;
 }
@@ -175,32 +201,27 @@ message ListNotesRequest {
   string organization_id = 1;
   // Optional parent ID filter (null = root notes only)
   optional string parent_id = 2;
-  reserved 3;
-  reserved "tags";
   // Include deleted notes
-  bool include_deleted = 4;
-  // Reserved: was pinned_only (now use BookmarksService)
-  reserved 5;
-  reserved "pinned_only";
+  bool include_deleted = 3;
   // Pagination: page number (1-indexed)
-  int32 page = 6;
+  int32 page = 4;
   // Pagination: page size (default: 50, max: 100)
-  int32 page_size = 7;
+  int32 page_size = 5;
   // Sort by field (created_at, updated_at, title)
-  string sort_by = 8;
+  string sort_by = 6;
   // Sort order (asc, desc)
-  string sort_order = 9;
+  string sort_order = 7;
   // Optional access mode filter
-  optional common.v1.AccessMode access_mode = 10;
+  optional common.v1.AccessMode access_mode = 8;
   // Optional group ID filter (for group-scoped notes)
-  optional string group_id = 11;
+  optional string group_id = 9;
   // Show only my personal notes
-  bool personal_only = 12;
+  bool personal_only = 10;
   // Exclude content field from response (for tree/list views)
-  bool exclude_content = 13;
+  bool exclude_content = 11;
   // Filter notes that carry every tag id in this list (logical AND).
   // Empty = no tag filter.
-  repeated string tag_ids = 14;
+  repeated string tag_ids = 12;
 }
 
 // Response for listing notes
@@ -223,14 +244,12 @@ message SearchNotesRequest {
   string organization_id = 1;
   // Search query (full-text search)
   string query = 2;
-  reserved 3;
-  reserved "tags";
   // Include deleted notes
-  bool include_deleted = 4;
+  bool include_deleted = 3;
   // Pagination: page number (1-indexed)
-  int32 page = 5;
+  int32 page = 4;
   // Pagination: page size (default: 50, max: 100)
-  int32 page_size = 6;
+  int32 page_size = 5;
 }
 
 // Response for searching notes
@@ -254,7 +273,7 @@ message GetBacklinksRequest {
 }
 
 // Response with backlinks
-message BacklinksResponse {
+message GetBacklinksResponse {
   // List of notes that reference the target note
   repeated NoteReference backlinks = 1;
   // Total count
@@ -340,43 +359,38 @@ message Note {
   string slug = 8;
   // Is deleted flag
   bool is_deleted = 9;
-  // Reserved: was is_pinned (now use BookmarksService)
-  reserved 10;
-  reserved "is_pinned";
   // Version number for conflict detection
-  int64 version = 11;
+  int64 version = 10;
   // Optional parent note ID
-  optional string parent_id = 12;
-  reserved 13;
-  reserved 24;
+  optional string parent_id = 11;
   // Metadata
-  map<string, string> metadata = 14;
+  map<string, string> metadata = 12;
   // Created timestamp
-  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp created_at = 13;
   // Updated timestamp
-  google.protobuf.Timestamp updated_at = 16;
+  google.protobuf.Timestamp updated_at = 14;
   // Deleted timestamp (if soft-deleted)
-  optional google.protobuf.Timestamp deleted_at = 17;
+  optional google.protobuf.Timestamp deleted_at = 15;
   // Group IDs if shared with groups
-  repeated string group_ids = 18;
+  repeated string group_ids = 16;
   // User's role on this note
-  common.v1.ContentRole user_role = 19;
+  common.v1.ContentRole user_role = 17;
   // URNs referenced in this note's content (outgoing links)
-  repeated string outgoing_references = 20;
+  repeated string outgoing_references = 18;
   // Custom icon for the note (optional)
-  optional NoteIcon icon = 21;
+  optional NoteIcon icon = 19;
 
   // Owner information (populated for notes shared with current user)
-  optional NoteOwner owner_info = 22;
+  optional NoteOwner owner_info = 20;
 
   // Users/groups this note is shared with (only populated for owner)
-  repeated NoteShareTarget shared_with = 23;
+  repeated NoteShareTarget shared_with = 21;
 
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 25;
+  optional common.v1.ContentRole baseline_role = 22;
 
   // Unified tags assigned to this note (manual + inline sources hydrated server-side).
-  repeated tags.v1.Tag tags = 26;
+  repeated tags.v1.Tag tags = 23;
 }
 
 // Note reference (lightweight representation for backlinks)
@@ -449,8 +463,18 @@ message UnshareNoteFromGroupRequest {
   string group_id = 3;
 }
 
-// Response for share/unshare operations
-message ShareNoteResponse {
+// Response for share operation
+message ShareNoteWithGroupResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+  // Updated list of group IDs
+  repeated string group_ids = 3;
+}
+
+// Response for unshare operation
+message UnshareNoteFromGroupResponse {
   // Success flag
   bool success = 1;
   // Message
@@ -468,7 +492,7 @@ message GetNoteSharingRequest {
 }
 
 // Response with note sharing information
-message NoteSharingResponse {
+message GetNoteSharingResponse {
   // Note access mode
   common.v1.AccessMode access_mode = 1;
   // Owner user ID
@@ -513,8 +537,16 @@ message RevokePermissionRequest {
   string subject_id = 4;
 }
 
-// Response for permission operations
-message PermissionResponse {
+// Response for grant permission
+message GrantPermissionResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+}
+
+// Response for revoke permission
+message RevokePermissionResponse {
   // Success flag
   bool success = 1;
   // Message

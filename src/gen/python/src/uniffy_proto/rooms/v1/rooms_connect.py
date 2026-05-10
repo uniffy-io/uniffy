@@ -16,13 +16,13 @@ import rooms.v1.rooms_pb2 as rooms_dot_v1_dot_rooms__pb2
 
 
 class RoomsService(Protocol):
-    async def create_room(self, request: rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    async def create_room(self, request: rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_room(self, request: rooms_dot_v1_dot_rooms__pb2.GetRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    async def get_room(self, request: rooms_dot_v1_dot_rooms__pb2.GetRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.GetRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_room(self, request: rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    async def update_room(self, request: rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_room(self, request: rooms_dot_v1_dot_rooms__pb2.DeleteRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.DeleteRoomResponse:
@@ -31,13 +31,13 @@ class RoomsService(Protocol):
     async def list_rooms(self, request: rooms_dot_v1_dot_rooms__pb2.ListRoomsRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.ListRoomsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    async def create_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_booking(self, request: rooms_dot_v1_dot_rooms__pb2.GetBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    async def get_booking(self, request: rooms_dot_v1_dot_rooms__pb2.GetBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.GetBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def cancel_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    async def cancel_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_bookings(self, request: rooms_dot_v1_dot_rooms__pb2.ListBookingsRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.ListBookingsResponse:
@@ -60,7 +60,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="CreateRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_room,
@@ -70,7 +70,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="GetRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.GetRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.GetRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_room,
@@ -80,7 +80,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="UpdateRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_room,
@@ -110,7 +110,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="CreateBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_booking,
@@ -120,7 +120,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="GetBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.GetBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.GetBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_booking,
@@ -130,7 +130,7 @@ class RoomsServiceASGIApplication(ConnectASGIApplication[RoomsService]):
                         name="CancelBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.cancel_booking,
@@ -183,14 +183,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -203,14 +203,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.GetRoomResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.GetRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.GetRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -223,14 +223,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -283,14 +283,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -303,14 +303,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.GetBookingResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.GetBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.GetBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -323,14 +323,14 @@ class RoomsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CancelBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -399,21 +399,21 @@ class RoomsServiceClient(ConnectClient):
 
 
 class RoomsServiceSync(Protocol):
-    def create_room(self, request: rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    def create_room(self, request: rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_room(self, request: rooms_dot_v1_dot_rooms__pb2.GetRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    def get_room(self, request: rooms_dot_v1_dot_rooms__pb2.GetRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.GetRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_room(self, request: rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    def update_room(self, request: rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_room(self, request: rooms_dot_v1_dot_rooms__pb2.DeleteRoomRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.DeleteRoomResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_rooms(self, request: rooms_dot_v1_dot_rooms__pb2.ListRoomsRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.ListRoomsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    def create_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_booking(self, request: rooms_dot_v1_dot_rooms__pb2.GetBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    def get_booking(self, request: rooms_dot_v1_dot_rooms__pb2.GetBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.GetBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def cancel_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    def cancel_booking(self, request: rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_bookings(self, request: rooms_dot_v1_dot_rooms__pb2.ListBookingsRequest, ctx: RequestContext) -> rooms_dot_v1_dot_rooms__pb2.ListBookingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -432,7 +432,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_room,
@@ -442,7 +442,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.GetRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.GetRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_room,
@@ -452,7 +452,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateRoom",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_room,
@@ -482,7 +482,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_booking,
@@ -492,7 +492,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.GetBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.GetBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_booking,
@@ -502,7 +502,7 @@ class RoomsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CancelBooking",
                         service_name="rooms.v1.RoomsService",
                         input=rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest,
-                        output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                        output=rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.cancel_booking,
@@ -555,14 +555,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CreateRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CreateRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -575,14 +575,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.GetRoomResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.GetRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.GetRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -595,14 +595,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.RoomResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateRoom",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.UpdateRoomRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.RoomResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.UpdateRoomResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -655,14 +655,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CreateBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CreateBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -675,14 +675,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.GetBookingResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.GetBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.GetBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -695,14 +695,14 @@ class RoomsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> rooms_dot_v1_dot_rooms__pb2.BookingResponse:
+    ) -> rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CancelBooking",
                 service_name="rooms.v1.RoomsService",
                 input=rooms_dot_v1_dot_rooms__pb2.CancelBookingRequest,
-                output=rooms_dot_v1_dot_rooms__pb2.BookingResponse,
+                output=rooms_dot_v1_dot_rooms__pb2.CancelBookingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

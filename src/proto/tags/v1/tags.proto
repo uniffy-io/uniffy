@@ -12,10 +12,10 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1";
 // content. Inline note tags route through the same store via the
 // "inline" source on assignments.
 service TagsService {
-  rpc CreateTag(CreateTagRequest) returns (TagResponse) {}
-  rpc UpdateTag(UpdateTagRequest) returns (TagResponse) {}
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse) {}
+  rpc UpdateTag(UpdateTagRequest) returns (UpdateTagResponse) {}
   rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse) {}
-  rpc GetTag(GetTagRequest) returns (TagResponse) {}
+  rpc GetTag(GetTagRequest) returns (GetTagResponse) {}
 
   rpc ListTags(ListTagsRequest) returns (ListTagsResponse) {}
   rpc SuggestTags(SuggestTagsRequest) returns (SuggestTagsResponse) {}
@@ -26,12 +26,12 @@ service TagsService {
   rpc GetTagsForUrns(GetTagsForUrnsRequest) returns (GetTagsForUrnsResponse) {}
   rpc ListContentByTag(ListContentByTagRequest) returns (ListContentByTagResponse) {}
 
-  rpc MergeTags(MergeTagsRequest) returns (TagResponse) {}
+  rpc MergeTags(MergeTagsRequest) returns (MergeTagsResponse) {}
 
-  rpc CreateSavedFilter(CreateSavedTagFilterRequest) returns (SavedTagFilterResponse) {}
-  rpc UpdateSavedFilter(UpdateSavedTagFilterRequest) returns (SavedTagFilterResponse) {}
-  rpc DeleteSavedFilter(DeleteSavedTagFilterRequest) returns (DeleteSavedTagFilterResponse) {}
-  rpc ListSavedFilters(ListSavedTagFiltersRequest) returns (ListSavedTagFiltersResponse) {}
+  rpc CreateSavedFilter(CreateSavedFilterRequest) returns (CreateSavedFilterResponse) {}
+  rpc UpdateSavedFilter(UpdateSavedFilterRequest) returns (UpdateSavedFilterResponse) {}
+  rpc DeleteSavedFilter(DeleteSavedFilterRequest) returns (DeleteSavedFilterResponse) {}
+  rpc ListSavedFilters(ListSavedFiltersRequest) returns (ListSavedFiltersResponse) {}
 }
 
 message Tag {
@@ -105,7 +105,19 @@ message GetTagRequest {
   string tag = 2;
 }
 
-message TagResponse {
+message CreateTagResponse {
+  Tag tag = 1;
+}
+
+message UpdateTagResponse {
+  Tag tag = 1;
+}
+
+message GetTagResponse {
+  Tag tag = 1;
+}
+
+message MergeTagsResponse {
   Tag tag = 1;
 }
 
@@ -261,11 +273,15 @@ message SavedTagFilter {
   google.protobuf.Timestamp updated_at = 13;
 }
 
-message SavedTagFilterResponse {
+message CreateSavedFilterResponse {
   SavedTagFilter filter = 1;
 }
 
-message CreateSavedTagFilterRequest {
+message UpdateSavedFilterResponse {
+  SavedTagFilter filter = 1;
+}
+
+message CreateSavedFilterRequest {
   string organization_id = 1;
   string name = 2;
   optional string description = 3;
@@ -275,7 +291,7 @@ message CreateSavedTagFilterRequest {
   optional string sort_order = 7;
 }
 
-message UpdateSavedTagFilterRequest {
+message UpdateSavedFilterRequest {
   string organization_id = 1;
   string filter_id = 2;
   optional string name = 3;
@@ -286,21 +302,21 @@ message UpdateSavedTagFilterRequest {
   optional string sort_order = 8;
 }
 
-message DeleteSavedTagFilterRequest {
+message DeleteSavedFilterRequest {
   string organization_id = 1;
   string filter_id = 2;
 }
 
-message DeleteSavedTagFilterResponse {
+message DeleteSavedFilterResponse {
   bool success = 1;
 }
 
-message ListSavedTagFiltersRequest {
+message ListSavedFiltersRequest {
   string organization_id = 1;
   // Include system-seeded presets in the response. Defaults true.
   bool include_presets = 2;
 }
 
-message ListSavedTagFiltersResponse {
+message ListSavedFiltersResponse {
   repeated SavedTagFilter filters = 1;
 }

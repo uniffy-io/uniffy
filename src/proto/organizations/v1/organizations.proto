@@ -15,30 +15,30 @@ service OrganizationsService {
 
   // Organization CRUD (System Admin)
   rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
-  rpc GetOrganization(GetOrganizationRequest) returns (OrganizationDetail);
-  rpc CreateOrganization(CreateOrganizationRequest) returns (common.v1.OrganizationInfo);
-  rpc UpdateOrganization(UpdateOrganizationRequest) returns (common.v1.OrganizationInfo);
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
 
   // Organization overview (Org Admin)
-  rpc GetOrganizationOverview(GetOrganizationOverviewRequest) returns (OrganizationOverview);
+  rpc GetOrganizationOverview(GetOrganizationOverviewRequest) returns (GetOrganizationOverviewResponse);
 
   // Member management (Org Admin)
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
-  rpc AddMember(AddMemberRequest) returns (common.v1.MemberInfo);
-  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (common.v1.MemberInfo);
+  rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
   rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
 
   // Permission defaults (Org Admin)
-  rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (PermissionDefaultsResponse);
-  rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (ContentTypeDefaults);
+  rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (GetPermissionDefaultsResponse);
+  rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (UpdatePermissionDefaultsResponse);
 
   // Organization settings (Org Admin) — org-scoped JSONB preferences.
-  rpc GetOrganizationSettings(GetOrganizationSettingsRequest) returns (OrganizationSettings);
-  rpc UpdateOrganizationSettings(UpdateOrganizationSettingsRequest) returns (OrganizationSettings);
+  rpc GetOrganizationSettings(GetOrganizationSettingsRequest) returns (GetOrganizationSettingsResponse);
+  rpc UpdateOrganizationSettings(UpdateOrganizationSettingsRequest) returns (UpdateOrganizationSettingsResponse);
 
   // Domain Admin management (Org Admin)
-  rpc GrantDomainAdmin(GrantDomainAdminRequest) returns (common.v1.DomainAdminInfo);
+  rpc GrantDomainAdmin(GrantDomainAdminRequest) returns (GrantDomainAdminResponse);
   rpc RevokeDomainAdmin(RevokeDomainAdminRequest) returns (RevokeDomainAdminResponse);
   rpc ListDomainAdmins(ListDomainAdminsRequest) returns (ListDomainAdminsResponse);
   rpc GetUserDomainAdmins(GetUserDomainAdminsRequest) returns (GetUserDomainAdminsResponse);
@@ -81,6 +81,18 @@ message GetOrganizationRequest {
   string organization_id = 1;
 }
 
+message GetOrganizationResponse {
+  OrganizationDetail organization = 1;
+}
+
+message CreateOrganizationResponse {
+  common.v1.OrganizationInfo organization = 1;
+}
+
+message UpdateOrganizationResponse {
+  common.v1.OrganizationInfo organization = 1;
+}
+
 message CreateOrganizationRequest {
   string name = 1;
   string slug = 2;
@@ -108,6 +120,10 @@ message DeleteOrganizationResponse {
 
 message GetOrganizationOverviewRequest {
   string organization_id = 1;
+}
+
+message GetOrganizationOverviewResponse {
+  OrganizationOverview overview = 1;
 }
 
 message OrganizationOverview {
@@ -143,10 +159,18 @@ message AddMemberRequest {
   common.v1.OrganizationRole role = 3;
 }
 
+message AddMemberResponse {
+  common.v1.MemberInfo member = 1;
+}
+
 message UpdateMemberRoleRequest {
   string organization_id = 1;
   string user_id = 2;
   common.v1.OrganizationRole role = 3;
+}
+
+message UpdateMemberRoleResponse {
+  common.v1.MemberInfo member = 1;
 }
 
 message RemoveMemberRequest {
@@ -164,8 +188,12 @@ message GetPermissionDefaultsRequest {
   string organization_id = 1;
 }
 
-message PermissionDefaultsResponse {
+message GetPermissionDefaultsResponse {
   repeated ContentTypeDefaults defaults = 1;
+}
+
+message UpdatePermissionDefaultsResponse {
+  ContentTypeDefaults defaults = 1;
 }
 
 message UpdatePermissionDefaultsRequest {
@@ -200,9 +228,17 @@ message GetOrganizationSettingsRequest {
   string organization_id = 1;
 }
 
+message GetOrganizationSettingsResponse {
+  OrganizationSettings settings = 1;
+}
+
 message UpdateOrganizationSettingsRequest {
   string organization_id = 1;
   optional ChatSettings chat = 2;
+}
+
+message UpdateOrganizationSettingsResponse {
+  OrganizationSettings settings = 1;
 }
 
 // Domain Admin Messages (Org Admin)
@@ -211,6 +247,10 @@ message GrantDomainAdminRequest {
   string organization_id = 1;
   string user_id = 2;
   common.v1.DomainType domain = 3;
+}
+
+message GrantDomainAdminResponse {
+  common.v1.DomainAdminInfo domain_admin = 1;
 }
 
 message RevokeDomainAdminRequest {

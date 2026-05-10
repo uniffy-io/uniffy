@@ -61,19 +61,19 @@ const (
 // AgentsServiceClient is a client for the agents.v1.AgentsService service.
 type AgentsServiceClient interface {
 	// Create a new agent configuration
-	CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.CreateAgentResponse], error)
 	// Get an agent by ID
-	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error)
 	// List agents for an organization
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Update an agent configuration
-	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error)
 	// Delete an agent
 	DeleteAgent(context.Context, *connect.Request[v1.DeleteAgentRequest]) (*connect.Response[v1.DeleteAgentResponse], error)
 	// Upload agent avatar image (synchronous processing)
-	UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error)
+	UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.UploadAgentAvatarResponse], error)
 	// Delete agent avatar
-	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error)
+	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
 }
@@ -89,13 +89,13 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	agentsServiceMethods := v1.File_agents_v1_agents_proto.Services().ByName("AgentsService").Methods()
 	return &agentsServiceClient{
-		createAgent: connect.NewClient[v1.CreateAgentRequest, v1.AgentResponse](
+		createAgent: connect.NewClient[v1.CreateAgentRequest, v1.CreateAgentResponse](
 			httpClient,
 			baseURL+AgentsServiceCreateAgentProcedure,
 			connect.WithSchema(agentsServiceMethods.ByName("CreateAgent")),
 			connect.WithClientOptions(opts...),
 		),
-		getAgent: connect.NewClient[v1.GetAgentRequest, v1.AgentResponse](
+		getAgent: connect.NewClient[v1.GetAgentRequest, v1.GetAgentResponse](
 			httpClient,
 			baseURL+AgentsServiceGetAgentProcedure,
 			connect.WithSchema(agentsServiceMethods.ByName("GetAgent")),
@@ -107,7 +107,7 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(agentsServiceMethods.ByName("ListAgents")),
 			connect.WithClientOptions(opts...),
 		),
-		updateAgent: connect.NewClient[v1.UpdateAgentRequest, v1.AgentResponse](
+		updateAgent: connect.NewClient[v1.UpdateAgentRequest, v1.UpdateAgentResponse](
 			httpClient,
 			baseURL+AgentsServiceUpdateAgentProcedure,
 			connect.WithSchema(agentsServiceMethods.ByName("UpdateAgent")),
@@ -119,13 +119,13 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(agentsServiceMethods.ByName("DeleteAgent")),
 			connect.WithClientOptions(opts...),
 		),
-		uploadAgentAvatar: connect.NewClient[v1.UploadAgentAvatarRequest, v1.AgentResponse](
+		uploadAgentAvatar: connect.NewClient[v1.UploadAgentAvatarRequest, v1.UploadAgentAvatarResponse](
 			httpClient,
 			baseURL+AgentsServiceUploadAgentAvatarProcedure,
 			connect.WithSchema(agentsServiceMethods.ByName("UploadAgentAvatar")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteAgentAvatar: connect.NewClient[v1.DeleteAgentAvatarRequest, v1.AgentResponse](
+		deleteAgentAvatar: connect.NewClient[v1.DeleteAgentAvatarRequest, v1.DeleteAgentAvatarResponse](
 			httpClient,
 			baseURL+AgentsServiceDeleteAgentAvatarProcedure,
 			connect.WithSchema(agentsServiceMethods.ByName("DeleteAgentAvatar")),
@@ -142,23 +142,23 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // agentsServiceClient implements AgentsServiceClient.
 type agentsServiceClient struct {
-	createAgent         *connect.Client[v1.CreateAgentRequest, v1.AgentResponse]
-	getAgent            *connect.Client[v1.GetAgentRequest, v1.AgentResponse]
+	createAgent         *connect.Client[v1.CreateAgentRequest, v1.CreateAgentResponse]
+	getAgent            *connect.Client[v1.GetAgentRequest, v1.GetAgentResponse]
 	listAgents          *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
-	updateAgent         *connect.Client[v1.UpdateAgentRequest, v1.AgentResponse]
+	updateAgent         *connect.Client[v1.UpdateAgentRequest, v1.UpdateAgentResponse]
 	deleteAgent         *connect.Client[v1.DeleteAgentRequest, v1.DeleteAgentResponse]
-	uploadAgentAvatar   *connect.Client[v1.UploadAgentAvatarRequest, v1.AgentResponse]
-	deleteAgentAvatar   *connect.Client[v1.DeleteAgentAvatarRequest, v1.AgentResponse]
+	uploadAgentAvatar   *connect.Client[v1.UploadAgentAvatarRequest, v1.UploadAgentAvatarResponse]
+	deleteAgentAvatar   *connect.Client[v1.DeleteAgentAvatarRequest, v1.DeleteAgentAvatarResponse]
 	previewSystemPrompt *connect.Client[v1.PreviewSystemPromptRequest, v1.PreviewSystemPromptResponse]
 }
 
 // CreateAgent calls agents.v1.AgentsService.CreateAgent.
-func (c *agentsServiceClient) CreateAgent(ctx context.Context, req *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (c *agentsServiceClient) CreateAgent(ctx context.Context, req *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.CreateAgentResponse], error) {
 	return c.createAgent.CallUnary(ctx, req)
 }
 
 // GetAgent calls agents.v1.AgentsService.GetAgent.
-func (c *agentsServiceClient) GetAgent(ctx context.Context, req *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (c *agentsServiceClient) GetAgent(ctx context.Context, req *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error) {
 	return c.getAgent.CallUnary(ctx, req)
 }
 
@@ -168,7 +168,7 @@ func (c *agentsServiceClient) ListAgents(ctx context.Context, req *connect.Reque
 }
 
 // UpdateAgent calls agents.v1.AgentsService.UpdateAgent.
-func (c *agentsServiceClient) UpdateAgent(ctx context.Context, req *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (c *agentsServiceClient) UpdateAgent(ctx context.Context, req *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error) {
 	return c.updateAgent.CallUnary(ctx, req)
 }
 
@@ -178,12 +178,12 @@ func (c *agentsServiceClient) DeleteAgent(ctx context.Context, req *connect.Requ
 }
 
 // UploadAgentAvatar calls agents.v1.AgentsService.UploadAgentAvatar.
-func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, req *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, req *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.UploadAgentAvatarResponse], error) {
 	return c.uploadAgentAvatar.CallUnary(ctx, req)
 }
 
 // DeleteAgentAvatar calls agents.v1.AgentsService.DeleteAgentAvatar.
-func (c *agentsServiceClient) DeleteAgentAvatar(ctx context.Context, req *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (c *agentsServiceClient) DeleteAgentAvatar(ctx context.Context, req *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error) {
 	return c.deleteAgentAvatar.CallUnary(ctx, req)
 }
 
@@ -195,19 +195,19 @@ func (c *agentsServiceClient) PreviewSystemPrompt(ctx context.Context, req *conn
 // AgentsServiceHandler is an implementation of the agents.v1.AgentsService service.
 type AgentsServiceHandler interface {
 	// Create a new agent configuration
-	CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.CreateAgentResponse], error)
 	// Get an agent by ID
-	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error)
 	// List agents for an organization
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Update an agent configuration
-	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.AgentResponse], error)
+	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error)
 	// Delete an agent
 	DeleteAgent(context.Context, *connect.Request[v1.DeleteAgentRequest]) (*connect.Response[v1.DeleteAgentResponse], error)
 	// Upload agent avatar image (synchronous processing)
-	UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error)
+	UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.UploadAgentAvatarResponse], error)
 	// Delete agent avatar
-	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error)
+	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
 }
@@ -294,11 +294,11 @@ func NewAgentsServiceHandler(svc AgentsServiceHandler, opts ...connect.HandlerOp
 // UnimplementedAgentsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAgentsServiceHandler struct{}
 
-func (UnimplementedAgentsServiceHandler) CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (UnimplementedAgentsServiceHandler) CreateAgent(context.Context, *connect.Request[v1.CreateAgentRequest]) (*connect.Response[v1.CreateAgentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.CreateAgent is not implemented"))
 }
 
-func (UnimplementedAgentsServiceHandler) GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (UnimplementedAgentsServiceHandler) GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.GetAgent is not implemented"))
 }
 
@@ -306,7 +306,7 @@ func (UnimplementedAgentsServiceHandler) ListAgents(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.ListAgents is not implemented"))
 }
 
-func (UnimplementedAgentsServiceHandler) UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (UnimplementedAgentsServiceHandler) UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.UpdateAgent is not implemented"))
 }
 
@@ -314,11 +314,11 @@ func (UnimplementedAgentsServiceHandler) DeleteAgent(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.DeleteAgent is not implemented"))
 }
 
-func (UnimplementedAgentsServiceHandler) UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (UnimplementedAgentsServiceHandler) UploadAgentAvatar(context.Context, *connect.Request[v1.UploadAgentAvatarRequest]) (*connect.Response[v1.UploadAgentAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.UploadAgentAvatar is not implemented"))
 }
 
-func (UnimplementedAgentsServiceHandler) DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.AgentResponse], error) {
+func (UnimplementedAgentsServiceHandler) DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.DeleteAgentAvatar is not implemented"))
 }
 

@@ -663,6 +663,85 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
 }
 
 /**
+ * @generated from message agents.v1.StreamSendMessageRequest
+ */
+export class StreamSendMessageRequest extends Message<StreamSendMessageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * Legacy: addresses an isolated AgentSession. Used by the builder Test
+   * tab and historical playgrounds.
+   *
+   * @generated from field: string session_id = 2;
+   */
+  sessionId = "";
+
+  /**
+   * @generated from field: string content = 3;
+   */
+  content = "";
+
+  /**
+   * IDs of uploaded files to include (uploaded via FilesService)
+   *
+   * @generated from field: repeated string file_ids = 4;
+   */
+  fileIds: string[] = [];
+
+  /**
+   * IANA timezone of the user's browser (e.g. "America/New_York")
+   *
+   * @generated from field: string user_timezone = 5;
+   */
+  userTimezone = "";
+
+  /**
+   * New: invokes the agent inside a chat channel. When set, the runtime
+   * reads context from chat_messages (scoped per the channel binding) and
+   * writes outputs back as chat messages via the AgentChatBridge. Mutually
+   * exclusive with session_id at the handler boundary.
+   *
+   * @generated from field: optional agents.v1.ChatChannelContext chat_context = 6;
+   */
+  chatContext?: ChatChannelContext;
+
+  constructor(data?: PartialMessage<StreamSendMessageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.StreamSendMessageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "user_timezone", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "chat_context", kind: "message", T: ChatChannelContext, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageRequest {
+    return new StreamSendMessageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamSendMessageRequest {
+    return new StreamSendMessageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamSendMessageRequest {
+    return new StreamSendMessageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamSendMessageRequest | PlainMessage<StreamSendMessageRequest> | undefined, b: StreamSendMessageRequest | PlainMessage<StreamSendMessageRequest> | undefined): boolean {
+    return proto3.util.equals(StreamSendMessageRequest, a, b);
+  }
+}
+
+/**
  * ChatChannelContext binds an agent invocation to a chat channel and
  * the user message that triggered it. Used by the AgentChatBridge to
  * build the scoped context window and route streaming output.
@@ -779,9 +858,9 @@ export class SendMessageResponse extends Message<SendMessageResponse> {
 }
 
 /**
- * @generated from message agents.v1.ConfirmationResponse
+ * @generated from message agents.v1.RespondToConfirmationRequest
  */
-export class ConfirmationResponse extends Message<ConfirmationResponse> {
+export class RespondToConfirmationRequest extends Message<RespondToConfirmationRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -802,13 +881,13 @@ export class ConfirmationResponse extends Message<ConfirmationResponse> {
    */
   approved = false;
 
-  constructor(data?: PartialMessage<ConfirmationResponse>) {
+  constructor(data?: PartialMessage<RespondToConfirmationRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.ConfirmationResponse";
+  static readonly typeName = "agents.v1.RespondToConfirmationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -816,20 +895,20 @@ export class ConfirmationResponse extends Message<ConfirmationResponse> {
     { no: 4, name: "approved", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfirmationResponse {
-    return new ConfirmationResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RespondToConfirmationRequest {
+    return new RespondToConfirmationRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfirmationResponse {
-    return new ConfirmationResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RespondToConfirmationRequest {
+    return new RespondToConfirmationRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfirmationResponse {
-    return new ConfirmationResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RespondToConfirmationRequest {
+    return new RespondToConfirmationRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ConfirmationResponse | PlainMessage<ConfirmationResponse> | undefined, b: ConfirmationResponse | PlainMessage<ConfirmationResponse> | undefined): boolean {
-    return proto3.util.equals(ConfirmationResponse, a, b);
+  static equals(a: RespondToConfirmationRequest | PlainMessage<RespondToConfirmationRequest> | undefined, b: RespondToConfirmationRequest | PlainMessage<RespondToConfirmationRequest> | undefined): boolean {
+    return proto3.util.equals(RespondToConfirmationRequest, a, b);
   }
 }
 
@@ -877,48 +956,48 @@ export class SubscribeToRunRequest extends Message<SubscribeToRunRequest> {
 }
 
 /**
- * @generated from message agents.v1.ConfirmationResponseAck
+ * @generated from message agents.v1.RespondToConfirmationResponse
  */
-export class ConfirmationResponseAck extends Message<ConfirmationResponseAck> {
+export class RespondToConfirmationResponse extends Message<RespondToConfirmationResponse> {
   /**
    * @generated from field: bool accepted = 1;
    */
   accepted = false;
 
-  constructor(data?: PartialMessage<ConfirmationResponseAck>) {
+  constructor(data?: PartialMessage<RespondToConfirmationResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.ConfirmationResponseAck";
+  static readonly typeName = "agents.v1.RespondToConfirmationResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "accepted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfirmationResponseAck {
-    return new ConfirmationResponseAck().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RespondToConfirmationResponse {
+    return new RespondToConfirmationResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfirmationResponseAck {
-    return new ConfirmationResponseAck().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RespondToConfirmationResponse {
+    return new RespondToConfirmationResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfirmationResponseAck {
-    return new ConfirmationResponseAck().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RespondToConfirmationResponse {
+    return new RespondToConfirmationResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ConfirmationResponseAck | PlainMessage<ConfirmationResponseAck> | undefined, b: ConfirmationResponseAck | PlainMessage<ConfirmationResponseAck> | undefined): boolean {
-    return proto3.util.equals(ConfirmationResponseAck, a, b);
+  static equals(a: RespondToConfirmationResponse | PlainMessage<RespondToConfirmationResponse> | undefined, b: RespondToConfirmationResponse | PlainMessage<RespondToConfirmationResponse> | undefined): boolean {
+    return proto3.util.equals(RespondToConfirmationResponse, a, b);
   }
 }
 
 /**
- * @generated from message agents.v1.StreamSendMessageEvent
+ * @generated from message agents.v1.StreamSendMessageResponse
  */
-export class StreamSendMessageEvent extends Message<StreamSendMessageEvent> {
+export class StreamSendMessageResponse extends Message<StreamSendMessageResponse> {
   /**
-   * @generated from oneof agents.v1.StreamSendMessageEvent.event
+   * @generated from oneof agents.v1.StreamSendMessageResponse.event
    */
   event: {
     /**
@@ -975,13 +1054,13 @@ export class StreamSendMessageEvent extends Message<StreamSendMessageEvent> {
    */
   runId = "";
 
-  constructor(data?: PartialMessage<StreamSendMessageEvent>) {
+  constructor(data?: PartialMessage<StreamSendMessageResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.StreamSendMessageEvent";
+  static readonly typeName = "agents.v1.StreamSendMessageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
     { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
@@ -993,20 +1072,117 @@ export class StreamSendMessageEvent extends Message<StreamSendMessageEvent> {
     { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageEvent {
-    return new StreamSendMessageEvent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamSendMessageEvent {
-    return new StreamSendMessageEvent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamSendMessageEvent {
-    return new StreamSendMessageEvent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StreamSendMessageEvent | PlainMessage<StreamSendMessageEvent> | undefined, b: StreamSendMessageEvent | PlainMessage<StreamSendMessageEvent> | undefined): boolean {
-    return proto3.util.equals(StreamSendMessageEvent, a, b);
+  static equals(a: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined, b: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined): boolean {
+    return proto3.util.equals(StreamSendMessageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.SubscribeToRunResponse
+ */
+export class SubscribeToRunResponse extends Message<SubscribeToRunResponse> {
+  /**
+   * @generated from oneof agents.v1.SubscribeToRunResponse.event
+   */
+  event: {
+    /**
+     * @generated from field: agents.v1.StreamTokenEvent token = 1;
+     */
+    value: StreamTokenEvent;
+    case: "token";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolCallEvent tool_call = 2;
+     */
+    value: StreamToolCallEvent;
+    case: "toolCall";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolResultEvent tool_result = 3;
+     */
+    value: StreamToolResultEvent;
+    case: "toolResult";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 4;
+     */
+    value: StreamMessageStoredEvent;
+    case: "messageStored";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamDoneEvent done = 5;
+     */
+    value: StreamDoneEvent;
+    case: "done";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamErrorEvent error = 6;
+     */
+    value: StreamErrorEvent;
+    case: "error";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 7;
+     */
+    value: StreamConfirmationRequiredEvent;
+    case: "confirmationRequired";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  /**
+   * The egress run id this event belongs to. Populated on every event
+   * so a tab reload mid-stream can call SubscribeToRun(run_id) to
+   * resume from the start of the stream. Set by the handler from the
+   * run state hash; the worker does not embed it inside the oneof
+   * payload itself.
+   *
+   * @generated from field: string run_id = 8;
+   */
+  runId = "";
+
+  constructor(data?: PartialMessage<SubscribeToRunResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.SubscribeToRunResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
+    { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
+    { no: 3, name: "tool_result", kind: "message", T: StreamToolResultEvent, oneof: "event" },
+    { no: 4, name: "message_stored", kind: "message", T: StreamMessageStoredEvent, oneof: "event" },
+    { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
+    { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
+    { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
+    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
+    return new SubscribeToRunResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined, b: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined): boolean {
+    return proto3.util.equals(SubscribeToRunResponse, a, b);
   }
 }
 

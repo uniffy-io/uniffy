@@ -35,13 +35,13 @@ const (
 // CronService manages scheduled recurring agent tasks.
 type CronServiceClient interface {
 	// Create a new scheduled task
-	CreateCronTask(ctx context.Context, in *CreateCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error)
+	CreateCronTask(ctx context.Context, in *CreateCronTaskRequest, opts ...grpc.CallOption) (*CreateCronTaskResponse, error)
 	// Get a scheduled task by ID
-	GetCronTask(ctx context.Context, in *GetCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error)
+	GetCronTask(ctx context.Context, in *GetCronTaskRequest, opts ...grpc.CallOption) (*GetCronTaskResponse, error)
 	// List scheduled tasks for an organization
 	ListCronTasks(ctx context.Context, in *ListCronTasksRequest, opts ...grpc.CallOption) (*ListCronTasksResponse, error)
 	// Update a scheduled task
-	UpdateCronTask(ctx context.Context, in *UpdateCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error)
+	UpdateCronTask(ctx context.Context, in *UpdateCronTaskRequest, opts ...grpc.CallOption) (*UpdateCronTaskResponse, error)
 	// Delete a scheduled task
 	DeleteCronTask(ctx context.Context, in *DeleteCronTaskRequest, opts ...grpc.CallOption) (*DeleteCronTaskResponse, error)
 	// List execution history for a task
@@ -58,9 +58,9 @@ func NewCronServiceClient(cc grpc.ClientConnInterface) CronServiceClient {
 	return &cronServiceClient{cc}
 }
 
-func (c *cronServiceClient) CreateCronTask(ctx context.Context, in *CreateCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error) {
+func (c *cronServiceClient) CreateCronTask(ctx context.Context, in *CreateCronTaskRequest, opts ...grpc.CallOption) (*CreateCronTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CronTaskResponse)
+	out := new(CreateCronTaskResponse)
 	err := c.cc.Invoke(ctx, CronService_CreateCronTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -68,9 +68,9 @@ func (c *cronServiceClient) CreateCronTask(ctx context.Context, in *CreateCronTa
 	return out, nil
 }
 
-func (c *cronServiceClient) GetCronTask(ctx context.Context, in *GetCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error) {
+func (c *cronServiceClient) GetCronTask(ctx context.Context, in *GetCronTaskRequest, opts ...grpc.CallOption) (*GetCronTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CronTaskResponse)
+	out := new(GetCronTaskResponse)
 	err := c.cc.Invoke(ctx, CronService_GetCronTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -88,9 +88,9 @@ func (c *cronServiceClient) ListCronTasks(ctx context.Context, in *ListCronTasks
 	return out, nil
 }
 
-func (c *cronServiceClient) UpdateCronTask(ctx context.Context, in *UpdateCronTaskRequest, opts ...grpc.CallOption) (*CronTaskResponse, error) {
+func (c *cronServiceClient) UpdateCronTask(ctx context.Context, in *UpdateCronTaskRequest, opts ...grpc.CallOption) (*UpdateCronTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CronTaskResponse)
+	out := new(UpdateCronTaskResponse)
 	err := c.cc.Invoke(ctx, CronService_UpdateCronTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -135,13 +135,13 @@ func (c *cronServiceClient) TriggerCronTask(ctx context.Context, in *TriggerCron
 // CronService manages scheduled recurring agent tasks.
 type CronServiceServer interface {
 	// Create a new scheduled task
-	CreateCronTask(context.Context, *CreateCronTaskRequest) (*CronTaskResponse, error)
+	CreateCronTask(context.Context, *CreateCronTaskRequest) (*CreateCronTaskResponse, error)
 	// Get a scheduled task by ID
-	GetCronTask(context.Context, *GetCronTaskRequest) (*CronTaskResponse, error)
+	GetCronTask(context.Context, *GetCronTaskRequest) (*GetCronTaskResponse, error)
 	// List scheduled tasks for an organization
 	ListCronTasks(context.Context, *ListCronTasksRequest) (*ListCronTasksResponse, error)
 	// Update a scheduled task
-	UpdateCronTask(context.Context, *UpdateCronTaskRequest) (*CronTaskResponse, error)
+	UpdateCronTask(context.Context, *UpdateCronTaskRequest) (*UpdateCronTaskResponse, error)
 	// Delete a scheduled task
 	DeleteCronTask(context.Context, *DeleteCronTaskRequest) (*DeleteCronTaskResponse, error)
 	// List execution history for a task
@@ -158,16 +158,16 @@ type CronServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCronServiceServer struct{}
 
-func (UnimplementedCronServiceServer) CreateCronTask(context.Context, *CreateCronTaskRequest) (*CronTaskResponse, error) {
+func (UnimplementedCronServiceServer) CreateCronTask(context.Context, *CreateCronTaskRequest) (*CreateCronTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCronTask not implemented")
 }
-func (UnimplementedCronServiceServer) GetCronTask(context.Context, *GetCronTaskRequest) (*CronTaskResponse, error) {
+func (UnimplementedCronServiceServer) GetCronTask(context.Context, *GetCronTaskRequest) (*GetCronTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCronTask not implemented")
 }
 func (UnimplementedCronServiceServer) ListCronTasks(context.Context, *ListCronTasksRequest) (*ListCronTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCronTasks not implemented")
 }
-func (UnimplementedCronServiceServer) UpdateCronTask(context.Context, *UpdateCronTaskRequest) (*CronTaskResponse, error) {
+func (UnimplementedCronServiceServer) UpdateCronTask(context.Context, *UpdateCronTaskRequest) (*UpdateCronTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateCronTask not implemented")
 }
 func (UnimplementedCronServiceServer) DeleteCronTask(context.Context, *DeleteCronTaskRequest) (*DeleteCronTaskResponse, error) {

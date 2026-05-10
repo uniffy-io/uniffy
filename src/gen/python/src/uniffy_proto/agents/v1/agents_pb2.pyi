@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
@@ -99,7 +99,31 @@ class CreateAgentRequest(_message.Message):
     tag_ids: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
-class AgentResponse(_message.Message):
+class CreateAgentResponse(_message.Message):
+    __slots__ = ("agent",)
+    AGENT_FIELD_NUMBER: _ClassVar[int]
+    agent: AgentInfo
+    def __init__(self, agent: _Optional[_Union[AgentInfo, _Mapping]] = ...) -> None: ...
+
+class GetAgentResponse(_message.Message):
+    __slots__ = ("agent",)
+    AGENT_FIELD_NUMBER: _ClassVar[int]
+    agent: AgentInfo
+    def __init__(self, agent: _Optional[_Union[AgentInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateAgentResponse(_message.Message):
+    __slots__ = ("agent",)
+    AGENT_FIELD_NUMBER: _ClassVar[int]
+    agent: AgentInfo
+    def __init__(self, agent: _Optional[_Union[AgentInfo, _Mapping]] = ...) -> None: ...
+
+class UploadAgentAvatarResponse(_message.Message):
+    __slots__ = ("agent",)
+    AGENT_FIELD_NUMBER: _ClassVar[int]
+    agent: AgentInfo
+    def __init__(self, agent: _Optional[_Union[AgentInfo, _Mapping]] = ...) -> None: ...
+
+class DeleteAgentAvatarResponse(_message.Message):
     __slots__ = ("agent",)
     AGENT_FIELD_NUMBER: _ClassVar[int]
     agent: AgentInfo

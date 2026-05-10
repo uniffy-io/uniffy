@@ -22,10 +22,10 @@ class FilesService(Protocol):
     async def upload_chunk(self, request: files_dot_v1_dot_files__pb2.UploadChunkRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunkResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def complete_upload(self, request: files_dot_v1_dot_files__pb2.CompleteUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    async def complete_upload(self, request: files_dot_v1_dot_files__pb2.CompleteUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CompleteUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upload_chunks(self, request: AsyncIterator[files_dot_v1_dot_files__pb2.UploadChunkRequest], ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    async def upload_chunks(self, request: AsyncIterator[files_dot_v1_dot_files__pb2.UploadChunksRequest], ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def get_upload_status(self, request: files_dot_v1_dot_files__pb2.GetUploadStatusRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetUploadStatusResponse:
@@ -34,31 +34,31 @@ class FilesService(Protocol):
     async def abort_upload(self, request: files_dot_v1_dot_files__pb2.AbortUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.AbortUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
+    def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    async def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_file(self, request: files_dot_v1_dot_files__pb2.UpdateFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    async def update_file(self, request: files_dot_v1_dot_files__pb2.UpdateFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_file(self, request: files_dot_v1_dot_files__pb2.DeleteFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def restore_file(self, request: files_dot_v1_dot_files__pb2.RestoreFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    async def restore_file(self, request: files_dot_v1_dot_files__pb2.RestoreFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_files(self, request: files_dot_v1_dot_files__pb2.ListFilesRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFilesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_folder(self, request: files_dot_v1_dot_files__pb2.CreateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    async def create_folder(self, request: files_dot_v1_dot_files__pb2.CreateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_folder(self, request: files_dot_v1_dot_files__pb2.UpdateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    async def update_folder(self, request: files_dot_v1_dot_files__pb2.UpdateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_folder(self, request: files_dot_v1_dot_files__pb2.DeleteFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteFolderResponse:
@@ -70,7 +70,7 @@ class FilesService(Protocol):
     async def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    async def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
@@ -88,13 +88,13 @@ class FilesService(Protocol):
     async def list_trash(self, request: files_dot_v1_dot_files__pb2.ListTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    async def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_file_versions(self, request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFileVersionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    async def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
@@ -127,13 +127,13 @@ class FilesService(Protocol):
     async def check_storage_quota(self, request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    async def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_saved_filter(self, request: files_dot_v1_dot_files__pb2.GetSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    async def get_saved_filter(self, request: files_dot_v1_dot_files__pb2.GetSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_saved_filter(self, request: files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    async def update_saved_filter(self, request: files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_saved_filter(self, request: files_dot_v1_dot_files__pb2.DeleteSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteSavedFilterResponse:
@@ -173,7 +173,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="CompleteUpload",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CompleteUploadRequest,
-                        output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
+                        output=files_dot_v1_dot_files__pb2.CompleteUploadResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.complete_upload,
@@ -182,7 +182,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                     method=MethodInfo(
                         name="UploadChunks",
                         service_name="files.v1.FilesService",
-                        input=files_dot_v1_dot_files__pb2.UploadChunkRequest,
+                        input=files_dot_v1_dot_files__pb2.UploadChunksRequest,
                         output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
@@ -213,7 +213,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="DownloadFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
-                        output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                        output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.download_file,
@@ -233,7 +233,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="GetFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.GetFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.GetFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_file,
@@ -243,7 +243,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="UpdateFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_file,
@@ -263,7 +263,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="RestoreFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_file,
@@ -283,7 +283,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="CreateFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CreateFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.CreateFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_folder,
@@ -293,7 +293,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="UpdateFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_folder,
@@ -333,7 +333,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="EnsureRecordingsFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.ensure_recordings_folder,
@@ -393,7 +393,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="RestoreFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_folder,
@@ -413,7 +413,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="RestoreFileVersion",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFileVersionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_file_version,
@@ -523,7 +523,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="CreateSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CreateSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.CreateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_saved_filter,
@@ -533,7 +533,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="GetSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.GetSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.GetSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_saved_filter,
@@ -543,7 +543,7 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         name="UpdateSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_saved_filter,
@@ -626,14 +626,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    ) -> files_dot_v1_dot_files__pb2.CompleteUploadResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CompleteUpload",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CompleteUploadRequest,
-                output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
+                output=files_dot_v1_dot_files__pb2.CompleteUploadResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -642,7 +642,7 @@ class FilesServiceClient(ConnectClient):
 
     async def upload_chunks(
         self,
-        request: AsyncIterator[files_dot_v1_dot_files__pb2.UploadChunkRequest],
+        request: AsyncIterator[files_dot_v1_dot_files__pb2.UploadChunksRequest],
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
@@ -652,7 +652,7 @@ class FilesServiceClient(ConnectClient):
             method=MethodInfo(
                 name="UploadChunks",
                 service_name="files.v1.FilesService",
-                input=files_dot_v1_dot_files__pb2.UploadChunkRequest,
+                input=files_dot_v1_dot_files__pb2.UploadChunksRequest,
                 output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
@@ -706,14 +706,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
+    ) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="DownloadFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
-                output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -746,14 +746,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.GetFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.GetFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -766,14 +766,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateFileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -806,14 +806,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -846,14 +846,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.CreateFolderResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CreateFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.CreateFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -866,14 +866,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateFolderResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -946,14 +946,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="EnsureRecordingsFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1066,14 +1066,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFolderResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1106,14 +1106,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFileVersion",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFileVersionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1326,14 +1326,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.CreateSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CreateSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.CreateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1346,14 +1346,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.GetSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.GetSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.GetSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1366,14 +1366,14 @@ class FilesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1426,31 +1426,31 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def upload_chunk(self, request: files_dot_v1_dot_files__pb2.UploadChunkRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunkResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def complete_upload(self, request: files_dot_v1_dot_files__pb2.CompleteUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    def complete_upload(self, request: files_dot_v1_dot_files__pb2.CompleteUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CompleteUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upload_chunks(self, request: Iterator[files_dot_v1_dot_files__pb2.UploadChunkRequest], ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    def upload_chunks(self, request: Iterator[files_dot_v1_dot_files__pb2.UploadChunksRequest], ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_upload_status(self, request: files_dot_v1_dot_files__pb2.GetUploadStatusRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetUploadStatusResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def abort_upload(self, request: files_dot_v1_dot_files__pb2.AbortUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.AbortUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
+    def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_file(self, request: files_dot_v1_dot_files__pb2.UpdateFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    def update_file(self, request: files_dot_v1_dot_files__pb2.UpdateFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_file(self, request: files_dot_v1_dot_files__pb2.DeleteFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def restore_file(self, request: files_dot_v1_dot_files__pb2.RestoreFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    def restore_file(self, request: files_dot_v1_dot_files__pb2.RestoreFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_files(self, request: files_dot_v1_dot_files__pb2.ListFilesRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFilesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_folder(self, request: files_dot_v1_dot_files__pb2.CreateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    def create_folder(self, request: files_dot_v1_dot_files__pb2.CreateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_folder(self, request: files_dot_v1_dot_files__pb2.UpdateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    def update_folder(self, request: files_dot_v1_dot_files__pb2.UpdateFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_folder(self, request: files_dot_v1_dot_files__pb2.DeleteFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1458,7 +1458,7 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_folder_tree(self, request: files_dot_v1_dot_files__pb2.CreateFolderTreeRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateFolderTreeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    def ensure_recordings_folder(self, request: files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_items(self, request: files_dot_v1_dot_files__pb2.MoveItemsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.MoveItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1470,11 +1470,11 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_trash(self, request: files_dot_v1_dot_files__pb2.ListTrashRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    def restore_folder(self, request: files_dot_v1_dot_files__pb2.RestoreFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_file_versions(self, request: files_dot_v1_dot_files__pb2.ListFileVersionsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListFileVersionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
+    def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1496,11 +1496,11 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def check_storage_quota(self, request: files_dot_v1_dot_files__pb2.CheckStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CheckStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    def create_saved_filter(self, request: files_dot_v1_dot_files__pb2.CreateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.CreateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_saved_filter(self, request: files_dot_v1_dot_files__pb2.GetSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    def get_saved_filter(self, request: files_dot_v1_dot_files__pb2.GetSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_saved_filter(self, request: files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    def update_saved_filter(self, request: files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_saved_filter(self, request: files_dot_v1_dot_files__pb2.DeleteSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1537,7 +1537,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CompleteUpload",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CompleteUploadRequest,
-                        output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
+                        output=files_dot_v1_dot_files__pb2.CompleteUploadResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.complete_upload,
@@ -1546,7 +1546,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="UploadChunks",
                         service_name="files.v1.FilesService",
-                        input=files_dot_v1_dot_files__pb2.UploadChunkRequest,
+                        input=files_dot_v1_dot_files__pb2.UploadChunksRequest,
                         output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
@@ -1577,7 +1577,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="DownloadFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
-                        output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                        output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.download_file,
@@ -1597,7 +1597,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.GetFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.GetFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_file,
@@ -1607,7 +1607,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_file,
@@ -1627,7 +1627,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="RestoreFile",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFileRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_file,
@@ -1647,7 +1647,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CreateFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.CreateFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_folder,
@@ -1657,7 +1657,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_folder,
@@ -1697,7 +1697,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="EnsureRecordingsFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.ensure_recordings_folder,
@@ -1757,7 +1757,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="RestoreFolder",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
-                        output=files_dot_v1_dot_files__pb2.FolderResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFolderResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_folder,
@@ -1777,7 +1777,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="RestoreFileVersion",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
-                        output=files_dot_v1_dot_files__pb2.FileResponse,
+                        output=files_dot_v1_dot_files__pb2.RestoreFileVersionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_file_version,
@@ -1887,7 +1887,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.CreateSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.CreateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_saved_filter,
@@ -1897,7 +1897,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.GetSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.GetSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_saved_filter,
@@ -1907,7 +1907,7 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateSavedFilter",
                         service_name="files.v1.FilesService",
                         input=files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest,
-                        output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                        output=files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_saved_filter,
@@ -1990,14 +1990,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.UploadChunksResponse:
+    ) -> files_dot_v1_dot_files__pb2.CompleteUploadResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CompleteUpload",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CompleteUploadRequest,
-                output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
+                output=files_dot_v1_dot_files__pb2.CompleteUploadResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2006,7 +2006,7 @@ class FilesServiceClientSync(ConnectClientSync):
 
     def upload_chunks(
         self,
-        request: Iterator[files_dot_v1_dot_files__pb2.UploadChunkRequest],
+        request: Iterator[files_dot_v1_dot_files__pb2.UploadChunksRequest],
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
@@ -2016,7 +2016,7 @@ class FilesServiceClientSync(ConnectClientSync):
             method=MethodInfo(
                 name="UploadChunks",
                 service_name="files.v1.FilesService",
-                input=files_dot_v1_dot_files__pb2.UploadChunkRequest,
+                input=files_dot_v1_dot_files__pb2.UploadChunksRequest,
                 output=files_dot_v1_dot_files__pb2.UploadChunksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
@@ -2070,14 +2070,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> Iterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
+    ) -> Iterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="DownloadFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
-                output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2110,14 +2110,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.GetFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.GetFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2130,14 +2130,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateFileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2170,14 +2170,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFile",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2210,14 +2210,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.CreateFolderResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CreateFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.CreateFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2230,14 +2230,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateFolderResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2310,14 +2310,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="EnsureRecordingsFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.EnsureRecordingsFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2430,14 +2430,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FolderResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFolderResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFolder",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFolderRequest,
-                output=files_dot_v1_dot_files__pb2.FolderResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2470,14 +2470,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.FileResponse:
+    ) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreFileVersion",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
-                output=files_dot_v1_dot_files__pb2.FileResponse,
+                output=files_dot_v1_dot_files__pb2.RestoreFileVersionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2690,14 +2690,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.CreateSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.CreateSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.CreateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2710,14 +2710,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.GetSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.GetSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.GetSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2730,14 +2730,14 @@ class FilesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> files_dot_v1_dot_files__pb2.SavedFilterResponse:
+    ) -> files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSavedFilter",
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.UpdateSavedFilterRequest,
-                output=files_dot_v1_dot_files__pb2.SavedFilterResponse,
+                output=files_dot_v1_dot_files__pb2.UpdateSavedFilterResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

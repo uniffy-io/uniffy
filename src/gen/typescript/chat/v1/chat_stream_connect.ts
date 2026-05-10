@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { StreamUserChatEventsRequest, UserChatEvent } from "./chat_stream_pb.js";
+import { StreamUserChatEventsRequest, StreamUserChatEventsResponse } from "./chat_stream_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -26,7 +26,7 @@ export const ChatStreamService = {
     streamUserChatEvents: {
       name: "StreamUserChatEvents",
       I: StreamUserChatEventsRequest,
-      O: UserChatEvent,
+      O: StreamUserChatEventsResponse,
       kind: MethodKind.ServerStreaming,
     },
   }

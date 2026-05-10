@@ -173,8 +173,8 @@ export function NotesMetadataPanel() {
       await navigator.clipboard.writeText(url);
       setCopiedId(headingId);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy link:', err);
+    } catch {
+      // clipboard unavailable
     }
   };
 

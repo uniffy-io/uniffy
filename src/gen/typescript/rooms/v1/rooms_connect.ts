@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BookingResponse, CancelBookingRequest, CheckAvailabilityRequest, CheckAvailabilityResponse, CreateBookingRequest, CreateRoomRequest, DeleteRoomRequest, DeleteRoomResponse, FindAvailableRoomsRequest, FindAvailableRoomsResponse, GetBookingRequest, GetRoomRequest, ListBookingsRequest, ListBookingsResponse, ListRoomsRequest, ListRoomsResponse, RoomResponse, UpdateRoomRequest } from "./rooms_pb.js";
+import { CancelBookingRequest, CancelBookingResponse, CheckAvailabilityRequest, CheckAvailabilityResponse, CreateBookingRequest, CreateBookingResponse, CreateRoomRequest, CreateRoomResponse, DeleteRoomRequest, DeleteRoomResponse, FindAvailableRoomsRequest, FindAvailableRoomsResponse, GetBookingRequest, GetBookingResponse, GetRoomRequest, GetRoomResponse, ListBookingsRequest, ListBookingsResponse, ListRoomsRequest, ListRoomsResponse, UpdateRoomRequest, UpdateRoomResponse } from "./rooms_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -20,7 +20,7 @@ export const RoomsService = {
     createRoom: {
       name: "CreateRoom",
       I: CreateRoomRequest,
-      O: RoomResponse,
+      O: CreateRoomResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -29,7 +29,7 @@ export const RoomsService = {
     getRoom: {
       name: "GetRoom",
       I: GetRoomRequest,
-      O: RoomResponse,
+      O: GetRoomResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -38,7 +38,7 @@ export const RoomsService = {
     updateRoom: {
       name: "UpdateRoom",
       I: UpdateRoomRequest,
-      O: RoomResponse,
+      O: UpdateRoomResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -67,7 +67,7 @@ export const RoomsService = {
     createBooking: {
       name: "CreateBooking",
       I: CreateBookingRequest,
-      O: BookingResponse,
+      O: CreateBookingResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -76,7 +76,7 @@ export const RoomsService = {
     getBooking: {
       name: "GetBooking",
       I: GetBookingRequest,
-      O: BookingResponse,
+      O: GetBookingResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -85,7 +85,7 @@ export const RoomsService = {
     cancelBooking: {
       name: "CancelBooking",
       I: CancelBookingRequest,
-      O: BookingResponse,
+      O: CancelBookingResponse,
       kind: MethodKind.Unary,
     },
     /**

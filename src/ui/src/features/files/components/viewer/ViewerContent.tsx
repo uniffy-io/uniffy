@@ -83,12 +83,9 @@ function ViewerLoading() {
 export function ViewerContent({ file, isEditing, initialRotation, onExitEdit }: ViewerContentProps) {
     const { mimeType } = file;
 
-    console.log('[ViewerContent] Render:', { isEditing, mimeType, fileId: file.id });
-
     const getViewer = () => {
         // Image editing mode
         if (mimeType.startsWith('image/') && isEditing && onExitEdit) {
-            console.log('[ViewerContent] Rendering ImageEditor for file:', file.id);
             return <ImageEditor file={file} initialRotation={initialRotation} onClose={onExitEdit} />;
         }
 

@@ -8,7 +8,6 @@ package groupsv1
 
 import (
 	context "context"
-	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -38,14 +37,14 @@ const (
 type GroupsServiceClient interface {
 	// Group CRUD operations
 	ListGroups(ctx context.Context, in *ListGroupsRequest, opts ...grpc.CallOption) (*ListGroupsResponse, error)
-	GetGroup(ctx context.Context, in *GetGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error)
-	CreateGroup(ctx context.Context, in *CreateGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error)
-	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error)
+	GetGroup(ctx context.Context, in *GetGroupRequest, opts ...grpc.CallOption) (*GetGroupResponse, error)
+	CreateGroup(ctx context.Context, in *CreateGroupRequest, opts ...grpc.CallOption) (*CreateGroupResponse, error)
+	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*UpdateGroupResponse, error)
 	DeleteGroup(ctx context.Context, in *DeleteGroupRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
 	// Group membership operations
 	ListGroupMembers(ctx context.Context, in *ListGroupMembersRequest, opts ...grpc.CallOption) (*ListGroupMembersResponse, error)
-	AddGroupMember(ctx context.Context, in *AddGroupMemberRequest, opts ...grpc.CallOption) (*v1.GroupMemberInfo, error)
-	UpdateGroupMember(ctx context.Context, in *UpdateGroupMemberRequest, opts ...grpc.CallOption) (*v1.GroupMemberInfo, error)
+	AddGroupMember(ctx context.Context, in *AddGroupMemberRequest, opts ...grpc.CallOption) (*AddGroupMemberResponse, error)
+	UpdateGroupMember(ctx context.Context, in *UpdateGroupMemberRequest, opts ...grpc.CallOption) (*UpdateGroupMemberResponse, error)
 	RemoveGroupMember(ctx context.Context, in *RemoveGroupMemberRequest, opts ...grpc.CallOption) (*RemoveGroupMemberResponse, error)
 	// Bulk operations
 	GetUserGroups(ctx context.Context, in *GetUserGroupsRequest, opts ...grpc.CallOption) (*GetUserGroupsResponse, error)
@@ -69,9 +68,9 @@ func (c *groupsServiceClient) ListGroups(ctx context.Context, in *ListGroupsRequ
 	return out, nil
 }
 
-func (c *groupsServiceClient) GetGroup(ctx context.Context, in *GetGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error) {
+func (c *groupsServiceClient) GetGroup(ctx context.Context, in *GetGroupRequest, opts ...grpc.CallOption) (*GetGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GroupInfo)
+	out := new(GetGroupResponse)
 	err := c.cc.Invoke(ctx, GroupsService_GetGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -79,9 +78,9 @@ func (c *groupsServiceClient) GetGroup(ctx context.Context, in *GetGroupRequest,
 	return out, nil
 }
 
-func (c *groupsServiceClient) CreateGroup(ctx context.Context, in *CreateGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error) {
+func (c *groupsServiceClient) CreateGroup(ctx context.Context, in *CreateGroupRequest, opts ...grpc.CallOption) (*CreateGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GroupInfo)
+	out := new(CreateGroupResponse)
 	err := c.cc.Invoke(ctx, GroupsService_CreateGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -89,9 +88,9 @@ func (c *groupsServiceClient) CreateGroup(ctx context.Context, in *CreateGroupRe
 	return out, nil
 }
 
-func (c *groupsServiceClient) UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*v1.GroupInfo, error) {
+func (c *groupsServiceClient) UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*UpdateGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GroupInfo)
+	out := new(UpdateGroupResponse)
 	err := c.cc.Invoke(ctx, GroupsService_UpdateGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -119,9 +118,9 @@ func (c *groupsServiceClient) ListGroupMembers(ctx context.Context, in *ListGrou
 	return out, nil
 }
 
-func (c *groupsServiceClient) AddGroupMember(ctx context.Context, in *AddGroupMemberRequest, opts ...grpc.CallOption) (*v1.GroupMemberInfo, error) {
+func (c *groupsServiceClient) AddGroupMember(ctx context.Context, in *AddGroupMemberRequest, opts ...grpc.CallOption) (*AddGroupMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GroupMemberInfo)
+	out := new(AddGroupMemberResponse)
 	err := c.cc.Invoke(ctx, GroupsService_AddGroupMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -129,9 +128,9 @@ func (c *groupsServiceClient) AddGroupMember(ctx context.Context, in *AddGroupMe
 	return out, nil
 }
 
-func (c *groupsServiceClient) UpdateGroupMember(ctx context.Context, in *UpdateGroupMemberRequest, opts ...grpc.CallOption) (*v1.GroupMemberInfo, error) {
+func (c *groupsServiceClient) UpdateGroupMember(ctx context.Context, in *UpdateGroupMemberRequest, opts ...grpc.CallOption) (*UpdateGroupMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GroupMemberInfo)
+	out := new(UpdateGroupMemberResponse)
 	err := c.cc.Invoke(ctx, GroupsService_UpdateGroupMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -165,14 +164,14 @@ func (c *groupsServiceClient) GetUserGroups(ctx context.Context, in *GetUserGrou
 type GroupsServiceServer interface {
 	// Group CRUD operations
 	ListGroups(context.Context, *ListGroupsRequest) (*ListGroupsResponse, error)
-	GetGroup(context.Context, *GetGroupRequest) (*v1.GroupInfo, error)
-	CreateGroup(context.Context, *CreateGroupRequest) (*v1.GroupInfo, error)
-	UpdateGroup(context.Context, *UpdateGroupRequest) (*v1.GroupInfo, error)
+	GetGroup(context.Context, *GetGroupRequest) (*GetGroupResponse, error)
+	CreateGroup(context.Context, *CreateGroupRequest) (*CreateGroupResponse, error)
+	UpdateGroup(context.Context, *UpdateGroupRequest) (*UpdateGroupResponse, error)
 	DeleteGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error)
 	// Group membership operations
 	ListGroupMembers(context.Context, *ListGroupMembersRequest) (*ListGroupMembersResponse, error)
-	AddGroupMember(context.Context, *AddGroupMemberRequest) (*v1.GroupMemberInfo, error)
-	UpdateGroupMember(context.Context, *UpdateGroupMemberRequest) (*v1.GroupMemberInfo, error)
+	AddGroupMember(context.Context, *AddGroupMemberRequest) (*AddGroupMemberResponse, error)
+	UpdateGroupMember(context.Context, *UpdateGroupMemberRequest) (*UpdateGroupMemberResponse, error)
 	RemoveGroupMember(context.Context, *RemoveGroupMemberRequest) (*RemoveGroupMemberResponse, error)
 	// Bulk operations
 	GetUserGroups(context.Context, *GetUserGroupsRequest) (*GetUserGroupsResponse, error)
@@ -189,13 +188,13 @@ type UnimplementedGroupsServiceServer struct{}
 func (UnimplementedGroupsServiceServer) ListGroups(context.Context, *ListGroupsRequest) (*ListGroupsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListGroups not implemented")
 }
-func (UnimplementedGroupsServiceServer) GetGroup(context.Context, *GetGroupRequest) (*v1.GroupInfo, error) {
+func (UnimplementedGroupsServiceServer) GetGroup(context.Context, *GetGroupRequest) (*GetGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetGroup not implemented")
 }
-func (UnimplementedGroupsServiceServer) CreateGroup(context.Context, *CreateGroupRequest) (*v1.GroupInfo, error) {
+func (UnimplementedGroupsServiceServer) CreateGroup(context.Context, *CreateGroupRequest) (*CreateGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateGroup not implemented")
 }
-func (UnimplementedGroupsServiceServer) UpdateGroup(context.Context, *UpdateGroupRequest) (*v1.GroupInfo, error) {
+func (UnimplementedGroupsServiceServer) UpdateGroup(context.Context, *UpdateGroupRequest) (*UpdateGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateGroup not implemented")
 }
 func (UnimplementedGroupsServiceServer) DeleteGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error) {
@@ -204,10 +203,10 @@ func (UnimplementedGroupsServiceServer) DeleteGroup(context.Context, *DeleteGrou
 func (UnimplementedGroupsServiceServer) ListGroupMembers(context.Context, *ListGroupMembersRequest) (*ListGroupMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListGroupMembers not implemented")
 }
-func (UnimplementedGroupsServiceServer) AddGroupMember(context.Context, *AddGroupMemberRequest) (*v1.GroupMemberInfo, error) {
+func (UnimplementedGroupsServiceServer) AddGroupMember(context.Context, *AddGroupMemberRequest) (*AddGroupMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddGroupMember not implemented")
 }
-func (UnimplementedGroupsServiceServer) UpdateGroupMember(context.Context, *UpdateGroupMemberRequest) (*v1.GroupMemberInfo, error) {
+func (UnimplementedGroupsServiceServer) UpdateGroupMember(context.Context, *UpdateGroupMemberRequest) (*UpdateGroupMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateGroupMember not implemented")
 }
 func (UnimplementedGroupsServiceServer) RemoveGroupMember(context.Context, *RemoveGroupMemberRequest) (*RemoveGroupMemberResponse, error) {

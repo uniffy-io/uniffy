@@ -16,13 +16,13 @@ import projects.v1.projects_pb2 as projects_dot_v1_dot_projects__pb2
 
 
 class ProjectsService(Protocol):
-    async def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    async def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_project(self, request: projects_dot_v1_dot_projects__pb2.GetProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    async def get_project(self, request: projects_dot_v1_dot_projects__pb2.GetProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.GetProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_project(self, request: projects_dot_v1_dot_projects__pb2.UpdateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    async def update_project(self, request: projects_dot_v1_dot_projects__pb2.UpdateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_project(self, request: projects_dot_v1_dot_projects__pb2.DeleteProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteProjectResponse:
@@ -31,13 +31,13 @@ class ProjectsService(Protocol):
     async def list_projects(self, request: projects_dot_v1_dot_projects__pb2.ListProjectsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListProjectsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_task(self, request: projects_dot_v1_dot_projects__pb2.CreateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    async def create_task(self, request: projects_dot_v1_dot_projects__pb2.CreateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_task(self, request: projects_dot_v1_dot_projects__pb2.GetTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    async def get_task(self, request: projects_dot_v1_dot_projects__pb2.GetTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.GetTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_task(self, request: projects_dot_v1_dot_projects__pb2.UpdateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    async def update_task(self, request: projects_dot_v1_dot_projects__pb2.UpdateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_task(self, request: projects_dot_v1_dot_projects__pb2.DeleteTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteTaskResponse:
@@ -46,7 +46,7 @@ class ProjectsService(Protocol):
     async def list_tasks(self, request: projects_dot_v1_dot_projects__pb2.ListTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def move_task(self, request: projects_dot_v1_dot_projects__pb2.MoveTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    async def move_task(self, request: projects_dot_v1_dot_projects__pb2.MoveTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.MoveTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def bulk_update_tasks(self, request: projects_dot_v1_dot_projects__pb2.BulkUpdateTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.BulkUpdateTasksResponse:
@@ -55,19 +55,19 @@ class ProjectsService(Protocol):
     async def delete_tasks(self, request: projects_dot_v1_dot_projects__pb2.DeleteTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_field(self, request: projects_dot_v1_dot_projects__pb2.CreateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    async def create_field(self, request: projects_dot_v1_dot_projects__pb2.CreateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_field(self, request: projects_dot_v1_dot_projects__pb2.UpdateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    async def update_field(self, request: projects_dot_v1_dot_projects__pb2.UpdateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_field(self, request: projects_dot_v1_dot_projects__pb2.DeleteFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_view(self, request: projects_dot_v1_dot_projects__pb2.CreateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    async def create_view(self, request: projects_dot_v1_dot_projects__pb2.CreateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_view(self, request: projects_dot_v1_dot_projects__pb2.UpdateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    async def update_view(self, request: projects_dot_v1_dot_projects__pb2.UpdateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
@@ -76,16 +76,16 @@ class ProjectsService(Protocol):
     async def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    async def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    async def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    async def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.StartSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    async def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CompleteSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_sprint(self, request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
@@ -114,7 +114,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CreateProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_project,
@@ -124,7 +124,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="GetProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.GetProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.GetProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_project,
@@ -134,7 +134,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="UpdateProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_project,
@@ -164,7 +164,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CreateTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_task,
@@ -174,7 +174,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="GetTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.GetTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.GetTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_task,
@@ -184,7 +184,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="UpdateTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_task,
@@ -214,7 +214,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="MoveTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.MoveTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.MoveTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.move_task,
@@ -244,7 +244,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CreateField",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateFieldRequest,
-                        output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateFieldResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_field,
@@ -254,7 +254,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="UpdateField",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateFieldRequest,
-                        output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateFieldResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_field,
@@ -274,7 +274,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CreateView",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateViewRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateViewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_view,
@@ -284,7 +284,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="UpdateView",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateViewRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateViewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_view,
@@ -314,7 +314,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CreateSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_sprint,
@@ -324,7 +324,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="UpdateSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_sprint,
@@ -334,7 +334,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="StartSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.StartSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.start_sprint,
@@ -344,7 +344,7 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         name="CompleteSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CompleteSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.complete_sprint,
@@ -417,14 +417,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateProjectResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -437,14 +437,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.GetProjectResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.GetProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.GetProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -457,14 +457,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateProjectResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -517,14 +517,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -537,14 +537,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.GetTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.GetTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.GetTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -557,14 +557,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -617,14 +617,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.MoveTaskResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MoveTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.MoveTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.MoveTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -677,14 +677,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateFieldResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateField",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateFieldRequest,
-                output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateFieldResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -697,14 +697,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateFieldResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateField",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateFieldRequest,
-                output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateFieldResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -737,14 +737,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateViewResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateView",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateViewRequest,
-                output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateViewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -757,14 +757,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateViewResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateView",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateViewRequest,
-                output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateViewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -817,14 +817,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateSprintResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -837,14 +837,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateSprintResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -857,14 +857,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.StartSprintResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="StartSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.StartSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -877,14 +877,14 @@ class ProjectsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CompleteSprintResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CompleteSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.CompleteSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -993,53 +993,53 @@ class ProjectsServiceClient(ConnectClient):
 
 
 class ProjectsServiceSync(Protocol):
-    def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_project(self, request: projects_dot_v1_dot_projects__pb2.GetProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    def get_project(self, request: projects_dot_v1_dot_projects__pb2.GetProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.GetProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_project(self, request: projects_dot_v1_dot_projects__pb2.UpdateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    def update_project(self, request: projects_dot_v1_dot_projects__pb2.UpdateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_project(self, request: projects_dot_v1_dot_projects__pb2.DeleteProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_projects(self, request: projects_dot_v1_dot_projects__pb2.ListProjectsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListProjectsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_task(self, request: projects_dot_v1_dot_projects__pb2.CreateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    def create_task(self, request: projects_dot_v1_dot_projects__pb2.CreateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_task(self, request: projects_dot_v1_dot_projects__pb2.GetTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    def get_task(self, request: projects_dot_v1_dot_projects__pb2.GetTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.GetTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_task(self, request: projects_dot_v1_dot_projects__pb2.UpdateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    def update_task(self, request: projects_dot_v1_dot_projects__pb2.UpdateTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_task(self, request: projects_dot_v1_dot_projects__pb2.DeleteTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_tasks(self, request: projects_dot_v1_dot_projects__pb2.ListTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def move_task(self, request: projects_dot_v1_dot_projects__pb2.MoveTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    def move_task(self, request: projects_dot_v1_dot_projects__pb2.MoveTaskRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.MoveTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def bulk_update_tasks(self, request: projects_dot_v1_dot_projects__pb2.BulkUpdateTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.BulkUpdateTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_tasks(self, request: projects_dot_v1_dot_projects__pb2.DeleteTasksRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_field(self, request: projects_dot_v1_dot_projects__pb2.CreateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    def create_field(self, request: projects_dot_v1_dot_projects__pb2.CreateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_field(self, request: projects_dot_v1_dot_projects__pb2.UpdateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    def update_field(self, request: projects_dot_v1_dot_projects__pb2.UpdateFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_field(self, request: projects_dot_v1_dot_projects__pb2.DeleteFieldRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteFieldResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_view(self, request: projects_dot_v1_dot_projects__pb2.CreateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    def create_view(self, request: projects_dot_v1_dot_projects__pb2.CreateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_view(self, request: projects_dot_v1_dot_projects__pb2.UpdateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    def update_view(self, request: projects_dot_v1_dot_projects__pb2.UpdateViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.UpdateSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.StartSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CompleteSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_sprint(self, request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1062,7 +1062,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_project,
@@ -1072,7 +1072,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.GetProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.GetProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_project,
@@ -1082,7 +1082,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateProject",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateProjectRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateProjectResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_project,
@@ -1112,7 +1112,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_task,
@@ -1122,7 +1122,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.GetTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.GetTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_task,
@@ -1132,7 +1132,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_task,
@@ -1162,7 +1162,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="MoveTask",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.MoveTaskRequest,
-                        output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                        output=projects_dot_v1_dot_projects__pb2.MoveTaskResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.move_task,
@@ -1192,7 +1192,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateField",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateFieldRequest,
-                        output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateFieldResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_field,
@@ -1202,7 +1202,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateField",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateFieldRequest,
-                        output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateFieldResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_field,
@@ -1222,7 +1222,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateView",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateViewRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateViewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_view,
@@ -1232,7 +1232,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateView",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateViewRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateViewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_view,
@@ -1262,7 +1262,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CreateSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_sprint,
@@ -1272,7 +1272,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.UpdateSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_sprint,
@@ -1282,7 +1282,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="StartSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.StartSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.start_sprint,
@@ -1292,7 +1292,7 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CompleteSprint",
                         service_name="projects.v1.ProjectsService",
                         input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
-                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        output=projects_dot_v1_dot_projects__pb2.CompleteSprintResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.complete_sprint,
@@ -1365,14 +1365,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateProjectResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1385,14 +1385,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.GetProjectResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.GetProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.GetProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1405,14 +1405,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateProjectResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateProject",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateProjectRequest,
-                output=projects_dot_v1_dot_projects__pb2.ProjectResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateProjectResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1465,14 +1465,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1485,14 +1485,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.GetTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.GetTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.GetTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1505,14 +1505,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1565,14 +1565,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.TaskResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.MoveTaskResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MoveTask",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.MoveTaskRequest,
-                output=projects_dot_v1_dot_projects__pb2.TaskResponse,
+                output=projects_dot_v1_dot_projects__pb2.MoveTaskResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1625,14 +1625,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateFieldResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateField",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateFieldRequest,
-                output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateFieldResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1645,14 +1645,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.FieldResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateFieldResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateField",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateFieldRequest,
-                output=projects_dot_v1_dot_projects__pb2.FieldResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateFieldResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1685,14 +1685,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateViewResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateView",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateViewRequest,
-                output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateViewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1705,14 +1705,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ViewResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateViewResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateView",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateViewRequest,
-                output=projects_dot_v1_dot_projects__pb2.ViewResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateViewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1765,14 +1765,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CreateSprintResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.CreateSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1785,14 +1785,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.UpdateSprintResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.UpdateSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1805,14 +1805,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.StartSprintResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="StartSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.StartSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1825,14 +1825,14 @@ class ProjectsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+    ) -> projects_dot_v1_dot_projects__pb2.CompleteSprintResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CompleteSprint",
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
-                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                output=projects_dot_v1_dot_projects__pb2.CompleteSprintResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

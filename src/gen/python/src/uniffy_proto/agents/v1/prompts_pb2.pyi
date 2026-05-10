@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -72,7 +72,19 @@ class CreatePromptRequest(_message.Message):
     baseline_role: _common_pb2.ContentRole
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
-class PromptResponse(_message.Message):
+class CreatePromptResponse(_message.Message):
+    __slots__ = ("prompt",)
+    PROMPT_FIELD_NUMBER: _ClassVar[int]
+    prompt: PromptInfo
+    def __init__(self, prompt: _Optional[_Union[PromptInfo, _Mapping]] = ...) -> None: ...
+
+class GetPromptResponse(_message.Message):
+    __slots__ = ("prompt",)
+    PROMPT_FIELD_NUMBER: _ClassVar[int]
+    prompt: PromptInfo
+    def __init__(self, prompt: _Optional[_Union[PromptInfo, _Mapping]] = ...) -> None: ...
+
+class UpdatePromptResponse(_message.Message):
     __slots__ = ("prompt",)
     PROMPT_FIELD_NUMBER: _ClassVar[int]
     prompt: PromptInfo

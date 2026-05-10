@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -66,7 +66,19 @@ class CreateSkillRequest(_message.Message):
     owner_id: str
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., always_active: _Optional[bool] = ..., owner_id: _Optional[str] = ...) -> None: ...
 
-class SkillResponse(_message.Message):
+class CreateSkillResponse(_message.Message):
+    __slots__ = ("skill",)
+    SKILL_FIELD_NUMBER: _ClassVar[int]
+    skill: SkillInfo
+    def __init__(self, skill: _Optional[_Union[SkillInfo, _Mapping]] = ...) -> None: ...
+
+class GetSkillResponse(_message.Message):
+    __slots__ = ("skill",)
+    SKILL_FIELD_NUMBER: _ClassVar[int]
+    skill: SkillInfo
+    def __init__(self, skill: _Optional[_Union[SkillInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateSkillResponse(_message.Message):
     __slots__ = ("skill",)
     SKILL_FIELD_NUMBER: _ClassVar[int]
     skill: SkillInfo

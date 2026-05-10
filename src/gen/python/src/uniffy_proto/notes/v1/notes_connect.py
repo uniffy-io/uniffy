@@ -16,13 +16,13 @@ import notes.v1.notes_pb2 as notes_dot_v1_dot_notes__pb2
 
 
 class NotesService(Protocol):
-    async def create_note(self, request: notes_dot_v1_dot_notes__pb2.CreateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def create_note(self, request: notes_dot_v1_dot_notes__pb2.CreateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CreateNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_note(self, request: notes_dot_v1_dot_notes__pb2.GetNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def get_note(self, request: notes_dot_v1_dot_notes__pb2.GetNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_note(self, request: notes_dot_v1_dot_notes__pb2.UpdateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def update_note(self, request: notes_dot_v1_dot_notes__pb2.UpdateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UpdateNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_note(self, request: notes_dot_v1_dot_notes__pb2.DeleteNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.DeleteNoteResponse:
@@ -34,10 +34,10 @@ class NotesService(Protocol):
     async def search_notes(self, request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
+    async def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RestoreNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
@@ -46,25 +46,25 @@ class NotesService(Protocol):
     async def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    async def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    async def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    async def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteSharingResponse:
+    async def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    async def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    async def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -78,7 +78,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="CreateNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.CreateNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.CreateNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_note,
@@ -88,7 +88,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="GetNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_note,
@@ -98,7 +98,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="UpdateNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.UpdateNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.UpdateNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_note,
@@ -138,7 +138,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="GetBacklinks",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
-                        output=notes_dot_v1_dot_notes__pb2.BacklinksResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetBacklinksResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_backlinks,
@@ -148,7 +148,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="RestoreNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.RestoreNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_note,
@@ -178,7 +178,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="MoveNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.MoveNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.MoveNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.move_note,
@@ -188,7 +188,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="CopyNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.CopyNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.CopyNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.copy_note,
@@ -198,7 +198,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="ShareNoteWithGroup",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.share_note_with_group,
@@ -208,7 +208,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="UnshareNoteFromGroup",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.unshare_note_from_group,
@@ -218,7 +218,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="GetNoteSharing",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteSharingResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_note_sharing,
@@ -228,7 +228,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="GrantPermission",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.grant_permission,
@@ -238,7 +238,7 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         name="RevokePermission",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                        output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.revoke_permission,
@@ -261,14 +261,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.CreateNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.CreateNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.CreateNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -281,14 +281,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -301,14 +301,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.UpdateNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.UpdateNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.UpdateNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -381,14 +381,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetBacklinks",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
-                output=notes_dot_v1_dot_notes__pb2.BacklinksResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetBacklinksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -401,14 +401,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.RestoreNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.RestoreNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -461,14 +461,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MoveNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.MoveNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.MoveNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -481,14 +481,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CopyNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.CopyNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.CopyNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -501,14 +501,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ShareNoteWithGroup",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -521,14 +521,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UnshareNoteFromGroup",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -541,14 +541,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteSharingResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetNoteSharing",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteSharingResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -561,14 +561,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GrantPermission",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -581,14 +581,14 @@ class NotesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RevokePermission",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -597,11 +597,11 @@ class NotesServiceClient(ConnectClient):
 
 
 class NotesServiceSync(Protocol):
-    def create_note(self, request: notes_dot_v1_dot_notes__pb2.CreateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def create_note(self, request: notes_dot_v1_dot_notes__pb2.CreateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CreateNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_note(self, request: notes_dot_v1_dot_notes__pb2.GetNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def get_note(self, request: notes_dot_v1_dot_notes__pb2.GetNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_note(self, request: notes_dot_v1_dot_notes__pb2.UpdateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def update_note(self, request: notes_dot_v1_dot_notes__pb2.UpdateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UpdateNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_note(self, request: notes_dot_v1_dot_notes__pb2.DeleteNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.DeleteNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -609,27 +609,27 @@ class NotesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def search_notes(self, request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
+    def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RestoreNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteSharingResponse:
+    def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -642,7 +642,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.CreateNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.CreateNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_note,
@@ -652,7 +652,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_note,
@@ -662,7 +662,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.UpdateNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.UpdateNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_note,
@@ -702,7 +702,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetBacklinks",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
-                        output=notes_dot_v1_dot_notes__pb2.BacklinksResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetBacklinksResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_backlinks,
@@ -712,7 +712,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="RestoreNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.RestoreNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_note,
@@ -742,7 +742,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="MoveNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.MoveNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.MoveNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.move_note,
@@ -752,7 +752,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CopyNote",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.CopyNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.CopyNoteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.copy_note,
@@ -762,7 +762,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="ShareNoteWithGroup",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.share_note_with_group,
@@ -772,7 +772,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UnshareNoteFromGroup",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                        output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.unshare_note_from_group,
@@ -782,7 +782,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetNoteSharing",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteSharingResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_note_sharing,
@@ -792,7 +792,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="GrantPermission",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                        output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.grant_permission,
@@ -802,7 +802,7 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         name="RevokePermission",
                         service_name="notes.v1.NotesService",
                         input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                        output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.revoke_permission,
@@ -825,14 +825,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.CreateNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.CreateNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.CreateNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -845,14 +845,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -865,14 +865,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.UpdateNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.UpdateNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.UpdateNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -945,14 +945,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetBacklinks",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
-                output=notes_dot_v1_dot_notes__pb2.BacklinksResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetBacklinksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -965,14 +965,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.RestoreNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RestoreNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.RestoreNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1025,14 +1025,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="MoveNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.MoveNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.MoveNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1045,14 +1045,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CopyNote",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.CopyNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.CopyNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1065,14 +1065,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ShareNoteWithGroup",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1085,14 +1085,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UnshareNoteFromGroup",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteResponse,
+                output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1105,14 +1105,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteSharingResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetNoteSharing",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteSharingResponse,
+                output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1125,14 +1125,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GrantPermission",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1145,14 +1145,14 @@ class NotesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.PermissionResponse:
+    ) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RevokePermission",
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.PermissionResponse,
+                output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

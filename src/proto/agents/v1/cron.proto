@@ -2,24 +2,24 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // CronService manages scheduled recurring agent tasks.
 service CronService {
   // Create a new scheduled task
-  rpc CreateCronTask(CreateCronTaskRequest) returns (CronTaskResponse) {}
+  rpc CreateCronTask(CreateCronTaskRequest) returns (CreateCronTaskResponse) {}
 
   // Get a scheduled task by ID
-  rpc GetCronTask(GetCronTaskRequest) returns (CronTaskResponse) {}
+  rpc GetCronTask(GetCronTaskRequest) returns (GetCronTaskResponse) {}
 
   // List scheduled tasks for an organization
   rpc ListCronTasks(ListCronTasksRequest) returns (ListCronTasksResponse) {}
 
   // Update a scheduled task
-  rpc UpdateCronTask(UpdateCronTaskRequest) returns (CronTaskResponse) {}
+  rpc UpdateCronTask(UpdateCronTaskRequest) returns (UpdateCronTaskResponse) {}
 
   // Delete a scheduled task
   rpc DeleteCronTask(DeleteCronTaskRequest) returns (DeleteCronTaskResponse) {}
@@ -91,7 +91,15 @@ message CreateCronTaskRequest {
   optional common.v1.ContentRole baseline_role = 9;
 }
 
-message CronTaskResponse {
+message CreateCronTaskResponse {
+  CronTaskInfo task = 1;
+}
+
+message GetCronTaskResponse {
+  CronTaskInfo task = 1;
+}
+
+message UpdateCronTaskResponse {
   CronTaskInfo task = 1;
 }
 

@@ -34,9 +34,9 @@ type MemoriesServiceClient interface {
 	// List memories for a specific agent (scoped to current user)
 	ListMemories(ctx context.Context, in *ListMemoriesRequest, opts ...grpc.CallOption) (*ListMemoriesResponse, error)
 	// Create a new memory entry
-	CreateMemory(ctx context.Context, in *CreateMemoryRequest, opts ...grpc.CallOption) (*MemoryResponse, error)
+	CreateMemory(ctx context.Context, in *CreateMemoryRequest, opts ...grpc.CallOption) (*CreateMemoryResponse, error)
 	// Update a memory entry (content, category, importance)
-	UpdateMemory(ctx context.Context, in *UpdateMemoryRequest, opts ...grpc.CallOption) (*MemoryResponse, error)
+	UpdateMemory(ctx context.Context, in *UpdateMemoryRequest, opts ...grpc.CallOption) (*UpdateMemoryResponse, error)
 	// Delete a memory entry
 	DeleteMemory(ctx context.Context, in *DeleteMemoryRequest, opts ...grpc.CallOption) (*DeleteMemoryResponse, error)
 }
@@ -59,9 +59,9 @@ func (c *memoriesServiceClient) ListMemories(ctx context.Context, in *ListMemori
 	return out, nil
 }
 
-func (c *memoriesServiceClient) CreateMemory(ctx context.Context, in *CreateMemoryRequest, opts ...grpc.CallOption) (*MemoryResponse, error) {
+func (c *memoriesServiceClient) CreateMemory(ctx context.Context, in *CreateMemoryRequest, opts ...grpc.CallOption) (*CreateMemoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MemoryResponse)
+	out := new(CreateMemoryResponse)
 	err := c.cc.Invoke(ctx, MemoriesService_CreateMemory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -69,9 +69,9 @@ func (c *memoriesServiceClient) CreateMemory(ctx context.Context, in *CreateMemo
 	return out, nil
 }
 
-func (c *memoriesServiceClient) UpdateMemory(ctx context.Context, in *UpdateMemoryRequest, opts ...grpc.CallOption) (*MemoryResponse, error) {
+func (c *memoriesServiceClient) UpdateMemory(ctx context.Context, in *UpdateMemoryRequest, opts ...grpc.CallOption) (*UpdateMemoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MemoryResponse)
+	out := new(UpdateMemoryResponse)
 	err := c.cc.Invoke(ctx, MemoriesService_UpdateMemory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -98,9 +98,9 @@ type MemoriesServiceServer interface {
 	// List memories for a specific agent (scoped to current user)
 	ListMemories(context.Context, *ListMemoriesRequest) (*ListMemoriesResponse, error)
 	// Create a new memory entry
-	CreateMemory(context.Context, *CreateMemoryRequest) (*MemoryResponse, error)
+	CreateMemory(context.Context, *CreateMemoryRequest) (*CreateMemoryResponse, error)
 	// Update a memory entry (content, category, importance)
-	UpdateMemory(context.Context, *UpdateMemoryRequest) (*MemoryResponse, error)
+	UpdateMemory(context.Context, *UpdateMemoryRequest) (*UpdateMemoryResponse, error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *DeleteMemoryRequest) (*DeleteMemoryResponse, error)
 	mustEmbedUnimplementedMemoriesServiceServer()
@@ -116,10 +116,10 @@ type UnimplementedMemoriesServiceServer struct{}
 func (UnimplementedMemoriesServiceServer) ListMemories(context.Context, *ListMemoriesRequest) (*ListMemoriesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMemories not implemented")
 }
-func (UnimplementedMemoriesServiceServer) CreateMemory(context.Context, *CreateMemoryRequest) (*MemoryResponse, error) {
+func (UnimplementedMemoriesServiceServer) CreateMemory(context.Context, *CreateMemoryRequest) (*CreateMemoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateMemory not implemented")
 }
-func (UnimplementedMemoriesServiceServer) UpdateMemory(context.Context, *UpdateMemoryRequest) (*MemoryResponse, error) {
+func (UnimplementedMemoriesServiceServer) UpdateMemory(context.Context, *UpdateMemoryRequest) (*UpdateMemoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMemory not implemented")
 }
 func (UnimplementedMemoriesServiceServer) DeleteMemory(context.Context, *DeleteMemoryRequest) (*DeleteMemoryResponse, error) {

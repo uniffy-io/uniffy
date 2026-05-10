@@ -379,39 +379,113 @@ export class CreateCronTaskRequest extends Message<CreateCronTaskRequest> {
 }
 
 /**
- * @generated from message agents.v1.CronTaskResponse
+ * @generated from message agents.v1.CreateCronTaskResponse
  */
-export class CronTaskResponse extends Message<CronTaskResponse> {
+export class CreateCronTaskResponse extends Message<CreateCronTaskResponse> {
   /**
    * @generated from field: agents.v1.CronTaskInfo task = 1;
    */
   task?: CronTaskInfo;
 
-  constructor(data?: PartialMessage<CronTaskResponse>) {
+  constructor(data?: PartialMessage<CreateCronTaskResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.CronTaskResponse";
+  static readonly typeName = "agents.v1.CreateCronTaskResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "task", kind: "message", T: CronTaskInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CronTaskResponse {
-    return new CronTaskResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCronTaskResponse {
+    return new CreateCronTaskResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CronTaskResponse {
-    return new CronTaskResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCronTaskResponse {
+    return new CreateCronTaskResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CronTaskResponse {
-    return new CronTaskResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCronTaskResponse {
+    return new CreateCronTaskResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CronTaskResponse | PlainMessage<CronTaskResponse> | undefined, b: CronTaskResponse | PlainMessage<CronTaskResponse> | undefined): boolean {
-    return proto3.util.equals(CronTaskResponse, a, b);
+  static equals(a: CreateCronTaskResponse | PlainMessage<CreateCronTaskResponse> | undefined, b: CreateCronTaskResponse | PlainMessage<CreateCronTaskResponse> | undefined): boolean {
+    return proto3.util.equals(CreateCronTaskResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetCronTaskResponse
+ */
+export class GetCronTaskResponse extends Message<GetCronTaskResponse> {
+  /**
+   * @generated from field: agents.v1.CronTaskInfo task = 1;
+   */
+  task?: CronTaskInfo;
+
+  constructor(data?: PartialMessage<GetCronTaskResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetCronTaskResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "task", kind: "message", T: CronTaskInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCronTaskResponse {
+    return new GetCronTaskResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCronTaskResponse {
+    return new GetCronTaskResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCronTaskResponse {
+    return new GetCronTaskResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCronTaskResponse | PlainMessage<GetCronTaskResponse> | undefined, b: GetCronTaskResponse | PlainMessage<GetCronTaskResponse> | undefined): boolean {
+    return proto3.util.equals(GetCronTaskResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdateCronTaskResponse
+ */
+export class UpdateCronTaskResponse extends Message<UpdateCronTaskResponse> {
+  /**
+   * @generated from field: agents.v1.CronTaskInfo task = 1;
+   */
+  task?: CronTaskInfo;
+
+  constructor(data?: PartialMessage<UpdateCronTaskResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdateCronTaskResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "task", kind: "message", T: CronTaskInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCronTaskResponse {
+    return new UpdateCronTaskResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCronTaskResponse {
+    return new UpdateCronTaskResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCronTaskResponse {
+    return new UpdateCronTaskResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCronTaskResponse | PlainMessage<UpdateCronTaskResponse> | undefined, b: UpdateCronTaskResponse | PlainMessage<UpdateCronTaskResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCronTaskResponse, a, b);
   }
 }
 

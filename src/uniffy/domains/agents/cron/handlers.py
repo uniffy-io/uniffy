@@ -8,10 +8,11 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.cron_pb2 import (
     CreateCronTaskRequest,
-    CronTaskResponse,
+    CreateCronTaskResponse,
     DeleteCronTaskRequest,
     DeleteCronTaskResponse,
     GetCronTaskRequest,
+    GetCronTaskResponse,
     ListCronRunLogsRequest,
     ListCronRunLogsResponse,
     ListCronTasksRequest,
@@ -19,6 +20,7 @@ from uniffy_proto.agents.v1.cron_pb2 import (
     TriggerCronTaskRequest,
     TriggerCronTaskResponse,
     UpdateCronTaskRequest,
+    UpdateCronTaskResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -63,7 +65,7 @@ class CronHandlers:
         self,
         request: CreateCronTaskRequest,
         ctx: RequestContext,
-    ) -> CronTaskResponse:
+    ) -> CreateCronTaskResponse:
         """Create a new cron task."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -91,7 +93,7 @@ class CronHandlers:
                     baseline_role=baseline_role,
                     description=description,
                 )
-                return CronTaskResponse(task=cron_task_to_proto(task))
+                return CreateCronTaskResponse(task=cron_task_to_proto(task))
         except ConnectError:
             raise
         except Exception as exc:
@@ -101,7 +103,7 @@ class CronHandlers:
         self,
         request: GetCronTaskRequest,
         ctx: RequestContext,
-    ) -> CronTaskResponse:
+    ) -> GetCronTaskResponse:
         """Get a cron task by ID."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -111,7 +113,7 @@ class CronHandlers:
             async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task = await ops.get_by_id(user_id, org_id, task_id)
-                return CronTaskResponse(task=cron_task_to_proto(task))
+                return GetCronTaskResponse(task=cron_task_to_proto(task))
         except ConnectError:
             raise
         except Exception as exc:
@@ -165,7 +167,7 @@ class CronHandlers:
         self,
         request: UpdateCronTaskRequest,
         ctx: RequestContext,
-    ) -> CronTaskResponse:
+    ) -> UpdateCronTaskResponse:
         """Update a cron task."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -197,7 +199,7 @@ class CronHandlers:
                     task_id=task_id,
                     **kwargs,
                 )
-                return CronTaskResponse(task=cron_task_to_proto(task))
+                return UpdateCronTaskResponse(task=cron_task_to_proto(task))
         except ConnectError:
             raise
         except Exception as exc:

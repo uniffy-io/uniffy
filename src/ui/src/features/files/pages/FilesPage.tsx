@@ -95,7 +95,6 @@ export function FilesPage() {
     // Refetch files when viewScope changes
     useEffect(() => {
         if (organizationId) {
-            console.log('[FilesPage] ViewScope changed, refetching files for scope:', viewScope);
             dispatch(initializeFilesData({ forceRefresh: true }));
         }
     }, [dispatch, organizationId, viewScope]);
@@ -178,8 +177,8 @@ export function FilesPage() {
                     : `uniffy-files-${new Date().toISOString().slice(0, 10)}`;
 
                 await downloadAsArchive(items, organizationId, archiveName, dispatch);
-            } catch (error) {
-                console.error('Bulk download failed:', error);
+            } catch {
+                // failDownload was dispatched by downloadAsArchive
             }
         },
         [organizationId, currentFolderId, dispatch]
@@ -270,8 +269,8 @@ export function FilesPage() {
                     parentId: currentFolderId ?? undefined,
                 })
             ).unwrap();
-        } catch (err) {
-            console.error('Failed to create folder:', err);
+        } catch {
+            // error toast is shown by errorToastMiddleware
         }
     }, [dispatch, currentFolderId]);
 

@@ -1,5 +1,4 @@
 from common.v1 import common_pb2 as _common_pb2
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -35,6 +34,36 @@ class GetGroupRequest(_message.Message):
     organization_id: str
     group_id: str
     def __init__(self, organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
+
+class GetGroupResponse(_message.Message):
+    __slots__ = ("group",)
+    GROUP_FIELD_NUMBER: _ClassVar[int]
+    group: _common_pb2.GroupInfo
+    def __init__(self, group: _Optional[_Union[_common_pb2.GroupInfo, _Mapping]] = ...) -> None: ...
+
+class CreateGroupResponse(_message.Message):
+    __slots__ = ("group",)
+    GROUP_FIELD_NUMBER: _ClassVar[int]
+    group: _common_pb2.GroupInfo
+    def __init__(self, group: _Optional[_Union[_common_pb2.GroupInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateGroupResponse(_message.Message):
+    __slots__ = ("group",)
+    GROUP_FIELD_NUMBER: _ClassVar[int]
+    group: _common_pb2.GroupInfo
+    def __init__(self, group: _Optional[_Union[_common_pb2.GroupInfo, _Mapping]] = ...) -> None: ...
+
+class AddGroupMemberResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: _common_pb2.GroupMemberInfo
+    def __init__(self, member: _Optional[_Union[_common_pb2.GroupMemberInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateGroupMemberResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: _common_pb2.GroupMemberInfo
+    def __init__(self, member: _Optional[_Union[_common_pb2.GroupMemberInfo, _Mapping]] = ...) -> None: ...
 
 class CreateGroupRequest(_message.Message):
     __slots__ = ("organization_id", "name", "description", "is_private", "is_default")

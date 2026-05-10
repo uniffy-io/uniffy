@@ -90,8 +90,7 @@ export function MonthView() {
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString()
         })).unwrap();
-    } catch (error) {
-        console.error("Failed to move event", error);
+    } catch {
     }
     
     dispatch(endDrag());
