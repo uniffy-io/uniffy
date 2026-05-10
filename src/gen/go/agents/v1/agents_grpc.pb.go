@@ -36,19 +36,19 @@ const (
 // AgentsService manages agent configurations for an organization.
 type AgentsServiceClient interface {
 	// Create a new agent configuration
-	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error)
+	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*CreateAgentResponse, error)
 	// Get an agent by ID
-	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error)
+	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error)
 	// List agents for an organization
 	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
 	// Update an agent configuration
-	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error)
+	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error)
 	// Delete an agent
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
 	// Upload agent avatar image (synchronous processing)
-	UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*AgentResponse, error)
+	UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*UploadAgentAvatarResponse, error)
 	// Delete agent avatar
-	DeleteAgentAvatar(ctx context.Context, in *DeleteAgentAvatarRequest, opts ...grpc.CallOption) (*AgentResponse, error)
+	DeleteAgentAvatar(ctx context.Context, in *DeleteAgentAvatarRequest, opts ...grpc.CallOption) (*DeleteAgentAvatarResponse, error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(ctx context.Context, in *PreviewSystemPromptRequest, opts ...grpc.CallOption) (*PreviewSystemPromptResponse, error)
 }
@@ -61,9 +61,9 @@ func NewAgentsServiceClient(cc grpc.ClientConnInterface) AgentsServiceClient {
 	return &agentsServiceClient{cc}
 }
 
-func (c *agentsServiceClient) CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error) {
+func (c *agentsServiceClient) CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*CreateAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AgentResponse)
+	out := new(CreateAgentResponse)
 	err := c.cc.Invoke(ctx, AgentsService_CreateAgent_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -71,9 +71,9 @@ func (c *agentsServiceClient) CreateAgent(ctx context.Context, in *CreateAgentRe
 	return out, nil
 }
 
-func (c *agentsServiceClient) GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error) {
+func (c *agentsServiceClient) GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AgentResponse)
+	out := new(GetAgentResponse)
 	err := c.cc.Invoke(ctx, AgentsService_GetAgent_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -91,9 +91,9 @@ func (c *agentsServiceClient) ListAgents(ctx context.Context, in *ListAgentsRequ
 	return out, nil
 }
 
-func (c *agentsServiceClient) UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*AgentResponse, error) {
+func (c *agentsServiceClient) UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AgentResponse)
+	out := new(UpdateAgentResponse)
 	err := c.cc.Invoke(ctx, AgentsService_UpdateAgent_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,9 +111,9 @@ func (c *agentsServiceClient) DeleteAgent(ctx context.Context, in *DeleteAgentRe
 	return out, nil
 }
 
-func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*AgentResponse, error) {
+func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*UploadAgentAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AgentResponse)
+	out := new(UploadAgentAvatarResponse)
 	err := c.cc.Invoke(ctx, AgentsService_UploadAgentAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -121,9 +121,9 @@ func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, in *UploadA
 	return out, nil
 }
 
-func (c *agentsServiceClient) DeleteAgentAvatar(ctx context.Context, in *DeleteAgentAvatarRequest, opts ...grpc.CallOption) (*AgentResponse, error) {
+func (c *agentsServiceClient) DeleteAgentAvatar(ctx context.Context, in *DeleteAgentAvatarRequest, opts ...grpc.CallOption) (*DeleteAgentAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AgentResponse)
+	out := new(DeleteAgentAvatarResponse)
 	err := c.cc.Invoke(ctx, AgentsService_DeleteAgentAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -148,19 +148,19 @@ func (c *agentsServiceClient) PreviewSystemPrompt(ctx context.Context, in *Previ
 // AgentsService manages agent configurations for an organization.
 type AgentsServiceServer interface {
 	// Create a new agent configuration
-	CreateAgent(context.Context, *CreateAgentRequest) (*AgentResponse, error)
+	CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error)
 	// Get an agent by ID
-	GetAgent(context.Context, *GetAgentRequest) (*AgentResponse, error)
+	GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error)
 	// List agents for an organization
 	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
 	// Update an agent configuration
-	UpdateAgent(context.Context, *UpdateAgentRequest) (*AgentResponse, error)
+	UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error)
 	// Delete an agent
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
 	// Upload agent avatar image (synchronous processing)
-	UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*AgentResponse, error)
+	UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*UploadAgentAvatarResponse, error)
 	// Delete agent avatar
-	DeleteAgentAvatar(context.Context, *DeleteAgentAvatarRequest) (*AgentResponse, error)
+	DeleteAgentAvatar(context.Context, *DeleteAgentAvatarRequest) (*DeleteAgentAvatarResponse, error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *PreviewSystemPromptRequest) (*PreviewSystemPromptResponse, error)
 	mustEmbedUnimplementedAgentsServiceServer()
@@ -173,25 +173,25 @@ type AgentsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAgentsServiceServer struct{}
 
-func (UnimplementedAgentsServiceServer) CreateAgent(context.Context, *CreateAgentRequest) (*AgentResponse, error) {
+func (UnimplementedAgentsServiceServer) CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAgent not implemented")
 }
-func (UnimplementedAgentsServiceServer) GetAgent(context.Context, *GetAgentRequest) (*AgentResponse, error) {
+func (UnimplementedAgentsServiceServer) GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgent not implemented")
 }
 func (UnimplementedAgentsServiceServer) ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAgents not implemented")
 }
-func (UnimplementedAgentsServiceServer) UpdateAgent(context.Context, *UpdateAgentRequest) (*AgentResponse, error) {
+func (UnimplementedAgentsServiceServer) UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAgent not implemented")
 }
 func (UnimplementedAgentsServiceServer) DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAgent not implemented")
 }
-func (UnimplementedAgentsServiceServer) UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*AgentResponse, error) {
+func (UnimplementedAgentsServiceServer) UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*UploadAgentAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadAgentAvatar not implemented")
 }
-func (UnimplementedAgentsServiceServer) DeleteAgentAvatar(context.Context, *DeleteAgentAvatarRequest) (*AgentResponse, error) {
+func (UnimplementedAgentsServiceServer) DeleteAgentAvatar(context.Context, *DeleteAgentAvatarRequest) (*DeleteAgentAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAgentAvatar not implemented")
 }
 func (UnimplementedAgentsServiceServer) PreviewSystemPrompt(context.Context, *PreviewSystemPromptRequest) (*PreviewSystemPromptResponse, error) {

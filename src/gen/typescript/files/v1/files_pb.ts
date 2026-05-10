@@ -333,6 +333,63 @@ export class UploadChunkRequest extends Message<UploadChunkRequest> {
 }
 
 /**
+ * @generated from message files.v1.UploadChunksRequest
+ */
+export class UploadChunksRequest extends Message<UploadChunksRequest> {
+  /**
+   * @generated from field: string upload_id = 1;
+   */
+  uploadId = "";
+
+  /**
+   * 1-indexed
+   *
+   * @generated from field: int32 chunk_number = 2;
+   */
+  chunkNumber = 0;
+
+  /**
+   * @generated from field: bytes data = 3;
+   */
+  data = new Uint8Array(0);
+
+  /**
+   * @generated from field: bool is_last = 4;
+   */
+  isLast = false;
+
+  constructor(data?: PartialMessage<UploadChunksRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.UploadChunksRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "upload_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "chunk_number", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 4, name: "is_last", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadChunksRequest {
+    return new UploadChunksRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UploadChunksRequest {
+    return new UploadChunksRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UploadChunksRequest {
+    return new UploadChunksRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UploadChunksRequest | PlainMessage<UploadChunksRequest> | undefined, b: UploadChunksRequest | PlainMessage<UploadChunksRequest> | undefined): boolean {
+    return proto3.util.equals(UploadChunksRequest, a, b);
+  }
+}
+
+/**
  * @generated from message files.v1.UploadChunkResponse
  */
 export class UploadChunkResponse extends Message<UploadChunkResponse> {
@@ -466,6 +523,45 @@ export class UploadChunksResponse extends Message<UploadChunksResponse> {
 
   static equals(a: UploadChunksResponse | PlainMessage<UploadChunksResponse> | undefined, b: UploadChunksResponse | PlainMessage<UploadChunksResponse> | undefined): boolean {
     return proto3.util.equals(UploadChunksResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.CompleteUploadResponse
+ */
+export class CompleteUploadResponse extends Message<CompleteUploadResponse> {
+  /**
+   * The completed file
+   *
+   * @generated from field: files.v1.File file = 1;
+   */
+  file?: File;
+
+  constructor(data?: PartialMessage<CompleteUploadResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.CompleteUploadResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file", kind: "message", T: File },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteUploadResponse {
+    return new CompleteUploadResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompleteUploadResponse {
+    return new CompleteUploadResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompleteUploadResponse {
+    return new CompleteUploadResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompleteUploadResponse | PlainMessage<CompleteUploadResponse> | undefined, b: CompleteUploadResponse | PlainMessage<CompleteUploadResponse> | undefined): boolean {
+    return proto3.util.equals(CompleteUploadResponse, a, b);
   }
 }
 
@@ -705,9 +801,9 @@ export class DownloadFileRequest extends Message<DownloadFileRequest> {
 }
 
 /**
- * @generated from message files.v1.DownloadChunkResponse
+ * @generated from message files.v1.DownloadFileResponse
  */
-export class DownloadChunkResponse extends Message<DownloadChunkResponse> {
+export class DownloadFileResponse extends Message<DownloadFileResponse> {
   /**
    * @generated from field: bytes data = 1;
    */
@@ -740,13 +836,13 @@ export class DownloadChunkResponse extends Message<DownloadChunkResponse> {
    */
   totalSize?: bigint;
 
-  constructor(data?: PartialMessage<DownloadChunkResponse>) {
+  constructor(data?: PartialMessage<DownloadFileResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "files.v1.DownloadChunkResponse";
+  static readonly typeName = "files.v1.DownloadFileResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 2, name: "chunk_number", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -756,20 +852,20 @@ export class DownloadChunkResponse extends Message<DownloadChunkResponse> {
     { no: 6, name: "total_size", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DownloadChunkResponse {
-    return new DownloadChunkResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DownloadFileResponse {
+    return new DownloadFileResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DownloadChunkResponse {
-    return new DownloadChunkResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DownloadFileResponse {
+    return new DownloadFileResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DownloadChunkResponse {
-    return new DownloadChunkResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DownloadFileResponse {
+    return new DownloadFileResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DownloadChunkResponse | PlainMessage<DownloadChunkResponse> | undefined, b: DownloadChunkResponse | PlainMessage<DownloadChunkResponse> | undefined): boolean {
-    return proto3.util.equals(DownloadChunkResponse, a, b);
+  static equals(a: DownloadFileResponse | PlainMessage<DownloadFileResponse> | undefined, b: DownloadFileResponse | PlainMessage<DownloadFileResponse> | undefined): boolean {
+    return proto3.util.equals(DownloadFileResponse, a, b);
   }
 }
 
@@ -976,75 +1072,75 @@ export class File extends Message<File> {
   folderId?: string;
 
   /**
-   * @generated from field: optional string description = 12;
+   * @generated from field: optional string description = 11;
    */
   description?: string;
 
   /**
-   * @generated from field: int32 version = 13;
+   * @generated from field: int32 version = 12;
    */
   version = 0;
 
   /**
-   * @generated from field: files.v1.ExtractionStatus extraction_status = 14;
+   * @generated from field: files.v1.ExtractionStatus extraction_status = 13;
    */
   extractionStatus = ExtractionStatus.UNSPECIFIED;
 
   /**
-   * @generated from field: bool is_deleted = 15;
+   * @generated from field: bool is_deleted = 14;
    */
   isDeleted = false;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created_at = 16;
+   * @generated from field: google.protobuf.Timestamp created_at = 15;
    */
   createdAt?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 17;
+   * @generated from field: google.protobuf.Timestamp updated_at = 16;
    */
   updatedAt?: Timestamp;
 
   /**
-   * @generated from field: optional google.protobuf.Timestamp deleted_at = 18;
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 17;
    */
   deletedAt?: Timestamp;
 
   /**
    * Sharing info (populated based on context)
    *
-   * @generated from field: repeated string group_ids = 19;
+   * @generated from field: repeated string group_ids = 18;
    */
   groupIds: string[] = [];
 
   /**
-   * @generated from field: common.v1.ContentRole user_role = 20;
+   * @generated from field: common.v1.ContentRole user_role = 19;
    */
   userRole = ContentRole.UNSPECIFIED;
 
   /**
-   * @generated from field: optional files.v1.FileOwner owner_info = 21;
+   * @generated from field: optional files.v1.FileOwner owner_info = 20;
    */
   ownerInfo?: FileOwner;
 
   /**
    * Media metadata (extracted from file content)
    *
-   * @generated from field: optional files.v1.FileMetadata metadata = 22;
+   * @generated from field: optional files.v1.FileMetadata metadata = 21;
    */
   metadata?: FileMetadata;
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 22;
    */
   baselineRole?: ContentRole;
 
   /**
    * Unified tags assigned to this file (manual source, hydrated server-side).
    *
-   * @generated from field: repeated tags.v1.Tag tags = 24;
+   * @generated from field: repeated tags.v1.Tag tags = 23;
    */
   tags: Tag[] = [];
 
@@ -1052,7 +1148,7 @@ export class File extends Message<File> {
    * Server-side transcode pipeline state. UI uses this to gate the download
    * button while a WebM screen recording is being remuxed to MP4.
    *
-   * @generated from field: files.v1.TranscodeStatus transcode_status = 25;
+   * @generated from field: files.v1.TranscodeStatus transcode_status = 24;
    */
   transcodeStatus = TranscodeStatus.UNSPECIFIED;
 
@@ -1074,20 +1170,20 @@ export class File extends Message<File> {
     { no: 8, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "size_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 10, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 12, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 13, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 14, name: "extraction_status", kind: "enum", T: proto3.getEnumType(ExtractionStatus) },
-    { no: 15, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 16, name: "created_at", kind: "message", T: Timestamp },
-    { no: 17, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 18, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
-    { no: 19, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 20, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
-    { no: 21, name: "owner_info", kind: "message", T: FileOwner, opt: true },
-    { no: 22, name: "metadata", kind: "message", T: FileMetadata, opt: true },
-    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 24, name: "tags", kind: "message", T: Tag, repeated: true },
-    { no: 25, name: "transcode_status", kind: "enum", T: proto3.getEnumType(TranscodeStatus) },
+    { no: 11, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 13, name: "extraction_status", kind: "enum", T: proto3.getEnumType(ExtractionStatus) },
+    { no: 14, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "created_at", kind: "message", T: Timestamp },
+    { no: 16, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 17, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 19, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
+    { no: 20, name: "owner_info", kind: "message", T: FileOwner, opt: true },
+    { no: 21, name: "metadata", kind: "message", T: FileMetadata, opt: true },
+    { no: 22, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 23, name: "tags", kind: "message", T: Tag, repeated: true },
+    { no: 24, name: "transcode_status", kind: "enum", T: proto3.getEnumType(TranscodeStatus) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): File {
@@ -1324,39 +1420,150 @@ export class FileOwner extends Message<FileOwner> {
 }
 
 /**
- * @generated from message files.v1.FileResponse
+ * @generated from message files.v1.GetFileResponse
  */
-export class FileResponse extends Message<FileResponse> {
+export class GetFileResponse extends Message<GetFileResponse> {
   /**
    * @generated from field: files.v1.File file = 1;
    */
   file?: File;
 
-  constructor(data?: PartialMessage<FileResponse>) {
+  constructor(data?: PartialMessage<GetFileResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "files.v1.FileResponse";
+  static readonly typeName = "files.v1.GetFileResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "file", kind: "message", T: File },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileResponse {
-    return new FileResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFileResponse {
+    return new GetFileResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FileResponse {
-    return new FileResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFileResponse {
+    return new GetFileResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FileResponse {
-    return new FileResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFileResponse {
+    return new GetFileResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: FileResponse | PlainMessage<FileResponse> | undefined, b: FileResponse | PlainMessage<FileResponse> | undefined): boolean {
-    return proto3.util.equals(FileResponse, a, b);
+  static equals(a: GetFileResponse | PlainMessage<GetFileResponse> | undefined, b: GetFileResponse | PlainMessage<GetFileResponse> | undefined): boolean {
+    return proto3.util.equals(GetFileResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.UpdateFileResponse
+ */
+export class UpdateFileResponse extends Message<UpdateFileResponse> {
+  /**
+   * @generated from field: files.v1.File file = 1;
+   */
+  file?: File;
+
+  constructor(data?: PartialMessage<UpdateFileResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.UpdateFileResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file", kind: "message", T: File },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFileResponse {
+    return new UpdateFileResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFileResponse {
+    return new UpdateFileResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFileResponse {
+    return new UpdateFileResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFileResponse | PlainMessage<UpdateFileResponse> | undefined, b: UpdateFileResponse | PlainMessage<UpdateFileResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateFileResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RestoreFileResponse
+ */
+export class RestoreFileResponse extends Message<RestoreFileResponse> {
+  /**
+   * @generated from field: files.v1.File file = 1;
+   */
+  file?: File;
+
+  constructor(data?: PartialMessage<RestoreFileResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RestoreFileResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file", kind: "message", T: File },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreFileResponse {
+    return new RestoreFileResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestoreFileResponse {
+    return new RestoreFileResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestoreFileResponse {
+    return new RestoreFileResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestoreFileResponse | PlainMessage<RestoreFileResponse> | undefined, b: RestoreFileResponse | PlainMessage<RestoreFileResponse> | undefined): boolean {
+    return proto3.util.equals(RestoreFileResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RestoreFileVersionResponse
+ */
+export class RestoreFileVersionResponse extends Message<RestoreFileVersionResponse> {
+  /**
+   * @generated from field: files.v1.File file = 1;
+   */
+  file?: File;
+
+  constructor(data?: PartialMessage<RestoreFileVersionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RestoreFileVersionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file", kind: "message", T: File },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreFileVersionResponse {
+    return new RestoreFileVersionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestoreFileVersionResponse {
+    return new RestoreFileVersionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestoreFileVersionResponse {
+    return new RestoreFileVersionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestoreFileVersionResponse | PlainMessage<RestoreFileVersionResponse> | undefined, b: RestoreFileVersionResponse | PlainMessage<RestoreFileVersionResponse> | undefined): boolean {
+    return proto3.util.equals(RestoreFileVersionResponse, a, b);
   }
 }
 
@@ -1423,17 +1630,17 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
   filename?: string;
 
   /**
-   * @generated from field: optional string description = 5;
+   * @generated from field: optional string description = 4;
    */
   description?: string;
 
   /**
-   * @generated from field: optional common.v1.AccessMode access_mode = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 5;
    */
   accessMode?: AccessMode;
 
   /**
-   * @generated from field: optional common.v1.ContentRole baseline_role = 7;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 6;
    */
   baselineRole?: ContentRole;
 
@@ -1441,7 +1648,7 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
    * Replacement set of unified-tag ids. Empty list clears all manual tags.
    * Field unset (HasField=false) leaves manual tags untouched.
    *
-   * @generated from field: optional files.v1.FileTagIds tag_ids = 8;
+   * @generated from field: optional files.v1.FileTagIds tag_ids = 7;
    */
   tagIds?: FileTagIds;
 
@@ -1456,10 +1663,10 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
     { no: 1, name: "file_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 7, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 8, name: "tag_ids", kind: "message", T: FileTagIds, opt: true },
+    { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 6, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 7, name: "tag_ids", kind: "message", T: FileTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFileRequest {
@@ -1631,53 +1838,53 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
   folderId?: string;
 
   /**
-   * @generated from field: bool include_deleted = 4;
+   * @generated from field: bool include_deleted = 3;
    */
   includeDeleted = false;
 
   /**
-   * @generated from field: bool personal_only = 5;
+   * @generated from field: bool personal_only = 4;
    */
   personalOnly = false;
 
   /**
-   * @generated from field: optional common.v1.AccessMode access_mode = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 5;
    */
   accessMode?: AccessMode;
 
   /**
-   * @generated from field: optional string group_id = 7;
+   * @generated from field: optional string group_id = 6;
    */
   groupId?: string;
 
   /**
-   * @generated from field: int32 page = 8;
+   * @generated from field: int32 page = 7;
    */
   page = 0;
 
   /**
-   * @generated from field: int32 page_size = 9;
+   * @generated from field: int32 page_size = 8;
    */
   pageSize = 0;
 
   /**
    * created_at, updated_at, filename, size
    *
-   * @generated from field: string sort_by = 10;
+   * @generated from field: string sort_by = 9;
    */
   sortBy = "";
 
   /**
    * asc, desc
    *
-   * @generated from field: string sort_order = 11;
+   * @generated from field: string sort_order = 10;
    */
   sortOrder = "";
 
   /**
    * Filter for files shared with user (not owned)
    *
-   * @generated from field: bool shared_only = 12;
+   * @generated from field: bool shared_only = 11;
    */
   sharedOnly = false;
 
@@ -1685,7 +1892,7 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
    * Filter to files carrying every tag id in this list (logical AND).
    * Empty = no tag filter.
    *
-   * @generated from field: repeated string tag_ids = 13;
+   * @generated from field: repeated string tag_ids = 12;
    */
   tagIds: string[] = [];
 
@@ -1699,16 +1906,16 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 7, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 9, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 10, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 11, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 12, name: "shared_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 13, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 6, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "shared_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListFilesRequest {
@@ -1895,39 +2102,150 @@ export class Folder extends Message<Folder> {
 }
 
 /**
- * @generated from message files.v1.FolderResponse
+ * @generated from message files.v1.CreateFolderResponse
  */
-export class FolderResponse extends Message<FolderResponse> {
+export class CreateFolderResponse extends Message<CreateFolderResponse> {
   /**
    * @generated from field: files.v1.Folder folder = 1;
    */
   folder?: Folder;
 
-  constructor(data?: PartialMessage<FolderResponse>) {
+  constructor(data?: PartialMessage<CreateFolderResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "files.v1.FolderResponse";
+  static readonly typeName = "files.v1.CreateFolderResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "folder", kind: "message", T: Folder },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FolderResponse {
-    return new FolderResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFolderResponse {
+    return new CreateFolderResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FolderResponse {
-    return new FolderResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFolderResponse {
+    return new CreateFolderResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FolderResponse {
-    return new FolderResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFolderResponse {
+    return new CreateFolderResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: FolderResponse | PlainMessage<FolderResponse> | undefined, b: FolderResponse | PlainMessage<FolderResponse> | undefined): boolean {
-    return proto3.util.equals(FolderResponse, a, b);
+  static equals(a: CreateFolderResponse | PlainMessage<CreateFolderResponse> | undefined, b: CreateFolderResponse | PlainMessage<CreateFolderResponse> | undefined): boolean {
+    return proto3.util.equals(CreateFolderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.UpdateFolderResponse
+ */
+export class UpdateFolderResponse extends Message<UpdateFolderResponse> {
+  /**
+   * @generated from field: files.v1.Folder folder = 1;
+   */
+  folder?: Folder;
+
+  constructor(data?: PartialMessage<UpdateFolderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.UpdateFolderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "folder", kind: "message", T: Folder },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFolderResponse {
+    return new UpdateFolderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFolderResponse {
+    return new UpdateFolderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFolderResponse {
+    return new UpdateFolderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFolderResponse | PlainMessage<UpdateFolderResponse> | undefined, b: UpdateFolderResponse | PlainMessage<UpdateFolderResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateFolderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.EnsureRecordingsFolderResponse
+ */
+export class EnsureRecordingsFolderResponse extends Message<EnsureRecordingsFolderResponse> {
+  /**
+   * @generated from field: files.v1.Folder folder = 1;
+   */
+  folder?: Folder;
+
+  constructor(data?: PartialMessage<EnsureRecordingsFolderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.EnsureRecordingsFolderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "folder", kind: "message", T: Folder },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnsureRecordingsFolderResponse {
+    return new EnsureRecordingsFolderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnsureRecordingsFolderResponse {
+    return new EnsureRecordingsFolderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnsureRecordingsFolderResponse {
+    return new EnsureRecordingsFolderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnsureRecordingsFolderResponse | PlainMessage<EnsureRecordingsFolderResponse> | undefined, b: EnsureRecordingsFolderResponse | PlainMessage<EnsureRecordingsFolderResponse> | undefined): boolean {
+    return proto3.util.equals(EnsureRecordingsFolderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.RestoreFolderResponse
+ */
+export class RestoreFolderResponse extends Message<RestoreFolderResponse> {
+  /**
+   * @generated from field: files.v1.Folder folder = 1;
+   */
+  folder?: Folder;
+
+  constructor(data?: PartialMessage<RestoreFolderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.RestoreFolderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "folder", kind: "message", T: Folder },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreFolderResponse {
+    return new RestoreFolderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestoreFolderResponse {
+    return new RestoreFolderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestoreFolderResponse {
+    return new RestoreFolderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestoreFolderResponse | PlainMessage<RestoreFolderResponse> | undefined, b: RestoreFolderResponse | PlainMessage<RestoreFolderResponse> | undefined): boolean {
+    return proto3.util.equals(RestoreFolderResponse, a, b);
   }
 }
 
@@ -3158,35 +3476,35 @@ export class FilterCriteria extends Message<FilterCriteria> {
   /**
    * Minimum file size
    *
-   * @generated from field: optional int64 size_min_bytes = 6;
+   * @generated from field: optional int64 size_min_bytes = 5;
    */
   sizeMinBytes?: bigint;
 
   /**
    * Maximum file size
    *
-   * @generated from field: optional int64 size_max_bytes = 7;
+   * @generated from field: optional int64 size_max_bytes = 6;
    */
   sizeMaxBytes?: bigint;
 
   /**
    * Created after date
    *
-   * @generated from field: optional google.protobuf.Timestamp created_after = 8;
+   * @generated from field: optional google.protobuf.Timestamp created_after = 7;
    */
   createdAfter?: Timestamp;
 
   /**
    * Created before date
    *
-   * @generated from field: optional google.protobuf.Timestamp created_before = 9;
+   * @generated from field: optional google.protobuf.Timestamp created_before = 8;
    */
   createdBefore?: Timestamp;
 
   /**
    * Filter to files carrying every tag id in this list (logical AND).
    *
-   * @generated from field: repeated string tag_ids = 10;
+   * @generated from field: repeated string tag_ids = 9;
    */
   tagIds: string[] = [];
 
@@ -3202,11 +3520,11 @@ export class FilterCriteria extends Message<FilterCriteria> {
     { no: 2, name: "mime_categories", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "owner_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 6, name: "size_min_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 7, name: "size_max_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 8, name: "created_after", kind: "message", T: Timestamp, opt: true },
-    { no: 9, name: "created_before", kind: "message", T: Timestamp, opt: true },
-    { no: 10, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "size_min_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 6, name: "size_max_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 7, name: "created_after", kind: "message", T: Timestamp, opt: true },
+    { no: 8, name: "created_before", kind: "message", T: Timestamp, opt: true },
+    { no: 9, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FilterCriteria {
@@ -3383,39 +3701,113 @@ export class SavedFilter extends Message<SavedFilter> {
 }
 
 /**
- * @generated from message files.v1.SavedFilterResponse
+ * @generated from message files.v1.CreateSavedFilterResponse
  */
-export class SavedFilterResponse extends Message<SavedFilterResponse> {
+export class CreateSavedFilterResponse extends Message<CreateSavedFilterResponse> {
   /**
    * @generated from field: files.v1.SavedFilter filter = 1;
    */
   filter?: SavedFilter;
 
-  constructor(data?: PartialMessage<SavedFilterResponse>) {
+  constructor(data?: PartialMessage<CreateSavedFilterResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "files.v1.SavedFilterResponse";
+  static readonly typeName = "files.v1.CreateSavedFilterResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "filter", kind: "message", T: SavedFilter },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SavedFilterResponse {
-    return new SavedFilterResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SavedFilterResponse {
-    return new SavedFilterResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SavedFilterResponse {
-    return new SavedFilterResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SavedFilterResponse | PlainMessage<SavedFilterResponse> | undefined, b: SavedFilterResponse | PlainMessage<SavedFilterResponse> | undefined): boolean {
-    return proto3.util.equals(SavedFilterResponse, a, b);
+  static equals(a: CreateSavedFilterResponse | PlainMessage<CreateSavedFilterResponse> | undefined, b: CreateSavedFilterResponse | PlainMessage<CreateSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(CreateSavedFilterResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.GetSavedFilterResponse
+ */
+export class GetSavedFilterResponse extends Message<GetSavedFilterResponse> {
+  /**
+   * @generated from field: files.v1.SavedFilter filter = 1;
+   */
+  filter?: SavedFilter;
+
+  constructor(data?: PartialMessage<GetSavedFilterResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.GetSavedFilterResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "filter", kind: "message", T: SavedFilter },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSavedFilterResponse {
+    return new GetSavedFilterResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSavedFilterResponse {
+    return new GetSavedFilterResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSavedFilterResponse {
+    return new GetSavedFilterResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSavedFilterResponse | PlainMessage<GetSavedFilterResponse> | undefined, b: GetSavedFilterResponse | PlainMessage<GetSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(GetSavedFilterResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message files.v1.UpdateSavedFilterResponse
+ */
+export class UpdateSavedFilterResponse extends Message<UpdateSavedFilterResponse> {
+  /**
+   * @generated from field: files.v1.SavedFilter filter = 1;
+   */
+  filter?: SavedFilter;
+
+  constructor(data?: PartialMessage<UpdateSavedFilterResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.UpdateSavedFilterResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "filter", kind: "message", T: SavedFilter },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSavedFilterResponse | PlainMessage<UpdateSavedFilterResponse> | undefined, b: UpdateSavedFilterResponse | PlainMessage<UpdateSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateSavedFilterResponse, a, b);
   }
 }
 

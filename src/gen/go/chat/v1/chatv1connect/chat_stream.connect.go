@@ -44,7 +44,7 @@ type ChatStreamServiceClient interface {
 	// Opens a single persistent connection per user. Channel events are fanned out
 	// server-side to each member's Valkey channel, so no reconnection is needed
 	// when switching channels - the frontend filters by channel_id.
-	StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest]) (*connect.ServerStreamForClient[v1.UserChatEvent], error)
+	StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest]) (*connect.ServerStreamForClient[v1.StreamUserChatEventsResponse], error)
 }
 
 // NewChatStreamServiceClient constructs a client for the chat.v1.ChatStreamService service. By
@@ -58,7 +58,7 @@ func NewChatStreamServiceClient(httpClient connect.HTTPClient, baseURL string, o
 	baseURL = strings.TrimRight(baseURL, "/")
 	chatStreamServiceMethods := v1.File_chat_v1_chat_stream_proto.Services().ByName("ChatStreamService").Methods()
 	return &chatStreamServiceClient{
-		streamUserChatEvents: connect.NewClient[v1.StreamUserChatEventsRequest, v1.UserChatEvent](
+		streamUserChatEvents: connect.NewClient[v1.StreamUserChatEventsRequest, v1.StreamUserChatEventsResponse](
 			httpClient,
 			baseURL+ChatStreamServiceStreamUserChatEventsProcedure,
 			connect.WithSchema(chatStreamServiceMethods.ByName("StreamUserChatEvents")),
@@ -69,11 +69,11 @@ func NewChatStreamServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // chatStreamServiceClient implements ChatStreamServiceClient.
 type chatStreamServiceClient struct {
-	streamUserChatEvents *connect.Client[v1.StreamUserChatEventsRequest, v1.UserChatEvent]
+	streamUserChatEvents *connect.Client[v1.StreamUserChatEventsRequest, v1.StreamUserChatEventsResponse]
 }
 
 // StreamUserChatEvents calls chat.v1.ChatStreamService.StreamUserChatEvents.
-func (c *chatStreamServiceClient) StreamUserChatEvents(ctx context.Context, req *connect.Request[v1.StreamUserChatEventsRequest]) (*connect.ServerStreamForClient[v1.UserChatEvent], error) {
+func (c *chatStreamServiceClient) StreamUserChatEvents(ctx context.Context, req *connect.Request[v1.StreamUserChatEventsRequest]) (*connect.ServerStreamForClient[v1.StreamUserChatEventsResponse], error) {
 	return c.streamUserChatEvents.CallServerStream(ctx, req)
 }
 
@@ -83,7 +83,7 @@ type ChatStreamServiceHandler interface {
 	// Opens a single persistent connection per user. Channel events are fanned out
 	// server-side to each member's Valkey channel, so no reconnection is needed
 	// when switching channels - the frontend filters by channel_id.
-	StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest], *connect.ServerStream[v1.UserChatEvent]) error
+	StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest], *connect.ServerStream[v1.StreamUserChatEventsResponse]) error
 }
 
 // NewChatStreamServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -112,6 +112,6 @@ func NewChatStreamServiceHandler(svc ChatStreamServiceHandler, opts ...connect.H
 // UnimplementedChatStreamServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedChatStreamServiceHandler struct{}
 
-func (UnimplementedChatStreamServiceHandler) StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest], *connect.ServerStream[v1.UserChatEvent]) error {
+func (UnimplementedChatStreamServiceHandler) StreamUserChatEvents(context.Context, *connect.Request[v1.StreamUserChatEventsRequest], *connect.ServerStream[v1.StreamUserChatEventsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatStreamService.StreamUserChatEvents is not implemented"))
 }

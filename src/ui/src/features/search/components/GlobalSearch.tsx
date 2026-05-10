@@ -155,6 +155,9 @@ export function GlobalSearch() {
                     <input
                         ref={inputRef}
                         type="text"
+                        id="global-search"
+                        name="global-search"
+                        autoComplete="off"
                         value={query}
                         onChange={handleInputChange}
                         onFocus={() => {

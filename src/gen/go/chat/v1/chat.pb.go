@@ -7093,7 +7093,7 @@ var File_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\x1a\x12tags/v1/tags.proto\"I\n" +
+	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"I\n" +
 	"\vChatSubject\x12*\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x16.common.v1.SubjectTypeR\x04type\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"\xe4\b\n" +

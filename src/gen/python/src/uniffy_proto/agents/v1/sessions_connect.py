@@ -16,22 +16,22 @@ import agents.v1.sessions_pb2 as agents_dot_v1_dot_sessions__pb2
 
 
 class SessionsService(Protocol):
-    async def create_session(self, request: agents_dot_v1_dot_sessions__pb2.CreateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    async def create_session(self, request: agents_dot_v1_dot_sessions__pb2.CreateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CreateSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    async def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_sessions(self, request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    async def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def archive_session(self, request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.MessageResponse:
+    async def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_messages(self, request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListMessagesResponse:
@@ -57,7 +57,7 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         name="CreateSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.CreateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.CreateSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_session,
@@ -67,7 +67,7 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         name="GetSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.GetSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.GetSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_session,
@@ -87,7 +87,7 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         name="UpdateSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_session,
@@ -107,7 +107,7 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         name="AddMessage",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.MessageResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_message,
@@ -170,14 +170,14 @@ class SessionsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.CreateSessionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.CreateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.CreateSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -190,14 +190,14 @@ class SessionsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.GetSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.GetSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -230,14 +230,14 @@ class SessionsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -270,14 +270,14 @@ class SessionsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.MessageResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMessage",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.MessageResponse,
+                output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -366,17 +366,17 @@ class SessionsServiceClient(ConnectClient):
 
 
 class SessionsServiceSync(Protocol):
-    def create_session(self, request: agents_dot_v1_dot_sessions__pb2.CreateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    def create_session(self, request: agents_dot_v1_dot_sessions__pb2.CreateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CreateSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_sessions(self, request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def archive_session(self, request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.MessageResponse:
+    def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_messages(self, request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListMessagesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -397,7 +397,7 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.CreateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.CreateSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_session,
@@ -407,7 +407,7 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.GetSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.GetSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_session,
@@ -427,7 +427,7 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateSession",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_session,
@@ -447,7 +447,7 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddMessage",
                         service_name="agents.v1.SessionsService",
                         input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.MessageResponse,
+                        output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_message,
@@ -510,14 +510,14 @@ class SessionsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.CreateSessionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.CreateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.CreateSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -530,14 +530,14 @@ class SessionsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.GetSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.GetSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -570,14 +570,14 @@ class SessionsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SessionResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateSession",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SessionResponse,
+                output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -610,14 +610,14 @@ class SessionsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.MessageResponse:
+    ) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMessage",
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.MessageResponse,
+                output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -2,23 +2,23 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
 import "agents/v1/sessions.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // RuntimeService handles message execution (send to LLM and store response).
 service RuntimeService {
   // Send a user message and get the assistant response
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   // Send a user message and stream tokens, tool events, and the final response
-  rpc StreamSendMessage(SendMessageRequest) returns (stream StreamSendMessageEvent) {}
+  rpc StreamSendMessage(StreamSendMessageRequest) returns (stream StreamSendMessageResponse) {}
   // Resume an in-flight run by run_id. Replays the full event stream from
   // the start, then tails live until Done/Error or the 120s wall budget.
   // Used by the frontend after a tab reload to reconnect without
   // re-driving the LLM.
-  rpc SubscribeToRun(SubscribeToRunRequest) returns (stream StreamSendMessageEvent) {}
+  rpc SubscribeToRun(SubscribeToRunRequest) returns (stream SubscribeToRunResponse) {}
   // Approve or reject a destructive tool call that requires confirmation
-  rpc RespondToConfirmation(ConfirmationResponse) returns (ConfirmationResponseAck) {}
+  rpc RespondToConfirmation(RespondToConfirmationRequest) returns (RespondToConfirmationResponse) {}
   // Get usage statistics for an organization
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
 }
@@ -138,6 +138,23 @@ message SendMessageRequest {
   optional ChatChannelContext chat_context = 6;
 }
 
+message StreamSendMessageRequest {
+  string organization_id = 1;
+  // Legacy: addresses an isolated AgentSession. Used by the builder Test
+  // tab and historical playgrounds.
+  string session_id = 2;
+  string content = 3;
+  // IDs of uploaded files to include (uploaded via FilesService)
+  repeated string file_ids = 4;
+  // IANA timezone of the user's browser (e.g. "America/New_York")
+  string user_timezone = 5;
+  // New: invokes the agent inside a chat channel. When set, the runtime
+  // reads context from chat_messages (scoped per the channel binding) and
+  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // exclusive with session_id at the handler boundary.
+  optional ChatChannelContext chat_context = 6;
+}
+
 // ChatChannelContext binds an agent invocation to a chat channel and
 // the user message that triggered it. Used by the AgentChatBridge to
 // build the scoped context window and route streaming output.
@@ -160,7 +177,7 @@ message SendMessageResponse {
   string model_used = 3;
 }
 
-message ConfirmationResponse {
+message RespondToConfirmationRequest {
   string organization_id = 1;
   string session_id = 2;
   string tool_call_id = 3;
@@ -172,13 +189,31 @@ message SubscribeToRunRequest {
   string organization_id = 2;
 }
 
-message ConfirmationResponseAck {
+message RespondToConfirmationResponse {
   bool accepted = 1;
 }
 
 // --- Streaming event types ---
 
-message StreamSendMessageEvent {
+message StreamSendMessageResponse {
+  oneof event {
+    StreamTokenEvent token = 1;
+    StreamToolCallEvent tool_call = 2;
+    StreamToolResultEvent tool_result = 3;
+    StreamMessageStoredEvent message_stored = 4;
+    StreamDoneEvent done = 5;
+    StreamErrorEvent error = 6;
+    StreamConfirmationRequiredEvent confirmation_required = 7;
+  }
+  // The egress run id this event belongs to. Populated on every event
+  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
+  // resume from the start of the stream. Set by the handler from the
+  // run state hash; the worker does not embed it inside the oneof
+  // payload itself.
+  string run_id = 8;
+}
+
+message SubscribeToRunResponse {
   oneof event {
     StreamTokenEvent token = 1;
     StreamToolCallEvent tool_call = 2;

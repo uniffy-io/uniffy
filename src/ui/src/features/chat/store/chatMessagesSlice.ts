@@ -290,6 +290,45 @@ export const chatMessagesSlice = createSlice({
         }
       }
     },
+    evictExpiredTyping: (
+      state,
+      action: PayloadAction<{ channelId?: string; rootId?: string } | undefined>,
+    ) => {
+      const now = Date.now();
+      const prune = (entries: TypingEntry[] | undefined): TypingEntry[] | undefined => {
+        if (!entries || entries.length === 0) return entries;
+        const kept = entries.filter(e => e.expiresAt > now);
+        return kept.length === entries.length ? entries : kept;
+      };
+      const targetChannel = action.payload?.channelId;
+      const targetThread = action.payload?.rootId;
+      if (targetChannel) {
+        const next = prune(state.typingByChannel[targetChannel]);
+        if (next !== state.typingByChannel[targetChannel]) {
+          state.typingByChannel[targetChannel] = next ?? [];
+        }
+      }
+      if (targetThread) {
+        const next = prune(state.typingByThread[targetThread]);
+        if (next !== state.typingByThread[targetThread]) {
+          state.typingByThread[targetThread] = next ?? [];
+        }
+      }
+      if (!targetChannel && !targetThread) {
+        for (const key of Object.keys(state.typingByChannel)) {
+          const next = prune(state.typingByChannel[key]);
+          if (next !== state.typingByChannel[key]) {
+            state.typingByChannel[key] = next ?? [];
+          }
+        }
+        for (const key of Object.keys(state.typingByThread)) {
+          const next = prune(state.typingByThread[key]);
+          if (next !== state.typingByThread[key]) {
+            state.typingByThread[key] = next ?? [];
+          }
+        }
+      }
+    },
     addReactionToMessage: (
       state,
       action: PayloadAction<{
@@ -393,6 +432,7 @@ export const {
   clearTypingUser,
   setAgentTyping,
   clearAgentTyping,
+  evictExpiredTyping,
   addReactionToMessage,
   removeReactionFromMessage,
   appendDelta,
@@ -463,24 +503,52 @@ export const selectPinnedCountForChannel = (
   channelId: string,
 ): number => state.chatMessages.pinnedCountByChannel[channelId] ?? 0;
 
+type TypingUser = { userId: string; displayName: string; isAgent?: boolean };
+
+const EMPTY_TYPING: readonly TypingUser[] = Object.freeze([]);
+
+const stripExpiry = (entries: TypingEntry[]): TypingUser[] => {
+  const now = Date.now();
+  const out: TypingUser[] = [];
+  for (const e of entries) {
+    if (e.expiresAt > now) {
+      out.push({ userId: e.userId, displayName: e.displayName, isAgent: e.isAgent });
+    }
+  }
+  return out;
+};
+
+const typingChannelSelectorByKey = new Map<string, (state: RootState) => TypingUser[]>();
+const typingThreadSelectorByKey = new Map<string, (state: RootState) => TypingUser[]>();
+
 export const selectTypingUsers = (
   state: RootState,
   channelId: string,
-): { userId: string; displayName: string; isAgent?: boolean }[] => {
-  const entries = state.chatMessages.typingByChannel[channelId];
-  if (!entries) return [];
-  const now = Date.now();
-  return entries.filter(e => e.expiresAt > now);
+): TypingUser[] => {
+  let selector = typingChannelSelectorByKey.get(channelId);
+  if (!selector) {
+    selector = createSelector(
+      [(s: RootState) => s.chatMessages.typingByChannel[channelId]],
+      (entries): TypingUser[] => (entries ? stripExpiry(entries) : (EMPTY_TYPING as TypingUser[])),
+    );
+    typingChannelSelectorByKey.set(channelId, selector);
+  }
+  return selector(state);
 };
 
 export const selectTypingInThread = (
   state: RootState,
   rootId: string,
-): { userId: string; displayName: string; isAgent?: boolean }[] => {
-  const entries = state.chatMessages.typingByThread[rootId];
-  if (!entries) return [];
-  const now = Date.now();
-  return entries.filter(e => e.expiresAt > now);
+): TypingUser[] => {
+  let selector = typingThreadSelectorByKey.get(rootId);
+  if (!selector) {
+    selector = createSelector(
+      [(s: RootState) => s.chatMessages.typingByThread[rootId]],
+      (entries): TypingUser[] => (entries ? stripExpiry(entries) : (EMPTY_TYPING as TypingUser[])),
+    );
+    typingThreadSelectorByKey.set(rootId, selector);
+  }
+  return selector(state);
 };
 
 export const chatMessagesReducer = chatMessagesSlice.reducer;

@@ -127,7 +127,25 @@ class GetTagRequest(_message.Message):
     tag: str
     def __init__(self, organization_id: _Optional[str] = ..., tag: _Optional[str] = ...) -> None: ...
 
-class TagResponse(_message.Message):
+class CreateTagResponse(_message.Message):
+    __slots__ = ("tag",)
+    TAG_FIELD_NUMBER: _ClassVar[int]
+    tag: Tag
+    def __init__(self, tag: _Optional[_Union[Tag, _Mapping]] = ...) -> None: ...
+
+class UpdateTagResponse(_message.Message):
+    __slots__ = ("tag",)
+    TAG_FIELD_NUMBER: _ClassVar[int]
+    tag: Tag
+    def __init__(self, tag: _Optional[_Union[Tag, _Mapping]] = ...) -> None: ...
+
+class GetTagResponse(_message.Message):
+    __slots__ = ("tag",)
+    TAG_FIELD_NUMBER: _ClassVar[int]
+    tag: Tag
+    def __init__(self, tag: _Optional[_Union[Tag, _Mapping]] = ...) -> None: ...
+
+class MergeTagsResponse(_message.Message):
     __slots__ = ("tag",)
     TAG_FIELD_NUMBER: _ClassVar[int]
     tag: Tag
@@ -343,13 +361,19 @@ class SavedTagFilter(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[_Union[IconValue, _Mapping]] = ..., criteria: _Optional[_Union[TagFilterCriteria, _Mapping]] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., is_preset: _Optional[bool] = ..., removed_tag_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
-class SavedTagFilterResponse(_message.Message):
+class CreateSavedFilterResponse(_message.Message):
     __slots__ = ("filter",)
     FILTER_FIELD_NUMBER: _ClassVar[int]
     filter: SavedTagFilter
     def __init__(self, filter: _Optional[_Union[SavedTagFilter, _Mapping]] = ...) -> None: ...
 
-class CreateSavedTagFilterRequest(_message.Message):
+class UpdateSavedFilterResponse(_message.Message):
+    __slots__ = ("filter",)
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    filter: SavedTagFilter
+    def __init__(self, filter: _Optional[_Union[SavedTagFilter, _Mapping]] = ...) -> None: ...
+
+class CreateSavedFilterRequest(_message.Message):
     __slots__ = ("organization_id", "name", "description", "icon", "criteria", "sort_by", "sort_order")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -367,7 +391,7 @@ class CreateSavedTagFilterRequest(_message.Message):
     sort_order: str
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[_Union[IconValue, _Mapping]] = ..., criteria: _Optional[_Union[TagFilterCriteria, _Mapping]] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ...) -> None: ...
 
-class UpdateSavedTagFilterRequest(_message.Message):
+class UpdateSavedFilterRequest(_message.Message):
     __slots__ = ("organization_id", "filter_id", "name", "description", "icon", "criteria", "sort_by", "sort_order")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FILTER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -387,7 +411,7 @@ class UpdateSavedTagFilterRequest(_message.Message):
     sort_order: str
     def __init__(self, organization_id: _Optional[str] = ..., filter_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[_Union[IconValue, _Mapping]] = ..., criteria: _Optional[_Union[TagFilterCriteria, _Mapping]] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ...) -> None: ...
 
-class DeleteSavedTagFilterRequest(_message.Message):
+class DeleteSavedFilterRequest(_message.Message):
     __slots__ = ("organization_id", "filter_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FILTER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -395,13 +419,13 @@ class DeleteSavedTagFilterRequest(_message.Message):
     filter_id: str
     def __init__(self, organization_id: _Optional[str] = ..., filter_id: _Optional[str] = ...) -> None: ...
 
-class DeleteSavedTagFilterResponse(_message.Message):
+class DeleteSavedFilterResponse(_message.Message):
     __slots__ = ("success",)
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
 
-class ListSavedTagFiltersRequest(_message.Message):
+class ListSavedFiltersRequest(_message.Message):
     __slots__ = ("organization_id", "include_presets")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_PRESETS_FIELD_NUMBER: _ClassVar[int]
@@ -409,7 +433,7 @@ class ListSavedTagFiltersRequest(_message.Message):
     include_presets: bool
     def __init__(self, organization_id: _Optional[str] = ..., include_presets: _Optional[bool] = ...) -> None: ...
 
-class ListSavedTagFiltersResponse(_message.Message):
+class ListSavedFiltersResponse(_message.Message):
     __slots__ = ("filters",)
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     filters: _containers.RepeatedCompositeFieldContainer[SavedTagFilter]

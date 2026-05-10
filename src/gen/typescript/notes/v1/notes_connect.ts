@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, EmptyTrashRequest, EmptyTrashResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
+import { AutosaveNoteRequest, AutosaveNoteResponse, CopyNoteRequest, CopyNoteResponse, CreateNoteRequest, CreateNoteResponse, DeleteNoteRequest, DeleteNoteResponse, EmptyTrashRequest, EmptyTrashResponse, GetBacklinksRequest, GetBacklinksResponse, GetNoteRequest, GetNoteResponse, GetNoteSharingRequest, GetNoteSharingResponse, GrantPermissionRequest, GrantPermissionResponse, ListNotesRequest, ListNotesResponse, MoveNoteRequest, MoveNoteResponse, RestoreNoteRequest, RestoreNoteResponse, RevokePermissionRequest, RevokePermissionResponse, SearchNotesRequest, SearchNotesResponse, ShareNoteWithGroupRequest, ShareNoteWithGroupResponse, UnshareNoteFromGroupRequest, UnshareNoteFromGroupResponse, UpdateNoteRequest, UpdateNoteResponse } from "./notes_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const NotesService = {
     createNote: {
       name: "CreateNote",
       I: CreateNoteRequest,
-      O: NoteResponse,
+      O: CreateNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -33,7 +33,7 @@ export const NotesService = {
     getNote: {
       name: "GetNote",
       I: GetNoteRequest,
-      O: NoteResponse,
+      O: GetNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -44,7 +44,7 @@ export const NotesService = {
     updateNote: {
       name: "UpdateNote",
       I: UpdateNoteRequest,
-      O: NoteResponse,
+      O: UpdateNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +88,7 @@ export const NotesService = {
     getBacklinks: {
       name: "GetBacklinks",
       I: GetBacklinksRequest,
-      O: BacklinksResponse,
+      O: GetBacklinksResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -99,7 +99,7 @@ export const NotesService = {
     restoreNote: {
       name: "RestoreNote",
       I: RestoreNoteRequest,
-      O: NoteResponse,
+      O: RestoreNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -132,7 +132,7 @@ export const NotesService = {
     moveNote: {
       name: "MoveNote",
       I: MoveNoteRequest,
-      O: NoteResponse,
+      O: MoveNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -143,7 +143,7 @@ export const NotesService = {
     copyNote: {
       name: "CopyNote",
       I: CopyNoteRequest,
-      O: NoteResponse,
+      O: CopyNoteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -154,7 +154,7 @@ export const NotesService = {
     shareNoteWithGroup: {
       name: "ShareNoteWithGroup",
       I: ShareNoteWithGroupRequest,
-      O: ShareNoteResponse,
+      O: ShareNoteWithGroupResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -165,7 +165,7 @@ export const NotesService = {
     unshareNoteFromGroup: {
       name: "UnshareNoteFromGroup",
       I: UnshareNoteFromGroupRequest,
-      O: ShareNoteResponse,
+      O: UnshareNoteFromGroupResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -176,7 +176,7 @@ export const NotesService = {
     getNoteSharing: {
       name: "GetNoteSharing",
       I: GetNoteSharingRequest,
-      O: NoteSharingResponse,
+      O: GetNoteSharingResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -187,7 +187,7 @@ export const NotesService = {
     grantPermission: {
       name: "GrantPermission",
       I: GrantPermissionRequest,
-      O: PermissionResponse,
+      O: GrantPermissionResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -198,7 +198,7 @@ export const NotesService = {
     revokePermission: {
       name: "RevokePermission",
       I: RevokePermissionRequest,
-      O: PermissionResponse,
+      O: RevokePermissionResponse,
       kind: MethodKind.Unary,
     },
   }

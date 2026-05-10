@@ -22,11 +22,11 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 from common.v1 import common_pb2 as common_dot_v1_dot_common__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x61gents/v1/skills.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16\x63ommon/v1/common.proto\"\xc8\x03\n\tSkillInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12,\n\x0forganization_id\x18\x02 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x04 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x05 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12.\n\x06source\x18\x07 \x01(\x0e\x32\x16.agents.v1.SkillSourceR\x06source\x12#\n\ralways_active\x18\x08 \x01(\x08R\x0c\x61lwaysActive\x12\x39\n\ncreated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\n \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1e\n\x08owner_id\x18\x0b \x01(\tH\x01R\x07ownerId\x88\x01\x01\x42\x12\n\x10_organization_idB\x0b\n\t_owner_id\"\x99\x02\n\x12\x43reateSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x05 \x01(\tR\x07\x63ontent\x12(\n\ralways_active\x18\x06 \x01(\x08H\x00R\x0c\x61lwaysActive\x88\x01\x01\x12\x1e\n\x08owner_id\x18\x07 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x42\x10\n\x0e_always_activeB\x0b\n\t_owner_id\";\n\rSkillResponse\x12*\n\x05skill\x18\x01 \x01(\x0b\x32\x14.agents.v1.SkillInfoR\x05skill\"U\n\x0fGetSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\"\x8e\x01\n\x11ListSkillsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x41\n\npagination\x18\x02 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x42\r\n\x0b_pagination\"\x81\x01\n\x12ListSkillsResponse\x12,\n\x06skills\x18\x01 \x03(\x0b\x32\x14.agents.v1.SkillInfoR\x06skills\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xd1\x02\n\x12UpdateSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n\x0c\x64isplay_name\x18\x04 \x01(\tH\x01R\x0b\x64isplayName\x88\x01\x01\x12%\n\x0b\x64\x65scription\x18\x05 \x01(\tH\x02R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\x07\x63ontent\x18\x06 \x01(\tH\x03R\x07\x63ontent\x88\x01\x01\x12(\n\ralways_active\x18\x07 \x01(\x08H\x04R\x0c\x61lwaysActive\x88\x01\x01\x42\x07\n\x05_nameB\x0f\n\r_display_nameB\x0e\n\x0c_descriptionB\n\n\x08_contentB\x10\n\x0e_always_active\"X\n\x12\x44\x65leteSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\"/\n\x13\x44\x65leteSkillResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\x7f\n\x0bSkillSource\x12\x1c\n\x18SKILL_SOURCE_UNSPECIFIED\x10\x00\x12\x18\n\x14SKILL_SOURCE_BUNDLED\x10\x01\x12\x1d\n\x19SKILL_SOURCE_ORGANIZATION\x10\x02\x12\x19\n\x15SKILL_SOURCE_PERSONAL\x10\x03\x32\x84\x03\n\rSkillsService\x12H\n\x0b\x43reateSkill\x12\x1d.agents.v1.CreateSkillRequest\x1a\x18.agents.v1.SkillResponse\"\x00\x12\x42\n\x08GetSkill\x12\x1a.agents.v1.GetSkillRequest\x1a\x18.agents.v1.SkillResponse\"\x00\x12K\n\nListSkills\x12\x1c.agents.v1.ListSkillsRequest\x1a\x1d.agents.v1.ListSkillsResponse\"\x00\x12H\n\x0bUpdateSkill\x12\x1d.agents.v1.UpdateSkillRequest\x1a\x18.agents.v1.SkillResponse\"\x00\x12N\n\x0b\x44\x65leteSkill\x12\x1d.agents.v1.DeleteSkillRequest\x1a\x1e.agents.v1.DeleteSkillResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x61gents/v1/skills.proto\x12\tagents.v1\x1a\x16\x63ommon/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x03\n\tSkillInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12,\n\x0forganization_id\x18\x02 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x04 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x05 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12.\n\x06source\x18\x07 \x01(\x0e\x32\x16.agents.v1.SkillSourceR\x06source\x12#\n\ralways_active\x18\x08 \x01(\x08R\x0c\x61lwaysActive\x12\x39\n\ncreated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\n \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1e\n\x08owner_id\x18\x0b \x01(\tH\x01R\x07ownerId\x88\x01\x01\x42\x12\n\x10_organization_idB\x0b\n\t_owner_id\"\x99\x02\n\x12\x43reateSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x05 \x01(\tR\x07\x63ontent\x12(\n\ralways_active\x18\x06 \x01(\x08H\x00R\x0c\x61lwaysActive\x88\x01\x01\x12\x1e\n\x08owner_id\x18\x07 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x42\x10\n\x0e_always_activeB\x0b\n\t_owner_id\"A\n\x13\x43reateSkillResponse\x12*\n\x05skill\x18\x01 \x01(\x0b\x32\x14.agents.v1.SkillInfoR\x05skill\">\n\x10GetSkillResponse\x12*\n\x05skill\x18\x01 \x01(\x0b\x32\x14.agents.v1.SkillInfoR\x05skill\"A\n\x13UpdateSkillResponse\x12*\n\x05skill\x18\x01 \x01(\x0b\x32\x14.agents.v1.SkillInfoR\x05skill\"U\n\x0fGetSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\"\x8e\x01\n\x11ListSkillsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x41\n\npagination\x18\x02 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x42\r\n\x0b_pagination\"\x81\x01\n\x12ListSkillsResponse\x12,\n\x06skills\x18\x01 \x03(\x0b\x32\x14.agents.v1.SkillInfoR\x06skills\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xd1\x02\n\x12UpdateSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n\x0c\x64isplay_name\x18\x04 \x01(\tH\x01R\x0b\x64isplayName\x88\x01\x01\x12%\n\x0b\x64\x65scription\x18\x05 \x01(\tH\x02R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\x07\x63ontent\x18\x06 \x01(\tH\x03R\x07\x63ontent\x88\x01\x01\x12(\n\ralways_active\x18\x07 \x01(\x08H\x04R\x0c\x61lwaysActive\x88\x01\x01\x42\x07\n\x05_nameB\x0f\n\r_display_nameB\x0e\n\x0c_descriptionB\n\n\x08_contentB\x10\n\x0e_always_active\"X\n\x12\x44\x65leteSkillRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08skill_id\x18\x02 \x01(\tR\x07skillId\"/\n\x13\x44\x65leteSkillResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\x7f\n\x0bSkillSource\x12\x1c\n\x18SKILL_SOURCE_UNSPECIFIED\x10\x00\x12\x18\n\x14SKILL_SOURCE_BUNDLED\x10\x01\x12\x1d\n\x19SKILL_SOURCE_ORGANIZATION\x10\x02\x12\x19\n\x15SKILL_SOURCE_PERSONAL\x10\x03\x32\x93\x03\n\rSkillsService\x12N\n\x0b\x43reateSkill\x12\x1d.agents.v1.CreateSkillRequest\x1a\x1e.agents.v1.CreateSkillResponse\"\x00\x12\x45\n\x08GetSkill\x12\x1a.agents.v1.GetSkillRequest\x1a\x1b.agents.v1.GetSkillResponse\"\x00\x12K\n\nListSkills\x12\x1c.agents.v1.ListSkillsRequest\x1a\x1d.agents.v1.ListSkillsResponse\"\x00\x12N\n\x0bUpdateSkill\x12\x1d.agents.v1.UpdateSkillRequest\x1a\x1e.agents.v1.UpdateSkillResponse\"\x00\x12N\n\x0b\x44\x65leteSkill\x12\x1d.agents.v1.DeleteSkillRequest\x1a\x1e.agents.v1.DeleteSkillResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,26 +34,30 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agents.v1.skills_pb2', _glo
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1'
-  _globals['_SKILLSOURCE']._serialized_start=1741
-  _globals['_SKILLSOURCE']._serialized_end=1868
+  _globals['_SKILLSOURCE']._serialized_start=1878
+  _globals['_SKILLSOURCE']._serialized_end=2005
   _globals['_SKILLINFO']._serialized_start=95
   _globals['_SKILLINFO']._serialized_end=551
   _globals['_CREATESKILLREQUEST']._serialized_start=554
   _globals['_CREATESKILLREQUEST']._serialized_end=835
-  _globals['_SKILLRESPONSE']._serialized_start=837
-  _globals['_SKILLRESPONSE']._serialized_end=896
-  _globals['_GETSKILLREQUEST']._serialized_start=898
-  _globals['_GETSKILLREQUEST']._serialized_end=983
-  _globals['_LISTSKILLSREQUEST']._serialized_start=986
-  _globals['_LISTSKILLSREQUEST']._serialized_end=1128
-  _globals['_LISTSKILLSRESPONSE']._serialized_start=1131
-  _globals['_LISTSKILLSRESPONSE']._serialized_end=1260
-  _globals['_UPDATESKILLREQUEST']._serialized_start=1263
-  _globals['_UPDATESKILLREQUEST']._serialized_end=1600
-  _globals['_DELETESKILLREQUEST']._serialized_start=1602
-  _globals['_DELETESKILLREQUEST']._serialized_end=1690
-  _globals['_DELETESKILLRESPONSE']._serialized_start=1692
-  _globals['_DELETESKILLRESPONSE']._serialized_end=1739
-  _globals['_SKILLSSERVICE']._serialized_start=1871
-  _globals['_SKILLSSERVICE']._serialized_end=2259
+  _globals['_CREATESKILLRESPONSE']._serialized_start=837
+  _globals['_CREATESKILLRESPONSE']._serialized_end=902
+  _globals['_GETSKILLRESPONSE']._serialized_start=904
+  _globals['_GETSKILLRESPONSE']._serialized_end=966
+  _globals['_UPDATESKILLRESPONSE']._serialized_start=968
+  _globals['_UPDATESKILLRESPONSE']._serialized_end=1033
+  _globals['_GETSKILLREQUEST']._serialized_start=1035
+  _globals['_GETSKILLREQUEST']._serialized_end=1120
+  _globals['_LISTSKILLSREQUEST']._serialized_start=1123
+  _globals['_LISTSKILLSREQUEST']._serialized_end=1265
+  _globals['_LISTSKILLSRESPONSE']._serialized_start=1268
+  _globals['_LISTSKILLSRESPONSE']._serialized_end=1397
+  _globals['_UPDATESKILLREQUEST']._serialized_start=1400
+  _globals['_UPDATESKILLREQUEST']._serialized_end=1737
+  _globals['_DELETESKILLREQUEST']._serialized_start=1739
+  _globals['_DELETESKILLREQUEST']._serialized_end=1827
+  _globals['_DELETESKILLRESPONSE']._serialized_start=1829
+  _globals['_DELETESKILLRESPONSE']._serialized_end=1876
+  _globals['_SKILLSSERVICE']._serialized_start=2008
+  _globals['_SKILLSSERVICE']._serialized_end=2411
 # @@protoc_insertion_point(module_scope)

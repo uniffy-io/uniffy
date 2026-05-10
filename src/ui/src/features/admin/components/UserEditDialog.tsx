@@ -64,8 +64,8 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setOrgs(response.memberships);
-    } catch (err) {
-      console.error('Failed to fetch user organizations:', err);
+    } catch {
+      // failure leaves orgs empty; admin can retry
     }
   }, [accessToken, user.id]);
 
@@ -77,8 +77,8 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setAllOrgs(response.organizations);
-    } catch (err) {
-      console.error('Failed to fetch organizations:', err);
+    } catch {
+      // failure leaves list empty; admin can retry
     }
   }, [accessToken]);
 
@@ -109,8 +109,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
       );
       onSave();
       onClose();
-    } catch (err) {
-      console.error('Failed to update user:', err);
+    } catch {
       alert('Failed to update user');
     } finally {
       setLoading(false);
@@ -131,8 +130,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
       );
       setNewOrgId('');
       fetchUserOrgs();
-    } catch (err) {
-      console.error('Failed to add user to org:', err);
+    } catch {
       alert('Failed to add user to organization');
     }
   };
@@ -155,8 +153,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
       );
       setRemovingOrgId(null);
       fetchUserOrgs();
-    } catch (err) {
-      console.error('Failed to remove user from org:', err);
+    } catch {
       alert('Failed to remove user from organization');
     } finally {
       setRemoveOrgLoading(false);

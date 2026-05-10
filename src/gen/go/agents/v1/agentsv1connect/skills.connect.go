@@ -52,13 +52,13 @@ const (
 // SkillsServiceClient is a client for the agents.v1.SkillsService service.
 type SkillsServiceClient interface {
 	// Create a new organization skill
-	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
-	GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.GetSkillResponse], error)
 	// List skills (bundled + organization)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Update an organization skill
-	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 }
@@ -74,13 +74,13 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	skillsServiceMethods := v1.File_agents_v1_skills_proto.Services().ByName("SkillsService").Methods()
 	return &skillsServiceClient{
-		createSkill: connect.NewClient[v1.CreateSkillRequest, v1.SkillResponse](
+		createSkill: connect.NewClient[v1.CreateSkillRequest, v1.CreateSkillResponse](
 			httpClient,
 			baseURL+SkillsServiceCreateSkillProcedure,
 			connect.WithSchema(skillsServiceMethods.ByName("CreateSkill")),
 			connect.WithClientOptions(opts...),
 		),
-		getSkill: connect.NewClient[v1.GetSkillRequest, v1.SkillResponse](
+		getSkill: connect.NewClient[v1.GetSkillRequest, v1.GetSkillResponse](
 			httpClient,
 			baseURL+SkillsServiceGetSkillProcedure,
 			connect.WithSchema(skillsServiceMethods.ByName("GetSkill")),
@@ -92,7 +92,7 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(skillsServiceMethods.ByName("ListSkills")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSkill: connect.NewClient[v1.UpdateSkillRequest, v1.SkillResponse](
+		updateSkill: connect.NewClient[v1.UpdateSkillRequest, v1.UpdateSkillResponse](
 			httpClient,
 			baseURL+SkillsServiceUpdateSkillProcedure,
 			connect.WithSchema(skillsServiceMethods.ByName("UpdateSkill")),
@@ -109,20 +109,20 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // skillsServiceClient implements SkillsServiceClient.
 type skillsServiceClient struct {
-	createSkill *connect.Client[v1.CreateSkillRequest, v1.SkillResponse]
-	getSkill    *connect.Client[v1.GetSkillRequest, v1.SkillResponse]
+	createSkill *connect.Client[v1.CreateSkillRequest, v1.CreateSkillResponse]
+	getSkill    *connect.Client[v1.GetSkillRequest, v1.GetSkillResponse]
 	listSkills  *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
-	updateSkill *connect.Client[v1.UpdateSkillRequest, v1.SkillResponse]
+	updateSkill *connect.Client[v1.UpdateSkillRequest, v1.UpdateSkillResponse]
 	deleteSkill *connect.Client[v1.DeleteSkillRequest, v1.DeleteSkillResponse]
 }
 
 // CreateSkill calls agents.v1.SkillsService.CreateSkill.
-func (c *skillsServiceClient) CreateSkill(ctx context.Context, req *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (c *skillsServiceClient) CreateSkill(ctx context.Context, req *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error) {
 	return c.createSkill.CallUnary(ctx, req)
 }
 
 // GetSkill calls agents.v1.SkillsService.GetSkill.
-func (c *skillsServiceClient) GetSkill(ctx context.Context, req *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (c *skillsServiceClient) GetSkill(ctx context.Context, req *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.GetSkillResponse], error) {
 	return c.getSkill.CallUnary(ctx, req)
 }
 
@@ -132,7 +132,7 @@ func (c *skillsServiceClient) ListSkills(ctx context.Context, req *connect.Reque
 }
 
 // UpdateSkill calls agents.v1.SkillsService.UpdateSkill.
-func (c *skillsServiceClient) UpdateSkill(ctx context.Context, req *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (c *skillsServiceClient) UpdateSkill(ctx context.Context, req *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error) {
 	return c.updateSkill.CallUnary(ctx, req)
 }
 
@@ -144,13 +144,13 @@ func (c *skillsServiceClient) DeleteSkill(ctx context.Context, req *connect.Requ
 // SkillsServiceHandler is an implementation of the agents.v1.SkillsService service.
 type SkillsServiceHandler interface {
 	// Create a new organization skill
-	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
-	GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.GetSkillResponse], error)
 	// List skills (bundled + organization)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Update an organization skill
-	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.SkillResponse], error)
+	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 }
@@ -213,11 +213,11 @@ func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOp
 // UnimplementedSkillsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSkillsServiceHandler struct{}
 
-func (UnimplementedSkillsServiceHandler) CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (UnimplementedSkillsServiceHandler) CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.CreateSkill is not implemented"))
 }
 
-func (UnimplementedSkillsServiceHandler) GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (UnimplementedSkillsServiceHandler) GetSkill(context.Context, *connect.Request[v1.GetSkillRequest]) (*connect.Response[v1.GetSkillResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GetSkill is not implemented"))
 }
 
@@ -225,7 +225,7 @@ func (UnimplementedSkillsServiceHandler) ListSkills(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.ListSkills is not implemented"))
 }
 
-func (UnimplementedSkillsServiceHandler) UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.SkillResponse], error) {
+func (UnimplementedSkillsServiceHandler) UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.UpdateSkill is not implemented"))
 }
 

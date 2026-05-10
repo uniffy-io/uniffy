@@ -8,13 +8,15 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.files.v1.files_pb2 import (
     CreateSavedFilterRequest,
+    CreateSavedFilterResponse,
     DeleteSavedFilterRequest,
     DeleteSavedFilterResponse,
     GetSavedFilterRequest,
+    GetSavedFilterResponse,
     ListSavedFiltersRequest,
     ListSavedFiltersResponse,
-    SavedFilterResponse,
     UpdateSavedFilterRequest,
+    UpdateSavedFilterResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
@@ -35,7 +37,7 @@ class SavedFilterHandlersMixin:
         self,
         request: CreateSavedFilterRequest,
         ctx: RequestContext,
-    ) -> SavedFilterResponse:
+    ) -> CreateSavedFilterResponse:
         """Create a new saved filter."""
         try:
             organization_id = UUID(request.organization_id)
@@ -70,7 +72,7 @@ class SavedFilterHandlersMixin:
                     sort_order=request.sort_order if request.HasField("sort_order") else None,
                 )
 
-                return SavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
+                return CreateSavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
 
         except ConnectError:
             raise
@@ -82,7 +84,7 @@ class SavedFilterHandlersMixin:
         self,
         request: GetSavedFilterRequest,
         ctx: RequestContext,
-    ) -> SavedFilterResponse:
+    ) -> GetSavedFilterResponse:
         """Get a saved filter by ID."""
         try:
             filter_id = UUID(request.filter_id)
@@ -96,7 +98,7 @@ class SavedFilterHandlersMixin:
             async with open_session() as session:
                 ops = SavedFilterOperations(session)
                 saved_filter = await ops.get_by_id(user_id, organization_id, filter_id)
-                return SavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
+                return GetSavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Saved filter not found")
@@ -112,7 +114,7 @@ class SavedFilterHandlersMixin:
         self,
         request: UpdateSavedFilterRequest,
         ctx: RequestContext,
-    ) -> SavedFilterResponse:
+    ) -> UpdateSavedFilterResponse:
         """Update a saved filter."""
         try:
             filter_id = UUID(request.filter_id)
@@ -146,7 +148,7 @@ class SavedFilterHandlersMixin:
                     sort_order=request.sort_order if request.HasField("sort_order") else None,
                 )
 
-                return SavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
+                return UpdateSavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Saved filter not found")

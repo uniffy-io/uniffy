@@ -319,27 +319,27 @@ func (x *CreatePromptRequest) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
-type PromptResponse struct {
+type CreatePromptResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Prompt        *PromptInfo            `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PromptResponse) Reset() {
-	*x = PromptResponse{}
+func (x *CreatePromptResponse) Reset() {
+	*x = CreatePromptResponse{}
 	mi := &file_agents_v1_prompts_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PromptResponse) String() string {
+func (x *CreatePromptResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PromptResponse) ProtoMessage() {}
+func (*CreatePromptResponse) ProtoMessage() {}
 
-func (x *PromptResponse) ProtoReflect() protoreflect.Message {
+func (x *CreatePromptResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_prompts_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -351,12 +351,100 @@ func (x *PromptResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PromptResponse.ProtoReflect.Descriptor instead.
-func (*PromptResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreatePromptResponse.ProtoReflect.Descriptor instead.
+func (*CreatePromptResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *PromptResponse) GetPrompt() *PromptInfo {
+func (x *CreatePromptResponse) GetPrompt() *PromptInfo {
+	if x != nil {
+		return x.Prompt
+	}
+	return nil
+}
+
+type GetPromptResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prompt        *PromptInfo            `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPromptResponse) Reset() {
+	*x = GetPromptResponse{}
+	mi := &file_agents_v1_prompts_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPromptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPromptResponse) ProtoMessage() {}
+
+func (x *GetPromptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_prompts_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPromptResponse.ProtoReflect.Descriptor instead.
+func (*GetPromptResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetPromptResponse) GetPrompt() *PromptInfo {
+	if x != nil {
+		return x.Prompt
+	}
+	return nil
+}
+
+type UpdatePromptResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prompt        *PromptInfo            `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePromptResponse) Reset() {
+	*x = UpdatePromptResponse{}
+	mi := &file_agents_v1_prompts_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePromptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePromptResponse) ProtoMessage() {}
+
+func (x *UpdatePromptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_prompts_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePromptResponse.ProtoReflect.Descriptor instead.
+func (*UpdatePromptResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdatePromptResponse) GetPrompt() *PromptInfo {
 	if x != nil {
 		return x.Prompt
 	}
@@ -373,7 +461,7 @@ type GetPromptRequest struct {
 
 func (x *GetPromptRequest) Reset() {
 	*x = GetPromptRequest{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[3]
+	mi := &file_agents_v1_prompts_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -385,7 +473,7 @@ func (x *GetPromptRequest) String() string {
 func (*GetPromptRequest) ProtoMessage() {}
 
 func (x *GetPromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[3]
+	mi := &file_agents_v1_prompts_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -398,7 +486,7 @@ func (x *GetPromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromptRequest.ProtoReflect.Descriptor instead.
 func (*GetPromptRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{3}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetPromptRequest) GetOrganizationId() string {
@@ -425,7 +513,7 @@ type ListPromptsRequest struct {
 
 func (x *ListPromptsRequest) Reset() {
 	*x = ListPromptsRequest{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[4]
+	mi := &file_agents_v1_prompts_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -437,7 +525,7 @@ func (x *ListPromptsRequest) String() string {
 func (*ListPromptsRequest) ProtoMessage() {}
 
 func (x *ListPromptsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[4]
+	mi := &file_agents_v1_prompts_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -450,7 +538,7 @@ func (x *ListPromptsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromptsRequest.ProtoReflect.Descriptor instead.
 func (*ListPromptsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{4}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListPromptsRequest) GetOrganizationId() string {
@@ -477,7 +565,7 @@ type ListPromptsResponse struct {
 
 func (x *ListPromptsResponse) Reset() {
 	*x = ListPromptsResponse{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[5]
+	mi := &file_agents_v1_prompts_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +577,7 @@ func (x *ListPromptsResponse) String() string {
 func (*ListPromptsResponse) ProtoMessage() {}
 
 func (x *ListPromptsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[5]
+	mi := &file_agents_v1_prompts_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +590,7 @@ func (x *ListPromptsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromptsResponse.ProtoReflect.Descriptor instead.
 func (*ListPromptsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{5}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListPromptsResponse) GetPrompts() []*PromptInfo {
@@ -535,7 +623,7 @@ type UpdatePromptRequest struct {
 
 func (x *UpdatePromptRequest) Reset() {
 	*x = UpdatePromptRequest{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[6]
+	mi := &file_agents_v1_prompts_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -547,7 +635,7 @@ func (x *UpdatePromptRequest) String() string {
 func (*UpdatePromptRequest) ProtoMessage() {}
 
 func (x *UpdatePromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[6]
+	mi := &file_agents_v1_prompts_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +648,7 @@ func (x *UpdatePromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePromptRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePromptRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdatePromptRequest) GetOrganizationId() string {
@@ -629,7 +717,7 @@ type DeletePromptRequest struct {
 
 func (x *DeletePromptRequest) Reset() {
 	*x = DeletePromptRequest{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[7]
+	mi := &file_agents_v1_prompts_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -641,7 +729,7 @@ func (x *DeletePromptRequest) String() string {
 func (*DeletePromptRequest) ProtoMessage() {}
 
 func (x *DeletePromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[7]
+	mi := &file_agents_v1_prompts_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -654,7 +742,7 @@ func (x *DeletePromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromptRequest.ProtoReflect.Descriptor instead.
 func (*DeletePromptRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeletePromptRequest) GetOrganizationId() string {
@@ -680,7 +768,7 @@ type DeletePromptResponse struct {
 
 func (x *DeletePromptResponse) Reset() {
 	*x = DeletePromptResponse{}
-	mi := &file_agents_v1_prompts_proto_msgTypes[8]
+	mi := &file_agents_v1_prompts_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -692,7 +780,7 @@ func (x *DeletePromptResponse) String() string {
 func (*DeletePromptResponse) ProtoMessage() {}
 
 func (x *DeletePromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_prompts_proto_msgTypes[8]
+	mi := &file_agents_v1_prompts_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -705,7 +793,7 @@ func (x *DeletePromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromptResponse.ProtoReflect.Descriptor instead.
 func (*DeletePromptResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{8}
+	return file_agents_v1_prompts_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeletePromptResponse) GetSuccess() bool {
@@ -719,7 +807,7 @@ var File_agents_v1_prompts_proto protoreflect.FileDescriptor
 
 const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/prompts.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xd0\x04\n" +
+	"\x17agents/v1/prompts.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd0\x04\n" +
 	"\n" +
 	"PromptInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
@@ -756,8 +844,12 @@ const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\x05_nameB\v\n" +
 	"\t_owner_idB\x0e\n" +
 	"\f_access_modeB\x10\n" +
-	"\x0e_baseline_role\"?\n" +
-	"\x0ePromptResponse\x12-\n" +
+	"\x0e_baseline_role\"E\n" +
+	"\x14CreatePromptResponse\x12-\n" +
+	"\x06prompt\x18\x01 \x01(\v2\x15.agents.v1.PromptInfoR\x06prompt\"B\n" +
+	"\x11GetPromptResponse\x12-\n" +
+	"\x06prompt\x18\x01 \x01(\v2\x15.agents.v1.PromptInfoR\x06prompt\"E\n" +
+	"\x14UpdatePromptResponse\x12-\n" +
 	"\x06prompt\x18\x01 \x01(\v2\x15.agents.v1.PromptInfoR\x06prompt\"X\n" +
 	"\x10GetPromptRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
@@ -799,12 +891,12 @@ const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\x19PROMPT_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15PROMPT_SOURCE_BUNDLED\x10\x01\x12\x1e\n" +
 	"\x1aPROMPT_SOURCE_ORGANIZATION\x10\x02\x12\x1a\n" +
-	"\x16PROMPT_SOURCE_PERSONAL\x10\x032\x94\x03\n" +
-	"\x0ePromptsService\x12K\n" +
-	"\fCreatePrompt\x12\x1e.agents.v1.CreatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12E\n" +
-	"\tGetPrompt\x12\x1b.agents.v1.GetPromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12N\n" +
-	"\vListPrompts\x12\x1d.agents.v1.ListPromptsRequest\x1a\x1e.agents.v1.ListPromptsResponse\"\x00\x12K\n" +
-	"\fUpdatePrompt\x12\x1e.agents.v1.UpdatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12Q\n" +
+	"\x16PROMPT_SOURCE_PERSONAL\x10\x032\xa3\x03\n" +
+	"\x0ePromptsService\x12Q\n" +
+	"\fCreatePrompt\x12\x1e.agents.v1.CreatePromptRequest\x1a\x1f.agents.v1.CreatePromptResponse\"\x00\x12H\n" +
+	"\tGetPrompt\x12\x1b.agents.v1.GetPromptRequest\x1a\x1c.agents.v1.GetPromptResponse\"\x00\x12N\n" +
+	"\vListPrompts\x12\x1d.agents.v1.ListPromptsRequest\x1a\x1e.agents.v1.ListPromptsResponse\"\x00\x12Q\n" +
+	"\fUpdatePrompt\x12\x1e.agents.v1.UpdatePromptRequest\x1a\x1f.agents.v1.UpdatePromptResponse\"\x00\x12Q\n" +
 	"\fDeletePrompt\x12\x1e.agents.v1.DeletePromptRequest\x1a\x1f.agents.v1.DeletePromptResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
@@ -820,53 +912,57 @@ func file_agents_v1_prompts_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_prompts_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_prompts_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agents_v1_prompts_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agents_v1_prompts_proto_goTypes = []any{
 	(PromptSource)(0),             // 0: agents.v1.PromptSource
 	(*PromptInfo)(nil),            // 1: agents.v1.PromptInfo
 	(*CreatePromptRequest)(nil),   // 2: agents.v1.CreatePromptRequest
-	(*PromptResponse)(nil),        // 3: agents.v1.PromptResponse
-	(*GetPromptRequest)(nil),      // 4: agents.v1.GetPromptRequest
-	(*ListPromptsRequest)(nil),    // 5: agents.v1.ListPromptsRequest
-	(*ListPromptsResponse)(nil),   // 6: agents.v1.ListPromptsResponse
-	(*UpdatePromptRequest)(nil),   // 7: agents.v1.UpdatePromptRequest
-	(*DeletePromptRequest)(nil),   // 8: agents.v1.DeletePromptRequest
-	(*DeletePromptResponse)(nil),  // 9: agents.v1.DeletePromptResponse
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
-	(v1.AccessMode)(0),            // 11: common.v1.AccessMode
-	(v1.ContentRole)(0),           // 12: common.v1.ContentRole
-	(*v1.PaginationRequest)(nil),  // 13: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil), // 14: common.v1.PaginationResponse
+	(*CreatePromptResponse)(nil),  // 3: agents.v1.CreatePromptResponse
+	(*GetPromptResponse)(nil),     // 4: agents.v1.GetPromptResponse
+	(*UpdatePromptResponse)(nil),  // 5: agents.v1.UpdatePromptResponse
+	(*GetPromptRequest)(nil),      // 6: agents.v1.GetPromptRequest
+	(*ListPromptsRequest)(nil),    // 7: agents.v1.ListPromptsRequest
+	(*ListPromptsResponse)(nil),   // 8: agents.v1.ListPromptsResponse
+	(*UpdatePromptRequest)(nil),   // 9: agents.v1.UpdatePromptRequest
+	(*DeletePromptRequest)(nil),   // 10: agents.v1.DeletePromptRequest
+	(*DeletePromptResponse)(nil),  // 11: agents.v1.DeletePromptResponse
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(v1.AccessMode)(0),            // 13: common.v1.AccessMode
+	(v1.ContentRole)(0),           // 14: common.v1.ContentRole
+	(*v1.PaginationRequest)(nil),  // 15: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil), // 16: common.v1.PaginationResponse
 }
 var file_agents_v1_prompts_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.PromptInfo.source:type_name -> agents.v1.PromptSource
-	10, // 1: agents.v1.PromptInfo.created_at:type_name -> google.protobuf.Timestamp
-	10, // 2: agents.v1.PromptInfo.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 3: agents.v1.PromptInfo.access_mode:type_name -> common.v1.AccessMode
-	12, // 4: agents.v1.PromptInfo.baseline_role:type_name -> common.v1.ContentRole
-	11, // 5: agents.v1.CreatePromptRequest.access_mode:type_name -> common.v1.AccessMode
-	12, // 6: agents.v1.CreatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 7: agents.v1.PromptResponse.prompt:type_name -> agents.v1.PromptInfo
-	13, // 8: agents.v1.ListPromptsRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 9: agents.v1.ListPromptsResponse.prompts:type_name -> agents.v1.PromptInfo
-	14, // 10: agents.v1.ListPromptsResponse.pagination:type_name -> common.v1.PaginationResponse
-	11, // 11: agents.v1.UpdatePromptRequest.access_mode:type_name -> common.v1.AccessMode
-	12, // 12: agents.v1.UpdatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
-	2,  // 13: agents.v1.PromptsService.CreatePrompt:input_type -> agents.v1.CreatePromptRequest
-	4,  // 14: agents.v1.PromptsService.GetPrompt:input_type -> agents.v1.GetPromptRequest
-	5,  // 15: agents.v1.PromptsService.ListPrompts:input_type -> agents.v1.ListPromptsRequest
-	7,  // 16: agents.v1.PromptsService.UpdatePrompt:input_type -> agents.v1.UpdatePromptRequest
-	8,  // 17: agents.v1.PromptsService.DeletePrompt:input_type -> agents.v1.DeletePromptRequest
-	3,  // 18: agents.v1.PromptsService.CreatePrompt:output_type -> agents.v1.PromptResponse
-	3,  // 19: agents.v1.PromptsService.GetPrompt:output_type -> agents.v1.PromptResponse
-	6,  // 20: agents.v1.PromptsService.ListPrompts:output_type -> agents.v1.ListPromptsResponse
-	3,  // 21: agents.v1.PromptsService.UpdatePrompt:output_type -> agents.v1.PromptResponse
-	9,  // 22: agents.v1.PromptsService.DeletePrompt:output_type -> agents.v1.DeletePromptResponse
-	18, // [18:23] is the sub-list for method output_type
-	13, // [13:18] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	12, // 1: agents.v1.PromptInfo.created_at:type_name -> google.protobuf.Timestamp
+	12, // 2: agents.v1.PromptInfo.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 3: agents.v1.PromptInfo.access_mode:type_name -> common.v1.AccessMode
+	14, // 4: agents.v1.PromptInfo.baseline_role:type_name -> common.v1.ContentRole
+	13, // 5: agents.v1.CreatePromptRequest.access_mode:type_name -> common.v1.AccessMode
+	14, // 6: agents.v1.CreatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 7: agents.v1.CreatePromptResponse.prompt:type_name -> agents.v1.PromptInfo
+	1,  // 8: agents.v1.GetPromptResponse.prompt:type_name -> agents.v1.PromptInfo
+	1,  // 9: agents.v1.UpdatePromptResponse.prompt:type_name -> agents.v1.PromptInfo
+	15, // 10: agents.v1.ListPromptsRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 11: agents.v1.ListPromptsResponse.prompts:type_name -> agents.v1.PromptInfo
+	16, // 12: agents.v1.ListPromptsResponse.pagination:type_name -> common.v1.PaginationResponse
+	13, // 13: agents.v1.UpdatePromptRequest.access_mode:type_name -> common.v1.AccessMode
+	14, // 14: agents.v1.UpdatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
+	2,  // 15: agents.v1.PromptsService.CreatePrompt:input_type -> agents.v1.CreatePromptRequest
+	6,  // 16: agents.v1.PromptsService.GetPrompt:input_type -> agents.v1.GetPromptRequest
+	7,  // 17: agents.v1.PromptsService.ListPrompts:input_type -> agents.v1.ListPromptsRequest
+	9,  // 18: agents.v1.PromptsService.UpdatePrompt:input_type -> agents.v1.UpdatePromptRequest
+	10, // 19: agents.v1.PromptsService.DeletePrompt:input_type -> agents.v1.DeletePromptRequest
+	3,  // 20: agents.v1.PromptsService.CreatePrompt:output_type -> agents.v1.CreatePromptResponse
+	4,  // 21: agents.v1.PromptsService.GetPrompt:output_type -> agents.v1.GetPromptResponse
+	8,  // 22: agents.v1.PromptsService.ListPrompts:output_type -> agents.v1.ListPromptsResponse
+	5,  // 23: agents.v1.PromptsService.UpdatePrompt:output_type -> agents.v1.UpdatePromptResponse
+	11, // 24: agents.v1.PromptsService.DeletePrompt:output_type -> agents.v1.DeletePromptResponse
+	20, // [20:25] is the sub-list for method output_type
+	15, // [15:20] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_prompts_proto_init() }
@@ -876,15 +972,15 @@ func file_agents_v1_prompts_proto_init() {
 	}
 	file_agents_v1_prompts_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_prompts_proto_msgTypes[1].OneofWrappers = []any{}
-	file_agents_v1_prompts_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agents_v1_prompts_proto_msgTypes[6].OneofWrappers = []any{}
+	file_agents_v1_prompts_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_prompts_proto_rawDesc), len(file_agents_v1_prompts_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

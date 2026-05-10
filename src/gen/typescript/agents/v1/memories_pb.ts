@@ -367,39 +367,76 @@ export class UpdateMemoryRequest extends Message<UpdateMemoryRequest> {
 }
 
 /**
- * @generated from message agents.v1.MemoryResponse
+ * @generated from message agents.v1.CreateMemoryResponse
  */
-export class MemoryResponse extends Message<MemoryResponse> {
+export class CreateMemoryResponse extends Message<CreateMemoryResponse> {
   /**
    * @generated from field: agents.v1.MemoryInfo memory = 1;
    */
   memory?: MemoryInfo;
 
-  constructor(data?: PartialMessage<MemoryResponse>) {
+  constructor(data?: PartialMessage<CreateMemoryResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.MemoryResponse";
+  static readonly typeName = "agents.v1.CreateMemoryResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "memory", kind: "message", T: MemoryInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemoryResponse {
-    return new MemoryResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateMemoryResponse {
+    return new CreateMemoryResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemoryResponse {
-    return new MemoryResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateMemoryResponse {
+    return new CreateMemoryResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemoryResponse {
-    return new MemoryResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateMemoryResponse {
+    return new CreateMemoryResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MemoryResponse | PlainMessage<MemoryResponse> | undefined, b: MemoryResponse | PlainMessage<MemoryResponse> | undefined): boolean {
-    return proto3.util.equals(MemoryResponse, a, b);
+  static equals(a: CreateMemoryResponse | PlainMessage<CreateMemoryResponse> | undefined, b: CreateMemoryResponse | PlainMessage<CreateMemoryResponse> | undefined): boolean {
+    return proto3.util.equals(CreateMemoryResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdateMemoryResponse
+ */
+export class UpdateMemoryResponse extends Message<UpdateMemoryResponse> {
+  /**
+   * @generated from field: agents.v1.MemoryInfo memory = 1;
+   */
+  memory?: MemoryInfo;
+
+  constructor(data?: PartialMessage<UpdateMemoryResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdateMemoryResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "memory", kind: "message", T: MemoryInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMemoryResponse {
+    return new UpdateMemoryResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateMemoryResponse {
+    return new UpdateMemoryResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateMemoryResponse {
+    return new UpdateMemoryResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateMemoryResponse | PlainMessage<UpdateMemoryResponse> | undefined, b: UpdateMemoryResponse | PlainMessage<UpdateMemoryResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateMemoryResponse, a, b);
   }
 }
 

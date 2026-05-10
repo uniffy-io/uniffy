@@ -16,13 +16,13 @@ import settings.v1.settings_pb2 as settings_dot_v1_dot_settings__pb2
 
 
 class SettingsService(Protocol):
-    async def create_profile(self, request: settings_dot_v1_dot_settings__pb2.CreateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    async def create_profile(self, request: settings_dot_v1_dot_settings__pb2.CreateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.CreateProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_profile(self, request: settings_dot_v1_dot_settings__pb2.GetProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    async def get_profile(self, request: settings_dot_v1_dot_settings__pb2.GetProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_profile(self, request: settings_dot_v1_dot_settings__pb2.UpdateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    async def update_profile(self, request: settings_dot_v1_dot_settings__pb2.UpdateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.UpdateProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_profile(self, request: settings_dot_v1_dot_settings__pb2.DeleteProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.DeleteProfileResponse:
@@ -31,13 +31,13 @@ class SettingsService(Protocol):
     async def list_profiles(self, request: settings_dot_v1_dot_settings__pb2.ListProfilesRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ListProfilesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_effective_settings(self, request: settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse:
+    async def get_effective_settings(self, request: settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_settings_schema(self, request: settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse:
+    async def get_settings_schema(self, request: settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def set_default_profile(self, request: settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    async def set_default_profile(self, request: settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -51,7 +51,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="CreateProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.CreateProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.CreateProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_profile,
@@ -61,7 +61,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="GetProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_profile,
@@ -71,7 +71,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="UpdateProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.UpdateProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.UpdateProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_profile,
@@ -101,7 +101,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="GetEffectiveSettings",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest,
-                        output=settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_effective_settings,
@@ -111,7 +111,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="GetSettingsSchema",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest,
-                        output=settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_settings_schema,
@@ -121,7 +121,7 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         name="SetDefaultProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.set_default_profile,
@@ -144,14 +144,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.CreateProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.CreateProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.CreateProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -164,14 +164,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -184,14 +184,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.UpdateProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.UpdateProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.UpdateProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -244,14 +244,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEffectiveSettings",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest,
-                output=settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -264,14 +264,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSettingsSchema",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest,
-                output=settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -284,14 +284,14 @@ class SettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="SetDefaultProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -300,21 +300,21 @@ class SettingsServiceClient(ConnectClient):
 
 
 class SettingsServiceSync(Protocol):
-    def create_profile(self, request: settings_dot_v1_dot_settings__pb2.CreateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    def create_profile(self, request: settings_dot_v1_dot_settings__pb2.CreateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.CreateProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_profile(self, request: settings_dot_v1_dot_settings__pb2.GetProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    def get_profile(self, request: settings_dot_v1_dot_settings__pb2.GetProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_profile(self, request: settings_dot_v1_dot_settings__pb2.UpdateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    def update_profile(self, request: settings_dot_v1_dot_settings__pb2.UpdateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.UpdateProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_profile(self, request: settings_dot_v1_dot_settings__pb2.DeleteProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.DeleteProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_profiles(self, request: settings_dot_v1_dot_settings__pb2.ListProfilesRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ListProfilesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_effective_settings(self, request: settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse:
+    def get_effective_settings(self, request: settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_settings_schema(self, request: settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse:
+    def get_settings_schema(self, request: settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def set_default_profile(self, request: settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    def set_default_profile(self, request: settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -327,7 +327,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.CreateProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.CreateProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_profile,
@@ -337,7 +337,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_profile,
@@ -347,7 +347,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.UpdateProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.UpdateProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_profile,
@@ -377,7 +377,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetEffectiveSettings",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest,
-                        output=settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_effective_settings,
@@ -387,7 +387,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetSettingsSchema",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest,
-                        output=settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse,
+                        output=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_settings_schema,
@@ -397,7 +397,7 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="SetDefaultProfile",
                         service_name="settings.v1.SettingsService",
                         input=settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest,
-                        output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                        output=settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.set_default_profile,
@@ -420,14 +420,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.CreateProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.CreateProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.CreateProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -440,14 +440,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -460,14 +460,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.UpdateProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.UpdateProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.UpdateProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -520,14 +520,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetEffectiveSettings",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsRequest,
-                output=settings_dot_v1_dot_settings__pb2.EffectiveSettingsResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetEffectiveSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -540,14 +540,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetSettingsSchema",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaRequest,
-                output=settings_dot_v1_dot_settings__pb2.SettingsSchemaResponse,
+                output=settings_dot_v1_dot_settings__pb2.GetSettingsSchemaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -560,14 +560,14 @@ class SettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> settings_dot_v1_dot_settings__pb2.ProfileResponse:
+    ) -> settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="SetDefaultProfile",
                 service_name="settings.v1.SettingsService",
                 input=settings_dot_v1_dot_settings__pb2.SetDefaultProfileRequest,
-                output=settings_dot_v1_dot_settings__pb2.ProfileResponse,
+                output=settings_dot_v1_dot_settings__pb2.SetDefaultProfileResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

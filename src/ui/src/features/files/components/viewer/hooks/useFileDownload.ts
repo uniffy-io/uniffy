@@ -171,7 +171,6 @@ export function useFileDownload(
             } catch (err) {
                 if (!cancelled) {
                     const message = err instanceof Error ? err.message : 'Download failed';
-                    console.error('[useFileDownload] Error:', message);
                     setError(message);
                 }
             } finally {

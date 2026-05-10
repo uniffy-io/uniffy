@@ -12,7 +12,6 @@ from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, Endpoint, EndpointSync
-import common.v1.common_pb2 as common_dot_v1_dot_common__pb2
 import organizations.v1.organizations_pb2 as organizations_dot_v1_dot_organizations__pb2
 
 
@@ -23,46 +22,46 @@ class OrganizationsService(Protocol):
     async def list_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationDetail:
+    async def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    async def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    async def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_organization(self, request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationOverview:
+    async def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_members(self, request: organizations_dot_v1_dot_organizations__pb2.ListMembersRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_member(self, request: organizations_dot_v1_dot_organizations__pb2.AddMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    async def add_member(self, request: organizations_dot_v1_dot_organizations__pb2.AddMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.AddMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_member_role(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    async def update_member_role(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def remove_member(self, request: organizations_dot_v1_dot_organizations__pb2.RemoveMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse:
+    async def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
+    async def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    async def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    async def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+    async def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def revoke_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
@@ -105,7 +104,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="GetOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationDetail,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_organization,
@@ -115,7 +114,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="CreateOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_organization,
@@ -125,7 +124,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="UpdateOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_organization,
@@ -145,7 +144,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="GetOrganizationOverview",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationOverview,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_organization_overview,
@@ -165,7 +164,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="AddMember",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.AddMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.AddMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_member,
@@ -175,7 +174,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="UpdateMemberRole",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_member_role,
@@ -195,7 +194,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="GetPermissionDefaults",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_permission_defaults,
@@ -205,7 +204,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="UpdatePermissionDefaults",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_permission_defaults,
@@ -215,7 +214,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="GetOrganizationSettings",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_organization_settings,
@@ -225,7 +224,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="UpdateOrganizationSettings",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_organization_settings,
@@ -235,7 +234,7 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         name="GrantDomainAdmin",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
-                        output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.grant_domain_admin,
@@ -328,14 +327,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationDetail:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationDetail,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -348,14 +347,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -368,14 +367,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -408,14 +407,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationOverview:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganizationOverview",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationOverview,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -448,14 +447,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.AddMemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMember",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.AddMemberRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.AddMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -468,14 +467,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemberRole",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -508,14 +507,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetPermissionDefaults",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse,
+                output=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -528,14 +527,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdatePermissionDefaults",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -548,14 +547,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganizationSettings",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -568,14 +567,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrganizationSettings",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -588,14 +587,14 @@ class OrganizationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GrantDomainAdmin",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
-                output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -668,33 +667,33 @@ class OrganizationsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationDetail:
+    def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_organization(self, request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationOverview:
+    def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_members(self, request: organizations_dot_v1_dot_organizations__pb2.ListMembersRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_member(self, request: organizations_dot_v1_dot_organizations__pb2.AddMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    def add_member(self, request: organizations_dot_v1_dot_organizations__pb2.AddMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.AddMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_member_role(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    def update_member_role(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_member(self, request: organizations_dot_v1_dot_organizations__pb2.RemoveMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse:
+    def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
+    def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+    def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def revoke_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -733,7 +732,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationDetail,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_organization,
@@ -743,7 +742,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_organization,
@@ -753,7 +752,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateOrganization",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
-                        output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_organization,
@@ -773,7 +772,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetOrganizationOverview",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationOverview,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_organization_overview,
@@ -793,7 +792,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddMember",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.AddMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.AddMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_member,
@@ -803,7 +802,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateMemberRole",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest,
-                        output=common_dot_v1_dot_common__pb2.MemberInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_member_role,
@@ -823,7 +822,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetPermissionDefaults",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_permission_defaults,
@@ -833,7 +832,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdatePermissionDefaults",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_permission_defaults,
@@ -843,7 +842,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetOrganizationSettings",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_organization_settings,
@@ -853,7 +852,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateOrganizationSettings",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_organization_settings,
@@ -863,7 +862,7 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GrantDomainAdmin",
                         service_name="organizations.v1.OrganizationsService",
                         input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
-                        output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                        output=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.grant_domain_admin,
@@ -956,14 +955,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationDetail:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationDetail,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -976,14 +975,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -996,14 +995,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.OrganizationInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrganization",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
-                output=common_dot_v1_dot_common__pb2.OrganizationInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1036,14 +1035,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationOverview:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganizationOverview",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationOverview,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1076,14 +1075,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.AddMemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddMember",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.AddMemberRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.AddMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1096,14 +1095,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.MemberInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemberRole",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleRequest,
-                output=common_dot_v1_dot_common__pb2.MemberInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1136,14 +1135,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetPermissionDefaults",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse,
+                output=organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1156,14 +1155,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdatePermissionDefaults",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1176,14 +1175,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrganizationSettings",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1196,14 +1195,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.OrganizationSettings:
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrganizationSettings",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.OrganizationSettings,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1216,14 +1215,14 @@ class OrganizationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+    ) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GrantDomainAdmin",
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
-                output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                output=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

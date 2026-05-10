@@ -16,7 +16,7 @@ import agents.v1.providers_pb2 as agents_dot_v1_dot_providers__pb2
 
 
 class ProvidersService(Protocol):
-    async def add_provider_key(self, request: agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    async def add_provider_key(self, request: agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def list_provider_keys(self, request: agents_dot_v1_dot_providers__pb2.ListProviderKeysRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListProviderKeysResponse:
@@ -31,10 +31,10 @@ class ProvidersService(Protocol):
     async def list_available_models(self, request: agents_dot_v1_dot_providers__pb2.ListAvailableModelsRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def toggle_provider_key(self, request: agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    async def toggle_provider_key(self, request: agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_models_for_key(self, request: agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
+    async def list_models_for_key(self, request: agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -48,7 +48,7 @@ class ProvidersServiceASGIApplication(ConnectASGIApplication[ProvidersService]):
                         name="AddProviderKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                        output=agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_provider_key,
@@ -98,7 +98,7 @@ class ProvidersServiceASGIApplication(ConnectASGIApplication[ProvidersService]):
                         name="ToggleProviderKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                        output=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.toggle_provider_key,
@@ -108,7 +108,7 @@ class ProvidersServiceASGIApplication(ConnectASGIApplication[ProvidersService]):
                         name="ListModelsForKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse,
+                        output=agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_models_for_key,
@@ -131,14 +131,14 @@ class ProvidersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddProviderKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                output=agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -231,14 +231,14 @@ class ProvidersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ToggleProviderKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                output=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -251,14 +251,14 @@ class ProvidersServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListModelsForKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse,
+                output=agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -267,7 +267,7 @@ class ProvidersServiceClient(ConnectClient):
 
 
 class ProvidersServiceSync(Protocol):
-    def add_provider_key(self, request: agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    def add_provider_key(self, request: agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_provider_keys(self, request: agents_dot_v1_dot_providers__pb2.ListProviderKeysRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListProviderKeysResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -277,9 +277,9 @@ class ProvidersServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_available_models(self, request: agents_dot_v1_dot_providers__pb2.ListAvailableModelsRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def toggle_provider_key(self, request: agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    def toggle_provider_key(self, request: agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_models_for_key(self, request: agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
+    def list_models_for_key(self, request: agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest, ctx: RequestContext) -> agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -292,7 +292,7 @@ class ProvidersServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddProviderKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                        output=agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_provider_key,
@@ -342,7 +342,7 @@ class ProvidersServiceWSGIApplication(ConnectWSGIApplication):
                         name="ToggleProviderKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                        output=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.toggle_provider_key,
@@ -352,7 +352,7 @@ class ProvidersServiceWSGIApplication(ConnectWSGIApplication):
                         name="ListModelsForKey",
                         service_name="agents.v1.ProvidersService",
                         input=agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest,
-                        output=agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse,
+                        output=agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_models_for_key,
@@ -375,14 +375,14 @@ class ProvidersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddProviderKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.AddProviderKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                output=agents_dot_v1_dot_providers__pb2.AddProviderKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -475,14 +475,14 @@ class ProvidersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ProviderKeyResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ToggleProviderKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ProviderKeyResponse,
+                output=agents_dot_v1_dot_providers__pb2.ToggleProviderKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -495,14 +495,14 @@ class ProvidersServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse:
+    ) -> agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListModelsForKey",
                 service_name="agents.v1.ProvidersService",
                 input=agents_dot_v1_dot_providers__pb2.ListModelsForKeyRequest,
-                output=agents_dot_v1_dot_providers__pb2.ListAvailableModelsResponse,
+                output=agents_dot_v1_dot_providers__pb2.ListModelsForKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

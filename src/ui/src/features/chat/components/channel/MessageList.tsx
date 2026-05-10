@@ -25,6 +25,7 @@ import {
   selectHasMoreForChannel,
   selectIsChannelLoading,
   evictOldestMessages,
+  evictExpiredTyping,
 } from '@/features/chat/store/chatMessagesSlice';
 import { fetchMessages } from '@/features/chat/store/chatThunks';
 import {
@@ -220,11 +221,14 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const unreadSeparatorId = useAppSelector((state) =>
     effectiveChannelId ? selectUnreadSeparatorForChannel(state, effectiveChannelId) : null,
   );
-  const [, setTypingTick] = useState(0);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
-  const typingUsers = useAppSelector((state) =>
+  const allTypingUsers = useAppSelector((state) =>
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
-  ).filter(u => u.userId !== currentUserId);
+  );
+  const typingUsers = useMemo(
+    () => allTypingUsers.filter(u => u.userId !== currentUserId),
+    [allTypingUsers, currentUserId],
+  );
   const hasMore = useAppSelector((state) =>
     effectiveChannelId ? selectHasMoreForChannel(state, effectiveChannelId) : false,
   );
@@ -237,10 +241,12 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const loadingMoreRef = useRef(false);
 
   useEffect(() => {
-    if (typingUsers.length === 0) return;
-    const timer = setInterval(() => setTypingTick(t => t + 1), 2000);
+    if (!effectiveChannelId || typingUsers.length === 0) return;
+    const timer = setInterval(() => {
+      dispatch(evictExpiredTyping({ channelId: effectiveChannelId }));
+    }, 2000);
     return () => clearInterval(timer);
-  }, [typingUsers.length]);
+  }, [dispatch, effectiveChannelId, typingUsers.length]);
 
   const rootMessages = useMemo(
     () => messages.filter((m) => m.rootId === null),

@@ -43,8 +43,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
 
     // Handle document load error
     const handleDocumentLoadError = useCallback(
-        (err: Error) => {
-            console.error('PDF load error:', err);
+        () => {
             setError('Failed to load PDF');
             dispatch(setViewerLoading(false));
         },

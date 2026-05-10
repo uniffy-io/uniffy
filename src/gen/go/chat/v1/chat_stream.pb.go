@@ -1364,35 +1364,35 @@ func (x *StreamUserChatEventsRequest) GetOrganizationId() string {
 	return ""
 }
 
-type UserChatEvent struct {
+type StreamUserChatEventsResponse struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	EventType UserChatEventType      `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=chat.v1.UserChatEventType" json:"event_type,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
-	//	*UserChatEvent_UnreadCount
-	//	*UserChatEvent_ThreadActivity
-	//	*UserChatEvent_MentionReceived
-	//	*UserChatEvent_ChannelEvent
-	Payload       isUserChatEvent_Payload `protobuf_oneof:"payload"`
+	//	*StreamUserChatEventsResponse_UnreadCount
+	//	*StreamUserChatEventsResponse_ThreadActivity
+	//	*StreamUserChatEventsResponse_MentionReceived
+	//	*StreamUserChatEventsResponse_ChannelEvent
+	Payload       isStreamUserChatEventsResponse_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UserChatEvent) Reset() {
-	*x = UserChatEvent{}
+func (x *StreamUserChatEventsResponse) Reset() {
+	*x = StreamUserChatEventsResponse{}
 	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UserChatEvent) String() string {
+func (x *StreamUserChatEventsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UserChatEvent) ProtoMessage() {}
+func (*StreamUserChatEventsResponse) ProtoMessage() {}
 
-func (x *UserChatEvent) ProtoReflect() protoreflect.Message {
+func (x *StreamUserChatEventsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1404,96 +1404,96 @@ func (x *UserChatEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UserChatEvent.ProtoReflect.Descriptor instead.
-func (*UserChatEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use StreamUserChatEventsResponse.ProtoReflect.Descriptor instead.
+func (*StreamUserChatEventsResponse) Descriptor() ([]byte, []int) {
 	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *UserChatEvent) GetEventType() UserChatEventType {
+func (x *StreamUserChatEventsResponse) GetEventType() UserChatEventType {
 	if x != nil {
 		return x.EventType
 	}
 	return UserChatEventType_USER_CHAT_EVENT_TYPE_UNSPECIFIED
 }
 
-func (x *UserChatEvent) GetTimestamp() *timestamppb.Timestamp {
+func (x *StreamUserChatEventsResponse) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
 	}
 	return nil
 }
 
-func (x *UserChatEvent) GetPayload() isUserChatEvent_Payload {
+func (x *StreamUserChatEventsResponse) GetPayload() isStreamUserChatEventsResponse_Payload {
 	if x != nil {
 		return x.Payload
 	}
 	return nil
 }
 
-func (x *UserChatEvent) GetUnreadCount() *UnreadCountPayload {
+func (x *StreamUserChatEventsResponse) GetUnreadCount() *UnreadCountPayload {
 	if x != nil {
-		if x, ok := x.Payload.(*UserChatEvent_UnreadCount); ok {
+		if x, ok := x.Payload.(*StreamUserChatEventsResponse_UnreadCount); ok {
 			return x.UnreadCount
 		}
 	}
 	return nil
 }
 
-func (x *UserChatEvent) GetThreadActivity() *ThreadActivityPayload {
+func (x *StreamUserChatEventsResponse) GetThreadActivity() *ThreadActivityPayload {
 	if x != nil {
-		if x, ok := x.Payload.(*UserChatEvent_ThreadActivity); ok {
+		if x, ok := x.Payload.(*StreamUserChatEventsResponse_ThreadActivity); ok {
 			return x.ThreadActivity
 		}
 	}
 	return nil
 }
 
-func (x *UserChatEvent) GetMentionReceived() *MentionReceivedPayload {
+func (x *StreamUserChatEventsResponse) GetMentionReceived() *MentionReceivedPayload {
 	if x != nil {
-		if x, ok := x.Payload.(*UserChatEvent_MentionReceived); ok {
+		if x, ok := x.Payload.(*StreamUserChatEventsResponse_MentionReceived); ok {
 			return x.MentionReceived
 		}
 	}
 	return nil
 }
 
-func (x *UserChatEvent) GetChannelEvent() *ChatEvent {
+func (x *StreamUserChatEventsResponse) GetChannelEvent() *ChatEvent {
 	if x != nil {
-		if x, ok := x.Payload.(*UserChatEvent_ChannelEvent); ok {
+		if x, ok := x.Payload.(*StreamUserChatEventsResponse_ChannelEvent); ok {
 			return x.ChannelEvent
 		}
 	}
 	return nil
 }
 
-type isUserChatEvent_Payload interface {
-	isUserChatEvent_Payload()
+type isStreamUserChatEventsResponse_Payload interface {
+	isStreamUserChatEventsResponse_Payload()
 }
 
-type UserChatEvent_UnreadCount struct {
+type StreamUserChatEventsResponse_UnreadCount struct {
 	UnreadCount *UnreadCountPayload `protobuf:"bytes,10,opt,name=unread_count,json=unreadCount,proto3,oneof"`
 }
 
-type UserChatEvent_ThreadActivity struct {
+type StreamUserChatEventsResponse_ThreadActivity struct {
 	ThreadActivity *ThreadActivityPayload `protobuf:"bytes,11,opt,name=thread_activity,json=threadActivity,proto3,oneof"`
 }
 
-type UserChatEvent_MentionReceived struct {
+type StreamUserChatEventsResponse_MentionReceived struct {
 	MentionReceived *MentionReceivedPayload `protobuf:"bytes,12,opt,name=mention_received,json=mentionReceived,proto3,oneof"`
 }
 
-type UserChatEvent_ChannelEvent struct {
+type StreamUserChatEventsResponse_ChannelEvent struct {
 	// Channel-level event forwarded through the unified stream
 	ChannelEvent *ChatEvent `protobuf:"bytes,13,opt,name=channel_event,json=channelEvent,proto3,oneof"`
 }
 
-func (*UserChatEvent_UnreadCount) isUserChatEvent_Payload() {}
+func (*StreamUserChatEventsResponse_UnreadCount) isStreamUserChatEventsResponse_Payload() {}
 
-func (*UserChatEvent_ThreadActivity) isUserChatEvent_Payload() {}
+func (*StreamUserChatEventsResponse_ThreadActivity) isStreamUserChatEventsResponse_Payload() {}
 
-func (*UserChatEvent_MentionReceived) isUserChatEvent_Payload() {}
+func (*StreamUserChatEventsResponse_MentionReceived) isStreamUserChatEventsResponse_Payload() {}
 
-func (*UserChatEvent_ChannelEvent) isUserChatEvent_Payload() {}
+func (*StreamUserChatEventsResponse_ChannelEvent) isStreamUserChatEventsResponse_Payload() {}
 
 type UnreadCountPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1720,7 +1720,7 @@ var File_chat_v1_chat_stream_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12chat/v1/chat.proto\"\xca\b\n" +
+	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x12chat/v1/chat.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xca\b\n" +
 	"\tChatEvent\x125\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x16.chat.v1.ChatEventTypeR\teventType\x128\n" +
@@ -1824,8 +1824,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
 	"decided_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\"F\n" +
 	"\x1bStreamUserChatEventsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xa5\x03\n" +
-	"\rUserChatEvent\x129\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xb4\x03\n" +
+	"\x1cStreamUserChatEventsResponse\x129\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x1a.chat.v1.UserChatEventTypeR\teventType\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12@\n" +
@@ -1886,9 +1886,9 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"$USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY\x10\x02\x12)\n" +
 	"%USER_CHAT_EVENT_TYPE_MENTION_RECEIVED\x10\x03\x12\"\n" +
 	"\x1eUSER_CHAT_EVENT_TYPE_HEARTBEAT\x10\x04\x12&\n" +
-	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x052m\n" +
-	"\x11ChatStreamService\x12X\n" +
-	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a\x16.chat.v1.UserChatEvent\"\x000\x01B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
+	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x052|\n" +
+	"\x11ChatStreamService\x12g\n" +
+	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a%.chat.v1.StreamUserChatEventsResponse\"\x000\x01B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
 var (
 	file_chat_v1_chat_stream_proto_rawDescOnce sync.Once
@@ -1921,7 +1921,7 @@ var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(*AgentConfirmationRequestedPayload)(nil), // 13: chat.v1.AgentConfirmationRequestedPayload
 	(*AgentConfirmationResolvedPayload)(nil),  // 14: chat.v1.AgentConfirmationResolvedPayload
 	(*StreamUserChatEventsRequest)(nil),       // 15: chat.v1.StreamUserChatEventsRequest
-	(*UserChatEvent)(nil),                     // 16: chat.v1.UserChatEvent
+	(*StreamUserChatEventsResponse)(nil),      // 16: chat.v1.StreamUserChatEventsResponse
 	(*UnreadCountPayload)(nil),                // 17: chat.v1.UnreadCountPayload
 	(*ThreadActivityPayload)(nil),             // 18: chat.v1.ThreadActivityPayload
 	(*MentionReceivedPayload)(nil),            // 19: chat.v1.MentionReceivedPayload
@@ -1954,15 +1954,15 @@ var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	20, // 19: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
 	24, // 20: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
 	20, // 21: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
-	1,  // 22: chat.v1.UserChatEvent.event_type:type_name -> chat.v1.UserChatEventType
-	20, // 23: chat.v1.UserChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	17, // 24: chat.v1.UserChatEvent.unread_count:type_name -> chat.v1.UnreadCountPayload
-	18, // 25: chat.v1.UserChatEvent.thread_activity:type_name -> chat.v1.ThreadActivityPayload
-	19, // 26: chat.v1.UserChatEvent.mention_received:type_name -> chat.v1.MentionReceivedPayload
-	3,  // 27: chat.v1.UserChatEvent.channel_event:type_name -> chat.v1.ChatEvent
+	1,  // 22: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
+	20, // 23: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	17, // 24: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
+	18, // 25: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
+	19, // 26: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
+	3,  // 27: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
 	20, // 28: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
 	15, // 29: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
-	16, // 30: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.UserChatEvent
+	16, // 30: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
 	30, // [30:31] is the sub-list for method output_type
 	29, // [29:30] is the sub-list for method input_type
 	29, // [29:29] is the sub-list for extension type_name
@@ -1995,10 +1995,10 @@ func file_chat_v1_chat_stream_proto_init() {
 	file_chat_v1_chat_stream_proto_msgTypes[7].OneofWrappers = []any{}
 	file_chat_v1_chat_stream_proto_msgTypes[9].OneofWrappers = []any{}
 	file_chat_v1_chat_stream_proto_msgTypes[13].OneofWrappers = []any{
-		(*UserChatEvent_UnreadCount)(nil),
-		(*UserChatEvent_ThreadActivity)(nil),
-		(*UserChatEvent_MentionReceived)(nil),
-		(*UserChatEvent_ChannelEvent)(nil),
+		(*StreamUserChatEventsResponse_UnreadCount)(nil),
+		(*StreamUserChatEventsResponse_ThreadActivity)(nil),
+		(*StreamUserChatEventsResponse_MentionReceived)(nil),
+		(*StreamUserChatEventsResponse_ChannelEvent)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

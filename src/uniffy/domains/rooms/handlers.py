@@ -9,24 +9,28 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from uniffy_proto.rooms.v1.rooms_pb2 import (
-    BookingResponse,
     CancelBookingRequest,
+    CancelBookingResponse,
     CheckAvailabilityRequest,
     CheckAvailabilityResponse,
     CreateBookingRequest,
+    CreateBookingResponse,
     CreateRoomRequest,
+    CreateRoomResponse,
     DeleteRoomRequest,
     DeleteRoomResponse,
     FindAvailableRoomsRequest,
     FindAvailableRoomsResponse,
     GetBookingRequest,
+    GetBookingResponse,
     GetRoomRequest,
+    GetRoomResponse,
     ListBookingsRequest,
     ListBookingsResponse,
     ListRoomsRequest,
     ListRoomsResponse,
-    RoomResponse,
     UpdateRoomRequest,
+    UpdateRoomResponse,
 )
 
 from uniffy.core.converters.common_proto import (
@@ -77,7 +81,7 @@ class RoomHandlers:
         self,
         request: CreateRoomRequest,
         ctx: RequestContext,
-    ) -> RoomResponse:
+    ) -> CreateRoomResponse:
         """Create a new room."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -124,7 +128,7 @@ class RoomHandlers:
             async with open_session() as session:
                 ops = RoomOperations(session)
                 room = await ops.create_room(**kwargs)
-                return RoomResponse(room=room_to_proto(room))
+                return CreateRoomResponse(room=room_to_proto(room))
         except ConnectError:
             raise
         except Exception as exc:
@@ -134,7 +138,7 @@ class RoomHandlers:
         self,
         request: GetRoomRequest,
         ctx: RequestContext,
-    ) -> RoomResponse:
+    ) -> GetRoomResponse:
         """Get a room by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -144,7 +148,7 @@ class RoomHandlers:
             async with open_session() as session:
                 ops = RoomOperations(session)
                 room = await ops.get_by_id(user_id, organization_id, room_id)
-                return RoomResponse(room=room_to_proto(room))
+                return GetRoomResponse(room=room_to_proto(room))
         except ConnectError:
             raise
         except Exception as exc:
@@ -154,7 +158,7 @@ class RoomHandlers:
         self,
         request: UpdateRoomRequest,
         ctx: RequestContext,
-    ) -> RoomResponse:
+    ) -> UpdateRoomResponse:
         """Update an existing room."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -191,7 +195,7 @@ class RoomHandlers:
                     room_id=room_id,
                     **kwargs,
                 )
-                return RoomResponse(room=room_to_proto(room))
+                return UpdateRoomResponse(room=room_to_proto(room))
         except ConnectError:
             raise
         except Exception as exc:
@@ -285,7 +289,7 @@ class BookingHandlers:
         self,
         request: CreateBookingRequest,
         ctx: RequestContext,
-    ) -> BookingResponse:
+    ) -> CreateBookingResponse:
         """Create a new room booking."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -311,7 +315,9 @@ class BookingHandlers:
 
                 room_name, booker_name = await _load_booking_names(session, booking.room_id, user_id)
 
-                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
+                return CreateBookingResponse(
+                    booking=booking_to_proto(booking, room_name, booker_name)
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -321,7 +327,7 @@ class BookingHandlers:
         self,
         request: GetBookingRequest,
         ctx: RequestContext,
-    ) -> BookingResponse:
+    ) -> GetBookingResponse:
         """Get a booking by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -334,7 +340,7 @@ class BookingHandlers:
                 room_name, booker_name = await _load_booking_names(
                     session, booking.room_id, booking.user_id
                 )
-                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
+                return GetBookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
         except ConnectError:
             raise
         except Exception as exc:
@@ -344,7 +350,7 @@ class BookingHandlers:
         self,
         request: CancelBookingRequest,
         ctx: RequestContext,
-    ) -> BookingResponse:
+    ) -> CancelBookingResponse:
         """Cancel an existing booking."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -357,7 +363,9 @@ class BookingHandlers:
                 room_name, booker_name = await _load_booking_names(
                     session, booking.room_id, booking.user_id
                 )
-                return BookingResponse(booking=booking_to_proto(booking, room_name, booker_name))
+                return CancelBookingResponse(
+                    booking=booking_to_proto(booking, room_name, booker_name)
+                )
         except ConnectError:
             raise
         except Exception as exc:

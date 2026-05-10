@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package rooms.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1";
 
 // ============================================================================
 // Enums
@@ -13,26 +13,26 @@ import "common/v1/common.proto";
 
 // Type of bookable room or resource
 enum RoomType {
-  ROOM_TYPE_UNSPECIFIED     = 0;
-  ROOM_TYPE_MEETING_ROOM   = 1;
+  ROOM_TYPE_UNSPECIFIED = 0;
+  ROOM_TYPE_MEETING_ROOM = 1;
   ROOM_TYPE_CONFERENCE_ROOM = 2;
-  ROOM_TYPE_OFFICE         = 3;
-  ROOM_TYPE_OTHER          = 4;
+  ROOM_TYPE_OFFICE = 3;
+  ROOM_TYPE_OTHER = 4;
 }
 
 // Operational status of a room
 enum RoomStatus {
   ROOM_STATUS_UNSPECIFIED = 0;
-  ROOM_STATUS_ACTIVE      = 1;
+  ROOM_STATUS_ACTIVE = 1;
   ROOM_STATUS_MAINTENANCE = 2;
-  ROOM_STATUS_RETIRED     = 3;
+  ROOM_STATUS_RETIRED = 3;
 }
 
 // Status of a booking
 enum BookingStatus {
   BOOKING_STATUS_UNSPECIFIED = 0;
-  BOOKING_STATUS_CONFIRMED   = 1;
-  BOOKING_STATUS_CANCELLED   = 2;
+  BOOKING_STATUS_CONFIRMED = 1;
+  BOOKING_STATUS_CANCELLED = 2;
 }
 
 // ============================================================================
@@ -41,16 +41,16 @@ enum BookingStatus {
 
 service RoomsService {
   // ----- Room CRUD -----
-  rpc CreateRoom(CreateRoomRequest) returns (RoomResponse);
-  rpc GetRoom(GetRoomRequest) returns (RoomResponse);
-  rpc UpdateRoom(UpdateRoomRequest) returns (RoomResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  rpc GetRoom(GetRoomRequest) returns (GetRoomResponse);
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
   rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
   rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
 
   // ----- Booking CRUD -----
-  rpc CreateBooking(CreateBookingRequest) returns (BookingResponse);
-  rpc GetBooking(GetBookingRequest) returns (BookingResponse);
-  rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
+  rpc CreateBooking(CreateBookingRequest) returns (CreateBookingResponse);
+  rpc GetBooking(GetBookingRequest) returns (GetBookingResponse);
+  rpc CancelBooking(CancelBookingRequest) returns (CancelBookingResponse);
   rpc ListBookings(ListBookingsRequest) returns (ListBookingsResponse);
 
   // ----- Availability -----
@@ -167,7 +167,15 @@ message DeleteRoomResponse {
   string message = 2;
 }
 
-message RoomResponse {
+message CreateRoomResponse {
+  Room room = 1;
+}
+
+message GetRoomResponse {
+  Room room = 1;
+}
+
+message UpdateRoomResponse {
   Room room = 1;
 }
 
@@ -216,7 +224,15 @@ message CancelBookingRequest {
   string organization_id = 2;
 }
 
-message BookingResponse {
+message CreateBookingResponse {
+  RoomBooking booking = 1;
+}
+
+message GetBookingResponse {
+  RoomBooking booking = 1;
+}
+
+message CancelBookingResponse {
   RoomBooking booking = 1;
 }
 

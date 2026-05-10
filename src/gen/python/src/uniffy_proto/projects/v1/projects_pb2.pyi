@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -32,6 +32,7 @@ class ViewType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 
 class TagFilterMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
+    TAG_FILTER_MODE_UNSPECIFIED: _ClassVar[TagFilterMode]
     TAG_FILTER_MODE_ALL: _ClassVar[TagFilterMode]
     TAG_FILTER_MODE_ANY: _ClassVar[TagFilterMode]
     TAG_FILTER_MODE_NONE: _ClassVar[TagFilterMode]
@@ -60,6 +61,7 @@ VIEW_TYPE_UNSPECIFIED: ViewType
 VIEW_TYPE_TABLE: ViewType
 VIEW_TYPE_BOARD: ViewType
 VIEW_TYPE_ROADMAP: ViewType
+TAG_FILTER_MODE_UNSPECIFIED: TagFilterMode
 TAG_FILTER_MODE_ALL: TagFilterMode
 TAG_FILTER_MODE_ANY: TagFilterMode
 TAG_FILTER_MODE_NONE: TagFilterMode
@@ -407,7 +409,19 @@ class ListProjectsRequest(_message.Message):
     include_deleted: bool
     def __init__(self, organization_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., include_deleted: _Optional[bool] = ...) -> None: ...
 
-class ProjectResponse(_message.Message):
+class CreateProjectResponse(_message.Message):
+    __slots__ = ("project",)
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    project: Project
+    def __init__(self, project: _Optional[_Union[Project, _Mapping]] = ...) -> None: ...
+
+class GetProjectResponse(_message.Message):
+    __slots__ = ("project",)
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    project: Project
+    def __init__(self, project: _Optional[_Union[Project, _Mapping]] = ...) -> None: ...
+
+class UpdateProjectResponse(_message.Message):
     __slots__ = ("project",)
     PROJECT_FIELD_NUMBER: _ClassVar[int]
     project: Project
@@ -613,7 +627,37 @@ class ListTasksRequest(_message.Message):
     tag_filter_mode: TagFilterMode
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ..., tag_filter_mode: _Optional[_Union[TagFilterMode, str]] = ...) -> None: ...
 
-class TaskResponse(_message.Message):
+class CreateTaskResponse(_message.Message):
+    __slots__ = ("task", "updated_parent", "spawned_task")
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
+    SPAWNED_TASK_FIELD_NUMBER: _ClassVar[int]
+    task: Task
+    updated_parent: Task
+    spawned_task: Task
+    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ..., spawned_task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
+
+class GetTaskResponse(_message.Message):
+    __slots__ = ("task", "updated_parent", "spawned_task")
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
+    SPAWNED_TASK_FIELD_NUMBER: _ClassVar[int]
+    task: Task
+    updated_parent: Task
+    spawned_task: Task
+    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ..., spawned_task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
+
+class UpdateTaskResponse(_message.Message):
+    __slots__ = ("task", "updated_parent", "spawned_task")
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
+    SPAWNED_TASK_FIELD_NUMBER: _ClassVar[int]
+    task: Task
+    updated_parent: Task
+    spawned_task: Task
+    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ..., spawned_task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
+
+class MoveTaskResponse(_message.Message):
     __slots__ = ("task", "updated_parent", "spawned_task")
     TASK_FIELD_NUMBER: _ClassVar[int]
     UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
@@ -701,7 +745,13 @@ class DeleteFieldRequest(_message.Message):
     field_id: str
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., field_id: _Optional[str] = ...) -> None: ...
 
-class FieldResponse(_message.Message):
+class CreateFieldResponse(_message.Message):
+    __slots__ = ("field",)
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    field: FieldDefinition
+    def __init__(self, field: _Optional[_Union[FieldDefinition, _Mapping]] = ...) -> None: ...
+
+class UpdateFieldResponse(_message.Message):
     __slots__ = ("field",)
     FIELD_FIELD_NUMBER: _ClassVar[int]
     field: FieldDefinition
@@ -755,7 +805,13 @@ class DeleteViewRequest(_message.Message):
     view_id: str
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., view_id: _Optional[str] = ...) -> None: ...
 
-class ViewResponse(_message.Message):
+class CreateViewResponse(_message.Message):
+    __slots__ = ("view",)
+    VIEW_FIELD_NUMBER: _ClassVar[int]
+    view: ViewConfig
+    def __init__(self, view: _Optional[_Union[ViewConfig, _Mapping]] = ...) -> None: ...
+
+class UpdateViewResponse(_message.Message):
     __slots__ = ("view",)
     VIEW_FIELD_NUMBER: _ClassVar[int]
     view: ViewConfig
@@ -837,7 +893,25 @@ class ListSprintsRequest(_message.Message):
     include_closed: bool
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., include_closed: _Optional[bool] = ...) -> None: ...
 
-class SprintResponse(_message.Message):
+class CreateSprintResponse(_message.Message):
+    __slots__ = ("sprint",)
+    SPRINT_FIELD_NUMBER: _ClassVar[int]
+    sprint: Sprint
+    def __init__(self, sprint: _Optional[_Union[Sprint, _Mapping]] = ...) -> None: ...
+
+class UpdateSprintResponse(_message.Message):
+    __slots__ = ("sprint",)
+    SPRINT_FIELD_NUMBER: _ClassVar[int]
+    sprint: Sprint
+    def __init__(self, sprint: _Optional[_Union[Sprint, _Mapping]] = ...) -> None: ...
+
+class StartSprintResponse(_message.Message):
+    __slots__ = ("sprint",)
+    SPRINT_FIELD_NUMBER: _ClassVar[int]
+    sprint: Sprint
+    def __init__(self, sprint: _Optional[_Union[Sprint, _Mapping]] = ...) -> None: ...
+
+class CompleteSprintResponse(_message.Message):
     __slots__ = ("sprint",)
     SPRINT_FIELD_NUMBER: _ClassVar[int]
     sprint: Sprint

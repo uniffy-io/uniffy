@@ -37,7 +37,7 @@ class NotificationsService(Protocol):
     async def unregister_push_subscription(self, request: notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> AsyncIterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
+    def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> AsyncIterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
@@ -136,7 +136,7 @@ class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsSe
                         name="StreamNotifications",
                         service_name="notifications.v1.NotificationsService",
                         input=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest,
-                        output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent,
+                        output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stream_notifications,
@@ -349,14 +349,14 @@ class NotificationsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> AsyncIterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
+    ) -> AsyncIterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="StreamNotifications",
                 service_name="notifications.v1.NotificationsService",
                 input=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest,
-                output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent,
+                output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -479,7 +479,7 @@ class NotificationsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def unregister_push_subscription(self, request: notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
+    def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -572,7 +572,7 @@ class NotificationsServiceWSGIApplication(ConnectWSGIApplication):
                         name="StreamNotifications",
                         service_name="notifications.v1.NotificationsService",
                         input=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest,
-                        output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent,
+                        output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stream_notifications,
@@ -785,14 +785,14 @@ class NotificationsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
+    ) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse]:
         return self.execute_server_stream(
             request=request,
             method=MethodInfo(
                 name="StreamNotifications",
                 service_name="notifications.v1.NotificationsService",
                 input=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest,
-                output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent,
+                output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

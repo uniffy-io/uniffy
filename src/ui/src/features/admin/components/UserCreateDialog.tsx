@@ -45,8 +45,8 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setOrganizations(response.organizations);
-    } catch (err) {
-      console.error('Failed to fetch organizations:', err);
+    } catch {
+      // failure leaves list empty
     }
   }, [accessToken]);
 
@@ -88,10 +88,10 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
       );
 
       // If an organization is selected, add the user to it
-      if (orgId && newUser.id) {
+      if (orgId && newUser.user?.id) {
         await usersClient.addUserToOrganization(
           {
-            userId: newUser.id,
+            userId: newUser.user.id,
             organizationId: orgId,
             role: orgRole
           },
@@ -110,7 +110,6 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
       setOrgId('');
       setOrgRole(OrganizationRole.MEMBER);
     } catch (err: unknown) {
-      console.error('Failed to create user:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       alert(`Failed to create user: ${message}`);
     } finally {

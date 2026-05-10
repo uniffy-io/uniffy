@@ -81,11 +81,11 @@ const (
 // NotesServiceClient is a client for the notes.v1.NotesService service.
 type NotesServiceClient interface {
 	// Create a new note
-	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
 	// Get a note by ID
-	GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.GetNoteResponse], error)
 	// Update an existing note
-	UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.UpdateNoteResponse], error)
 	// Delete a note (soft delete)
 	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error)
 	// List notes in organization with pagination and filters
@@ -93,27 +93,27 @@ type NotesServiceClient interface {
 	// Search notes using full-text search
 	SearchNotes(context.Context, *connect.Request[v1.SearchNotesRequest]) (*connect.Response[v1.SearchNotesResponse], error)
 	// Get backlinks for a note (other notes that reference this note)
-	GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.BacklinksResponse], error)
+	GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.GetBacklinksResponse], error)
 	// Restore a deleted note
-	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
 	// Autosave note content (optimized for frequent updates)
 	AutosaveNote(context.Context, *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error)
 	// Move note between spaces (personal, group, organization)
-	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error)
 	// Copy note to another space
-	CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.CopyNoteResponse], error)
 	// Share note with group(s)
-	ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error)
+	ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteWithGroupResponse], error)
 	// Unshare note from group
-	UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error)
+	UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.UnshareNoteFromGroupResponse], error)
 	// Get sharing info for a note
-	GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.NoteSharingResponse], error)
+	GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.GetNoteSharingResponse], error)
 	// Grant permission to user/group for a note
-	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionResponse], error)
+	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.GrantPermissionResponse], error)
 	// Revoke permission from user/group for a note
-	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.PermissionResponse], error)
+	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error)
 }
 
 // NewNotesServiceClient constructs a client for the notes.v1.NotesService service. By default, it
@@ -127,19 +127,19 @@ func NewNotesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 	baseURL = strings.TrimRight(baseURL, "/")
 	notesServiceMethods := v1.File_notes_v1_notes_proto.Services().ByName("NotesService").Methods()
 	return &notesServiceClient{
-		createNote: connect.NewClient[v1.CreateNoteRequest, v1.NoteResponse](
+		createNote: connect.NewClient[v1.CreateNoteRequest, v1.CreateNoteResponse](
 			httpClient,
 			baseURL+NotesServiceCreateNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("CreateNote")),
 			connect.WithClientOptions(opts...),
 		),
-		getNote: connect.NewClient[v1.GetNoteRequest, v1.NoteResponse](
+		getNote: connect.NewClient[v1.GetNoteRequest, v1.GetNoteResponse](
 			httpClient,
 			baseURL+NotesServiceGetNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("GetNote")),
 			connect.WithClientOptions(opts...),
 		),
-		updateNote: connect.NewClient[v1.UpdateNoteRequest, v1.NoteResponse](
+		updateNote: connect.NewClient[v1.UpdateNoteRequest, v1.UpdateNoteResponse](
 			httpClient,
 			baseURL+NotesServiceUpdateNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("UpdateNote")),
@@ -163,13 +163,13 @@ func NewNotesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(notesServiceMethods.ByName("SearchNotes")),
 			connect.WithClientOptions(opts...),
 		),
-		getBacklinks: connect.NewClient[v1.GetBacklinksRequest, v1.BacklinksResponse](
+		getBacklinks: connect.NewClient[v1.GetBacklinksRequest, v1.GetBacklinksResponse](
 			httpClient,
 			baseURL+NotesServiceGetBacklinksProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("GetBacklinks")),
 			connect.WithClientOptions(opts...),
 		),
-		restoreNote: connect.NewClient[v1.RestoreNoteRequest, v1.NoteResponse](
+		restoreNote: connect.NewClient[v1.RestoreNoteRequest, v1.RestoreNoteResponse](
 			httpClient,
 			baseURL+NotesServiceRestoreNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("RestoreNote")),
@@ -187,43 +187,43 @@ func NewNotesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(notesServiceMethods.ByName("AutosaveNote")),
 			connect.WithClientOptions(opts...),
 		),
-		moveNote: connect.NewClient[v1.MoveNoteRequest, v1.NoteResponse](
+		moveNote: connect.NewClient[v1.MoveNoteRequest, v1.MoveNoteResponse](
 			httpClient,
 			baseURL+NotesServiceMoveNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("MoveNote")),
 			connect.WithClientOptions(opts...),
 		),
-		copyNote: connect.NewClient[v1.CopyNoteRequest, v1.NoteResponse](
+		copyNote: connect.NewClient[v1.CopyNoteRequest, v1.CopyNoteResponse](
 			httpClient,
 			baseURL+NotesServiceCopyNoteProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("CopyNote")),
 			connect.WithClientOptions(opts...),
 		),
-		shareNoteWithGroup: connect.NewClient[v1.ShareNoteWithGroupRequest, v1.ShareNoteResponse](
+		shareNoteWithGroup: connect.NewClient[v1.ShareNoteWithGroupRequest, v1.ShareNoteWithGroupResponse](
 			httpClient,
 			baseURL+NotesServiceShareNoteWithGroupProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("ShareNoteWithGroup")),
 			connect.WithClientOptions(opts...),
 		),
-		unshareNoteFromGroup: connect.NewClient[v1.UnshareNoteFromGroupRequest, v1.ShareNoteResponse](
+		unshareNoteFromGroup: connect.NewClient[v1.UnshareNoteFromGroupRequest, v1.UnshareNoteFromGroupResponse](
 			httpClient,
 			baseURL+NotesServiceUnshareNoteFromGroupProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("UnshareNoteFromGroup")),
 			connect.WithClientOptions(opts...),
 		),
-		getNoteSharing: connect.NewClient[v1.GetNoteSharingRequest, v1.NoteSharingResponse](
+		getNoteSharing: connect.NewClient[v1.GetNoteSharingRequest, v1.GetNoteSharingResponse](
 			httpClient,
 			baseURL+NotesServiceGetNoteSharingProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("GetNoteSharing")),
 			connect.WithClientOptions(opts...),
 		),
-		grantPermission: connect.NewClient[v1.GrantPermissionRequest, v1.PermissionResponse](
+		grantPermission: connect.NewClient[v1.GrantPermissionRequest, v1.GrantPermissionResponse](
 			httpClient,
 			baseURL+NotesServiceGrantPermissionProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("GrantPermission")),
 			connect.WithClientOptions(opts...),
 		),
-		revokePermission: connect.NewClient[v1.RevokePermissionRequest, v1.PermissionResponse](
+		revokePermission: connect.NewClient[v1.RevokePermissionRequest, v1.RevokePermissionResponse](
 			httpClient,
 			baseURL+NotesServiceRevokePermissionProcedure,
 			connect.WithSchema(notesServiceMethods.ByName("RevokePermission")),
@@ -234,37 +234,37 @@ func NewNotesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // notesServiceClient implements NotesServiceClient.
 type notesServiceClient struct {
-	createNote           *connect.Client[v1.CreateNoteRequest, v1.NoteResponse]
-	getNote              *connect.Client[v1.GetNoteRequest, v1.NoteResponse]
-	updateNote           *connect.Client[v1.UpdateNoteRequest, v1.NoteResponse]
+	createNote           *connect.Client[v1.CreateNoteRequest, v1.CreateNoteResponse]
+	getNote              *connect.Client[v1.GetNoteRequest, v1.GetNoteResponse]
+	updateNote           *connect.Client[v1.UpdateNoteRequest, v1.UpdateNoteResponse]
 	deleteNote           *connect.Client[v1.DeleteNoteRequest, v1.DeleteNoteResponse]
 	listNotes            *connect.Client[v1.ListNotesRequest, v1.ListNotesResponse]
 	searchNotes          *connect.Client[v1.SearchNotesRequest, v1.SearchNotesResponse]
-	getBacklinks         *connect.Client[v1.GetBacklinksRequest, v1.BacklinksResponse]
-	restoreNote          *connect.Client[v1.RestoreNoteRequest, v1.NoteResponse]
+	getBacklinks         *connect.Client[v1.GetBacklinksRequest, v1.GetBacklinksResponse]
+	restoreNote          *connect.Client[v1.RestoreNoteRequest, v1.RestoreNoteResponse]
 	emptyTrash           *connect.Client[v1.EmptyTrashRequest, v1.EmptyTrashResponse]
 	autosaveNote         *connect.Client[v1.AutosaveNoteRequest, v1.AutosaveNoteResponse]
-	moveNote             *connect.Client[v1.MoveNoteRequest, v1.NoteResponse]
-	copyNote             *connect.Client[v1.CopyNoteRequest, v1.NoteResponse]
-	shareNoteWithGroup   *connect.Client[v1.ShareNoteWithGroupRequest, v1.ShareNoteResponse]
-	unshareNoteFromGroup *connect.Client[v1.UnshareNoteFromGroupRequest, v1.ShareNoteResponse]
-	getNoteSharing       *connect.Client[v1.GetNoteSharingRequest, v1.NoteSharingResponse]
-	grantPermission      *connect.Client[v1.GrantPermissionRequest, v1.PermissionResponse]
-	revokePermission     *connect.Client[v1.RevokePermissionRequest, v1.PermissionResponse]
+	moveNote             *connect.Client[v1.MoveNoteRequest, v1.MoveNoteResponse]
+	copyNote             *connect.Client[v1.CopyNoteRequest, v1.CopyNoteResponse]
+	shareNoteWithGroup   *connect.Client[v1.ShareNoteWithGroupRequest, v1.ShareNoteWithGroupResponse]
+	unshareNoteFromGroup *connect.Client[v1.UnshareNoteFromGroupRequest, v1.UnshareNoteFromGroupResponse]
+	getNoteSharing       *connect.Client[v1.GetNoteSharingRequest, v1.GetNoteSharingResponse]
+	grantPermission      *connect.Client[v1.GrantPermissionRequest, v1.GrantPermissionResponse]
+	revokePermission     *connect.Client[v1.RevokePermissionRequest, v1.RevokePermissionResponse]
 }
 
 // CreateNote calls notes.v1.NotesService.CreateNote.
-func (c *notesServiceClient) CreateNote(ctx context.Context, req *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) CreateNote(ctx context.Context, req *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error) {
 	return c.createNote.CallUnary(ctx, req)
 }
 
 // GetNote calls notes.v1.NotesService.GetNote.
-func (c *notesServiceClient) GetNote(ctx context.Context, req *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) GetNote(ctx context.Context, req *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.GetNoteResponse], error) {
 	return c.getNote.CallUnary(ctx, req)
 }
 
 // UpdateNote calls notes.v1.NotesService.UpdateNote.
-func (c *notesServiceClient) UpdateNote(ctx context.Context, req *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) UpdateNote(ctx context.Context, req *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.UpdateNoteResponse], error) {
 	return c.updateNote.CallUnary(ctx, req)
 }
 
@@ -284,12 +284,12 @@ func (c *notesServiceClient) SearchNotes(ctx context.Context, req *connect.Reque
 }
 
 // GetBacklinks calls notes.v1.NotesService.GetBacklinks.
-func (c *notesServiceClient) GetBacklinks(ctx context.Context, req *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.BacklinksResponse], error) {
+func (c *notesServiceClient) GetBacklinks(ctx context.Context, req *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.GetBacklinksResponse], error) {
 	return c.getBacklinks.CallUnary(ctx, req)
 }
 
 // RestoreNote calls notes.v1.NotesService.RestoreNote.
-func (c *notesServiceClient) RestoreNote(ctx context.Context, req *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) RestoreNote(ctx context.Context, req *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error) {
 	return c.restoreNote.CallUnary(ctx, req)
 }
 
@@ -304,48 +304,48 @@ func (c *notesServiceClient) AutosaveNote(ctx context.Context, req *connect.Requ
 }
 
 // MoveNote calls notes.v1.NotesService.MoveNote.
-func (c *notesServiceClient) MoveNote(ctx context.Context, req *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) MoveNote(ctx context.Context, req *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error) {
 	return c.moveNote.CallUnary(ctx, req)
 }
 
 // CopyNote calls notes.v1.NotesService.CopyNote.
-func (c *notesServiceClient) CopyNote(ctx context.Context, req *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (c *notesServiceClient) CopyNote(ctx context.Context, req *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.CopyNoteResponse], error) {
 	return c.copyNote.CallUnary(ctx, req)
 }
 
 // ShareNoteWithGroup calls notes.v1.NotesService.ShareNoteWithGroup.
-func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, req *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error) {
+func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, req *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteWithGroupResponse], error) {
 	return c.shareNoteWithGroup.CallUnary(ctx, req)
 }
 
 // UnshareNoteFromGroup calls notes.v1.NotesService.UnshareNoteFromGroup.
-func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, req *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error) {
+func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, req *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.UnshareNoteFromGroupResponse], error) {
 	return c.unshareNoteFromGroup.CallUnary(ctx, req)
 }
 
 // GetNoteSharing calls notes.v1.NotesService.GetNoteSharing.
-func (c *notesServiceClient) GetNoteSharing(ctx context.Context, req *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.NoteSharingResponse], error) {
+func (c *notesServiceClient) GetNoteSharing(ctx context.Context, req *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.GetNoteSharingResponse], error) {
 	return c.getNoteSharing.CallUnary(ctx, req)
 }
 
 // GrantPermission calls notes.v1.NotesService.GrantPermission.
-func (c *notesServiceClient) GrantPermission(ctx context.Context, req *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionResponse], error) {
+func (c *notesServiceClient) GrantPermission(ctx context.Context, req *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.GrantPermissionResponse], error) {
 	return c.grantPermission.CallUnary(ctx, req)
 }
 
 // RevokePermission calls notes.v1.NotesService.RevokePermission.
-func (c *notesServiceClient) RevokePermission(ctx context.Context, req *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.PermissionResponse], error) {
+func (c *notesServiceClient) RevokePermission(ctx context.Context, req *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error) {
 	return c.revokePermission.CallUnary(ctx, req)
 }
 
 // NotesServiceHandler is an implementation of the notes.v1.NotesService service.
 type NotesServiceHandler interface {
 	// Create a new note
-	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
 	// Get a note by ID
-	GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.GetNoteResponse], error)
 	// Update an existing note
-	UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.UpdateNoteResponse], error)
 	// Delete a note (soft delete)
 	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error)
 	// List notes in organization with pagination and filters
@@ -353,27 +353,27 @@ type NotesServiceHandler interface {
 	// Search notes using full-text search
 	SearchNotes(context.Context, *connect.Request[v1.SearchNotesRequest]) (*connect.Response[v1.SearchNotesResponse], error)
 	// Get backlinks for a note (other notes that reference this note)
-	GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.BacklinksResponse], error)
+	GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.GetBacklinksResponse], error)
 	// Restore a deleted note
-	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
 	// Autosave note content (optimized for frequent updates)
 	AutosaveNote(context.Context, *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error)
 	// Move note between spaces (personal, group, organization)
-	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error)
 	// Copy note to another space
-	CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.NoteResponse], error)
+	CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.CopyNoteResponse], error)
 	// Share note with group(s)
-	ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error)
+	ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteWithGroupResponse], error)
 	// Unshare note from group
-	UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error)
+	UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.UnshareNoteFromGroupResponse], error)
 	// Get sharing info for a note
-	GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.NoteSharingResponse], error)
+	GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.GetNoteSharingResponse], error)
 	// Grant permission to user/group for a note
-	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionResponse], error)
+	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.GrantPermissionResponse], error)
 	// Revoke permission from user/group for a note
-	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.PermissionResponse], error)
+	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error)
 }
 
 // NewNotesServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -530,15 +530,15 @@ func NewNotesServiceHandler(svc NotesServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedNotesServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedNotesServiceHandler struct{}
 
-func (UnimplementedNotesServiceHandler) CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.CreateNote is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) GetNote(context.Context, *connect.Request[v1.GetNoteRequest]) (*connect.Response[v1.GetNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.GetNote is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) UpdateNote(context.Context, *connect.Request[v1.UpdateNoteRequest]) (*connect.Response[v1.UpdateNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.UpdateNote is not implemented"))
 }
 
@@ -554,11 +554,11 @@ func (UnimplementedNotesServiceHandler) SearchNotes(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.SearchNotes is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.BacklinksResponse], error) {
+func (UnimplementedNotesServiceHandler) GetBacklinks(context.Context, *connect.Request[v1.GetBacklinksRequest]) (*connect.Response[v1.GetBacklinksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.GetBacklinks is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.RestoreNote is not implemented"))
 }
 
@@ -570,30 +570,30 @@ func (UnimplementedNotesServiceHandler) AutosaveNote(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.AutosaveNote is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.MoveNote is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.NoteResponse], error) {
+func (UnimplementedNotesServiceHandler) CopyNote(context.Context, *connect.Request[v1.CopyNoteRequest]) (*connect.Response[v1.CopyNoteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.CopyNote is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error) {
+func (UnimplementedNotesServiceHandler) ShareNoteWithGroup(context.Context, *connect.Request[v1.ShareNoteWithGroupRequest]) (*connect.Response[v1.ShareNoteWithGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.ShareNoteWithGroup is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.ShareNoteResponse], error) {
+func (UnimplementedNotesServiceHandler) UnshareNoteFromGroup(context.Context, *connect.Request[v1.UnshareNoteFromGroupRequest]) (*connect.Response[v1.UnshareNoteFromGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.UnshareNoteFromGroup is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.NoteSharingResponse], error) {
+func (UnimplementedNotesServiceHandler) GetNoteSharing(context.Context, *connect.Request[v1.GetNoteSharingRequest]) (*connect.Response[v1.GetNoteSharingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.GetNoteSharing is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionResponse], error) {
+func (UnimplementedNotesServiceHandler) GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.GrantPermissionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.GrantPermission is not implemented"))
 }
 
-func (UnimplementedNotesServiceHandler) RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.PermissionResponse], error) {
+func (UnimplementedNotesServiceHandler) RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.RevokePermission is not implemented"))
 }

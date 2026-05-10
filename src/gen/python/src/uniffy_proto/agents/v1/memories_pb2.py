@@ -22,11 +22,11 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 from common.v1 import common_pb2 as common_dot_v1_dot_common__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x61gents/v1/memories.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16\x63ommon/v1/common.proto\"\xd3\x02\n\nMemoryInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12\x10\n\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n\x07\x63ontent\x18\x04 \x01(\tR\x07\x63ontent\x12\x35\n\x08\x63\x61tegory\x18\x05 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryR\x08\x63\x61tegory\x12\x1e\n\nimportance\x18\x06 \x01(\x02R\nimportance\x12!\n\x0c\x61\x63\x63\x65ss_count\x18\x07 \x01(\x05R\x0b\x61\x63\x63\x65ssCount\x12\x39\n\ncreated_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9c\x02\n\x13ListMemoriesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12:\n\x08\x63\x61tegory\x18\x03 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryH\x00R\x08\x63\x61tegory\x88\x01\x01\x12\x1b\n\x06search\x18\x04 \x01(\tH\x01R\x06search\x88\x01\x01\x12\x41\n\npagination\x18\x05 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x02R\npagination\x88\x01\x01\x42\x0b\n\t_categoryB\t\n\x07_searchB\r\n\x0b_pagination\"\x88\x01\n\x14ListMemoriesResponse\x12\x31\n\x08memories\x18\x01 \x03(\x0b\x32\x15.agents.v1.MemoryInfoR\x08memories\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xf0\x01\n\x13\x43reateMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12\x10\n\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n\x07\x63ontent\x18\x04 \x01(\tR\x07\x63ontent\x12\x35\n\x08\x63\x61tegory\x18\x05 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryR\x08\x63\x61tegory\x12#\n\nimportance\x18\x06 \x01(\x02H\x00R\nimportance\x88\x01\x01\x42\r\n\x0b_importance\"\x83\x02\n\x13UpdateMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tmemory_id\x18\x02 \x01(\tR\x08memoryId\x12\x1d\n\x07\x63ontent\x18\x03 \x01(\tH\x00R\x07\x63ontent\x88\x01\x01\x12:\n\x08\x63\x61tegory\x18\x04 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryH\x01R\x08\x63\x61tegory\x88\x01\x01\x12#\n\nimportance\x18\x05 \x01(\x02H\x02R\nimportance\x88\x01\x01\x42\n\n\x08_contentB\x0b\n\t_categoryB\r\n\x0b_importance\"?\n\x0eMemoryResponse\x12-\n\x06memory\x18\x01 \x01(\x0b\x32\x15.agents.v1.MemoryInfoR\x06memory\"[\n\x13\x44\x65leteMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tmemory_id\x18\x02 \x01(\tR\x08memoryId\"0\n\x14\x44\x65leteMemoryResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\xac\x01\n\x0eMemoryCategory\x12\x1f\n\x1bMEMORY_CATEGORY_UNSPECIFIED\x10\x00\x12\x1f\n\x1bMEMORY_CATEGORY_PREFERENCES\x10\x01\x12\x19\n\x15MEMORY_CATEGORY_FACTS\x10\x02\x12\x1b\n\x17MEMORY_CATEGORY_CONTEXT\x10\x03\x12 \n\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x04\x32\xd1\x02\n\x0fMemoriesService\x12Q\n\x0cListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12K\n\x0c\x43reateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x19.agents.v1.MemoryResponse\"\x00\x12K\n\x0cUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x19.agents.v1.MemoryResponse\"\x00\x12Q\n\x0c\x44\x65leteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x61gents/v1/memories.proto\x12\tagents.v1\x1a\x16\x63ommon/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd3\x02\n\nMemoryInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12\x10\n\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n\x07\x63ontent\x18\x04 \x01(\tR\x07\x63ontent\x12\x35\n\x08\x63\x61tegory\x18\x05 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryR\x08\x63\x61tegory\x12\x1e\n\nimportance\x18\x06 \x01(\x02R\nimportance\x12!\n\x0c\x61\x63\x63\x65ss_count\x18\x07 \x01(\x05R\x0b\x61\x63\x63\x65ssCount\x12\x39\n\ncreated_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9c\x02\n\x13ListMemoriesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12:\n\x08\x63\x61tegory\x18\x03 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryH\x00R\x08\x63\x61tegory\x88\x01\x01\x12\x1b\n\x06search\x18\x04 \x01(\tH\x01R\x06search\x88\x01\x01\x12\x41\n\npagination\x18\x05 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x02R\npagination\x88\x01\x01\x42\x0b\n\t_categoryB\t\n\x07_searchB\r\n\x0b_pagination\"\x88\x01\n\x14ListMemoriesResponse\x12\x31\n\x08memories\x18\x01 \x03(\x0b\x32\x15.agents.v1.MemoryInfoR\x08memories\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xf0\x01\n\x13\x43reateMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08\x61gent_id\x18\x02 \x01(\tR\x07\x61gentId\x12\x10\n\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n\x07\x63ontent\x18\x04 \x01(\tR\x07\x63ontent\x12\x35\n\x08\x63\x61tegory\x18\x05 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryR\x08\x63\x61tegory\x12#\n\nimportance\x18\x06 \x01(\x02H\x00R\nimportance\x88\x01\x01\x42\r\n\x0b_importance\"\x83\x02\n\x13UpdateMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tmemory_id\x18\x02 \x01(\tR\x08memoryId\x12\x1d\n\x07\x63ontent\x18\x03 \x01(\tH\x00R\x07\x63ontent\x88\x01\x01\x12:\n\x08\x63\x61tegory\x18\x04 \x01(\x0e\x32\x19.agents.v1.MemoryCategoryH\x01R\x08\x63\x61tegory\x88\x01\x01\x12#\n\nimportance\x18\x05 \x01(\x02H\x02R\nimportance\x88\x01\x01\x42\n\n\x08_contentB\x0b\n\t_categoryB\r\n\x0b_importance\"E\n\x14\x43reateMemoryResponse\x12-\n\x06memory\x18\x01 \x01(\x0b\x32\x15.agents.v1.MemoryInfoR\x06memory\"E\n\x14UpdateMemoryResponse\x12-\n\x06memory\x18\x01 \x01(\x0b\x32\x15.agents.v1.MemoryInfoR\x06memory\"[\n\x13\x44\x65leteMemoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tmemory_id\x18\x02 \x01(\tR\x08memoryId\"0\n\x14\x44\x65leteMemoryResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\xac\x01\n\x0eMemoryCategory\x12\x1f\n\x1bMEMORY_CATEGORY_UNSPECIFIED\x10\x00\x12\x1f\n\x1bMEMORY_CATEGORY_PREFERENCES\x10\x01\x12\x19\n\x15MEMORY_CATEGORY_FACTS\x10\x02\x12\x1b\n\x17MEMORY_CATEGORY_CONTEXT\x10\x03\x12 \n\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x04\x32\xdd\x02\n\x0fMemoriesService\x12Q\n\x0cListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12Q\n\x0c\x43reateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x1f.agents.v1.CreateMemoryResponse\"\x00\x12Q\n\x0cUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x1f.agents.v1.UpdateMemoryResponse\"\x00\x12Q\n\x0c\x44\x65leteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,8 +34,8 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agents.v1.memories_pb2', _g
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1'
-  _globals['_MEMORYCATEGORY']._serialized_start=1578
-  _globals['_MEMORYCATEGORY']._serialized_end=1750
+  _globals['_MEMORYCATEGORY']._serialized_start=1655
+  _globals['_MEMORYCATEGORY']._serialized_end=1827
   _globals['_MEMORYINFO']._serialized_start=97
   _globals['_MEMORYINFO']._serialized_end=436
   _globals['_LISTMEMORIESREQUEST']._serialized_start=439
@@ -46,12 +46,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CREATEMEMORYREQUEST']._serialized_end=1105
   _globals['_UPDATEMEMORYREQUEST']._serialized_start=1108
   _globals['_UPDATEMEMORYREQUEST']._serialized_end=1367
-  _globals['_MEMORYRESPONSE']._serialized_start=1369
-  _globals['_MEMORYRESPONSE']._serialized_end=1432
-  _globals['_DELETEMEMORYREQUEST']._serialized_start=1434
-  _globals['_DELETEMEMORYREQUEST']._serialized_end=1525
-  _globals['_DELETEMEMORYRESPONSE']._serialized_start=1527
-  _globals['_DELETEMEMORYRESPONSE']._serialized_end=1575
-  _globals['_MEMORIESSERVICE']._serialized_start=1753
-  _globals['_MEMORIESSERVICE']._serialized_end=2090
+  _globals['_CREATEMEMORYRESPONSE']._serialized_start=1369
+  _globals['_CREATEMEMORYRESPONSE']._serialized_end=1438
+  _globals['_UPDATEMEMORYRESPONSE']._serialized_start=1440
+  _globals['_UPDATEMEMORYRESPONSE']._serialized_end=1509
+  _globals['_DELETEMEMORYREQUEST']._serialized_start=1511
+  _globals['_DELETEMEMORYREQUEST']._serialized_end=1602
+  _globals['_DELETEMEMORYRESPONSE']._serialized_start=1604
+  _globals['_DELETEMEMORYRESPONSE']._serialized_end=1652
+  _globals['_MEMORIESSERVICE']._serialized_start=1830
+  _globals['_MEMORIESSERVICE']._serialized_end=2179
 # @@protoc_insertion_point(module_scope)

@@ -495,27 +495,27 @@ func (x *CreateCronTaskRequest) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
-type CronTaskResponse struct {
+type CreateCronTaskResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Task          *CronTaskInfo          `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CronTaskResponse) Reset() {
-	*x = CronTaskResponse{}
+func (x *CreateCronTaskResponse) Reset() {
+	*x = CreateCronTaskResponse{}
 	mi := &file_agents_v1_cron_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CronTaskResponse) String() string {
+func (x *CreateCronTaskResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CronTaskResponse) ProtoMessage() {}
+func (*CreateCronTaskResponse) ProtoMessage() {}
 
-func (x *CronTaskResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateCronTaskResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_cron_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -527,12 +527,100 @@ func (x *CronTaskResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CronTaskResponse.ProtoReflect.Descriptor instead.
-func (*CronTaskResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCronTaskResponse.ProtoReflect.Descriptor instead.
+func (*CreateCronTaskResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_cron_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CronTaskResponse) GetTask() *CronTaskInfo {
+func (x *CreateCronTaskResponse) GetTask() *CronTaskInfo {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type GetCronTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *CronTaskInfo          `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCronTaskResponse) Reset() {
+	*x = GetCronTaskResponse{}
+	mi := &file_agents_v1_cron_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCronTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCronTaskResponse) ProtoMessage() {}
+
+func (x *GetCronTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_cron_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCronTaskResponse.ProtoReflect.Descriptor instead.
+func (*GetCronTaskResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetCronTaskResponse) GetTask() *CronTaskInfo {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type UpdateCronTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *CronTaskInfo          `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCronTaskResponse) Reset() {
+	*x = UpdateCronTaskResponse{}
+	mi := &file_agents_v1_cron_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCronTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCronTaskResponse) ProtoMessage() {}
+
+func (x *UpdateCronTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_cron_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCronTaskResponse.ProtoReflect.Descriptor instead.
+func (*UpdateCronTaskResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateCronTaskResponse) GetTask() *CronTaskInfo {
 	if x != nil {
 		return x.Task
 	}
@@ -549,7 +637,7 @@ type GetCronTaskRequest struct {
 
 func (x *GetCronTaskRequest) Reset() {
 	*x = GetCronTaskRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[4]
+	mi := &file_agents_v1_cron_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -561,7 +649,7 @@ func (x *GetCronTaskRequest) String() string {
 func (*GetCronTaskRequest) ProtoMessage() {}
 
 func (x *GetCronTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[4]
+	mi := &file_agents_v1_cron_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -574,7 +662,7 @@ func (x *GetCronTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCronTaskRequest.ProtoReflect.Descriptor instead.
 func (*GetCronTaskRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{4}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetCronTaskRequest) GetOrganizationId() string {
@@ -602,7 +690,7 @@ type ListCronTasksRequest struct {
 
 func (x *ListCronTasksRequest) Reset() {
 	*x = ListCronTasksRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[5]
+	mi := &file_agents_v1_cron_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +702,7 @@ func (x *ListCronTasksRequest) String() string {
 func (*ListCronTasksRequest) ProtoMessage() {}
 
 func (x *ListCronTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[5]
+	mi := &file_agents_v1_cron_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +715,7 @@ func (x *ListCronTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCronTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListCronTasksRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{5}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListCronTasksRequest) GetOrganizationId() string {
@@ -661,7 +749,7 @@ type ListCronTasksResponse struct {
 
 func (x *ListCronTasksResponse) Reset() {
 	*x = ListCronTasksResponse{}
-	mi := &file_agents_v1_cron_proto_msgTypes[6]
+	mi := &file_agents_v1_cron_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +761,7 @@ func (x *ListCronTasksResponse) String() string {
 func (*ListCronTasksResponse) ProtoMessage() {}
 
 func (x *ListCronTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[6]
+	mi := &file_agents_v1_cron_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,7 +774,7 @@ func (x *ListCronTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCronTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListCronTasksResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListCronTasksResponse) GetTasks() []*CronTaskInfo {
@@ -719,7 +807,7 @@ type UpdateCronTaskRequest struct {
 
 func (x *UpdateCronTaskRequest) Reset() {
 	*x = UpdateCronTaskRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[7]
+	mi := &file_agents_v1_cron_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +819,7 @@ func (x *UpdateCronTaskRequest) String() string {
 func (*UpdateCronTaskRequest) ProtoMessage() {}
 
 func (x *UpdateCronTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[7]
+	mi := &file_agents_v1_cron_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +832,7 @@ func (x *UpdateCronTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCronTaskRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCronTaskRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateCronTaskRequest) GetOrganizationId() string {
@@ -813,7 +901,7 @@ type DeleteCronTaskRequest struct {
 
 func (x *DeleteCronTaskRequest) Reset() {
 	*x = DeleteCronTaskRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[8]
+	mi := &file_agents_v1_cron_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -825,7 +913,7 @@ func (x *DeleteCronTaskRequest) String() string {
 func (*DeleteCronTaskRequest) ProtoMessage() {}
 
 func (x *DeleteCronTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[8]
+	mi := &file_agents_v1_cron_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -838,7 +926,7 @@ func (x *DeleteCronTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCronTaskRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCronTaskRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{8}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteCronTaskRequest) GetOrganizationId() string {
@@ -864,7 +952,7 @@ type DeleteCronTaskResponse struct {
 
 func (x *DeleteCronTaskResponse) Reset() {
 	*x = DeleteCronTaskResponse{}
-	mi := &file_agents_v1_cron_proto_msgTypes[9]
+	mi := &file_agents_v1_cron_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -876,7 +964,7 @@ func (x *DeleteCronTaskResponse) String() string {
 func (*DeleteCronTaskResponse) ProtoMessage() {}
 
 func (x *DeleteCronTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[9]
+	mi := &file_agents_v1_cron_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -889,7 +977,7 @@ func (x *DeleteCronTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCronTaskResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCronTaskResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{9}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteCronTaskResponse) GetSuccess() bool {
@@ -910,7 +998,7 @@ type ListCronRunLogsRequest struct {
 
 func (x *ListCronRunLogsRequest) Reset() {
 	*x = ListCronRunLogsRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[10]
+	mi := &file_agents_v1_cron_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -922,7 +1010,7 @@ func (x *ListCronRunLogsRequest) String() string {
 func (*ListCronRunLogsRequest) ProtoMessage() {}
 
 func (x *ListCronRunLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[10]
+	mi := &file_agents_v1_cron_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +1023,7 @@ func (x *ListCronRunLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCronRunLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListCronRunLogsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{10}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListCronRunLogsRequest) GetOrganizationId() string {
@@ -969,7 +1057,7 @@ type ListCronRunLogsResponse struct {
 
 func (x *ListCronRunLogsResponse) Reset() {
 	*x = ListCronRunLogsResponse{}
-	mi := &file_agents_v1_cron_proto_msgTypes[11]
+	mi := &file_agents_v1_cron_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -981,7 +1069,7 @@ func (x *ListCronRunLogsResponse) String() string {
 func (*ListCronRunLogsResponse) ProtoMessage() {}
 
 func (x *ListCronRunLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[11]
+	mi := &file_agents_v1_cron_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -994,7 +1082,7 @@ func (x *ListCronRunLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCronRunLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListCronRunLogsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{11}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListCronRunLogsResponse) GetLogs() []*CronRunLogInfo {
@@ -1021,7 +1109,7 @@ type TriggerCronTaskRequest struct {
 
 func (x *TriggerCronTaskRequest) Reset() {
 	*x = TriggerCronTaskRequest{}
-	mi := &file_agents_v1_cron_proto_msgTypes[12]
+	mi := &file_agents_v1_cron_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1033,7 +1121,7 @@ func (x *TriggerCronTaskRequest) String() string {
 func (*TriggerCronTaskRequest) ProtoMessage() {}
 
 func (x *TriggerCronTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[12]
+	mi := &file_agents_v1_cron_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1046,7 +1134,7 @@ func (x *TriggerCronTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerCronTaskRequest.ProtoReflect.Descriptor instead.
 func (*TriggerCronTaskRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{12}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TriggerCronTaskRequest) GetOrganizationId() string {
@@ -1075,7 +1163,7 @@ type TriggerCronTaskResponse struct {
 
 func (x *TriggerCronTaskResponse) Reset() {
 	*x = TriggerCronTaskResponse{}
-	mi := &file_agents_v1_cron_proto_msgTypes[13]
+	mi := &file_agents_v1_cron_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1087,7 +1175,7 @@ func (x *TriggerCronTaskResponse) String() string {
 func (*TriggerCronTaskResponse) ProtoMessage() {}
 
 func (x *TriggerCronTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_cron_proto_msgTypes[13]
+	mi := &file_agents_v1_cron_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1100,7 +1188,7 @@ func (x *TriggerCronTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerCronTaskResponse.ProtoReflect.Descriptor instead.
 func (*TriggerCronTaskResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_cron_proto_rawDescGZIP(), []int{13}
+	return file_agents_v1_cron_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TriggerCronTaskResponse) GetRunLog() *CronRunLogInfo {
@@ -1121,7 +1209,7 @@ var File_agents_v1_cron_proto protoreflect.FileDescriptor
 
 const file_agents_v1_cron_proto_rawDesc = "" +
 	"\n" +
-	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\x82\t\n" +
+	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x82\t\n" +
 	"\fCronTaskInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1197,8 +1285,12 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\t_timezoneB\x0e\n" +
 	"\f_descriptionB\x0e\n" +
 	"\f_access_modeB\x10\n" +
-	"\x0e_baseline_role\"?\n" +
-	"\x10CronTaskResponse\x12+\n" +
+	"\x0e_baseline_role\"E\n" +
+	"\x16CreateCronTaskResponse\x12+\n" +
+	"\x04task\x18\x01 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task\"B\n" +
+	"\x13GetCronTaskResponse\x12+\n" +
+	"\x04task\x18\x01 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task\"E\n" +
+	"\x16UpdateCronTaskResponse\x12+\n" +
 	"\x04task\x18\x01 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task\"V\n" +
 	"\x12GetCronTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
@@ -1254,12 +1346,12 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\"z\n" +
 	"\x17TriggerCronTaskResponse\x122\n" +
 	"\arun_log\x18\x01 \x01(\v2\x19.agents.v1.CronRunLogInfoR\x06runLog\x12+\n" +
-	"\x04task\x18\x02 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task2\xe7\x04\n" +
-	"\vCronService\x12Q\n" +
-	"\x0eCreateCronTask\x12 .agents.v1.CreateCronTaskRequest\x1a\x1b.agents.v1.CronTaskResponse\"\x00\x12K\n" +
-	"\vGetCronTask\x12\x1d.agents.v1.GetCronTaskRequest\x1a\x1b.agents.v1.CronTaskResponse\"\x00\x12T\n" +
-	"\rListCronTasks\x12\x1f.agents.v1.ListCronTasksRequest\x1a .agents.v1.ListCronTasksResponse\"\x00\x12Q\n" +
-	"\x0eUpdateCronTask\x12 .agents.v1.UpdateCronTaskRequest\x1a\x1b.agents.v1.CronTaskResponse\"\x00\x12W\n" +
+	"\x04task\x18\x02 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task2\xf6\x04\n" +
+	"\vCronService\x12W\n" +
+	"\x0eCreateCronTask\x12 .agents.v1.CreateCronTaskRequest\x1a!.agents.v1.CreateCronTaskResponse\"\x00\x12N\n" +
+	"\vGetCronTask\x12\x1d.agents.v1.GetCronTaskRequest\x1a\x1e.agents.v1.GetCronTaskResponse\"\x00\x12T\n" +
+	"\rListCronTasks\x12\x1f.agents.v1.ListCronTasksRequest\x1a .agents.v1.ListCronTasksResponse\"\x00\x12W\n" +
+	"\x0eUpdateCronTask\x12 .agents.v1.UpdateCronTaskRequest\x1a!.agents.v1.UpdateCronTaskResponse\"\x00\x12W\n" +
 	"\x0eDeleteCronTask\x12 .agents.v1.DeleteCronTaskRequest\x1a!.agents.v1.DeleteCronTaskResponse\"\x00\x12Z\n" +
 	"\x0fListCronRunLogs\x12!.agents.v1.ListCronRunLogsRequest\x1a\".agents.v1.ListCronRunLogsResponse\"\x00\x12Z\n" +
 	"\x0fTriggerCronTask\x12!.agents.v1.TriggerCronTaskRequest\x1a\".agents.v1.TriggerCronTaskResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
@@ -1276,67 +1368,71 @@ func file_agents_v1_cron_proto_rawDescGZIP() []byte {
 	return file_agents_v1_cron_proto_rawDescData
 }
 
-var file_agents_v1_cron_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agents_v1_cron_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agents_v1_cron_proto_goTypes = []any{
 	(*CronTaskInfo)(nil),            // 0: agents.v1.CronTaskInfo
 	(*CronRunLogInfo)(nil),          // 1: agents.v1.CronRunLogInfo
 	(*CreateCronTaskRequest)(nil),   // 2: agents.v1.CreateCronTaskRequest
-	(*CronTaskResponse)(nil),        // 3: agents.v1.CronTaskResponse
-	(*GetCronTaskRequest)(nil),      // 4: agents.v1.GetCronTaskRequest
-	(*ListCronTasksRequest)(nil),    // 5: agents.v1.ListCronTasksRequest
-	(*ListCronTasksResponse)(nil),   // 6: agents.v1.ListCronTasksResponse
-	(*UpdateCronTaskRequest)(nil),   // 7: agents.v1.UpdateCronTaskRequest
-	(*DeleteCronTaskRequest)(nil),   // 8: agents.v1.DeleteCronTaskRequest
-	(*DeleteCronTaskResponse)(nil),  // 9: agents.v1.DeleteCronTaskResponse
-	(*ListCronRunLogsRequest)(nil),  // 10: agents.v1.ListCronRunLogsRequest
-	(*ListCronRunLogsResponse)(nil), // 11: agents.v1.ListCronRunLogsResponse
-	(*TriggerCronTaskRequest)(nil),  // 12: agents.v1.TriggerCronTaskRequest
-	(*TriggerCronTaskResponse)(nil), // 13: agents.v1.TriggerCronTaskResponse
-	(*timestamppb.Timestamp)(nil),   // 14: google.protobuf.Timestamp
-	(v1.AccessMode)(0),              // 15: common.v1.AccessMode
-	(v1.ContentRole)(0),             // 16: common.v1.ContentRole
-	(*v1.PaginationRequest)(nil),    // 17: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),   // 18: common.v1.PaginationResponse
+	(*CreateCronTaskResponse)(nil),  // 3: agents.v1.CreateCronTaskResponse
+	(*GetCronTaskResponse)(nil),     // 4: agents.v1.GetCronTaskResponse
+	(*UpdateCronTaskResponse)(nil),  // 5: agents.v1.UpdateCronTaskResponse
+	(*GetCronTaskRequest)(nil),      // 6: agents.v1.GetCronTaskRequest
+	(*ListCronTasksRequest)(nil),    // 7: agents.v1.ListCronTasksRequest
+	(*ListCronTasksResponse)(nil),   // 8: agents.v1.ListCronTasksResponse
+	(*UpdateCronTaskRequest)(nil),   // 9: agents.v1.UpdateCronTaskRequest
+	(*DeleteCronTaskRequest)(nil),   // 10: agents.v1.DeleteCronTaskRequest
+	(*DeleteCronTaskResponse)(nil),  // 11: agents.v1.DeleteCronTaskResponse
+	(*ListCronRunLogsRequest)(nil),  // 12: agents.v1.ListCronRunLogsRequest
+	(*ListCronRunLogsResponse)(nil), // 13: agents.v1.ListCronRunLogsResponse
+	(*TriggerCronTaskRequest)(nil),  // 14: agents.v1.TriggerCronTaskRequest
+	(*TriggerCronTaskResponse)(nil), // 15: agents.v1.TriggerCronTaskResponse
+	(*timestamppb.Timestamp)(nil),   // 16: google.protobuf.Timestamp
+	(v1.AccessMode)(0),              // 17: common.v1.AccessMode
+	(v1.ContentRole)(0),             // 18: common.v1.ContentRole
+	(*v1.PaginationRequest)(nil),    // 19: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),   // 20: common.v1.PaginationResponse
 }
 var file_agents_v1_cron_proto_depIdxs = []int32{
-	14, // 0: agents.v1.CronTaskInfo.last_run_at:type_name -> google.protobuf.Timestamp
-	14, // 1: agents.v1.CronTaskInfo.next_run_at:type_name -> google.protobuf.Timestamp
-	15, // 2: agents.v1.CronTaskInfo.access_mode:type_name -> common.v1.AccessMode
-	14, // 3: agents.v1.CronTaskInfo.created_at:type_name -> google.protobuf.Timestamp
-	14, // 4: agents.v1.CronTaskInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 5: agents.v1.CronTaskInfo.baseline_role:type_name -> common.v1.ContentRole
-	14, // 6: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
-	14, // 7: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
-	15, // 8: agents.v1.CreateCronTaskRequest.access_mode:type_name -> common.v1.AccessMode
-	16, // 9: agents.v1.CreateCronTaskRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 10: agents.v1.CronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	17, // 11: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 12: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
-	18, // 13: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	17, // 14: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 15: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
-	18, // 16: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
-	1,  // 17: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
-	0,  // 18: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	2,  // 19: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
-	4,  // 20: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
-	5,  // 21: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
-	7,  // 22: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
-	8,  // 23: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
-	10, // 24: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
-	12, // 25: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
-	3,  // 26: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CronTaskResponse
-	3,  // 27: agents.v1.CronService.GetCronTask:output_type -> agents.v1.CronTaskResponse
-	6,  // 28: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
-	3,  // 29: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.CronTaskResponse
-	9,  // 30: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
-	11, // 31: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
-	13, // 32: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
-	26, // [26:33] is the sub-list for method output_type
-	19, // [19:26] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	16, // 0: agents.v1.CronTaskInfo.last_run_at:type_name -> google.protobuf.Timestamp
+	16, // 1: agents.v1.CronTaskInfo.next_run_at:type_name -> google.protobuf.Timestamp
+	17, // 2: agents.v1.CronTaskInfo.access_mode:type_name -> common.v1.AccessMode
+	16, // 3: agents.v1.CronTaskInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 4: agents.v1.CronTaskInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 5: agents.v1.CronTaskInfo.baseline_role:type_name -> common.v1.ContentRole
+	16, // 6: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
+	16, // 7: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
+	17, // 8: agents.v1.CreateCronTaskRequest.access_mode:type_name -> common.v1.AccessMode
+	18, // 9: agents.v1.CreateCronTaskRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 10: agents.v1.CreateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	0,  // 11: agents.v1.GetCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	0,  // 12: agents.v1.UpdateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	19, // 13: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,  // 14: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
+	20, // 15: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	19, // 16: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 17: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
+	20, // 18: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
+	1,  // 19: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
+	0,  // 20: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	2,  // 21: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
+	6,  // 22: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
+	7,  // 23: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
+	9,  // 24: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
+	10, // 25: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
+	12, // 26: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
+	14, // 27: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
+	3,  // 28: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CreateCronTaskResponse
+	4,  // 29: agents.v1.CronService.GetCronTask:output_type -> agents.v1.GetCronTaskResponse
+	8,  // 30: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
+	5,  // 31: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.UpdateCronTaskResponse
+	11, // 32: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
+	13, // 33: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
+	15, // 34: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
+	28, // [28:35] is the sub-list for method output_type
+	21, // [21:28] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_cron_proto_init() }
@@ -1347,16 +1443,16 @@ func file_agents_v1_cron_proto_init() {
 	file_agents_v1_cron_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_cron_proto_msgTypes[1].OneofWrappers = []any{}
 	file_agents_v1_cron_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agents_v1_cron_proto_msgTypes[5].OneofWrappers = []any{}
 	file_agents_v1_cron_proto_msgTypes[7].OneofWrappers = []any{}
-	file_agents_v1_cron_proto_msgTypes[10].OneofWrappers = []any{}
+	file_agents_v1_cron_proto_msgTypes[9].OneofWrappers = []any{}
+	file_agents_v1_cron_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_cron_proto_rawDesc), len(file_agents_v1_cron_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2,16 +2,16 @@
 
 from uuid import UUID
 
-from uniffy_proto.auth.v1.auth_pb2 import CurrentUserResponse, SessionInfo
+from uniffy_proto.auth.v1.auth_pb2 import GetCurrentUserResponse, SessionInfo
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 
 
-def user_to_current_user_response(user: User) -> CurrentUserResponse:
+def user_to_current_user_response(user: User) -> GetCurrentUserResponse:
     """
-    Convert User model to CurrentUserResponse proto.
+    Convert User model to GetCurrentUserResponse proto.
 
     Parameters
     ----------
@@ -20,11 +20,11 @@ def user_to_current_user_response(user: User) -> CurrentUserResponse:
 
     Returns
     -------
-    CurrentUserResponse
+    GetCurrentUserResponse
         Proto message.
 
     """
-    return CurrentUserResponse(
+    return GetCurrentUserResponse(
         id=str(user.id),
         email=user.email,
         username=user.username,
@@ -69,5 +69,4 @@ def session_to_proto(
     )
 
 
-# Backward compatibility alias
 user_to_proto = user_to_current_user_response

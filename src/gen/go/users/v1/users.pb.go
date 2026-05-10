@@ -191,6 +191,358 @@ func (*GetMyProfileRequest) Descriptor() ([]byte, []int) {
 	return file_users_v1_users_proto_rawDescGZIP(), []int{1}
 }
 
+type GetMyProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMyProfileResponse) Reset() {
+	*x = GetMyProfileResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyProfileResponse) ProtoMessage() {}
+
+func (x *GetMyProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyProfileResponse.ProtoReflect.Descriptor instead.
+func (*GetMyProfileResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetMyProfileResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type UpdateMyProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMyProfileResponse) Reset() {
+	*x = UpdateMyProfileResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMyProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMyProfileResponse) ProtoMessage() {}
+
+func (x *UpdateMyProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMyProfileResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMyProfileResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UpdateMyProfileResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type GetUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserResponse) Reset() {
+	*x = GetUserResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserResponse) ProtoMessage() {}
+
+func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
+func (*GetUserResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetUserResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type CreateUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUserResponse) Reset() {
+	*x = CreateUserResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUserResponse) ProtoMessage() {}
+
+func (x *CreateUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUserResponse.ProtoReflect.Descriptor instead.
+func (*CreateUserResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateUserResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type UpdateUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateUserResponse) Reset() {
+	*x = UpdateUserResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateUserResponse) ProtoMessage() {}
+
+func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateUserResponse.ProtoReflect.Descriptor instead.
+func (*UpdateUserResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateUserResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type UploadAvatarResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadAvatarResponse) Reset() {
+	*x = UploadAvatarResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadAvatarResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadAvatarResponse) ProtoMessage() {}
+
+func (x *UploadAvatarResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadAvatarResponse.ProtoReflect.Descriptor instead.
+func (*UploadAvatarResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UploadAvatarResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type DeleteAvatarResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserProfile           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAvatarResponse) Reset() {
+	*x = DeleteAvatarResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAvatarResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAvatarResponse) ProtoMessage() {}
+
+func (x *DeleteAvatarResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAvatarResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAvatarResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteAvatarResponse) GetUser() *UserProfile {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type AddUserToOrganizationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Member        *v1.MemberInfo         `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddUserToOrganizationResponse) Reset() {
+	*x = AddUserToOrganizationResponse{}
+	mi := &file_users_v1_users_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddUserToOrganizationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddUserToOrganizationResponse) ProtoMessage() {}
+
+func (x *AddUserToOrganizationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_users_v1_users_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddUserToOrganizationResponse.ProtoReflect.Descriptor instead.
+func (*AddUserToOrganizationResponse) Descriptor() ([]byte, []int) {
+	return file_users_v1_users_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AddUserToOrganizationResponse) GetMember() *v1.MemberInfo {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
 type UpdateMyProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FullName      *string                `protobuf:"bytes,1,opt,name=full_name,json=fullName,proto3,oneof" json:"full_name,omitempty"`
@@ -204,7 +556,7 @@ type UpdateMyProfileRequest struct {
 
 func (x *UpdateMyProfileRequest) Reset() {
 	*x = UpdateMyProfileRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[2]
+	mi := &file_users_v1_users_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -216,7 +568,7 @@ func (x *UpdateMyProfileRequest) String() string {
 func (*UpdateMyProfileRequest) ProtoMessage() {}
 
 func (x *UpdateMyProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[2]
+	mi := &file_users_v1_users_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -229,7 +581,7 @@ func (x *UpdateMyProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMyProfileRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMyProfileRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{2}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateMyProfileRequest) GetFullName() string {
@@ -278,7 +630,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[3]
+	mi := &file_users_v1_users_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +642,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[3]
+	mi := &file_users_v1_users_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +655,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{3}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListUsersRequest) GetPagination() *v1.PaginationRequest {
@@ -337,7 +689,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_users_v1_users_proto_msgTypes[4]
+	mi := &file_users_v1_users_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -349,7 +701,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[4]
+	mi := &file_users_v1_users_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -362,7 +714,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{4}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListUsersResponse) GetUsers() []*UserProfile {
@@ -388,7 +740,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[5]
+	mi := &file_users_v1_users_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -400,7 +752,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[5]
+	mi := &file_users_v1_users_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -413,7 +765,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{5}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetUserRequest) GetUserId() string {
@@ -436,7 +788,7 @@ type CreateUserRequest struct {
 
 func (x *CreateUserRequest) Reset() {
 	*x = CreateUserRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[6]
+	mi := &file_users_v1_users_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -448,7 +800,7 @@ func (x *CreateUserRequest) String() string {
 func (*CreateUserRequest) ProtoMessage() {}
 
 func (x *CreateUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[6]
+	mi := &file_users_v1_users_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,7 +813,7 @@ func (x *CreateUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUserRequest.ProtoReflect.Descriptor instead.
 func (*CreateUserRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{6}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateUserRequest) GetEmail() string {
@@ -514,7 +866,7 @@ type UpdateUserRequest struct {
 
 func (x *UpdateUserRequest) Reset() {
 	*x = UpdateUserRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[7]
+	mi := &file_users_v1_users_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +878,7 @@ func (x *UpdateUserRequest) String() string {
 func (*UpdateUserRequest) ProtoMessage() {}
 
 func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[7]
+	mi := &file_users_v1_users_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +891,7 @@ func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{7}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateUserRequest) GetUserId() string {
@@ -600,7 +952,7 @@ type DeleteUserRequest struct {
 
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[8]
+	mi := &file_users_v1_users_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -612,7 +964,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[8]
+	mi := &file_users_v1_users_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,7 +977,7 @@ func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{8}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteUserRequest) GetUserId() string {
@@ -644,7 +996,7 @@ type DeleteUserResponse struct {
 
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
-	mi := &file_users_v1_users_proto_msgTypes[9]
+	mi := &file_users_v1_users_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +1008,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[9]
+	mi := &file_users_v1_users_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +1021,7 @@ func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{9}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteUserResponse) GetSuccess() bool {
@@ -688,7 +1040,7 @@ type ListUserOrganizationsRequest struct {
 
 func (x *ListUserOrganizationsRequest) Reset() {
 	*x = ListUserOrganizationsRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[10]
+	mi := &file_users_v1_users_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -700,7 +1052,7 @@ func (x *ListUserOrganizationsRequest) String() string {
 func (*ListUserOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListUserOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[10]
+	mi := &file_users_v1_users_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -713,7 +1065,7 @@ func (x *ListUserOrganizationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserOrganizationsRequest.ProtoReflect.Descriptor instead.
 func (*ListUserOrganizationsRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{10}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListUserOrganizationsRequest) GetUserId() string {
@@ -732,7 +1084,7 @@ type ListUserOrganizationsResponse struct {
 
 func (x *ListUserOrganizationsResponse) Reset() {
 	*x = ListUserOrganizationsResponse{}
-	mi := &file_users_v1_users_proto_msgTypes[11]
+	mi := &file_users_v1_users_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +1096,7 @@ func (x *ListUserOrganizationsResponse) String() string {
 func (*ListUserOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListUserOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[11]
+	mi := &file_users_v1_users_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +1109,7 @@ func (x *ListUserOrganizationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserOrganizationsResponse.ProtoReflect.Descriptor instead.
 func (*ListUserOrganizationsResponse) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{11}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListUserOrganizationsResponse) GetMemberships() []*UserOrganizationMembership {
@@ -779,7 +1131,7 @@ type UserOrganizationMembership struct {
 
 func (x *UserOrganizationMembership) Reset() {
 	*x = UserOrganizationMembership{}
-	mi := &file_users_v1_users_proto_msgTypes[12]
+	mi := &file_users_v1_users_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -791,7 +1143,7 @@ func (x *UserOrganizationMembership) String() string {
 func (*UserOrganizationMembership) ProtoMessage() {}
 
 func (x *UserOrganizationMembership) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[12]
+	mi := &file_users_v1_users_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -804,7 +1156,7 @@ func (x *UserOrganizationMembership) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserOrganizationMembership.ProtoReflect.Descriptor instead.
 func (*UserOrganizationMembership) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{12}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UserOrganizationMembership) GetOrganization() *v1.OrganizationInfo {
@@ -846,7 +1198,7 @@ type AddUserToOrganizationRequest struct {
 
 func (x *AddUserToOrganizationRequest) Reset() {
 	*x = AddUserToOrganizationRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[13]
+	mi := &file_users_v1_users_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -858,7 +1210,7 @@ func (x *AddUserToOrganizationRequest) String() string {
 func (*AddUserToOrganizationRequest) ProtoMessage() {}
 
 func (x *AddUserToOrganizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[13]
+	mi := &file_users_v1_users_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -871,7 +1223,7 @@ func (x *AddUserToOrganizationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddUserToOrganizationRequest.ProtoReflect.Descriptor instead.
 func (*AddUserToOrganizationRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{13}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AddUserToOrganizationRequest) GetUserId() string {
@@ -905,7 +1257,7 @@ type RemoveUserFromOrganizationRequest struct {
 
 func (x *RemoveUserFromOrganizationRequest) Reset() {
 	*x = RemoveUserFromOrganizationRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[14]
+	mi := &file_users_v1_users_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1269,7 @@ func (x *RemoveUserFromOrganizationRequest) String() string {
 func (*RemoveUserFromOrganizationRequest) ProtoMessage() {}
 
 func (x *RemoveUserFromOrganizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[14]
+	mi := &file_users_v1_users_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1282,7 @@ func (x *RemoveUserFromOrganizationRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RemoveUserFromOrganizationRequest.ProtoReflect.Descriptor instead.
 func (*RemoveUserFromOrganizationRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{14}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RemoveUserFromOrganizationRequest) GetUserId() string {
@@ -956,7 +1308,7 @@ type RemoveUserFromOrganizationResponse struct {
 
 func (x *RemoveUserFromOrganizationResponse) Reset() {
 	*x = RemoveUserFromOrganizationResponse{}
-	mi := &file_users_v1_users_proto_msgTypes[15]
+	mi := &file_users_v1_users_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +1320,7 @@ func (x *RemoveUserFromOrganizationResponse) String() string {
 func (*RemoveUserFromOrganizationResponse) ProtoMessage() {}
 
 func (x *RemoveUserFromOrganizationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[15]
+	mi := &file_users_v1_users_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +1333,7 @@ func (x *RemoveUserFromOrganizationResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use RemoveUserFromOrganizationResponse.ProtoReflect.Descriptor instead.
 func (*RemoveUserFromOrganizationResponse) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{15}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RemoveUserFromOrganizationResponse) GetSuccess() bool {
@@ -1001,7 +1353,7 @@ type UploadAvatarRequest struct {
 
 func (x *UploadAvatarRequest) Reset() {
 	*x = UploadAvatarRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[16]
+	mi := &file_users_v1_users_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1013,7 +1365,7 @@ func (x *UploadAvatarRequest) String() string {
 func (*UploadAvatarRequest) ProtoMessage() {}
 
 func (x *UploadAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[16]
+	mi := &file_users_v1_users_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1026,7 +1378,7 @@ func (x *UploadAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadAvatarRequest.ProtoReflect.Descriptor instead.
 func (*UploadAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{16}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UploadAvatarRequest) GetImageData() []byte {
@@ -1051,7 +1403,7 @@ type DeleteAvatarRequest struct {
 
 func (x *DeleteAvatarRequest) Reset() {
 	*x = DeleteAvatarRequest{}
-	mi := &file_users_v1_users_proto_msgTypes[17]
+	mi := &file_users_v1_users_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1063,7 +1415,7 @@ func (x *DeleteAvatarRequest) String() string {
 func (*DeleteAvatarRequest) ProtoMessage() {}
 
 func (x *DeleteAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_users_v1_users_proto_msgTypes[17]
+	mi := &file_users_v1_users_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1076,7 +1428,7 @@ func (x *DeleteAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAvatarRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_users_v1_users_proto_rawDescGZIP(), []int{17}
+	return file_users_v1_users_proto_rawDescGZIP(), []int{25}
 }
 
 var File_users_v1_users_proto protoreflect.FileDescriptor
@@ -1109,7 +1461,23 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"\v_avatar_urlB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_family\"\x15\n" +
-	"\x13GetMyProfileRequest\"\x98\x02\n" +
+	"\x13GetMyProfileRequest\"A\n" +
+	"\x14GetMyProfileResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"D\n" +
+	"\x17UpdateMyProfileResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"<\n" +
+	"\x0fGetUserResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"?\n" +
+	"\x12CreateUserResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"?\n" +
+	"\x12UpdateUserResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"A\n" +
+	"\x14UploadAvatarResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"A\n" +
+	"\x14DeleteAvatarResponse\x12)\n" +
+	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"N\n" +
+	"\x1dAddUserToOrganizationResponse\x12-\n" +
+	"\x06member\x18\x01 \x01(\v2\x15.common.v1.MemberInfoR\x06member\"\x98\x02\n" +
 	"\x16UpdateMyProfileRequest\x12 \n" +
 	"\tfull_name\x18\x01 \x01(\tH\x00R\bfullName\x88\x01\x01\x12\x1f\n" +
 	"\busername\x18\x02 \x01(\tH\x01R\busername\x88\x01\x01\x12\"\n" +
@@ -1192,22 +1560,22 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"\n" +
 	"image_data\x18\x01 \x01(\fR\timageData\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\"\x15\n" +
-	"\x13DeleteAvatarRequest2\xb6\a\n" +
-	"\fUsersService\x12D\n" +
-	"\fGetMyProfile\x12\x1d.users.v1.GetMyProfileRequest\x1a\x15.users.v1.UserProfile\x12J\n" +
-	"\x0fUpdateMyProfile\x12 .users.v1.UpdateMyProfileRequest\x1a\x15.users.v1.UserProfile\x12D\n" +
-	"\tListUsers\x12\x1a.users.v1.ListUsersRequest\x1a\x1b.users.v1.ListUsersResponse\x12:\n" +
-	"\aGetUser\x12\x18.users.v1.GetUserRequest\x1a\x15.users.v1.UserProfile\x12@\n" +
+	"\x13DeleteAvatarRequest2\x81\b\n" +
+	"\fUsersService\x12M\n" +
+	"\fGetMyProfile\x12\x1d.users.v1.GetMyProfileRequest\x1a\x1e.users.v1.GetMyProfileResponse\x12V\n" +
+	"\x0fUpdateMyProfile\x12 .users.v1.UpdateMyProfileRequest\x1a!.users.v1.UpdateMyProfileResponse\x12D\n" +
+	"\tListUsers\x12\x1a.users.v1.ListUsersRequest\x1a\x1b.users.v1.ListUsersResponse\x12>\n" +
+	"\aGetUser\x12\x18.users.v1.GetUserRequest\x1a\x19.users.v1.GetUserResponse\x12G\n" +
 	"\n" +
-	"CreateUser\x12\x1b.users.v1.CreateUserRequest\x1a\x15.users.v1.UserProfile\x12@\n" +
+	"CreateUser\x12\x1b.users.v1.CreateUserRequest\x1a\x1c.users.v1.CreateUserResponse\x12G\n" +
 	"\n" +
-	"UpdateUser\x12\x1b.users.v1.UpdateUserRequest\x1a\x15.users.v1.UserProfile\x12G\n" +
+	"UpdateUser\x12\x1b.users.v1.UpdateUserRequest\x1a\x1c.users.v1.UpdateUserResponse\x12G\n" +
 	"\n" +
-	"DeleteUser\x12\x1b.users.v1.DeleteUserRequest\x1a\x1c.users.v1.DeleteUserResponse\x12D\n" +
-	"\fUploadAvatar\x12\x1d.users.v1.UploadAvatarRequest\x1a\x15.users.v1.UserProfile\x12D\n" +
-	"\fDeleteAvatar\x12\x1d.users.v1.DeleteAvatarRequest\x1a\x15.users.v1.UserProfile\x12h\n" +
-	"\x15ListUserOrganizations\x12&.users.v1.ListUserOrganizationsRequest\x1a'.users.v1.ListUserOrganizationsResponse\x12V\n" +
-	"\x15AddUserToOrganization\x12&.users.v1.AddUserToOrganizationRequest\x1a\x15.common.v1.MemberInfo\x12w\n" +
+	"DeleteUser\x12\x1b.users.v1.DeleteUserRequest\x1a\x1c.users.v1.DeleteUserResponse\x12M\n" +
+	"\fUploadAvatar\x12\x1d.users.v1.UploadAvatarRequest\x1a\x1e.users.v1.UploadAvatarResponse\x12M\n" +
+	"\fDeleteAvatar\x12\x1d.users.v1.DeleteAvatarRequest\x1a\x1e.users.v1.DeleteAvatarResponse\x12h\n" +
+	"\x15ListUserOrganizations\x12&.users.v1.ListUserOrganizationsRequest\x1a'.users.v1.ListUserOrganizationsResponse\x12h\n" +
+	"\x15AddUserToOrganization\x12&.users.v1.AddUserToOrganizationRequest\x1a'.users.v1.AddUserToOrganizationResponse\x12w\n" +
 	"\x1aRemoveUserFromOrganization\x12+.users.v1.RemoveUserFromOrganizationRequest\x1a,.users.v1.RemoveUserFromOrganizationResponseB9Z7github.com/uniffy-io/uniffy-proto-go/users/v1;usersv1b\x06proto3"
 
 var (
@@ -1222,73 +1590,89 @@ func file_users_v1_users_proto_rawDescGZIP() []byte {
 	return file_users_v1_users_proto_rawDescData
 }
 
-var file_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_users_v1_users_proto_goTypes = []any{
 	(*UserProfile)(nil),                        // 0: users.v1.UserProfile
 	(*GetMyProfileRequest)(nil),                // 1: users.v1.GetMyProfileRequest
-	(*UpdateMyProfileRequest)(nil),             // 2: users.v1.UpdateMyProfileRequest
-	(*ListUsersRequest)(nil),                   // 3: users.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),                  // 4: users.v1.ListUsersResponse
-	(*GetUserRequest)(nil),                     // 5: users.v1.GetUserRequest
-	(*CreateUserRequest)(nil),                  // 6: users.v1.CreateUserRequest
-	(*UpdateUserRequest)(nil),                  // 7: users.v1.UpdateUserRequest
-	(*DeleteUserRequest)(nil),                  // 8: users.v1.DeleteUserRequest
-	(*DeleteUserResponse)(nil),                 // 9: users.v1.DeleteUserResponse
-	(*ListUserOrganizationsRequest)(nil),       // 10: users.v1.ListUserOrganizationsRequest
-	(*ListUserOrganizationsResponse)(nil),      // 11: users.v1.ListUserOrganizationsResponse
-	(*UserOrganizationMembership)(nil),         // 12: users.v1.UserOrganizationMembership
-	(*AddUserToOrganizationRequest)(nil),       // 13: users.v1.AddUserToOrganizationRequest
-	(*RemoveUserFromOrganizationRequest)(nil),  // 14: users.v1.RemoveUserFromOrganizationRequest
-	(*RemoveUserFromOrganizationResponse)(nil), // 15: users.v1.RemoveUserFromOrganizationResponse
-	(*UploadAvatarRequest)(nil),                // 16: users.v1.UploadAvatarRequest
-	(*DeleteAvatarRequest)(nil),                // 17: users.v1.DeleteAvatarRequest
-	(*timestamppb.Timestamp)(nil),              // 18: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),               // 19: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),              // 20: common.v1.PaginationResponse
-	(*v1.OrganizationInfo)(nil),                // 21: common.v1.OrganizationInfo
-	(v1.OrganizationRole)(0),                   // 22: common.v1.OrganizationRole
-	(*v1.MemberInfo)(nil),                      // 23: common.v1.MemberInfo
+	(*GetMyProfileResponse)(nil),               // 2: users.v1.GetMyProfileResponse
+	(*UpdateMyProfileResponse)(nil),            // 3: users.v1.UpdateMyProfileResponse
+	(*GetUserResponse)(nil),                    // 4: users.v1.GetUserResponse
+	(*CreateUserResponse)(nil),                 // 5: users.v1.CreateUserResponse
+	(*UpdateUserResponse)(nil),                 // 6: users.v1.UpdateUserResponse
+	(*UploadAvatarResponse)(nil),               // 7: users.v1.UploadAvatarResponse
+	(*DeleteAvatarResponse)(nil),               // 8: users.v1.DeleteAvatarResponse
+	(*AddUserToOrganizationResponse)(nil),      // 9: users.v1.AddUserToOrganizationResponse
+	(*UpdateMyProfileRequest)(nil),             // 10: users.v1.UpdateMyProfileRequest
+	(*ListUsersRequest)(nil),                   // 11: users.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),                  // 12: users.v1.ListUsersResponse
+	(*GetUserRequest)(nil),                     // 13: users.v1.GetUserRequest
+	(*CreateUserRequest)(nil),                  // 14: users.v1.CreateUserRequest
+	(*UpdateUserRequest)(nil),                  // 15: users.v1.UpdateUserRequest
+	(*DeleteUserRequest)(nil),                  // 16: users.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),                 // 17: users.v1.DeleteUserResponse
+	(*ListUserOrganizationsRequest)(nil),       // 18: users.v1.ListUserOrganizationsRequest
+	(*ListUserOrganizationsResponse)(nil),      // 19: users.v1.ListUserOrganizationsResponse
+	(*UserOrganizationMembership)(nil),         // 20: users.v1.UserOrganizationMembership
+	(*AddUserToOrganizationRequest)(nil),       // 21: users.v1.AddUserToOrganizationRequest
+	(*RemoveUserFromOrganizationRequest)(nil),  // 22: users.v1.RemoveUserFromOrganizationRequest
+	(*RemoveUserFromOrganizationResponse)(nil), // 23: users.v1.RemoveUserFromOrganizationResponse
+	(*UploadAvatarRequest)(nil),                // 24: users.v1.UploadAvatarRequest
+	(*DeleteAvatarRequest)(nil),                // 25: users.v1.DeleteAvatarRequest
+	(*timestamppb.Timestamp)(nil),              // 26: google.protobuf.Timestamp
+	(*v1.MemberInfo)(nil),                      // 27: common.v1.MemberInfo
+	(*v1.PaginationRequest)(nil),               // 28: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),              // 29: common.v1.PaginationResponse
+	(*v1.OrganizationInfo)(nil),                // 30: common.v1.OrganizationInfo
+	(v1.OrganizationRole)(0),                   // 31: common.v1.OrganizationRole
 }
 var file_users_v1_users_proto_depIdxs = []int32{
-	18, // 0: users.v1.UserProfile.created_at:type_name -> google.protobuf.Timestamp
-	18, // 1: users.v1.UserProfile.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 2: users.v1.ListUsersRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 3: users.v1.ListUsersResponse.users:type_name -> users.v1.UserProfile
-	20, // 4: users.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginationResponse
-	12, // 5: users.v1.ListUserOrganizationsResponse.memberships:type_name -> users.v1.UserOrganizationMembership
-	21, // 6: users.v1.UserOrganizationMembership.organization:type_name -> common.v1.OrganizationInfo
-	22, // 7: users.v1.UserOrganizationMembership.role:type_name -> common.v1.OrganizationRole
-	18, // 8: users.v1.UserOrganizationMembership.joined_at:type_name -> google.protobuf.Timestamp
-	22, // 9: users.v1.AddUserToOrganizationRequest.role:type_name -> common.v1.OrganizationRole
-	1,  // 10: users.v1.UsersService.GetMyProfile:input_type -> users.v1.GetMyProfileRequest
-	2,  // 11: users.v1.UsersService.UpdateMyProfile:input_type -> users.v1.UpdateMyProfileRequest
-	3,  // 12: users.v1.UsersService.ListUsers:input_type -> users.v1.ListUsersRequest
-	5,  // 13: users.v1.UsersService.GetUser:input_type -> users.v1.GetUserRequest
-	6,  // 14: users.v1.UsersService.CreateUser:input_type -> users.v1.CreateUserRequest
-	7,  // 15: users.v1.UsersService.UpdateUser:input_type -> users.v1.UpdateUserRequest
-	8,  // 16: users.v1.UsersService.DeleteUser:input_type -> users.v1.DeleteUserRequest
-	16, // 17: users.v1.UsersService.UploadAvatar:input_type -> users.v1.UploadAvatarRequest
-	17, // 18: users.v1.UsersService.DeleteAvatar:input_type -> users.v1.DeleteAvatarRequest
-	10, // 19: users.v1.UsersService.ListUserOrganizations:input_type -> users.v1.ListUserOrganizationsRequest
-	13, // 20: users.v1.UsersService.AddUserToOrganization:input_type -> users.v1.AddUserToOrganizationRequest
-	14, // 21: users.v1.UsersService.RemoveUserFromOrganization:input_type -> users.v1.RemoveUserFromOrganizationRequest
-	0,  // 22: users.v1.UsersService.GetMyProfile:output_type -> users.v1.UserProfile
-	0,  // 23: users.v1.UsersService.UpdateMyProfile:output_type -> users.v1.UserProfile
-	4,  // 24: users.v1.UsersService.ListUsers:output_type -> users.v1.ListUsersResponse
-	0,  // 25: users.v1.UsersService.GetUser:output_type -> users.v1.UserProfile
-	0,  // 26: users.v1.UsersService.CreateUser:output_type -> users.v1.UserProfile
-	0,  // 27: users.v1.UsersService.UpdateUser:output_type -> users.v1.UserProfile
-	9,  // 28: users.v1.UsersService.DeleteUser:output_type -> users.v1.DeleteUserResponse
-	0,  // 29: users.v1.UsersService.UploadAvatar:output_type -> users.v1.UserProfile
-	0,  // 30: users.v1.UsersService.DeleteAvatar:output_type -> users.v1.UserProfile
-	11, // 31: users.v1.UsersService.ListUserOrganizations:output_type -> users.v1.ListUserOrganizationsResponse
-	23, // 32: users.v1.UsersService.AddUserToOrganization:output_type -> common.v1.MemberInfo
-	15, // 33: users.v1.UsersService.RemoveUserFromOrganization:output_type -> users.v1.RemoveUserFromOrganizationResponse
-	22, // [22:34] is the sub-list for method output_type
-	10, // [10:22] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	26, // 0: users.v1.UserProfile.created_at:type_name -> google.protobuf.Timestamp
+	26, // 1: users.v1.UserProfile.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 2: users.v1.GetMyProfileResponse.user:type_name -> users.v1.UserProfile
+	0,  // 3: users.v1.UpdateMyProfileResponse.user:type_name -> users.v1.UserProfile
+	0,  // 4: users.v1.GetUserResponse.user:type_name -> users.v1.UserProfile
+	0,  // 5: users.v1.CreateUserResponse.user:type_name -> users.v1.UserProfile
+	0,  // 6: users.v1.UpdateUserResponse.user:type_name -> users.v1.UserProfile
+	0,  // 7: users.v1.UploadAvatarResponse.user:type_name -> users.v1.UserProfile
+	0,  // 8: users.v1.DeleteAvatarResponse.user:type_name -> users.v1.UserProfile
+	27, // 9: users.v1.AddUserToOrganizationResponse.member:type_name -> common.v1.MemberInfo
+	28, // 10: users.v1.ListUsersRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,  // 11: users.v1.ListUsersResponse.users:type_name -> users.v1.UserProfile
+	29, // 12: users.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginationResponse
+	20, // 13: users.v1.ListUserOrganizationsResponse.memberships:type_name -> users.v1.UserOrganizationMembership
+	30, // 14: users.v1.UserOrganizationMembership.organization:type_name -> common.v1.OrganizationInfo
+	31, // 15: users.v1.UserOrganizationMembership.role:type_name -> common.v1.OrganizationRole
+	26, // 16: users.v1.UserOrganizationMembership.joined_at:type_name -> google.protobuf.Timestamp
+	31, // 17: users.v1.AddUserToOrganizationRequest.role:type_name -> common.v1.OrganizationRole
+	1,  // 18: users.v1.UsersService.GetMyProfile:input_type -> users.v1.GetMyProfileRequest
+	10, // 19: users.v1.UsersService.UpdateMyProfile:input_type -> users.v1.UpdateMyProfileRequest
+	11, // 20: users.v1.UsersService.ListUsers:input_type -> users.v1.ListUsersRequest
+	13, // 21: users.v1.UsersService.GetUser:input_type -> users.v1.GetUserRequest
+	14, // 22: users.v1.UsersService.CreateUser:input_type -> users.v1.CreateUserRequest
+	15, // 23: users.v1.UsersService.UpdateUser:input_type -> users.v1.UpdateUserRequest
+	16, // 24: users.v1.UsersService.DeleteUser:input_type -> users.v1.DeleteUserRequest
+	24, // 25: users.v1.UsersService.UploadAvatar:input_type -> users.v1.UploadAvatarRequest
+	25, // 26: users.v1.UsersService.DeleteAvatar:input_type -> users.v1.DeleteAvatarRequest
+	18, // 27: users.v1.UsersService.ListUserOrganizations:input_type -> users.v1.ListUserOrganizationsRequest
+	21, // 28: users.v1.UsersService.AddUserToOrganization:input_type -> users.v1.AddUserToOrganizationRequest
+	22, // 29: users.v1.UsersService.RemoveUserFromOrganization:input_type -> users.v1.RemoveUserFromOrganizationRequest
+	2,  // 30: users.v1.UsersService.GetMyProfile:output_type -> users.v1.GetMyProfileResponse
+	3,  // 31: users.v1.UsersService.UpdateMyProfile:output_type -> users.v1.UpdateMyProfileResponse
+	12, // 32: users.v1.UsersService.ListUsers:output_type -> users.v1.ListUsersResponse
+	4,  // 33: users.v1.UsersService.GetUser:output_type -> users.v1.GetUserResponse
+	5,  // 34: users.v1.UsersService.CreateUser:output_type -> users.v1.CreateUserResponse
+	6,  // 35: users.v1.UsersService.UpdateUser:output_type -> users.v1.UpdateUserResponse
+	17, // 36: users.v1.UsersService.DeleteUser:output_type -> users.v1.DeleteUserResponse
+	7,  // 37: users.v1.UsersService.UploadAvatar:output_type -> users.v1.UploadAvatarResponse
+	8,  // 38: users.v1.UsersService.DeleteAvatar:output_type -> users.v1.DeleteAvatarResponse
+	19, // 39: users.v1.UsersService.ListUserOrganizations:output_type -> users.v1.ListUserOrganizationsResponse
+	9,  // 40: users.v1.UsersService.AddUserToOrganization:output_type -> users.v1.AddUserToOrganizationResponse
+	23, // 41: users.v1.UsersService.RemoveUserFromOrganization:output_type -> users.v1.RemoveUserFromOrganizationResponse
+	30, // [30:42] is the sub-list for method output_type
+	18, // [18:30] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_users_v1_users_proto_init() }
@@ -1297,18 +1681,18 @@ func file_users_v1_users_proto_init() {
 		return
 	}
 	file_users_v1_users_proto_msgTypes[0].OneofWrappers = []any{}
-	file_users_v1_users_proto_msgTypes[2].OneofWrappers = []any{}
-	file_users_v1_users_proto_msgTypes[3].OneofWrappers = []any{}
-	file_users_v1_users_proto_msgTypes[4].OneofWrappers = []any{}
-	file_users_v1_users_proto_msgTypes[6].OneofWrappers = []any{}
-	file_users_v1_users_proto_msgTypes[7].OneofWrappers = []any{}
+	file_users_v1_users_proto_msgTypes[10].OneofWrappers = []any{}
+	file_users_v1_users_proto_msgTypes[11].OneofWrappers = []any{}
+	file_users_v1_users_proto_msgTypes[12].OneofWrappers = []any{}
+	file_users_v1_users_proto_msgTypes[14].OneofWrappers = []any{}
+	file_users_v1_users_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_users_v1_users_proto_rawDesc), len(file_users_v1_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

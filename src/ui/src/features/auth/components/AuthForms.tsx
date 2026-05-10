@@ -672,8 +672,7 @@ export function AuthForms() {
         console.warn('Storage encryption init failed:', err);
       });
 
-    } catch (err: unknown) {
-      console.error('Error fetching user details:', err);
+    } catch {
       throw new Error('Failed to fetch user details');
     }
   };

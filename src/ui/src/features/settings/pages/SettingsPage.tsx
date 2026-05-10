@@ -44,7 +44,6 @@ export function SettingsPage() {
 
     const handleCreateProfile = () => {
         // TODO: Open create profile modal
-        console.log('Create profile clicked');
     };
 
     // Show loading state

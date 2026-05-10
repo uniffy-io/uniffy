@@ -8,13 +8,15 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.prompts_pb2 import (
     CreatePromptRequest,
+    CreatePromptResponse,
     DeletePromptRequest,
     DeletePromptResponse,
     GetPromptRequest,
+    GetPromptResponse,
     ListPromptsRequest,
     ListPromptsResponse,
-    PromptResponse,
     UpdatePromptRequest,
+    UpdatePromptResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -56,7 +58,7 @@ class PromptsHandlers:
         self,
         request: CreatePromptRequest,
         ctx: RequestContext,
-    ) -> PromptResponse:
+    ) -> CreatePromptResponse:
         """Create a new prompt template."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -86,7 +88,7 @@ class PromptsHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return PromptResponse(prompt=prompt_to_proto(prompt))
+                return CreatePromptResponse(prompt=prompt_to_proto(prompt))
         except ConnectError:
             raise
         except Exception as exc:
@@ -96,7 +98,7 @@ class PromptsHandlers:
         self,
         request: GetPromptRequest,
         ctx: RequestContext,
-    ) -> PromptResponse:
+    ) -> GetPromptResponse:
         """Get a prompt by ID."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -110,7 +112,7 @@ class PromptsHandlers:
                     organization_id=org_id,
                     prompt_id=prompt_id,
                 )
-                return PromptResponse(prompt=prompt_to_proto(prompt))
+                return GetPromptResponse(prompt=prompt_to_proto(prompt))
         except ConnectError:
             raise
         except Exception as exc:
@@ -162,7 +164,7 @@ class PromptsHandlers:
         self,
         request: UpdatePromptRequest,
         ctx: RequestContext,
-    ) -> PromptResponse:
+    ) -> UpdatePromptResponse:
         """Update a prompt."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -185,7 +187,7 @@ class PromptsHandlers:
                     description=description,
                     content=content,
                 )
-                return PromptResponse(prompt=prompt_to_proto(prompt))
+                return UpdatePromptResponse(prompt=prompt_to_proto(prompt))
         except ConnectError:
             raise
         except Exception as exc:

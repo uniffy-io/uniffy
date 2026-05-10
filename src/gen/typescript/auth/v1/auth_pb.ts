@@ -354,11 +354,11 @@ export class RevokeOtherSessionsRequest extends Message<RevokeOtherSessionsReque
 }
 
 /**
- * Authentication response with tokens
+ * Authentication response with tokens (Register)
  *
- * @generated from message auth.v1.AuthResponse
+ * @generated from message auth.v1.RegisterResponse
  */
-export class AuthResponse extends Message<AuthResponse> {
+export class RegisterResponse extends Message<RegisterResponse> {
   /**
    * @generated from field: string access_token = 1;
    */
@@ -409,13 +409,13 @@ export class AuthResponse extends Message<AuthResponse> {
    */
   domainAdminDomains: DomainType[] = [];
 
-  constructor(data?: PartialMessage<AuthResponse>) {
+  constructor(data?: PartialMessage<RegisterResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "auth.v1.AuthResponse";
+  static readonly typeName = "auth.v1.RegisterResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "access_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "refresh_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -427,29 +427,211 @@ export class AuthResponse extends Message<AuthResponse> {
     { no: 8, name: "domain_admin_domains", kind: "enum", T: proto3.getEnumType(DomainType), repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthResponse {
-    return new AuthResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegisterResponse {
+    return new RegisterResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuthResponse {
-    return new AuthResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RegisterResponse {
+    return new RegisterResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuthResponse {
-    return new AuthResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RegisterResponse {
+    return new RegisterResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AuthResponse | PlainMessage<AuthResponse> | undefined, b: AuthResponse | PlainMessage<AuthResponse> | undefined): boolean {
-    return proto3.util.equals(AuthResponse, a, b);
+  static equals(a: RegisterResponse | PlainMessage<RegisterResponse> | undefined, b: RegisterResponse | PlainMessage<RegisterResponse> | undefined): boolean {
+    return proto3.util.equals(RegisterResponse, a, b);
+  }
+}
+
+/**
+ * Authentication response with tokens (Login)
+ *
+ * @generated from message auth.v1.LoginResponse
+ */
+export class LoginResponse extends Message<LoginResponse> {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken = "";
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken = "";
+
+  /**
+   * Always "bearer"
+   *
+   * @generated from field: string token_type = 3;
+   */
+  tokenType = "";
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId = "";
+
+  /**
+   * If authenticated into specific org
+   *
+   * @generated from field: optional string organization_id = 5;
+   */
+  organizationId?: string;
+
+  /**
+   * User's role in the org: MEMBER, ADMIN, or OWNER
+   *
+   * @generated from field: optional string organization_role = 6;
+   */
+  organizationRole?: string;
+
+  /**
+   * Server-side session identifier
+   *
+   * @generated from field: optional string session_id = 7;
+   */
+  sessionId?: string;
+
+  /**
+   * Domains where user is domain admin
+   *
+   * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
+   */
+  domainAdminDomains: DomainType[] = [];
+
+  constructor(data?: PartialMessage<LoginResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.LoginResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "access_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "refresh_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "token_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "organization_role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "domain_admin_domains", kind: "enum", T: proto3.getEnumType(DomainType), repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LoginResponse {
+    return new LoginResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LoginResponse {
+    return new LoginResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LoginResponse {
+    return new LoginResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LoginResponse | PlainMessage<LoginResponse> | undefined, b: LoginResponse | PlainMessage<LoginResponse> | undefined): boolean {
+    return proto3.util.equals(LoginResponse, a, b);
+  }
+}
+
+/**
+ * Authentication response with tokens (RefreshToken)
+ *
+ * @generated from message auth.v1.RefreshTokenResponse
+ */
+export class RefreshTokenResponse extends Message<RefreshTokenResponse> {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken = "";
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken = "";
+
+  /**
+   * Always "bearer"
+   *
+   * @generated from field: string token_type = 3;
+   */
+  tokenType = "";
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId = "";
+
+  /**
+   * If authenticated into specific org
+   *
+   * @generated from field: optional string organization_id = 5;
+   */
+  organizationId?: string;
+
+  /**
+   * User's role in the org: MEMBER, ADMIN, or OWNER
+   *
+   * @generated from field: optional string organization_role = 6;
+   */
+  organizationRole?: string;
+
+  /**
+   * Server-side session identifier
+   *
+   * @generated from field: optional string session_id = 7;
+   */
+  sessionId?: string;
+
+  /**
+   * Domains where user is domain admin
+   *
+   * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
+   */
+  domainAdminDomains: DomainType[] = [];
+
+  constructor(data?: PartialMessage<RefreshTokenResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RefreshTokenResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "access_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "refresh_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "token_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "organization_role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "domain_admin_domains", kind: "enum", T: proto3.getEnumType(DomainType), repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshTokenResponse {
+    return new RefreshTokenResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshTokenResponse {
+    return new RefreshTokenResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshTokenResponse {
+    return new RefreshTokenResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshTokenResponse | PlainMessage<RefreshTokenResponse> | undefined, b: RefreshTokenResponse | PlainMessage<RefreshTokenResponse> | undefined): boolean {
+    return proto3.util.equals(RefreshTokenResponse, a, b);
   }
 }
 
 /**
  * Current user info response
  *
- * @generated from message auth.v1.CurrentUserResponse
+ * @generated from message auth.v1.GetCurrentUserResponse
  */
-export class CurrentUserResponse extends Message<CurrentUserResponse> {
+export class GetCurrentUserResponse extends Message<GetCurrentUserResponse> {
   /**
    * @generated from field: string id = 1;
    */
@@ -505,13 +687,13 @@ export class CurrentUserResponse extends Message<CurrentUserResponse> {
    */
   hasAvatar = false;
 
-  constructor(data?: PartialMessage<CurrentUserResponse>) {
+  constructor(data?: PartialMessage<GetCurrentUserResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "auth.v1.CurrentUserResponse";
+  static readonly typeName = "auth.v1.GetCurrentUserResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -526,20 +708,20 @@ export class CurrentUserResponse extends Message<CurrentUserResponse> {
     { no: 11, name: "has_avatar", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CurrentUserResponse {
-    return new CurrentUserResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCurrentUserResponse {
+    return new GetCurrentUserResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CurrentUserResponse {
-    return new CurrentUserResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCurrentUserResponse {
+    return new GetCurrentUserResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CurrentUserResponse {
-    return new CurrentUserResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCurrentUserResponse {
+    return new GetCurrentUserResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CurrentUserResponse | PlainMessage<CurrentUserResponse> | undefined, b: CurrentUserResponse | PlainMessage<CurrentUserResponse> | undefined): boolean {
-    return proto3.util.equals(CurrentUserResponse, a, b);
+  static equals(a: GetCurrentUserResponse | PlainMessage<GetCurrentUserResponse> | undefined, b: GetCurrentUserResponse | PlainMessage<GetCurrentUserResponse> | undefined): boolean {
+    return proto3.util.equals(GetCurrentUserResponse, a, b);
   }
 }
 
@@ -594,31 +776,31 @@ export class SessionInfo extends Message<SessionInfo> {
   id = "";
 
   /**
-   * @generated from field: string user_agent = 3;
+   * @generated from field: string user_agent = 2;
    */
   userAgent = "";
 
   /**
-   * @generated from field: string device_label = 4;
+   * @generated from field: string device_label = 3;
    */
   deviceLabel = "";
 
   /**
    * ISO 8601 timestamp
    *
-   * @generated from field: string created_at = 5;
+   * @generated from field: string created_at = 4;
    */
   createdAt = "";
 
   /**
    * ISO 8601 timestamp
    *
-   * @generated from field: string last_activity = 6;
+   * @generated from field: string last_activity = 5;
    */
   lastActivity = "";
 
   /**
-   * @generated from field: bool is_current = 7;
+   * @generated from field: bool is_current = 6;
    */
   isCurrent = false;
 
@@ -631,11 +813,11 @@ export class SessionInfo extends Message<SessionInfo> {
   static readonly typeName = "auth.v1.SessionInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_agent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "device_label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "last_activity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "is_current", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "user_agent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "device_label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "last_activity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "is_current", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SessionInfo {

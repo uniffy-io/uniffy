@@ -882,27 +882,27 @@ func (x *SetAccessModeRequest) GetNote() string {
 	return ""
 }
 
-type AccessModeResponse struct {
+type SetAccessModeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Policy        *ContentAccessPolicy   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AccessModeResponse) Reset() {
-	*x = AccessModeResponse{}
+func (x *SetAccessModeResponse) Reset() {
+	*x = SetAccessModeResponse{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *AccessModeResponse) String() string {
+func (x *SetAccessModeResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*AccessModeResponse) ProtoMessage() {}
+func (*SetAccessModeResponse) ProtoMessage() {}
 
-func (x *AccessModeResponse) ProtoReflect() protoreflect.Message {
+func (x *SetAccessModeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -914,12 +914,12 @@ func (x *AccessModeResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AccessModeResponse.ProtoReflect.Descriptor instead.
-func (*AccessModeResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SetAccessModeResponse.ProtoReflect.Descriptor instead.
+func (*SetAccessModeResponse) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *AccessModeResponse) GetPolicy() *ContentAccessPolicy {
+func (x *SetAccessModeResponse) GetPolicy() *ContentAccessPolicy {
 	if x != nil {
 		return x.Policy
 	}
@@ -1046,27 +1046,27 @@ func (x *TransferOwnershipResponse) GetPolicy() *ContentAccessPolicy {
 	return nil
 }
 
-type MemberResponse struct {
+type AddMemberResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Member        *ContentMember         `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MemberResponse) Reset() {
-	*x = MemberResponse{}
+func (x *AddMemberResponse) Reset() {
+	*x = AddMemberResponse{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MemberResponse) String() string {
+func (x *AddMemberResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MemberResponse) ProtoMessage() {}
+func (*AddMemberResponse) ProtoMessage() {}
 
-func (x *MemberResponse) ProtoReflect() protoreflect.Message {
+func (x *AddMemberResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1078,12 +1078,56 @@ func (x *MemberResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MemberResponse.ProtoReflect.Descriptor instead.
-func (*MemberResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use AddMemberResponse.ProtoReflect.Descriptor instead.
+func (*AddMemberResponse) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *MemberResponse) GetMember() *ContentMember {
+func (x *AddMemberResponse) GetMember() *ContentMember {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+type UpdateMemberRoleResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Member        *ContentMember         `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMemberRoleResponse) Reset() {
+	*x = UpdateMemberRoleResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemberRoleResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemberRoleResponse) ProtoMessage() {}
+
+func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMemberRoleResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMemberRoleResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UpdateMemberRoleResponse) GetMember() *ContentMember {
 	if x != nil {
 		return x.Member
 	}
@@ -1106,7 +1150,7 @@ type ListMemberEventsRequest struct {
 
 func (x *ListMemberEventsRequest) Reset() {
 	*x = ListMemberEventsRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1118,7 +1162,7 @@ func (x *ListMemberEventsRequest) String() string {
 func (*ListMemberEventsRequest) ProtoMessage() {}
 
 func (x *ListMemberEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1131,7 +1175,7 @@ func (x *ListMemberEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemberEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListMemberEventsRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{14}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListMemberEventsRequest) GetOrganizationId() string {
@@ -1200,7 +1244,7 @@ type ListMemberEventsResponse struct {
 
 func (x *ListMemberEventsResponse) Reset() {
 	*x = ListMemberEventsResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1212,7 +1256,7 @@ func (x *ListMemberEventsResponse) String() string {
 func (*ListMemberEventsResponse) ProtoMessage() {}
 
 func (x *ListMemberEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1269,7 @@ func (x *ListMemberEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemberEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListMemberEventsResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{15}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListMemberEventsResponse) GetEvents() []*ContentMemberEvent {
@@ -1351,8 +1395,8 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\rbaseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x127\n" +
 	"\x18remove_members_on_narrow\x18\x06 \x01(\bR\x15removeMembersOnNarrow\x12\x12\n" +
 	"\x04note\x18\a \x01(\tR\x04noteB\x10\n" +
-	"\x0e_baseline_role\"Q\n" +
-	"\x12AccessModeResponse\x12;\n" +
+	"\x0e_baseline_role\"T\n" +
+	"\x15SetAccessModeResponse\x12;\n" +
 	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\"\xdc\x01\n" +
 	"\x18TransferOwnershipRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
@@ -1362,8 +1406,10 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\x11new_owner_user_id\x18\x04 \x01(\tR\x0enewOwnerUserId\x12\x12\n" +
 	"\x04note\x18\x05 \x01(\tR\x04note\"X\n" +
 	"\x19TransferOwnershipResponse\x12;\n" +
-	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\"G\n" +
-	"\x0eMemberResponse\x125\n" +
+	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\"J\n" +
+	"\x11AddMemberResponse\x125\n" +
+	"\x06member\x18\x01 \x01(\v2\x1d.permissions.v1.ContentMemberR\x06member\"Q\n" +
+	"\x18UpdateMemberRoleResponse\x125\n" +
 	"\x06member\x18\x01 \x01(\v2\x1d.permissions.v1.ContentMemberR\x06member\"\xf6\x03\n" +
 	"\x17ListMemberEventsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
@@ -1386,13 +1432,13 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\".permissions.v1.ContentMemberEventR\x06events\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination2\x9b\x05\n" +
+	"pagination2\xab\x05\n" +
 	"\x0eMembersService\x12V\n" +
-	"\vListMembers\x12\".permissions.v1.ListMembersRequest\x1a#.permissions.v1.ListMembersResponse\x12M\n" +
-	"\tAddMember\x12 .permissions.v1.AddMemberRequest\x1a\x1e.permissions.v1.MemberResponse\x12[\n" +
-	"\x10UpdateMemberRole\x12'.permissions.v1.UpdateMemberRoleRequest\x1a\x1e.permissions.v1.MemberResponse\x12Y\n" +
-	"\fRemoveMember\x12#.permissions.v1.RemoveMemberRequest\x1a$.permissions.v1.RemoveMemberResponse\x12Y\n" +
-	"\rSetAccessMode\x12$.permissions.v1.SetAccessModeRequest\x1a\".permissions.v1.AccessModeResponse\x12h\n" +
+	"\vListMembers\x12\".permissions.v1.ListMembersRequest\x1a#.permissions.v1.ListMembersResponse\x12P\n" +
+	"\tAddMember\x12 .permissions.v1.AddMemberRequest\x1a!.permissions.v1.AddMemberResponse\x12e\n" +
+	"\x10UpdateMemberRole\x12'.permissions.v1.UpdateMemberRoleRequest\x1a(.permissions.v1.UpdateMemberRoleResponse\x12Y\n" +
+	"\fRemoveMember\x12#.permissions.v1.RemoveMemberRequest\x1a$.permissions.v1.RemoveMemberResponse\x12\\\n" +
+	"\rSetAccessMode\x12$.permissions.v1.SetAccessModeRequest\x1a%.permissions.v1.SetAccessModeResponse\x12h\n" +
 	"\x11TransferOwnership\x12(.permissions.v1.TransferOwnershipRequest\x1a).permissions.v1.TransferOwnershipResponse\x12e\n" +
 	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponseBEZCgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
 
@@ -1408,7 +1454,7 @@ func file_permissions_v1_permissions_proto_rawDescGZIP() []byte {
 	return file_permissions_v1_permissions_proto_rawDescData
 }
 
-var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_permissions_v1_permissions_proto_goTypes = []any{
 	(*ContentMember)(nil),             // 0: permissions.v1.ContentMember
 	(*ContentAccessPolicy)(nil),       // 1: permissions.v1.ContentAccessPolicy
@@ -1420,86 +1466,88 @@ var file_permissions_v1_permissions_proto_goTypes = []any{
 	(*RemoveMemberRequest)(nil),       // 7: permissions.v1.RemoveMemberRequest
 	(*RemoveMemberResponse)(nil),      // 8: permissions.v1.RemoveMemberResponse
 	(*SetAccessModeRequest)(nil),      // 9: permissions.v1.SetAccessModeRequest
-	(*AccessModeResponse)(nil),        // 10: permissions.v1.AccessModeResponse
+	(*SetAccessModeResponse)(nil),     // 10: permissions.v1.SetAccessModeResponse
 	(*TransferOwnershipRequest)(nil),  // 11: permissions.v1.TransferOwnershipRequest
 	(*TransferOwnershipResponse)(nil), // 12: permissions.v1.TransferOwnershipResponse
-	(*MemberResponse)(nil),            // 13: permissions.v1.MemberResponse
-	(*ListMemberEventsRequest)(nil),   // 14: permissions.v1.ListMemberEventsRequest
-	(*ListMemberEventsResponse)(nil),  // 15: permissions.v1.ListMemberEventsResponse
-	(v1.SubjectType)(0),               // 16: common.v1.SubjectType
-	(v1.ContentRole)(0),               // 17: common.v1.ContentRole
-	(*timestamppb.Timestamp)(nil),     // 18: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                // 19: common.v1.AccessMode
-	(v1.ContentType)(0),               // 20: common.v1.ContentType
-	(v1.ContentMemberAction)(0),       // 21: common.v1.ContentMemberAction
-	(v1.OrganizationRole)(0),          // 22: common.v1.OrganizationRole
-	(*v1.PaginationRequest)(nil),      // 23: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),     // 24: common.v1.PaginationResponse
+	(*AddMemberResponse)(nil),         // 13: permissions.v1.AddMemberResponse
+	(*UpdateMemberRoleResponse)(nil),  // 14: permissions.v1.UpdateMemberRoleResponse
+	(*ListMemberEventsRequest)(nil),   // 15: permissions.v1.ListMemberEventsRequest
+	(*ListMemberEventsResponse)(nil),  // 16: permissions.v1.ListMemberEventsResponse
+	(v1.SubjectType)(0),               // 17: common.v1.SubjectType
+	(v1.ContentRole)(0),               // 18: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),     // 19: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                // 20: common.v1.AccessMode
+	(v1.ContentType)(0),               // 21: common.v1.ContentType
+	(v1.ContentMemberAction)(0),       // 22: common.v1.ContentMemberAction
+	(v1.OrganizationRole)(0),          // 23: common.v1.OrganizationRole
+	(*v1.PaginationRequest)(nil),      // 24: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),     // 25: common.v1.PaginationResponse
 }
 var file_permissions_v1_permissions_proto_depIdxs = []int32{
-	16, // 0: permissions.v1.ContentMember.subject_type:type_name -> common.v1.SubjectType
-	17, // 1: permissions.v1.ContentMember.role:type_name -> common.v1.ContentRole
-	18, // 2: permissions.v1.ContentMember.added_at:type_name -> google.protobuf.Timestamp
-	18, // 3: permissions.v1.ContentMember.updated_at:type_name -> google.protobuf.Timestamp
-	18, // 4: permissions.v1.ContentMember.expires_at:type_name -> google.protobuf.Timestamp
-	19, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
-	17, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
-	20, // 7: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
-	21, // 8: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
-	16, // 9: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
-	17, // 10: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
-	17, // 11: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
-	19, // 12: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
-	19, // 13: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
-	17, // 14: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
-	17, // 15: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
-	22, // 16: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
-	18, // 17: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	20, // 18: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
+	17, // 0: permissions.v1.ContentMember.subject_type:type_name -> common.v1.SubjectType
+	18, // 1: permissions.v1.ContentMember.role:type_name -> common.v1.ContentRole
+	19, // 2: permissions.v1.ContentMember.added_at:type_name -> google.protobuf.Timestamp
+	19, // 3: permissions.v1.ContentMember.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 4: permissions.v1.ContentMember.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
+	18, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
+	21, // 7: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
+	22, // 8: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
+	17, // 9: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
+	18, // 10: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
+	18, // 11: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
+	20, // 12: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
+	20, // 13: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
+	18, // 14: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
+	18, // 15: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
+	23, // 16: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
+	19, // 17: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	21, // 18: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
 	1,  // 19: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
 	0,  // 20: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
-	20, // 21: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
-	16, // 22: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	17, // 23: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
-	18, // 24: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
-	20, // 25: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
-	16, // 26: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
-	17, // 27: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
-	20, // 28: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
-	16, // 29: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	20, // 30: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
-	19, // 31: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
-	17, // 32: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 33: permissions.v1.AccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	20, // 34: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
+	21, // 21: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
+	17, // 22: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	18, // 23: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
+	19, // 24: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
+	21, // 25: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
+	17, // 26: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
+	18, // 27: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
+	21, // 28: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
+	17, // 29: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	21, // 30: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
+	20, // 31: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
+	18, // 32: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 33: permissions.v1.SetAccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	21, // 34: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
 	1,  // 35: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	0,  // 36: permissions.v1.MemberResponse.member:type_name -> permissions.v1.ContentMember
-	20, // 37: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
-	23, // 38: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
-	21, // 39: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
-	18, // 40: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
-	18, // 41: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
-	2,  // 42: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
-	24, // 43: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 44: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
-	5,  // 45: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
-	6,  // 46: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
-	7,  // 47: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
-	9,  // 48: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
-	11, // 49: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
-	14, // 50: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
-	4,  // 51: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
-	13, // 52: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.MemberResponse
-	13, // 53: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.MemberResponse
-	8,  // 54: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
-	10, // 55: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.AccessModeResponse
-	12, // 56: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
-	15, // 57: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
-	51, // [51:58] is the sub-list for method output_type
-	44, // [44:51] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	0,  // 36: permissions.v1.AddMemberResponse.member:type_name -> permissions.v1.ContentMember
+	0,  // 37: permissions.v1.UpdateMemberRoleResponse.member:type_name -> permissions.v1.ContentMember
+	21, // 38: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
+	24, // 39: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
+	22, // 40: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
+	19, // 41: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
+	19, // 42: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
+	2,  // 43: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
+	25, // 44: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 45: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
+	5,  // 46: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
+	6,  // 47: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
+	7,  // 48: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
+	9,  // 49: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
+	11, // 50: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
+	15, // 51: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
+	4,  // 52: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
+	13, // 53: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.AddMemberResponse
+	14, // 54: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.UpdateMemberRoleResponse
+	8,  // 55: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
+	10, // 56: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.SetAccessModeResponse
+	12, // 57: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
+	16, // 58: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
+	52, // [52:59] is the sub-list for method output_type
+	45, // [45:52] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_permissions_v1_permissions_proto_init() }
@@ -1512,14 +1560,14 @@ func file_permissions_v1_permissions_proto_init() {
 	file_permissions_v1_permissions_proto_msgTypes[2].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[5].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[9].OneofWrappers = []any{}
-	file_permissions_v1_permissions_proto_msgTypes[14].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_permissions_v1_permissions_proto_rawDesc), len(file_permissions_v1_permissions_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

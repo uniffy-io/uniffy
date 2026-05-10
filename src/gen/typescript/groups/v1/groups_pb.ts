@@ -153,6 +153,191 @@ export class GetGroupRequest extends Message<GetGroupRequest> {
 }
 
 /**
+ * @generated from message groups.v1.GetGroupResponse
+ */
+export class GetGroupResponse extends Message<GetGroupResponse> {
+  /**
+   * @generated from field: common.v1.GroupInfo group = 1;
+   */
+  group?: GroupInfo;
+
+  constructor(data?: PartialMessage<GetGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "groups.v1.GetGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group", kind: "message", T: GroupInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGroupResponse {
+    return new GetGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetGroupResponse {
+    return new GetGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetGroupResponse {
+    return new GetGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetGroupResponse | PlainMessage<GetGroupResponse> | undefined, b: GetGroupResponse | PlainMessage<GetGroupResponse> | undefined): boolean {
+    return proto3.util.equals(GetGroupResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message groups.v1.CreateGroupResponse
+ */
+export class CreateGroupResponse extends Message<CreateGroupResponse> {
+  /**
+   * @generated from field: common.v1.GroupInfo group = 1;
+   */
+  group?: GroupInfo;
+
+  constructor(data?: PartialMessage<CreateGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "groups.v1.CreateGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group", kind: "message", T: GroupInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateGroupResponse {
+    return new CreateGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateGroupResponse {
+    return new CreateGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateGroupResponse {
+    return new CreateGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateGroupResponse | PlainMessage<CreateGroupResponse> | undefined, b: CreateGroupResponse | PlainMessage<CreateGroupResponse> | undefined): boolean {
+    return proto3.util.equals(CreateGroupResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message groups.v1.UpdateGroupResponse
+ */
+export class UpdateGroupResponse extends Message<UpdateGroupResponse> {
+  /**
+   * @generated from field: common.v1.GroupInfo group = 1;
+   */
+  group?: GroupInfo;
+
+  constructor(data?: PartialMessage<UpdateGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "groups.v1.UpdateGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group", kind: "message", T: GroupInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateGroupResponse {
+    return new UpdateGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateGroupResponse {
+    return new UpdateGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateGroupResponse {
+    return new UpdateGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateGroupResponse | PlainMessage<UpdateGroupResponse> | undefined, b: UpdateGroupResponse | PlainMessage<UpdateGroupResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateGroupResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message groups.v1.AddGroupMemberResponse
+ */
+export class AddGroupMemberResponse extends Message<AddGroupMemberResponse> {
+  /**
+   * @generated from field: common.v1.GroupMemberInfo member = 1;
+   */
+  member?: GroupMemberInfo;
+
+  constructor(data?: PartialMessage<AddGroupMemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "groups.v1.AddGroupMemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "member", kind: "message", T: GroupMemberInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddGroupMemberResponse {
+    return new AddGroupMemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddGroupMemberResponse {
+    return new AddGroupMemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddGroupMemberResponse {
+    return new AddGroupMemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AddGroupMemberResponse | PlainMessage<AddGroupMemberResponse> | undefined, b: AddGroupMemberResponse | PlainMessage<AddGroupMemberResponse> | undefined): boolean {
+    return proto3.util.equals(AddGroupMemberResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message groups.v1.UpdateGroupMemberResponse
+ */
+export class UpdateGroupMemberResponse extends Message<UpdateGroupMemberResponse> {
+  /**
+   * @generated from field: common.v1.GroupMemberInfo member = 1;
+   */
+  member?: GroupMemberInfo;
+
+  constructor(data?: PartialMessage<UpdateGroupMemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "groups.v1.UpdateGroupMemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "member", kind: "message", T: GroupMemberInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateGroupMemberResponse {
+    return new UpdateGroupMemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateGroupMemberResponse {
+    return new UpdateGroupMemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateGroupMemberResponse {
+    return new UpdateGroupMemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateGroupMemberResponse | PlainMessage<UpdateGroupMemberResponse> | undefined, b: UpdateGroupMemberResponse | PlainMessage<UpdateGroupMemberResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateGroupMemberResponse, a, b);
+  }
+}
+
+/**
  * @generated from message groups.v1.CreateGroupRequest
  */
 export class CreateGroupRequest extends Message<CreateGroupRequest> {

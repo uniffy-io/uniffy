@@ -160,33 +160,33 @@ type FilesServiceClient interface {
 	// Call this for each chunk, then call CompleteUpload when done.
 	UploadChunk(context.Context, *connect.Request[v1.UploadChunkRequest]) (*connect.Response[v1.UploadChunkResponse], error)
 	// Complete an upload after all chunks have been sent.
-	CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.UploadChunksResponse], error)
+	CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.CompleteUploadResponse], error)
 	// Stream file chunks to backend (client streaming RPC - server-to-server only).
 	// NOTE: This does not work in browsers due to Fetch API limitations.
-	UploadChunks(context.Context) *connect.ClientStreamForClient[v1.UploadChunkRequest, v1.UploadChunksResponse]
+	UploadChunks(context.Context) *connect.ClientStreamForClient[v1.UploadChunksRequest, v1.UploadChunksResponse]
 	// Get status of an in-progress upload (for resuming after disconnect).
 	GetUploadStatus(context.Context, *connect.Request[v1.GetUploadStatusRequest]) (*connect.Response[v1.GetUploadStatusResponse], error)
 	// Abort an in-progress upload.
 	AbortUpload(context.Context, *connect.Request[v1.AbortUploadRequest]) (*connect.Response[v1.AbortUploadResponse], error)
 	// Stream file content from backend to client (server streaming RPC).
-	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadChunkResponse], error)
+	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadFileResponse], error)
 	// Stream file with byte range support for Service Worker media streaming.
 	// This RPC supports HTTP Range-like semantics for video/audio seeking.
 	StreamFileRange(context.Context, *connect.Request[v1.StreamFileRangeRequest]) (*connect.ServerStreamForClient[v1.StreamFileRangeResponse], error)
 	// Get a file by ID.
-	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.FileResponse], error)
+	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Update file metadata (rename, tags, description).
-	UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.FileResponse], error)
+	UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.UpdateFileResponse], error)
 	// Delete a file (soft delete by default).
 	DeleteFile(context.Context, *connect.Request[v1.DeleteFileRequest]) (*connect.Response[v1.DeleteFileResponse], error)
 	// Restore a soft-deleted file.
-	RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.FileResponse], error)
+	RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.RestoreFileResponse], error)
 	// List files with pagination and filters.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Create a new folder.
-	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error)
 	// Update a folder.
-	UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.UpdateFolderResponse], error)
 	// Delete a folder.
 	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// Get the full file/folder tree.
@@ -196,7 +196,7 @@ type FilesServiceClient interface {
 	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
 	// concurrent invocations across backend instances. Used by the screen
 	// recording feature to resolve the upload destination on first record.
-	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.EnsureRecordingsFolderResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -208,11 +208,11 @@ type FilesServiceClient interface {
 	// List deleted files and folders (trash).
 	ListTrash(context.Context, *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error)
 	// Restore a soft-deleted folder (and its contents) back to its parent.
-	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.RestoreFolderResponse], error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
-	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error)
+	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
 	// Set or update the organization storage quota configuration.
@@ -234,11 +234,11 @@ type FilesServiceClient interface {
 	// Pre-check whether an upload of a given size is allowed under quota.
 	CheckStorageQuota(context.Context, *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error)
 	// Create a new saved filter.
-	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error)
 	// Get a saved filter by ID.
-	GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.GetSavedFilterResponse], error)
 	// Update a saved filter.
-	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error)
 	// Delete a saved filter.
 	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
 	// List saved filters for the current user.
@@ -268,13 +268,13 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("UploadChunk")),
 			connect.WithClientOptions(opts...),
 		),
-		completeUpload: connect.NewClient[v1.CompleteUploadRequest, v1.UploadChunksResponse](
+		completeUpload: connect.NewClient[v1.CompleteUploadRequest, v1.CompleteUploadResponse](
 			httpClient,
 			baseURL+FilesServiceCompleteUploadProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("CompleteUpload")),
 			connect.WithClientOptions(opts...),
 		),
-		uploadChunks: connect.NewClient[v1.UploadChunkRequest, v1.UploadChunksResponse](
+		uploadChunks: connect.NewClient[v1.UploadChunksRequest, v1.UploadChunksResponse](
 			httpClient,
 			baseURL+FilesServiceUploadChunksProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("UploadChunks")),
@@ -292,7 +292,7 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("AbortUpload")),
 			connect.WithClientOptions(opts...),
 		),
-		downloadFile: connect.NewClient[v1.DownloadFileRequest, v1.DownloadChunkResponse](
+		downloadFile: connect.NewClient[v1.DownloadFileRequest, v1.DownloadFileResponse](
 			httpClient,
 			baseURL+FilesServiceDownloadFileProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("DownloadFile")),
@@ -304,13 +304,13 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("StreamFileRange")),
 			connect.WithClientOptions(opts...),
 		),
-		getFile: connect.NewClient[v1.GetFileRequest, v1.FileResponse](
+		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
 			httpClient,
 			baseURL+FilesServiceGetFileProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("GetFile")),
 			connect.WithClientOptions(opts...),
 		),
-		updateFile: connect.NewClient[v1.UpdateFileRequest, v1.FileResponse](
+		updateFile: connect.NewClient[v1.UpdateFileRequest, v1.UpdateFileResponse](
 			httpClient,
 			baseURL+FilesServiceUpdateFileProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("UpdateFile")),
@@ -322,7 +322,7 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("DeleteFile")),
 			connect.WithClientOptions(opts...),
 		),
-		restoreFile: connect.NewClient[v1.RestoreFileRequest, v1.FileResponse](
+		restoreFile: connect.NewClient[v1.RestoreFileRequest, v1.RestoreFileResponse](
 			httpClient,
 			baseURL+FilesServiceRestoreFileProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("RestoreFile")),
@@ -334,13 +334,13 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("ListFiles")),
 			connect.WithClientOptions(opts...),
 		),
-		createFolder: connect.NewClient[v1.CreateFolderRequest, v1.FolderResponse](
+		createFolder: connect.NewClient[v1.CreateFolderRequest, v1.CreateFolderResponse](
 			httpClient,
 			baseURL+FilesServiceCreateFolderProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("CreateFolder")),
 			connect.WithClientOptions(opts...),
 		),
-		updateFolder: connect.NewClient[v1.UpdateFolderRequest, v1.FolderResponse](
+		updateFolder: connect.NewClient[v1.UpdateFolderRequest, v1.UpdateFolderResponse](
 			httpClient,
 			baseURL+FilesServiceUpdateFolderProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("UpdateFolder")),
@@ -364,7 +364,7 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("CreateFolderTree")),
 			connect.WithClientOptions(opts...),
 		),
-		ensureRecordingsFolder: connect.NewClient[v1.EnsureRecordingsFolderRequest, v1.FolderResponse](
+		ensureRecordingsFolder: connect.NewClient[v1.EnsureRecordingsFolderRequest, v1.EnsureRecordingsFolderResponse](
 			httpClient,
 			baseURL+FilesServiceEnsureRecordingsFolderProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("EnsureRecordingsFolder")),
@@ -400,7 +400,7 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("ListTrash")),
 			connect.WithClientOptions(opts...),
 		),
-		restoreFolder: connect.NewClient[v1.RestoreFolderRequest, v1.FolderResponse](
+		restoreFolder: connect.NewClient[v1.RestoreFolderRequest, v1.RestoreFolderResponse](
 			httpClient,
 			baseURL+FilesServiceRestoreFolderProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("RestoreFolder")),
@@ -412,7 +412,7 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("ListFileVersions")),
 			connect.WithClientOptions(opts...),
 		),
-		restoreFileVersion: connect.NewClient[v1.RestoreFileVersionRequest, v1.FileResponse](
+		restoreFileVersion: connect.NewClient[v1.RestoreFileVersionRequest, v1.RestoreFileVersionResponse](
 			httpClient,
 			baseURL+FilesServiceRestoreFileVersionProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("RestoreFileVersion")),
@@ -478,19 +478,19 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("CheckStorageQuota")),
 			connect.WithClientOptions(opts...),
 		),
-		createSavedFilter: connect.NewClient[v1.CreateSavedFilterRequest, v1.SavedFilterResponse](
+		createSavedFilter: connect.NewClient[v1.CreateSavedFilterRequest, v1.CreateSavedFilterResponse](
 			httpClient,
 			baseURL+FilesServiceCreateSavedFilterProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("CreateSavedFilter")),
 			connect.WithClientOptions(opts...),
 		),
-		getSavedFilter: connect.NewClient[v1.GetSavedFilterRequest, v1.SavedFilterResponse](
+		getSavedFilter: connect.NewClient[v1.GetSavedFilterRequest, v1.GetSavedFilterResponse](
 			httpClient,
 			baseURL+FilesServiceGetSavedFilterProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("GetSavedFilter")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSavedFilter: connect.NewClient[v1.UpdateSavedFilterRequest, v1.SavedFilterResponse](
+		updateSavedFilter: connect.NewClient[v1.UpdateSavedFilterRequest, v1.UpdateSavedFilterResponse](
 			httpClient,
 			baseURL+FilesServiceUpdateSavedFilterProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("UpdateSavedFilter")),
@@ -515,31 +515,31 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type filesServiceClient struct {
 	initiateUpload                 *connect.Client[v1.InitiateUploadRequest, v1.InitiateUploadResponse]
 	uploadChunk                    *connect.Client[v1.UploadChunkRequest, v1.UploadChunkResponse]
-	completeUpload                 *connect.Client[v1.CompleteUploadRequest, v1.UploadChunksResponse]
-	uploadChunks                   *connect.Client[v1.UploadChunkRequest, v1.UploadChunksResponse]
+	completeUpload                 *connect.Client[v1.CompleteUploadRequest, v1.CompleteUploadResponse]
+	uploadChunks                   *connect.Client[v1.UploadChunksRequest, v1.UploadChunksResponse]
 	getUploadStatus                *connect.Client[v1.GetUploadStatusRequest, v1.GetUploadStatusResponse]
 	abortUpload                    *connect.Client[v1.AbortUploadRequest, v1.AbortUploadResponse]
-	downloadFile                   *connect.Client[v1.DownloadFileRequest, v1.DownloadChunkResponse]
+	downloadFile                   *connect.Client[v1.DownloadFileRequest, v1.DownloadFileResponse]
 	streamFileRange                *connect.Client[v1.StreamFileRangeRequest, v1.StreamFileRangeResponse]
-	getFile                        *connect.Client[v1.GetFileRequest, v1.FileResponse]
-	updateFile                     *connect.Client[v1.UpdateFileRequest, v1.FileResponse]
+	getFile                        *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
+	updateFile                     *connect.Client[v1.UpdateFileRequest, v1.UpdateFileResponse]
 	deleteFile                     *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
-	restoreFile                    *connect.Client[v1.RestoreFileRequest, v1.FileResponse]
+	restoreFile                    *connect.Client[v1.RestoreFileRequest, v1.RestoreFileResponse]
 	listFiles                      *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	createFolder                   *connect.Client[v1.CreateFolderRequest, v1.FolderResponse]
-	updateFolder                   *connect.Client[v1.UpdateFolderRequest, v1.FolderResponse]
+	createFolder                   *connect.Client[v1.CreateFolderRequest, v1.CreateFolderResponse]
+	updateFolder                   *connect.Client[v1.UpdateFolderRequest, v1.UpdateFolderResponse]
 	deleteFolder                   *connect.Client[v1.DeleteFolderRequest, v1.DeleteFolderResponse]
 	getFilesTree                   *connect.Client[v1.GetFilesTreeRequest, v1.GetFilesTreeResponse]
 	createFolderTree               *connect.Client[v1.CreateFolderTreeRequest, v1.CreateFolderTreeResponse]
-	ensureRecordingsFolder         *connect.Client[v1.EnsureRecordingsFolderRequest, v1.FolderResponse]
+	ensureRecordingsFolder         *connect.Client[v1.EnsureRecordingsFolderRequest, v1.EnsureRecordingsFolderResponse]
 	moveItems                      *connect.Client[v1.MoveItemsRequest, v1.MoveItemsResponse]
 	copyItems                      *connect.Client[v1.CopyItemsRequest, v1.CopyItemsResponse]
 	bulkDelete                     *connect.Client[v1.BulkDeleteRequest, v1.BulkDeleteResponse]
 	emptyTrash                     *connect.Client[v1.EmptyTrashRequest, v1.EmptyTrashResponse]
 	listTrash                      *connect.Client[v1.ListTrashRequest, v1.ListTrashResponse]
-	restoreFolder                  *connect.Client[v1.RestoreFolderRequest, v1.FolderResponse]
+	restoreFolder                  *connect.Client[v1.RestoreFolderRequest, v1.RestoreFolderResponse]
 	listFileVersions               *connect.Client[v1.ListFileVersionsRequest, v1.ListFileVersionsResponse]
-	restoreFileVersion             *connect.Client[v1.RestoreFileVersionRequest, v1.FileResponse]
+	restoreFileVersion             *connect.Client[v1.RestoreFileVersionRequest, v1.RestoreFileVersionResponse]
 	getOrgStorageQuota             *connect.Client[v1.GetOrgStorageQuotaRequest, v1.GetOrgStorageQuotaResponse]
 	setOrgStorageQuota             *connect.Client[v1.SetOrgStorageQuotaRequest, v1.SetOrgStorageQuotaResponse]
 	getUserStorageQuota            *connect.Client[v1.GetUserStorageQuotaRequest, v1.GetUserStorageQuotaResponse]
@@ -550,9 +550,9 @@ type filesServiceClient struct {
 	listOrgStorageUsage            *connect.Client[v1.ListOrgStorageUsageRequest, v1.ListOrgStorageUsageResponse]
 	recalculateStorageUsage        *connect.Client[v1.RecalculateStorageUsageRequest, v1.RecalculateStorageUsageResponse]
 	checkStorageQuota              *connect.Client[v1.CheckStorageQuotaRequest, v1.CheckStorageQuotaResponse]
-	createSavedFilter              *connect.Client[v1.CreateSavedFilterRequest, v1.SavedFilterResponse]
-	getSavedFilter                 *connect.Client[v1.GetSavedFilterRequest, v1.SavedFilterResponse]
-	updateSavedFilter              *connect.Client[v1.UpdateSavedFilterRequest, v1.SavedFilterResponse]
+	createSavedFilter              *connect.Client[v1.CreateSavedFilterRequest, v1.CreateSavedFilterResponse]
+	getSavedFilter                 *connect.Client[v1.GetSavedFilterRequest, v1.GetSavedFilterResponse]
+	updateSavedFilter              *connect.Client[v1.UpdateSavedFilterRequest, v1.UpdateSavedFilterResponse]
 	deleteSavedFilter              *connect.Client[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse]
 	listSavedFilters               *connect.Client[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse]
 }
@@ -568,12 +568,12 @@ func (c *filesServiceClient) UploadChunk(ctx context.Context, req *connect.Reque
 }
 
 // CompleteUpload calls files.v1.FilesService.CompleteUpload.
-func (c *filesServiceClient) CompleteUpload(ctx context.Context, req *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.UploadChunksResponse], error) {
+func (c *filesServiceClient) CompleteUpload(ctx context.Context, req *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.CompleteUploadResponse], error) {
 	return c.completeUpload.CallUnary(ctx, req)
 }
 
 // UploadChunks calls files.v1.FilesService.UploadChunks.
-func (c *filesServiceClient) UploadChunks(ctx context.Context) *connect.ClientStreamForClient[v1.UploadChunkRequest, v1.UploadChunksResponse] {
+func (c *filesServiceClient) UploadChunks(ctx context.Context) *connect.ClientStreamForClient[v1.UploadChunksRequest, v1.UploadChunksResponse] {
 	return c.uploadChunks.CallClientStream(ctx)
 }
 
@@ -588,7 +588,7 @@ func (c *filesServiceClient) AbortUpload(ctx context.Context, req *connect.Reque
 }
 
 // DownloadFile calls files.v1.FilesService.DownloadFile.
-func (c *filesServiceClient) DownloadFile(ctx context.Context, req *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadChunkResponse], error) {
+func (c *filesServiceClient) DownloadFile(ctx context.Context, req *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadFileResponse], error) {
 	return c.downloadFile.CallServerStream(ctx, req)
 }
 
@@ -598,12 +598,12 @@ func (c *filesServiceClient) StreamFileRange(ctx context.Context, req *connect.R
 }
 
 // GetFile calls files.v1.FilesService.GetFile.
-func (c *filesServiceClient) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (c *filesServiceClient) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return c.getFile.CallUnary(ctx, req)
 }
 
 // UpdateFile calls files.v1.FilesService.UpdateFile.
-func (c *filesServiceClient) UpdateFile(ctx context.Context, req *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (c *filesServiceClient) UpdateFile(ctx context.Context, req *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.UpdateFileResponse], error) {
 	return c.updateFile.CallUnary(ctx, req)
 }
 
@@ -613,7 +613,7 @@ func (c *filesServiceClient) DeleteFile(ctx context.Context, req *connect.Reques
 }
 
 // RestoreFile calls files.v1.FilesService.RestoreFile.
-func (c *filesServiceClient) RestoreFile(ctx context.Context, req *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (c *filesServiceClient) RestoreFile(ctx context.Context, req *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.RestoreFileResponse], error) {
 	return c.restoreFile.CallUnary(ctx, req)
 }
 
@@ -623,12 +623,12 @@ func (c *filesServiceClient) ListFiles(ctx context.Context, req *connect.Request
 }
 
 // CreateFolder calls files.v1.FilesService.CreateFolder.
-func (c *filesServiceClient) CreateFolder(ctx context.Context, req *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (c *filesServiceClient) CreateFolder(ctx context.Context, req *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error) {
 	return c.createFolder.CallUnary(ctx, req)
 }
 
 // UpdateFolder calls files.v1.FilesService.UpdateFolder.
-func (c *filesServiceClient) UpdateFolder(ctx context.Context, req *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (c *filesServiceClient) UpdateFolder(ctx context.Context, req *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.UpdateFolderResponse], error) {
 	return c.updateFolder.CallUnary(ctx, req)
 }
 
@@ -648,7 +648,7 @@ func (c *filesServiceClient) CreateFolderTree(ctx context.Context, req *connect.
 }
 
 // EnsureRecordingsFolder calls files.v1.FilesService.EnsureRecordingsFolder.
-func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, req *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (c *filesServiceClient) EnsureRecordingsFolder(ctx context.Context, req *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.EnsureRecordingsFolderResponse], error) {
 	return c.ensureRecordingsFolder.CallUnary(ctx, req)
 }
 
@@ -678,7 +678,7 @@ func (c *filesServiceClient) ListTrash(ctx context.Context, req *connect.Request
 }
 
 // RestoreFolder calls files.v1.FilesService.RestoreFolder.
-func (c *filesServiceClient) RestoreFolder(ctx context.Context, req *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (c *filesServiceClient) RestoreFolder(ctx context.Context, req *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.RestoreFolderResponse], error) {
 	return c.restoreFolder.CallUnary(ctx, req)
 }
 
@@ -688,7 +688,7 @@ func (c *filesServiceClient) ListFileVersions(ctx context.Context, req *connect.
 }
 
 // RestoreFileVersion calls files.v1.FilesService.RestoreFileVersion.
-func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, req *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error) {
+func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, req *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error) {
 	return c.restoreFileVersion.CallUnary(ctx, req)
 }
 
@@ -743,17 +743,17 @@ func (c *filesServiceClient) CheckStorageQuota(ctx context.Context, req *connect
 }
 
 // CreateSavedFilter calls files.v1.FilesService.CreateSavedFilter.
-func (c *filesServiceClient) CreateSavedFilter(ctx context.Context, req *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (c *filesServiceClient) CreateSavedFilter(ctx context.Context, req *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error) {
 	return c.createSavedFilter.CallUnary(ctx, req)
 }
 
 // GetSavedFilter calls files.v1.FilesService.GetSavedFilter.
-func (c *filesServiceClient) GetSavedFilter(ctx context.Context, req *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (c *filesServiceClient) GetSavedFilter(ctx context.Context, req *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.GetSavedFilterResponse], error) {
 	return c.getSavedFilter.CallUnary(ctx, req)
 }
 
 // UpdateSavedFilter calls files.v1.FilesService.UpdateSavedFilter.
-func (c *filesServiceClient) UpdateSavedFilter(ctx context.Context, req *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (c *filesServiceClient) UpdateSavedFilter(ctx context.Context, req *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error) {
 	return c.updateSavedFilter.CallUnary(ctx, req)
 }
 
@@ -775,33 +775,33 @@ type FilesServiceHandler interface {
 	// Call this for each chunk, then call CompleteUpload when done.
 	UploadChunk(context.Context, *connect.Request[v1.UploadChunkRequest]) (*connect.Response[v1.UploadChunkResponse], error)
 	// Complete an upload after all chunks have been sent.
-	CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.UploadChunksResponse], error)
+	CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.CompleteUploadResponse], error)
 	// Stream file chunks to backend (client streaming RPC - server-to-server only).
 	// NOTE: This does not work in browsers due to Fetch API limitations.
-	UploadChunks(context.Context, *connect.ClientStream[v1.UploadChunkRequest]) (*connect.Response[v1.UploadChunksResponse], error)
+	UploadChunks(context.Context, *connect.ClientStream[v1.UploadChunksRequest]) (*connect.Response[v1.UploadChunksResponse], error)
 	// Get status of an in-progress upload (for resuming after disconnect).
 	GetUploadStatus(context.Context, *connect.Request[v1.GetUploadStatusRequest]) (*connect.Response[v1.GetUploadStatusResponse], error)
 	// Abort an in-progress upload.
 	AbortUpload(context.Context, *connect.Request[v1.AbortUploadRequest]) (*connect.Response[v1.AbortUploadResponse], error)
 	// Stream file content from backend to client (server streaming RPC).
-	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadChunkResponse]) error
+	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadFileResponse]) error
 	// Stream file with byte range support for Service Worker media streaming.
 	// This RPC supports HTTP Range-like semantics for video/audio seeking.
 	StreamFileRange(context.Context, *connect.Request[v1.StreamFileRangeRequest], *connect.ServerStream[v1.StreamFileRangeResponse]) error
 	// Get a file by ID.
-	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.FileResponse], error)
+	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Update file metadata (rename, tags, description).
-	UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.FileResponse], error)
+	UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.UpdateFileResponse], error)
 	// Delete a file (soft delete by default).
 	DeleteFile(context.Context, *connect.Request[v1.DeleteFileRequest]) (*connect.Response[v1.DeleteFileResponse], error)
 	// Restore a soft-deleted file.
-	RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.FileResponse], error)
+	RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.RestoreFileResponse], error)
 	// List files with pagination and filters.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Create a new folder.
-	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error)
 	// Update a folder.
-	UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.UpdateFolderResponse], error)
 	// Delete a folder.
 	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// Get the full file/folder tree.
@@ -811,7 +811,7 @@ type FilesServiceHandler interface {
 	// Lazily create or fetch the per-user "Recordings" folder. Idempotent under
 	// concurrent invocations across backend instances. Used by the screen
 	// recording feature to resolve the upload destination on first record.
-	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.EnsureRecordingsFolderResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -823,11 +823,11 @@ type FilesServiceHandler interface {
 	// List deleted files and folders (trash).
 	ListTrash(context.Context, *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error)
 	// Restore a soft-deleted folder (and its contents) back to its parent.
-	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error)
+	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.RestoreFolderResponse], error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
-	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error)
+	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
 	// Set or update the organization storage quota configuration.
@@ -849,11 +849,11 @@ type FilesServiceHandler interface {
 	// Pre-check whether an upload of a given size is allowed under quota.
 	CheckStorageQuota(context.Context, *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error)
 	// Create a new saved filter.
-	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error)
 	// Get a saved filter by ID.
-	GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.GetSavedFilterResponse], error)
 	// Update a saved filter.
-	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
+	UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error)
 	// Delete a saved filter.
 	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
 	// List saved filters for the current user.
@@ -1222,11 +1222,11 @@ func (UnimplementedFilesServiceHandler) UploadChunk(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UploadChunk is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.UploadChunksResponse], error) {
+func (UnimplementedFilesServiceHandler) CompleteUpload(context.Context, *connect.Request[v1.CompleteUploadRequest]) (*connect.Response[v1.CompleteUploadResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CompleteUpload is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) UploadChunks(context.Context, *connect.ClientStream[v1.UploadChunkRequest]) (*connect.Response[v1.UploadChunksResponse], error) {
+func (UnimplementedFilesServiceHandler) UploadChunks(context.Context, *connect.ClientStream[v1.UploadChunksRequest]) (*connect.Response[v1.UploadChunksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UploadChunks is not implemented"))
 }
 
@@ -1238,7 +1238,7 @@ func (UnimplementedFilesServiceHandler) AbortUpload(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.AbortUpload is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadChunkResponse]) error {
+func (UnimplementedFilesServiceHandler) DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadFileResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.DownloadFile is not implemented"))
 }
 
@@ -1246,11 +1246,11 @@ func (UnimplementedFilesServiceHandler) StreamFileRange(context.Context, *connec
 	return connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.StreamFileRange is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (UnimplementedFilesServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetFile is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (UnimplementedFilesServiceHandler) UpdateFile(context.Context, *connect.Request[v1.UpdateFileRequest]) (*connect.Response[v1.UpdateFileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UpdateFile is not implemented"))
 }
 
@@ -1258,7 +1258,7 @@ func (UnimplementedFilesServiceHandler) DeleteFile(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.DeleteFile is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.FileResponse], error) {
+func (UnimplementedFilesServiceHandler) RestoreFile(context.Context, *connect.Request[v1.RestoreFileRequest]) (*connect.Response[v1.RestoreFileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFile is not implemented"))
 }
 
@@ -1266,11 +1266,11 @@ func (UnimplementedFilesServiceHandler) ListFiles(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListFiles is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (UnimplementedFilesServiceHandler) CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CreateFolder is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (UnimplementedFilesServiceHandler) UpdateFolder(context.Context, *connect.Request[v1.UpdateFolderRequest]) (*connect.Response[v1.UpdateFolderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UpdateFolder is not implemented"))
 }
 
@@ -1286,7 +1286,7 @@ func (UnimplementedFilesServiceHandler) CreateFolderTree(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CreateFolderTree is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (UnimplementedFilesServiceHandler) EnsureRecordingsFolder(context.Context, *connect.Request[v1.EnsureRecordingsFolderRequest]) (*connect.Response[v1.EnsureRecordingsFolderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.EnsureRecordingsFolder is not implemented"))
 }
 
@@ -1310,7 +1310,7 @@ func (UnimplementedFilesServiceHandler) ListTrash(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListTrash is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+func (UnimplementedFilesServiceHandler) RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.RestoreFolderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFolder is not implemented"))
 }
 
@@ -1318,7 +1318,7 @@ func (UnimplementedFilesServiceHandler) ListFileVersions(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListFileVersions is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error) {
+func (UnimplementedFilesServiceHandler) RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFileVersion is not implemented"))
 }
 
@@ -1362,15 +1362,15 @@ func (UnimplementedFilesServiceHandler) CheckStorageQuota(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CheckStorageQuota is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (UnimplementedFilesServiceHandler) CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.CreateSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CreateSavedFilter is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (UnimplementedFilesServiceHandler) GetSavedFilter(context.Context, *connect.Request[v1.GetSavedFilterRequest]) (*connect.Response[v1.GetSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetSavedFilter is not implemented"))
 }
 
-func (UnimplementedFilesServiceHandler) UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {
+func (UnimplementedFilesServiceHandler) UpdateSavedFilter(context.Context, *connect.Request[v1.UpdateSavedFilterRequest]) (*connect.Response[v1.UpdateSavedFilterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UpdateSavedFilter is not implemented"))
 }
 

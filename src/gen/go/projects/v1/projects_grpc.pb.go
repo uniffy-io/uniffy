@@ -55,35 +55,35 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProjectsServiceClient interface {
 	// ----- Projects -----
-	CreateProject(ctx context.Context, in *CreateProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error)
-	GetProject(ctx context.Context, in *GetProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error)
-	UpdateProject(ctx context.Context, in *UpdateProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error)
+	CreateProject(ctx context.Context, in *CreateProjectRequest, opts ...grpc.CallOption) (*CreateProjectResponse, error)
+	GetProject(ctx context.Context, in *GetProjectRequest, opts ...grpc.CallOption) (*GetProjectResponse, error)
+	UpdateProject(ctx context.Context, in *UpdateProjectRequest, opts ...grpc.CallOption) (*UpdateProjectResponse, error)
 	DeleteProject(ctx context.Context, in *DeleteProjectRequest, opts ...grpc.CallOption) (*DeleteProjectResponse, error)
 	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...grpc.CallOption) (*ListProjectsResponse, error)
 	// ----- Tasks -----
-	CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
-	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
-	UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
+	CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error)
+	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskResponse, error)
+	UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*UpdateTaskResponse, error)
 	DeleteTask(ctx context.Context, in *DeleteTaskRequest, opts ...grpc.CallOption) (*DeleteTaskResponse, error)
 	ListTasks(ctx context.Context, in *ListTasksRequest, opts ...grpc.CallOption) (*ListTasksResponse, error)
-	MoveTask(ctx context.Context, in *MoveTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
+	MoveTask(ctx context.Context, in *MoveTaskRequest, opts ...grpc.CallOption) (*MoveTaskResponse, error)
 	BulkUpdateTasks(ctx context.Context, in *BulkUpdateTasksRequest, opts ...grpc.CallOption) (*BulkUpdateTasksResponse, error)
 	DeleteTasks(ctx context.Context, in *DeleteTasksRequest, opts ...grpc.CallOption) (*DeleteTasksResponse, error)
 	// ----- Field Definitions -----
-	CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*FieldResponse, error)
-	UpdateField(ctx context.Context, in *UpdateFieldRequest, opts ...grpc.CallOption) (*FieldResponse, error)
+	CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*CreateFieldResponse, error)
+	UpdateField(ctx context.Context, in *UpdateFieldRequest, opts ...grpc.CallOption) (*UpdateFieldResponse, error)
 	DeleteField(ctx context.Context, in *DeleteFieldRequest, opts ...grpc.CallOption) (*DeleteFieldResponse, error)
 	// ----- View Configs -----
-	CreateView(ctx context.Context, in *CreateViewRequest, opts ...grpc.CallOption) (*ViewResponse, error)
-	UpdateView(ctx context.Context, in *UpdateViewRequest, opts ...grpc.CallOption) (*ViewResponse, error)
+	CreateView(ctx context.Context, in *CreateViewRequest, opts ...grpc.CallOption) (*CreateViewResponse, error)
+	UpdateView(ctx context.Context, in *UpdateViewRequest, opts ...grpc.CallOption) (*UpdateViewResponse, error)
 	DeleteView(ctx context.Context, in *DeleteViewRequest, opts ...grpc.CallOption) (*DeleteViewResponse, error)
 	// ----- Activities -----
 	ListActivities(ctx context.Context, in *ListActivitiesRequest, opts ...grpc.CallOption) (*ListActivitiesResponse, error)
 	// ----- Sprints -----
-	CreateSprint(ctx context.Context, in *CreateSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error)
-	UpdateSprint(ctx context.Context, in *UpdateSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error)
-	StartSprint(ctx context.Context, in *StartSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error)
-	CompleteSprint(ctx context.Context, in *CompleteSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error)
+	CreateSprint(ctx context.Context, in *CreateSprintRequest, opts ...grpc.CallOption) (*CreateSprintResponse, error)
+	UpdateSprint(ctx context.Context, in *UpdateSprintRequest, opts ...grpc.CallOption) (*UpdateSprintResponse, error)
+	StartSprint(ctx context.Context, in *StartSprintRequest, opts ...grpc.CallOption) (*StartSprintResponse, error)
+	CompleteSprint(ctx context.Context, in *CompleteSprintRequest, opts ...grpc.CallOption) (*CompleteSprintResponse, error)
 	DeleteSprint(ctx context.Context, in *DeleteSprintRequest, opts ...grpc.CallOption) (*DeleteSprintResponse, error)
 	ListSprints(ctx context.Context, in *ListSprintsRequest, opts ...grpc.CallOption) (*ListSprintsResponse, error)
 	// ----- Task Watchers -----
@@ -100,9 +100,9 @@ func NewProjectsServiceClient(cc grpc.ClientConnInterface) ProjectsServiceClient
 	return &projectsServiceClient{cc}
 }
 
-func (c *projectsServiceClient) CreateProject(ctx context.Context, in *CreateProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error) {
+func (c *projectsServiceClient) CreateProject(ctx context.Context, in *CreateProjectRequest, opts ...grpc.CallOption) (*CreateProjectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProjectResponse)
+	out := new(CreateProjectResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CreateProject_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -110,9 +110,9 @@ func (c *projectsServiceClient) CreateProject(ctx context.Context, in *CreatePro
 	return out, nil
 }
 
-func (c *projectsServiceClient) GetProject(ctx context.Context, in *GetProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error) {
+func (c *projectsServiceClient) GetProject(ctx context.Context, in *GetProjectRequest, opts ...grpc.CallOption) (*GetProjectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProjectResponse)
+	out := new(GetProjectResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_GetProject_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -120,9 +120,9 @@ func (c *projectsServiceClient) GetProject(ctx context.Context, in *GetProjectRe
 	return out, nil
 }
 
-func (c *projectsServiceClient) UpdateProject(ctx context.Context, in *UpdateProjectRequest, opts ...grpc.CallOption) (*ProjectResponse, error) {
+func (c *projectsServiceClient) UpdateProject(ctx context.Context, in *UpdateProjectRequest, opts ...grpc.CallOption) (*UpdateProjectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProjectResponse)
+	out := new(UpdateProjectResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_UpdateProject_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -150,9 +150,9 @@ func (c *projectsServiceClient) ListProjects(ctx context.Context, in *ListProjec
 	return out, nil
 }
 
-func (c *projectsServiceClient) CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+func (c *projectsServiceClient) CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TaskResponse)
+	out := new(CreateTaskResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CreateTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -160,9 +160,9 @@ func (c *projectsServiceClient) CreateTask(ctx context.Context, in *CreateTaskRe
 	return out, nil
 }
 
-func (c *projectsServiceClient) GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+func (c *projectsServiceClient) GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TaskResponse)
+	out := new(GetTaskResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_GetTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -170,9 +170,9 @@ func (c *projectsServiceClient) GetTask(ctx context.Context, in *GetTaskRequest,
 	return out, nil
 }
 
-func (c *projectsServiceClient) UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+func (c *projectsServiceClient) UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*UpdateTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TaskResponse)
+	out := new(UpdateTaskResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_UpdateTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -200,9 +200,9 @@ func (c *projectsServiceClient) ListTasks(ctx context.Context, in *ListTasksRequ
 	return out, nil
 }
 
-func (c *projectsServiceClient) MoveTask(ctx context.Context, in *MoveTaskRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+func (c *projectsServiceClient) MoveTask(ctx context.Context, in *MoveTaskRequest, opts ...grpc.CallOption) (*MoveTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TaskResponse)
+	out := new(MoveTaskResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_MoveTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -230,9 +230,9 @@ func (c *projectsServiceClient) DeleteTasks(ctx context.Context, in *DeleteTasks
 	return out, nil
 }
 
-func (c *projectsServiceClient) CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*FieldResponse, error) {
+func (c *projectsServiceClient) CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*CreateFieldResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FieldResponse)
+	out := new(CreateFieldResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CreateField_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -240,9 +240,9 @@ func (c *projectsServiceClient) CreateField(ctx context.Context, in *CreateField
 	return out, nil
 }
 
-func (c *projectsServiceClient) UpdateField(ctx context.Context, in *UpdateFieldRequest, opts ...grpc.CallOption) (*FieldResponse, error) {
+func (c *projectsServiceClient) UpdateField(ctx context.Context, in *UpdateFieldRequest, opts ...grpc.CallOption) (*UpdateFieldResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FieldResponse)
+	out := new(UpdateFieldResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_UpdateField_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -260,9 +260,9 @@ func (c *projectsServiceClient) DeleteField(ctx context.Context, in *DeleteField
 	return out, nil
 }
 
-func (c *projectsServiceClient) CreateView(ctx context.Context, in *CreateViewRequest, opts ...grpc.CallOption) (*ViewResponse, error) {
+func (c *projectsServiceClient) CreateView(ctx context.Context, in *CreateViewRequest, opts ...grpc.CallOption) (*CreateViewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ViewResponse)
+	out := new(CreateViewResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CreateView_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -270,9 +270,9 @@ func (c *projectsServiceClient) CreateView(ctx context.Context, in *CreateViewRe
 	return out, nil
 }
 
-func (c *projectsServiceClient) UpdateView(ctx context.Context, in *UpdateViewRequest, opts ...grpc.CallOption) (*ViewResponse, error) {
+func (c *projectsServiceClient) UpdateView(ctx context.Context, in *UpdateViewRequest, opts ...grpc.CallOption) (*UpdateViewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ViewResponse)
+	out := new(UpdateViewResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_UpdateView_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -300,9 +300,9 @@ func (c *projectsServiceClient) ListActivities(ctx context.Context, in *ListActi
 	return out, nil
 }
 
-func (c *projectsServiceClient) CreateSprint(ctx context.Context, in *CreateSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error) {
+func (c *projectsServiceClient) CreateSprint(ctx context.Context, in *CreateSprintRequest, opts ...grpc.CallOption) (*CreateSprintResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SprintResponse)
+	out := new(CreateSprintResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CreateSprint_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -310,9 +310,9 @@ func (c *projectsServiceClient) CreateSprint(ctx context.Context, in *CreateSpri
 	return out, nil
 }
 
-func (c *projectsServiceClient) UpdateSprint(ctx context.Context, in *UpdateSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error) {
+func (c *projectsServiceClient) UpdateSprint(ctx context.Context, in *UpdateSprintRequest, opts ...grpc.CallOption) (*UpdateSprintResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SprintResponse)
+	out := new(UpdateSprintResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_UpdateSprint_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -320,9 +320,9 @@ func (c *projectsServiceClient) UpdateSprint(ctx context.Context, in *UpdateSpri
 	return out, nil
 }
 
-func (c *projectsServiceClient) StartSprint(ctx context.Context, in *StartSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error) {
+func (c *projectsServiceClient) StartSprint(ctx context.Context, in *StartSprintRequest, opts ...grpc.CallOption) (*StartSprintResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SprintResponse)
+	out := new(StartSprintResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_StartSprint_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -330,9 +330,9 @@ func (c *projectsServiceClient) StartSprint(ctx context.Context, in *StartSprint
 	return out, nil
 }
 
-func (c *projectsServiceClient) CompleteSprint(ctx context.Context, in *CompleteSprintRequest, opts ...grpc.CallOption) (*SprintResponse, error) {
+func (c *projectsServiceClient) CompleteSprint(ctx context.Context, in *CompleteSprintRequest, opts ...grpc.CallOption) (*CompleteSprintResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SprintResponse)
+	out := new(CompleteSprintResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_CompleteSprint_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -395,35 +395,35 @@ func (c *projectsServiceClient) BulkCheckTaskWatchers(ctx context.Context, in *B
 // for forward compatibility.
 type ProjectsServiceServer interface {
 	// ----- Projects -----
-	CreateProject(context.Context, *CreateProjectRequest) (*ProjectResponse, error)
-	GetProject(context.Context, *GetProjectRequest) (*ProjectResponse, error)
-	UpdateProject(context.Context, *UpdateProjectRequest) (*ProjectResponse, error)
+	CreateProject(context.Context, *CreateProjectRequest) (*CreateProjectResponse, error)
+	GetProject(context.Context, *GetProjectRequest) (*GetProjectResponse, error)
+	UpdateProject(context.Context, *UpdateProjectRequest) (*UpdateProjectResponse, error)
 	DeleteProject(context.Context, *DeleteProjectRequest) (*DeleteProjectResponse, error)
 	ListProjects(context.Context, *ListProjectsRequest) (*ListProjectsResponse, error)
 	// ----- Tasks -----
-	CreateTask(context.Context, *CreateTaskRequest) (*TaskResponse, error)
-	GetTask(context.Context, *GetTaskRequest) (*TaskResponse, error)
-	UpdateTask(context.Context, *UpdateTaskRequest) (*TaskResponse, error)
+	CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error)
+	GetTask(context.Context, *GetTaskRequest) (*GetTaskResponse, error)
+	UpdateTask(context.Context, *UpdateTaskRequest) (*UpdateTaskResponse, error)
 	DeleteTask(context.Context, *DeleteTaskRequest) (*DeleteTaskResponse, error)
 	ListTasks(context.Context, *ListTasksRequest) (*ListTasksResponse, error)
-	MoveTask(context.Context, *MoveTaskRequest) (*TaskResponse, error)
+	MoveTask(context.Context, *MoveTaskRequest) (*MoveTaskResponse, error)
 	BulkUpdateTasks(context.Context, *BulkUpdateTasksRequest) (*BulkUpdateTasksResponse, error)
 	DeleteTasks(context.Context, *DeleteTasksRequest) (*DeleteTasksResponse, error)
 	// ----- Field Definitions -----
-	CreateField(context.Context, *CreateFieldRequest) (*FieldResponse, error)
-	UpdateField(context.Context, *UpdateFieldRequest) (*FieldResponse, error)
+	CreateField(context.Context, *CreateFieldRequest) (*CreateFieldResponse, error)
+	UpdateField(context.Context, *UpdateFieldRequest) (*UpdateFieldResponse, error)
 	DeleteField(context.Context, *DeleteFieldRequest) (*DeleteFieldResponse, error)
 	// ----- View Configs -----
-	CreateView(context.Context, *CreateViewRequest) (*ViewResponse, error)
-	UpdateView(context.Context, *UpdateViewRequest) (*ViewResponse, error)
+	CreateView(context.Context, *CreateViewRequest) (*CreateViewResponse, error)
+	UpdateView(context.Context, *UpdateViewRequest) (*UpdateViewResponse, error)
 	DeleteView(context.Context, *DeleteViewRequest) (*DeleteViewResponse, error)
 	// ----- Activities -----
 	ListActivities(context.Context, *ListActivitiesRequest) (*ListActivitiesResponse, error)
 	// ----- Sprints -----
-	CreateSprint(context.Context, *CreateSprintRequest) (*SprintResponse, error)
-	UpdateSprint(context.Context, *UpdateSprintRequest) (*SprintResponse, error)
-	StartSprint(context.Context, *StartSprintRequest) (*SprintResponse, error)
-	CompleteSprint(context.Context, *CompleteSprintRequest) (*SprintResponse, error)
+	CreateSprint(context.Context, *CreateSprintRequest) (*CreateSprintResponse, error)
+	UpdateSprint(context.Context, *UpdateSprintRequest) (*UpdateSprintResponse, error)
+	StartSprint(context.Context, *StartSprintRequest) (*StartSprintResponse, error)
+	CompleteSprint(context.Context, *CompleteSprintRequest) (*CompleteSprintResponse, error)
 	DeleteSprint(context.Context, *DeleteSprintRequest) (*DeleteSprintResponse, error)
 	ListSprints(context.Context, *ListSprintsRequest) (*ListSprintsResponse, error)
 	// ----- Task Watchers -----
@@ -440,13 +440,13 @@ type ProjectsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProjectsServiceServer struct{}
 
-func (UnimplementedProjectsServiceServer) CreateProject(context.Context, *CreateProjectRequest) (*ProjectResponse, error) {
+func (UnimplementedProjectsServiceServer) CreateProject(context.Context, *CreateProjectRequest) (*CreateProjectResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProject not implemented")
 }
-func (UnimplementedProjectsServiceServer) GetProject(context.Context, *GetProjectRequest) (*ProjectResponse, error) {
+func (UnimplementedProjectsServiceServer) GetProject(context.Context, *GetProjectRequest) (*GetProjectResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProject not implemented")
 }
-func (UnimplementedProjectsServiceServer) UpdateProject(context.Context, *UpdateProjectRequest) (*ProjectResponse, error) {
+func (UnimplementedProjectsServiceServer) UpdateProject(context.Context, *UpdateProjectRequest) (*UpdateProjectResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateProject not implemented")
 }
 func (UnimplementedProjectsServiceServer) DeleteProject(context.Context, *DeleteProjectRequest) (*DeleteProjectResponse, error) {
@@ -455,13 +455,13 @@ func (UnimplementedProjectsServiceServer) DeleteProject(context.Context, *Delete
 func (UnimplementedProjectsServiceServer) ListProjects(context.Context, *ListProjectsRequest) (*ListProjectsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProjects not implemented")
 }
-func (UnimplementedProjectsServiceServer) CreateTask(context.Context, *CreateTaskRequest) (*TaskResponse, error) {
+func (UnimplementedProjectsServiceServer) CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTask not implemented")
 }
-func (UnimplementedProjectsServiceServer) GetTask(context.Context, *GetTaskRequest) (*TaskResponse, error) {
+func (UnimplementedProjectsServiceServer) GetTask(context.Context, *GetTaskRequest) (*GetTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTask not implemented")
 }
-func (UnimplementedProjectsServiceServer) UpdateTask(context.Context, *UpdateTaskRequest) (*TaskResponse, error) {
+func (UnimplementedProjectsServiceServer) UpdateTask(context.Context, *UpdateTaskRequest) (*UpdateTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateTask not implemented")
 }
 func (UnimplementedProjectsServiceServer) DeleteTask(context.Context, *DeleteTaskRequest) (*DeleteTaskResponse, error) {
@@ -470,7 +470,7 @@ func (UnimplementedProjectsServiceServer) DeleteTask(context.Context, *DeleteTas
 func (UnimplementedProjectsServiceServer) ListTasks(context.Context, *ListTasksRequest) (*ListTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTasks not implemented")
 }
-func (UnimplementedProjectsServiceServer) MoveTask(context.Context, *MoveTaskRequest) (*TaskResponse, error) {
+func (UnimplementedProjectsServiceServer) MoveTask(context.Context, *MoveTaskRequest) (*MoveTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveTask not implemented")
 }
 func (UnimplementedProjectsServiceServer) BulkUpdateTasks(context.Context, *BulkUpdateTasksRequest) (*BulkUpdateTasksResponse, error) {
@@ -479,19 +479,19 @@ func (UnimplementedProjectsServiceServer) BulkUpdateTasks(context.Context, *Bulk
 func (UnimplementedProjectsServiceServer) DeleteTasks(context.Context, *DeleteTasksRequest) (*DeleteTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTasks not implemented")
 }
-func (UnimplementedProjectsServiceServer) CreateField(context.Context, *CreateFieldRequest) (*FieldResponse, error) {
+func (UnimplementedProjectsServiceServer) CreateField(context.Context, *CreateFieldRequest) (*CreateFieldResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateField not implemented")
 }
-func (UnimplementedProjectsServiceServer) UpdateField(context.Context, *UpdateFieldRequest) (*FieldResponse, error) {
+func (UnimplementedProjectsServiceServer) UpdateField(context.Context, *UpdateFieldRequest) (*UpdateFieldResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateField not implemented")
 }
 func (UnimplementedProjectsServiceServer) DeleteField(context.Context, *DeleteFieldRequest) (*DeleteFieldResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteField not implemented")
 }
-func (UnimplementedProjectsServiceServer) CreateView(context.Context, *CreateViewRequest) (*ViewResponse, error) {
+func (UnimplementedProjectsServiceServer) CreateView(context.Context, *CreateViewRequest) (*CreateViewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateView not implemented")
 }
-func (UnimplementedProjectsServiceServer) UpdateView(context.Context, *UpdateViewRequest) (*ViewResponse, error) {
+func (UnimplementedProjectsServiceServer) UpdateView(context.Context, *UpdateViewRequest) (*UpdateViewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateView not implemented")
 }
 func (UnimplementedProjectsServiceServer) DeleteView(context.Context, *DeleteViewRequest) (*DeleteViewResponse, error) {
@@ -500,16 +500,16 @@ func (UnimplementedProjectsServiceServer) DeleteView(context.Context, *DeleteVie
 func (UnimplementedProjectsServiceServer) ListActivities(context.Context, *ListActivitiesRequest) (*ListActivitiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListActivities not implemented")
 }
-func (UnimplementedProjectsServiceServer) CreateSprint(context.Context, *CreateSprintRequest) (*SprintResponse, error) {
+func (UnimplementedProjectsServiceServer) CreateSprint(context.Context, *CreateSprintRequest) (*CreateSprintResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSprint not implemented")
 }
-func (UnimplementedProjectsServiceServer) UpdateSprint(context.Context, *UpdateSprintRequest) (*SprintResponse, error) {
+func (UnimplementedProjectsServiceServer) UpdateSprint(context.Context, *UpdateSprintRequest) (*UpdateSprintResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSprint not implemented")
 }
-func (UnimplementedProjectsServiceServer) StartSprint(context.Context, *StartSprintRequest) (*SprintResponse, error) {
+func (UnimplementedProjectsServiceServer) StartSprint(context.Context, *StartSprintRequest) (*StartSprintResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StartSprint not implemented")
 }
-func (UnimplementedProjectsServiceServer) CompleteSprint(context.Context, *CompleteSprintRequest) (*SprintResponse, error) {
+func (UnimplementedProjectsServiceServer) CompleteSprint(context.Context, *CompleteSprintRequest) (*CompleteSprintResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteSprint not implemented")
 }
 func (UnimplementedProjectsServiceServer) DeleteSprint(context.Context, *DeleteSprintRequest) (*DeleteSprintResponse, error) {

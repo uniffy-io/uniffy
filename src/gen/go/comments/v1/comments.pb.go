@@ -1492,7 +1492,7 @@ var File_comments_v1_comments_proto protoreflect.FileDescriptor
 
 const file_comments_v1_comments_proto_rawDesc = "" +
 	"\n" +
-	"\x1acomments/v1/comments.proto\x12\vcomments.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x16common/v1/common.proto\"\x83\b\n" +
+	"\x1acomments/v1/comments.proto\x12\vcomments.v1\x1a\x16common/v1/common.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\b\n" +
 	"\aComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x129\n" +

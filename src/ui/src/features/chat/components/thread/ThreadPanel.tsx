@@ -16,7 +16,7 @@ import {
   selectActiveThreadMessages,
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchThreadMessages, sendMessage } from '@/features/chat/store/chatThunks';
-import { selectTypingInThread } from '@/features/chat/store/chatMessagesSlice';
+import { selectTypingInThread, evictExpiredTyping } from '@/features/chat/store/chatMessagesSlice';
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
@@ -54,6 +54,15 @@ export function ThreadPanel() {
       }));
     }
   }, [activeThreadId, rootMessage, dispatch]);
+
+  // Evict expired typing entries on a tick so stale "is typing" disappears.
+  useEffect(() => {
+    if (!activeThreadId || threadTyping.length === 0) return;
+    const timer = setInterval(() => {
+      dispatch(evictExpiredTyping({ rootId: activeThreadId }));
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [dispatch, activeThreadId, threadTyping.length]);
 
   // Reset stick-to-bottom when switching threads
   useLayoutEffect(() => {

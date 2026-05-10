@@ -100,49 +100,49 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
   /**
    * Optional metadata
    *
-   * @generated from field: map<string, string> metadata = 7;
+   * @generated from field: map<string, string> metadata = 6;
    */
   metadata: { [key: string]: string } = {};
 
   /**
    * Access mode (defaults to OWNER_ONLY)
    *
-   * @generated from field: optional common.v1.AccessMode access_mode = 8;
+   * @generated from field: optional common.v1.AccessMode access_mode = 7;
    */
   accessMode?: AccessMode;
 
   /**
    * Optional group ID(s) if using group-based membership
    *
-   * @generated from field: repeated string group_ids = 9;
+   * @generated from field: repeated string group_ids = 8;
    */
   groupIds: string[] = [];
 
   /**
    * Node type (defaults to NOTE)
    *
-   * @generated from field: optional notes.v1.NodeType node_type = 10;
+   * @generated from field: optional notes.v1.NodeType node_type = 9;
    */
   nodeType?: NodeType;
 
   /**
    * Optional custom icon
    *
-   * @generated from field: optional notes.v1.NoteIcon icon = 11;
+   * @generated from field: optional notes.v1.NoteIcon icon = 10;
    */
   icon?: NoteIcon;
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 12;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 11;
    */
   baselineRole?: ContentRole;
 
   /**
    * Optional unified-tag ids to assign on create
    *
-   * @generated from field: repeated string tag_ids = 13;
+   * @generated from field: repeated string tag_ids = 12;
    */
   tagIds: string[] = [];
 
@@ -159,13 +159,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 10, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
-    { no: 11, name: "icon", kind: "message", T: NoteIcon, opt: true },
-    { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 13, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 7, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 8, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
+    { no: 10, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 11, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -285,14 +285,14 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
   /**
    * Updated metadata (optional, merges with existing)
    *
-   * @generated from field: map<string, string> metadata = 8;
+   * @generated from field: map<string, string> metadata = 7;
    */
   metadata: { [key: string]: string } = {};
 
   /**
    * Updated icon (optional)
    *
-   * @generated from field: optional notes.v1.NoteIcon icon = 9;
+   * @generated from field: optional notes.v1.NoteIcon icon = 8;
    */
   icon?: NoteIcon;
 
@@ -300,7 +300,7 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
    * Replacement set of unified-tag ids. Empty list clears all manual tags.
    * Field is unset (HasField=false) to leave manual tags untouched.
    *
-   * @generated from field: optional notes.v1.NoteTagIds tag_ids = 10;
+   * @generated from field: optional notes.v1.NoteTagIds tag_ids = 9;
    */
   tagIds?: NoteTagIds;
 
@@ -318,9 +318,9 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
     { no: 4, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 9, name: "icon", kind: "message", T: NoteIcon, opt: true },
-    { no: 10, name: "tag_ids", kind: "message", T: NoteTagIds, opt: true },
+    { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 8, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 9, name: "tag_ids", kind: "message", T: NoteTagIds, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNoteRequest {
@@ -488,11 +488,11 @@ export class DeleteNoteResponse extends Message<DeleteNoteResponse> {
 }
 
 /**
- * Response containing a single note
+ * Response containing a single note (Create)
  *
- * @generated from message notes.v1.NoteResponse
+ * @generated from message notes.v1.CreateNoteResponse
  */
-export class NoteResponse extends Message<NoteResponse> {
+export class CreateNoteResponse extends Message<CreateNoteResponse> {
   /**
    * The note data
    *
@@ -500,31 +500,236 @@ export class NoteResponse extends Message<NoteResponse> {
    */
   note?: Note;
 
-  constructor(data?: PartialMessage<NoteResponse>) {
+  constructor(data?: PartialMessage<CreateNoteResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.NoteResponse";
+  static readonly typeName = "notes.v1.CreateNoteResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "note", kind: "message", T: Note },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteResponse {
-    return new NoteResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteResponse {
+    return new CreateNoteResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteResponse {
-    return new NoteResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateNoteResponse {
+    return new CreateNoteResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteResponse {
-    return new NoteResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateNoteResponse {
+    return new CreateNoteResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: NoteResponse | PlainMessage<NoteResponse> | undefined, b: NoteResponse | PlainMessage<NoteResponse> | undefined): boolean {
-    return proto3.util.equals(NoteResponse, a, b);
+  static equals(a: CreateNoteResponse | PlainMessage<CreateNoteResponse> | undefined, b: CreateNoteResponse | PlainMessage<CreateNoteResponse> | undefined): boolean {
+    return proto3.util.equals(CreateNoteResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single note (Get)
+ *
+ * @generated from message notes.v1.GetNoteResponse
+ */
+export class GetNoteResponse extends Message<GetNoteResponse> {
+  /**
+   * The note data
+   *
+   * @generated from field: notes.v1.Note note = 1;
+   */
+  note?: Note;
+
+  constructor(data?: PartialMessage<GetNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.GetNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: Note },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNoteResponse {
+    return new GetNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNoteResponse {
+    return new GetNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNoteResponse {
+    return new GetNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNoteResponse | PlainMessage<GetNoteResponse> | undefined, b: GetNoteResponse | PlainMessage<GetNoteResponse> | undefined): boolean {
+    return proto3.util.equals(GetNoteResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single note (Update)
+ *
+ * @generated from message notes.v1.UpdateNoteResponse
+ */
+export class UpdateNoteResponse extends Message<UpdateNoteResponse> {
+  /**
+   * The note data
+   *
+   * @generated from field: notes.v1.Note note = 1;
+   */
+  note?: Note;
+
+  constructor(data?: PartialMessage<UpdateNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.UpdateNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: Note },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNoteResponse {
+    return new UpdateNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNoteResponse {
+    return new UpdateNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNoteResponse {
+    return new UpdateNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateNoteResponse | PlainMessage<UpdateNoteResponse> | undefined, b: UpdateNoteResponse | PlainMessage<UpdateNoteResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateNoteResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single note (Restore)
+ *
+ * @generated from message notes.v1.RestoreNoteResponse
+ */
+export class RestoreNoteResponse extends Message<RestoreNoteResponse> {
+  /**
+   * The note data
+   *
+   * @generated from field: notes.v1.Note note = 1;
+   */
+  note?: Note;
+
+  constructor(data?: PartialMessage<RestoreNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.RestoreNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: Note },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreNoteResponse {
+    return new RestoreNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestoreNoteResponse {
+    return new RestoreNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestoreNoteResponse {
+    return new RestoreNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestoreNoteResponse | PlainMessage<RestoreNoteResponse> | undefined, b: RestoreNoteResponse | PlainMessage<RestoreNoteResponse> | undefined): boolean {
+    return proto3.util.equals(RestoreNoteResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single note (Move)
+ *
+ * @generated from message notes.v1.MoveNoteResponse
+ */
+export class MoveNoteResponse extends Message<MoveNoteResponse> {
+  /**
+   * The note data
+   *
+   * @generated from field: notes.v1.Note note = 1;
+   */
+  note?: Note;
+
+  constructor(data?: PartialMessage<MoveNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.MoveNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: Note },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveNoteResponse {
+    return new MoveNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MoveNoteResponse {
+    return new MoveNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MoveNoteResponse {
+    return new MoveNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MoveNoteResponse | PlainMessage<MoveNoteResponse> | undefined, b: MoveNoteResponse | PlainMessage<MoveNoteResponse> | undefined): boolean {
+    return proto3.util.equals(MoveNoteResponse, a, b);
+  }
+}
+
+/**
+ * Response containing a single note (Copy)
+ *
+ * @generated from message notes.v1.CopyNoteResponse
+ */
+export class CopyNoteResponse extends Message<CopyNoteResponse> {
+  /**
+   * The note data
+   *
+   * @generated from field: notes.v1.Note note = 1;
+   */
+  note?: Note;
+
+  constructor(data?: PartialMessage<CopyNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.CopyNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: Note },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CopyNoteResponse {
+    return new CopyNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CopyNoteResponse {
+    return new CopyNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CopyNoteResponse {
+    return new CopyNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CopyNoteResponse | PlainMessage<CopyNoteResponse> | undefined, b: CopyNoteResponse | PlainMessage<CopyNoteResponse> | undefined): boolean {
+    return proto3.util.equals(CopyNoteResponse, a, b);
   }
 }
 
@@ -551,63 +756,63 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   /**
    * Include deleted notes
    *
-   * @generated from field: bool include_deleted = 4;
+   * @generated from field: bool include_deleted = 3;
    */
   includeDeleted = false;
 
   /**
    * Pagination: page number (1-indexed)
    *
-   * @generated from field: int32 page = 6;
+   * @generated from field: int32 page = 4;
    */
   page = 0;
 
   /**
    * Pagination: page size (default: 50, max: 100)
    *
-   * @generated from field: int32 page_size = 7;
+   * @generated from field: int32 page_size = 5;
    */
   pageSize = 0;
 
   /**
    * Sort by field (created_at, updated_at, title)
    *
-   * @generated from field: string sort_by = 8;
+   * @generated from field: string sort_by = 6;
    */
   sortBy = "";
 
   /**
    * Sort order (asc, desc)
    *
-   * @generated from field: string sort_order = 9;
+   * @generated from field: string sort_order = 7;
    */
   sortOrder = "";
 
   /**
    * Optional access mode filter
    *
-   * @generated from field: optional common.v1.AccessMode access_mode = 10;
+   * @generated from field: optional common.v1.AccessMode access_mode = 8;
    */
   accessMode?: AccessMode;
 
   /**
    * Optional group ID filter (for group-scoped notes)
    *
-   * @generated from field: optional string group_id = 11;
+   * @generated from field: optional string group_id = 9;
    */
   groupId?: string;
 
   /**
    * Show only my personal notes
    *
-   * @generated from field: bool personal_only = 12;
+   * @generated from field: bool personal_only = 10;
    */
   personalOnly = false;
 
   /**
    * Exclude content field from response (for tree/list views)
    *
-   * @generated from field: bool exclude_content = 13;
+   * @generated from field: bool exclude_content = 11;
    */
   excludeContent = false;
 
@@ -615,7 +820,7 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
    * Filter notes that carry every tag id in this list (logical AND).
    * Empty = no tag filter.
    *
-   * @generated from field: repeated string tag_ids = 14;
+   * @generated from field: repeated string tag_ids = 12;
    */
   tagIds: string[] = [];
 
@@ -629,16 +834,16 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 7, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 8, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 11, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 12, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 13, name: "exclude_content", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 14, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 9, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 11, name: "exclude_content", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "tag_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNotesRequest {
@@ -754,21 +959,21 @@ export class SearchNotesRequest extends Message<SearchNotesRequest> {
   /**
    * Include deleted notes
    *
-   * @generated from field: bool include_deleted = 4;
+   * @generated from field: bool include_deleted = 3;
    */
   includeDeleted = false;
 
   /**
    * Pagination: page number (1-indexed)
    *
-   * @generated from field: int32 page = 5;
+   * @generated from field: int32 page = 4;
    */
   page = 0;
 
   /**
    * Pagination: page size (default: 50, max: 100)
    *
-   * @generated from field: int32 page_size = 6;
+   * @generated from field: int32 page_size = 5;
    */
   pageSize = 0;
 
@@ -782,9 +987,9 @@ export class SearchNotesRequest extends Message<SearchNotesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 6, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchNotesRequest {
@@ -921,9 +1126,9 @@ export class GetBacklinksRequest extends Message<GetBacklinksRequest> {
 /**
  * Response with backlinks
  *
- * @generated from message notes.v1.BacklinksResponse
+ * @generated from message notes.v1.GetBacklinksResponse
  */
-export class BacklinksResponse extends Message<BacklinksResponse> {
+export class GetBacklinksResponse extends Message<GetBacklinksResponse> {
   /**
    * List of notes that reference the target note
    *
@@ -938,32 +1143,32 @@ export class BacklinksResponse extends Message<BacklinksResponse> {
    */
   totalCount = 0;
 
-  constructor(data?: PartialMessage<BacklinksResponse>) {
+  constructor(data?: PartialMessage<GetBacklinksResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.BacklinksResponse";
+  static readonly typeName = "notes.v1.GetBacklinksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "backlinks", kind: "message", T: NoteReference, repeated: true },
     { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BacklinksResponse {
-    return new BacklinksResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetBacklinksResponse {
+    return new GetBacklinksResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BacklinksResponse {
-    return new BacklinksResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetBacklinksResponse {
+    return new GetBacklinksResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BacklinksResponse {
-    return new BacklinksResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetBacklinksResponse {
+    return new GetBacklinksResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: BacklinksResponse | PlainMessage<BacklinksResponse> | undefined, b: BacklinksResponse | PlainMessage<BacklinksResponse> | undefined): boolean {
-    return proto3.util.equals(BacklinksResponse, a, b);
+  static equals(a: GetBacklinksResponse | PlainMessage<GetBacklinksResponse> | undefined, b: GetBacklinksResponse | PlainMessage<GetBacklinksResponse> | undefined): boolean {
+    return proto3.util.equals(GetBacklinksResponse, a, b);
   }
 }
 
@@ -1374,98 +1579,98 @@ export class Note extends Message<Note> {
   /**
    * Version number for conflict detection
    *
-   * @generated from field: int64 version = 11;
+   * @generated from field: int64 version = 10;
    */
   version = protoInt64.zero;
 
   /**
    * Optional parent note ID
    *
-   * @generated from field: optional string parent_id = 12;
+   * @generated from field: optional string parent_id = 11;
    */
   parentId?: string;
 
   /**
    * Metadata
    *
-   * @generated from field: map<string, string> metadata = 14;
+   * @generated from field: map<string, string> metadata = 12;
    */
   metadata: { [key: string]: string } = {};
 
   /**
    * Created timestamp
    *
-   * @generated from field: google.protobuf.Timestamp created_at = 15;
+   * @generated from field: google.protobuf.Timestamp created_at = 13;
    */
   createdAt?: Timestamp;
 
   /**
    * Updated timestamp
    *
-   * @generated from field: google.protobuf.Timestamp updated_at = 16;
+   * @generated from field: google.protobuf.Timestamp updated_at = 14;
    */
   updatedAt?: Timestamp;
 
   /**
    * Deleted timestamp (if soft-deleted)
    *
-   * @generated from field: optional google.protobuf.Timestamp deleted_at = 17;
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 15;
    */
   deletedAt?: Timestamp;
 
   /**
    * Group IDs if shared with groups
    *
-   * @generated from field: repeated string group_ids = 18;
+   * @generated from field: repeated string group_ids = 16;
    */
   groupIds: string[] = [];
 
   /**
    * User's role on this note
    *
-   * @generated from field: common.v1.ContentRole user_role = 19;
+   * @generated from field: common.v1.ContentRole user_role = 17;
    */
   userRole = ContentRole.UNSPECIFIED;
 
   /**
    * URNs referenced in this note's content (outgoing links)
    *
-   * @generated from field: repeated string outgoing_references = 20;
+   * @generated from field: repeated string outgoing_references = 18;
    */
   outgoingReferences: string[] = [];
 
   /**
    * Custom icon for the note (optional)
    *
-   * @generated from field: optional notes.v1.NoteIcon icon = 21;
+   * @generated from field: optional notes.v1.NoteIcon icon = 19;
    */
   icon?: NoteIcon;
 
   /**
    * Owner information (populated for notes shared with current user)
    *
-   * @generated from field: optional notes.v1.NoteOwner owner_info = 22;
+   * @generated from field: optional notes.v1.NoteOwner owner_info = 20;
    */
   ownerInfo?: NoteOwner;
 
   /**
    * Users/groups this note is shared with (only populated for owner)
    *
-   * @generated from field: repeated notes.v1.NoteShareTarget shared_with = 23;
+   * @generated from field: repeated notes.v1.NoteShareTarget shared_with = 21;
    */
   sharedWith: NoteShareTarget[] = [];
 
   /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 25;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 22;
    */
   baselineRole?: ContentRole;
 
   /**
    * Unified tags assigned to this note (manual + inline sources hydrated server-side).
    *
-   * @generated from field: repeated tags.v1.Tag tags = 26;
+   * @generated from field: repeated tags.v1.Tag tags = 23;
    */
   tags: Tag[] = [];
 
@@ -1486,20 +1691,20 @@ export class Note extends Message<Note> {
     { no: 7, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 11, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 12, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 14, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 15, name: "created_at", kind: "message", T: Timestamp },
-    { no: 16, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 17, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
-    { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 19, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
-    { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 21, name: "icon", kind: "message", T: NoteIcon, opt: true },
-    { no: 22, name: "owner_info", kind: "message", T: NoteOwner, opt: true },
-    { no: 23, name: "shared_with", kind: "message", T: NoteShareTarget, repeated: true },
-    { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
-    { no: 26, name: "tags", kind: "message", T: Tag, repeated: true },
+    { no: 10, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 11, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 13, name: "created_at", kind: "message", T: Timestamp },
+    { no: 14, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 15, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 16, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 17, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
+    { no: 18, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 19, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 20, name: "owner_info", kind: "message", T: NoteOwner, opt: true },
+    { no: 21, name: "shared_with", kind: "message", T: NoteShareTarget, repeated: true },
+    { no: 22, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 23, name: "tags", kind: "message", T: Tag, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
@@ -1885,11 +2090,11 @@ export class UnshareNoteFromGroupRequest extends Message<UnshareNoteFromGroupReq
 }
 
 /**
- * Response for share/unshare operations
+ * Response for share operation
  *
- * @generated from message notes.v1.ShareNoteResponse
+ * @generated from message notes.v1.ShareNoteWithGroupResponse
  */
-export class ShareNoteResponse extends Message<ShareNoteResponse> {
+export class ShareNoteWithGroupResponse extends Message<ShareNoteWithGroupResponse> {
   /**
    * Success flag
    *
@@ -1911,33 +2116,90 @@ export class ShareNoteResponse extends Message<ShareNoteResponse> {
    */
   groupIds: string[] = [];
 
-  constructor(data?: PartialMessage<ShareNoteResponse>) {
+  constructor(data?: PartialMessage<ShareNoteWithGroupResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.ShareNoteResponse";
+  static readonly typeName = "notes.v1.ShareNoteWithGroupResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareNoteResponse {
-    return new ShareNoteResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareNoteWithGroupResponse {
+    return new ShareNoteWithGroupResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareNoteResponse {
-    return new ShareNoteResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareNoteWithGroupResponse {
+    return new ShareNoteWithGroupResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareNoteResponse {
-    return new ShareNoteResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareNoteWithGroupResponse {
+    return new ShareNoteWithGroupResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ShareNoteResponse | PlainMessage<ShareNoteResponse> | undefined, b: ShareNoteResponse | PlainMessage<ShareNoteResponse> | undefined): boolean {
-    return proto3.util.equals(ShareNoteResponse, a, b);
+  static equals(a: ShareNoteWithGroupResponse | PlainMessage<ShareNoteWithGroupResponse> | undefined, b: ShareNoteWithGroupResponse | PlainMessage<ShareNoteWithGroupResponse> | undefined): boolean {
+    return proto3.util.equals(ShareNoteWithGroupResponse, a, b);
+  }
+}
+
+/**
+ * Response for unshare operation
+ *
+ * @generated from message notes.v1.UnshareNoteFromGroupResponse
+ */
+export class UnshareNoteFromGroupResponse extends Message<UnshareNoteFromGroupResponse> {
+  /**
+   * Success flag
+   *
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  /**
+   * Message
+   *
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  /**
+   * Updated list of group IDs
+   *
+   * @generated from field: repeated string group_ids = 3;
+   */
+  groupIds: string[] = [];
+
+  constructor(data?: PartialMessage<UnshareNoteFromGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.UnshareNoteFromGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnshareNoteFromGroupResponse {
+    return new UnshareNoteFromGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnshareNoteFromGroupResponse {
+    return new UnshareNoteFromGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnshareNoteFromGroupResponse {
+    return new UnshareNoteFromGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UnshareNoteFromGroupResponse | PlainMessage<UnshareNoteFromGroupResponse> | undefined, b: UnshareNoteFromGroupResponse | PlainMessage<UnshareNoteFromGroupResponse> | undefined): boolean {
+    return proto3.util.equals(UnshareNoteFromGroupResponse, a, b);
   }
 }
 
@@ -1993,9 +2255,9 @@ export class GetNoteSharingRequest extends Message<GetNoteSharingRequest> {
 /**
  * Response with note sharing information
  *
- * @generated from message notes.v1.NoteSharingResponse
+ * @generated from message notes.v1.GetNoteSharingResponse
  */
-export class NoteSharingResponse extends Message<NoteSharingResponse> {
+export class GetNoteSharingResponse extends Message<GetNoteSharingResponse> {
   /**
    * Note access mode
    *
@@ -2031,13 +2293,13 @@ export class NoteSharingResponse extends Message<NoteSharingResponse> {
    */
   baselineRole?: ContentRole;
 
-  constructor(data?: PartialMessage<NoteSharingResponse>) {
+  constructor(data?: PartialMessage<GetNoteSharingResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.NoteSharingResponse";
+  static readonly typeName = "notes.v1.GetNoteSharingResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 2, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -2046,20 +2308,20 @@ export class NoteSharingResponse extends Message<NoteSharingResponse> {
     { no: 5, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteSharingResponse {
-    return new NoteSharingResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNoteSharingResponse {
+    return new GetNoteSharingResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteSharingResponse {
-    return new NoteSharingResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNoteSharingResponse {
+    return new GetNoteSharingResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteSharingResponse {
-    return new NoteSharingResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNoteSharingResponse {
+    return new GetNoteSharingResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: NoteSharingResponse | PlainMessage<NoteSharingResponse> | undefined, b: NoteSharingResponse | PlainMessage<NoteSharingResponse> | undefined): boolean {
-    return proto3.util.equals(NoteSharingResponse, a, b);
+  static equals(a: GetNoteSharingResponse | PlainMessage<GetNoteSharingResponse> | undefined, b: GetNoteSharingResponse | PlainMessage<GetNoteSharingResponse> | undefined): boolean {
+    return proto3.util.equals(GetNoteSharingResponse, a, b);
   }
 }
 
@@ -2234,11 +2496,11 @@ export class RevokePermissionRequest extends Message<RevokePermissionRequest> {
 }
 
 /**
- * Response for permission operations
+ * Response for grant permission
  *
- * @generated from message notes.v1.PermissionResponse
+ * @generated from message notes.v1.GrantPermissionResponse
  */
-export class PermissionResponse extends Message<PermissionResponse> {
+export class GrantPermissionResponse extends Message<GrantPermissionResponse> {
   /**
    * Success flag
    *
@@ -2253,32 +2515,81 @@ export class PermissionResponse extends Message<PermissionResponse> {
    */
   message = "";
 
-  constructor(data?: PartialMessage<PermissionResponse>) {
+  constructor(data?: PartialMessage<GrantPermissionResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.PermissionResponse";
+  static readonly typeName = "notes.v1.GrantPermissionResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PermissionResponse {
-    return new PermissionResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GrantPermissionResponse {
+    return new GrantPermissionResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PermissionResponse {
-    return new PermissionResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GrantPermissionResponse {
+    return new GrantPermissionResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PermissionResponse {
-    return new PermissionResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GrantPermissionResponse {
+    return new GrantPermissionResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PermissionResponse | PlainMessage<PermissionResponse> | undefined, b: PermissionResponse | PlainMessage<PermissionResponse> | undefined): boolean {
-    return proto3.util.equals(PermissionResponse, a, b);
+  static equals(a: GrantPermissionResponse | PlainMessage<GrantPermissionResponse> | undefined, b: GrantPermissionResponse | PlainMessage<GrantPermissionResponse> | undefined): boolean {
+    return proto3.util.equals(GrantPermissionResponse, a, b);
+  }
+}
+
+/**
+ * Response for revoke permission
+ *
+ * @generated from message notes.v1.RevokePermissionResponse
+ */
+export class RevokePermissionResponse extends Message<RevokePermissionResponse> {
+  /**
+   * Success flag
+   *
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  /**
+   * Message
+   *
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<RevokePermissionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.RevokePermissionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokePermissionResponse {
+    return new RevokePermissionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokePermissionResponse {
+    return new RevokePermissionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokePermissionResponse {
+    return new RevokePermissionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokePermissionResponse | PlainMessage<RevokePermissionResponse> | undefined, b: RevokePermissionResponse | PlainMessage<RevokePermissionResponse> | undefined): boolean {
+    return proto3.util.equals(RevokePermissionResponse, a, b);
   }
 }
 

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AccessModeResponse, AddMemberRequest, ListMemberEventsRequest, ListMemberEventsResponse, ListMembersRequest, ListMembersResponse, MemberResponse, RemoveMemberRequest, RemoveMemberResponse, SetAccessModeRequest, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest } from "./permissions_pb.js";
+import { AddMemberRequest, AddMemberResponse, ListMemberEventsRequest, ListMemberEventsResponse, ListMembersRequest, ListMembersResponse, RemoveMemberRequest, RemoveMemberResponse, SetAccessModeRequest, SetAccessModeResponse, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse } from "./permissions_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -27,7 +27,7 @@ export const MembersService = {
     addMember: {
       name: "AddMember",
       I: AddMemberRequest,
-      O: MemberResponse,
+      O: AddMemberResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -36,7 +36,7 @@ export const MembersService = {
     updateMemberRole: {
       name: "UpdateMemberRole",
       I: UpdateMemberRoleRequest,
-      O: MemberResponse,
+      O: UpdateMemberRoleResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -54,7 +54,7 @@ export const MembersService = {
     setAccessMode: {
       name: "SetAccessMode",
       I: SetAccessModeRequest,
-      O: AccessModeResponse,
+      O: SetAccessModeResponse,
       kind: MethodKind.Unary,
     },
     /**

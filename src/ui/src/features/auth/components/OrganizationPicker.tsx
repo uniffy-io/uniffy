@@ -110,8 +110,7 @@ export function OrganizationPicker() {
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setOrganizations(response.organizations);
-      } catch (err: unknown) {
-        console.error('Failed to list organizations:', err);
+      } catch {
         setError('Failed to load organizations.');
       } finally {
         setLoading(false);
@@ -182,8 +181,7 @@ export function OrganizationPicker() {
       }
 
       navigate('/');
-    } catch (err: unknown) {
-      console.error('Failed to select organization:', err);
+    } catch {
       setError('Failed to switch to organization.');
       setSelectingSlug(null);
     }

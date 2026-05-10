@@ -12,7 +12,6 @@ from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, Endpoint, EndpointSync
-import common.v1.common_pb2 as common_dot_v1_dot_common__pb2
 import groups.v1.groups_pb2 as groups_dot_v1_dot_groups__pb2
 
 
@@ -20,13 +19,13 @@ class GroupsService(Protocol):
     async def list_groups(self, request: groups_dot_v1_dot_groups__pb2.ListGroupsRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.ListGroupsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_group(self, request: groups_dot_v1_dot_groups__pb2.GetGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    async def get_group(self, request: groups_dot_v1_dot_groups__pb2.GetGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.GetGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_group(self, request: groups_dot_v1_dot_groups__pb2.CreateGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    async def create_group(self, request: groups_dot_v1_dot_groups__pb2.CreateGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.CreateGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_group(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    async def update_group(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.UpdateGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_group(self, request: groups_dot_v1_dot_groups__pb2.DeleteGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.DeleteGroupResponse:
@@ -35,10 +34,10 @@ class GroupsService(Protocol):
     async def list_group_members(self, request: groups_dot_v1_dot_groups__pb2.ListGroupMembersRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.ListGroupMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_group_member(self, request: groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    async def add_group_member(self, request: groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_group_member(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    async def update_group_member(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def remove_group_member(self, request: groups_dot_v1_dot_groups__pb2.RemoveGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.RemoveGroupMemberResponse:
@@ -68,7 +67,7 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
                         name="GetGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.GetGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.GetGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_group,
@@ -78,7 +77,7 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
                         name="CreateGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.CreateGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.CreateGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_group,
@@ -88,7 +87,7 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
                         name="UpdateGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.UpdateGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.UpdateGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_group,
@@ -118,7 +117,7 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
                         name="AddGroupMember",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                        output=groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.add_group_member,
@@ -128,7 +127,7 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
                         name="UpdateGroupMember",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                        output=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_group_member,
@@ -191,14 +190,14 @@ class GroupsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.GetGroupResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.GetGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.GetGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -211,14 +210,14 @@ class GroupsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.CreateGroupResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.CreateGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.CreateGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -231,14 +230,14 @@ class GroupsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.UpdateGroupResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.UpdateGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.UpdateGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -291,14 +290,14 @@ class GroupsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddGroupMember",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest,
-                output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                output=groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -311,14 +310,14 @@ class GroupsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateGroupMember",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest,
-                output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                output=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -369,19 +368,19 @@ class GroupsServiceClient(ConnectClient):
 class GroupsServiceSync(Protocol):
     def list_groups(self, request: groups_dot_v1_dot_groups__pb2.ListGroupsRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.ListGroupsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_group(self, request: groups_dot_v1_dot_groups__pb2.GetGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    def get_group(self, request: groups_dot_v1_dot_groups__pb2.GetGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.GetGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_group(self, request: groups_dot_v1_dot_groups__pb2.CreateGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    def create_group(self, request: groups_dot_v1_dot_groups__pb2.CreateGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.CreateGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_group(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    def update_group(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.UpdateGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_group(self, request: groups_dot_v1_dot_groups__pb2.DeleteGroupRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.DeleteGroupResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_group_members(self, request: groups_dot_v1_dot_groups__pb2.ListGroupMembersRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.ListGroupMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_group_member(self, request: groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    def add_group_member(self, request: groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_group_member(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    def update_group_member(self, request: groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_group_member(self, request: groups_dot_v1_dot_groups__pb2.RemoveGroupMemberRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.RemoveGroupMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -408,7 +407,7 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.GetGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.GetGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_group,
@@ -418,7 +417,7 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.CreateGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.CreateGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_group,
@@ -428,7 +427,7 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateGroup",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.UpdateGroupRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupInfo,
+                        output=groups_dot_v1_dot_groups__pb2.UpdateGroupResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_group,
@@ -458,7 +457,7 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
                         name="AddGroupMember",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                        output=groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.add_group_member,
@@ -468,7 +467,7 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateGroupMember",
                         service_name="groups.v1.GroupsService",
                         input=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest,
-                        output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                        output=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_group_member,
@@ -531,14 +530,14 @@ class GroupsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.GetGroupResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.GetGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.GetGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -551,14 +550,14 @@ class GroupsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.CreateGroupResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.CreateGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.CreateGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -571,14 +570,14 @@ class GroupsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.UpdateGroupResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateGroup",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.UpdateGroupRequest,
-                output=common_dot_v1_dot_common__pb2.GroupInfo,
+                output=groups_dot_v1_dot_groups__pb2.UpdateGroupResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -631,14 +630,14 @@ class GroupsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="AddGroupMember",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.AddGroupMemberRequest,
-                output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                output=groups_dot_v1_dot_groups__pb2.AddGroupMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -651,14 +650,14 @@ class GroupsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> common_dot_v1_dot_common__pb2.GroupMemberInfo:
+    ) -> groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateGroupMember",
                 service_name="groups.v1.GroupsService",
                 input=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberRequest,
-                output=common_dot_v1_dot_common__pb2.GroupMemberInfo,
+                output=groups_dot_v1_dot_groups__pb2.UpdateGroupMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

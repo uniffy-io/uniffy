@@ -696,39 +696,39 @@ export class SetAccessModeRequest extends Message<SetAccessModeRequest> {
 }
 
 /**
- * @generated from message permissions.v1.AccessModeResponse
+ * @generated from message permissions.v1.SetAccessModeResponse
  */
-export class AccessModeResponse extends Message<AccessModeResponse> {
+export class SetAccessModeResponse extends Message<SetAccessModeResponse> {
   /**
    * @generated from field: permissions.v1.ContentAccessPolicy policy = 1;
    */
   policy?: ContentAccessPolicy;
 
-  constructor(data?: PartialMessage<AccessModeResponse>) {
+  constructor(data?: PartialMessage<SetAccessModeResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.AccessModeResponse";
+  static readonly typeName = "permissions.v1.SetAccessModeResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "policy", kind: "message", T: ContentAccessPolicy },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AccessModeResponse {
-    return new AccessModeResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetAccessModeResponse {
+    return new SetAccessModeResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AccessModeResponse {
-    return new AccessModeResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetAccessModeResponse {
+    return new SetAccessModeResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AccessModeResponse {
-    return new AccessModeResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetAccessModeResponse {
+    return new SetAccessModeResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AccessModeResponse | PlainMessage<AccessModeResponse> | undefined, b: AccessModeResponse | PlainMessage<AccessModeResponse> | undefined): boolean {
-    return proto3.util.equals(AccessModeResponse, a, b);
+  static equals(a: SetAccessModeResponse | PlainMessage<SetAccessModeResponse> | undefined, b: SetAccessModeResponse | PlainMessage<SetAccessModeResponse> | undefined): boolean {
+    return proto3.util.equals(SetAccessModeResponse, a, b);
   }
 }
 
@@ -831,39 +831,76 @@ export class TransferOwnershipResponse extends Message<TransferOwnershipResponse
 }
 
 /**
- * @generated from message permissions.v1.MemberResponse
+ * @generated from message permissions.v1.AddMemberResponse
  */
-export class MemberResponse extends Message<MemberResponse> {
+export class AddMemberResponse extends Message<AddMemberResponse> {
   /**
    * @generated from field: permissions.v1.ContentMember member = 1;
    */
   member?: ContentMember;
 
-  constructor(data?: PartialMessage<MemberResponse>) {
+  constructor(data?: PartialMessage<AddMemberResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.MemberResponse";
+  static readonly typeName = "permissions.v1.AddMemberResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "member", kind: "message", T: ContentMember },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberResponse {
-    return new MemberResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddMemberResponse {
+    return new AddMemberResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberResponse {
-    return new MemberResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddMemberResponse {
+    return new AddMemberResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberResponse {
-    return new MemberResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddMemberResponse {
+    return new AddMemberResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MemberResponse | PlainMessage<MemberResponse> | undefined, b: MemberResponse | PlainMessage<MemberResponse> | undefined): boolean {
-    return proto3.util.equals(MemberResponse, a, b);
+  static equals(a: AddMemberResponse | PlainMessage<AddMemberResponse> | undefined, b: AddMemberResponse | PlainMessage<AddMemberResponse> | undefined): boolean {
+    return proto3.util.equals(AddMemberResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.UpdateMemberRoleResponse
+ */
+export class UpdateMemberRoleResponse extends Message<UpdateMemberRoleResponse> {
+  /**
+   * @generated from field: permissions.v1.ContentMember member = 1;
+   */
+  member?: ContentMember;
+
+  constructor(data?: PartialMessage<UpdateMemberRoleResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.UpdateMemberRoleResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "member", kind: "message", T: ContentMember },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMemberRoleResponse {
+    return new UpdateMemberRoleResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateMemberRoleResponse {
+    return new UpdateMemberRoleResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateMemberRoleResponse {
+    return new UpdateMemberRoleResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateMemberRoleResponse | PlainMessage<UpdateMemberRoleResponse> | undefined, b: UpdateMemberRoleResponse | PlainMessage<UpdateMemberRoleResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateMemberRoleResponse, a, b);
   }
 }
 

@@ -91,7 +91,6 @@ function requestTokenFromMainThread(): Promise<string | null> {
 
         // Request token from main thread
         if (tokenChannel) {
-            console.log('[MediaStreamWorker] Requesting token from main thread');
             tokenChannel.postMessage({ type: 'TOKEN_REQUEST' });
         }
 
@@ -101,7 +100,6 @@ function requestTokenFromMainThread(): Promise<string | null> {
             const index = tokenResponseCallbacks.indexOf(resolve);
             if (index !== -1) {
                 tokenResponseCallbacks.splice(index, 1);
-                console.log('[MediaStreamWorker] Token request timeout');
                 resolve(null);
             }
         }, TOKEN_REQUEST_TIMEOUT_MS);
@@ -144,22 +142,17 @@ function initTokenChannel(): void {
     tokenChannel.onmessage = (event) => {
         if (event.data?.type === 'TOKEN_UPDATE') {
             memoryToken = event.data.token;
-            console.log('[MediaStreamWorker] Token updated via BroadcastChannel');
             // Resolve any pending token requests
             resolveTokenCallbacks(event.data.token);
         } else if (event.data?.type === 'TOKEN_RESPONSE') {
             // Explicit response to our request
             memoryToken = event.data.token;
-            console.log('[MediaStreamWorker] Token received via response');
             resolveTokenCallbacks(event.data.token);
         } else if (event.data?.type === 'TOKEN_CLEAR') {
             memoryToken = null;
-            console.log('[MediaStreamWorker] Token cleared via BroadcastChannel');
             resolveTokenCallbacks(null);
         }
     };
-
-    console.log('[MediaStreamWorker] BroadcastChannel initialized');
 
     // Request token immediately on init (handles page reload scenario)
     requestTokenFromMainThread();
@@ -290,9 +283,7 @@ async function handleMediaRequest(
                     // If stream was cancelled by client, silently stop
                     if (cancelled) return;
 
-                    if (error instanceof Error && error.name === 'AbortError') {
-                        console.log('[MediaStreamWorker] Stream aborted');
-                    } else {
+                    if (!(error instanceof Error && error.name === 'AbortError')) {
                         console.error('[MediaStreamWorker] Stream error:', error);
                     }
                     try {
@@ -304,7 +295,6 @@ async function handleMediaRequest(
             },
             cancel() {
                 cancelled = true;
-                console.log('[MediaStreamWorker] Stream cancelled by client');
             },
         });
 
@@ -312,7 +302,6 @@ async function handleMediaRequest(
     } catch (error) {
         // Check if request was aborted (user navigated away, component unmounted, etc.)
         if (error instanceof Error && error.name === 'AbortError') {
-            console.log('[MediaStreamWorker] Request aborted (client disconnected)');
             return new Response('Request Aborted', { status: 499 }); // 499 = Client Closed Request
         }
         console.error('[MediaStreamWorker] Error streaming file:', error);
@@ -333,19 +322,13 @@ self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     event.preventDefault();
 });
 
-// Worker version for debugging
-const WORKER_VERSION = Date.now().toString(36);
-console.log(`[MediaStreamWorker] Script loaded, version: ${WORKER_VERSION}`);
-
 // Install event - activate immediately
 self.addEventListener('install', (event: ExtendableEvent) => {
-    console.log(`[MediaStreamWorker] Installing... (v${WORKER_VERSION})`);
     event.waitUntil(self.skipWaiting());
 });
 
 // Activate event - claim all clients immediately
 self.addEventListener('activate', (event: ExtendableEvent) => {
-    console.log(`[MediaStreamWorker] Activating... (v${WORKER_VERSION})`);
     event.waitUntil(self.clients.claim());
 });
 
@@ -432,7 +415,6 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     // Check for thumbnail requests first (simpler handler)
     const thumbnailMatch = url.pathname.match(THUMBNAIL_PATTERN);
     if (thumbnailMatch) {
-        console.log(`[MediaStreamWorker] Intercepting thumbnail request: ${url.pathname}`);
         event.respondWith(handleThumbnailRequest(event.request));
         return;
     }
@@ -440,7 +422,6 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     // Check for file requests (images embedded in notes, etc.)
     const filesMatch = url.pathname.match(FILES_PATTERN);
     if (filesMatch) {
-        console.log(`[MediaStreamWorker] Intercepting file request: ${url.pathname}`);
         event.respondWith(handleFileRequest(event.request));
         return;
     }
@@ -468,8 +449,6 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     const [, orgId, fileId] = mediaMatch;
     // Check if full file was requested (for audio that needs waveform analysis)
     const requestFullFile = url.searchParams.get('full') === 'true';
-
-    console.log(`[MediaStreamWorker] Intercepting request for file ${fileId}`, { requestFullFile });
 
     // Wrap in a safe handler with timeout that always returns a response
     const safeHandler = async (): Promise<Response> => {
@@ -550,11 +529,9 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
     if (event.data?.type === 'UPDATE_AUTH_TOKEN') {
         // Update in-memory token only (no persistent storage)
         memoryToken = event.data.token;
-        console.log('[MediaStreamWorker] Auth token updated via postMessage');
     } else if (event.data?.type === 'CLEAR_AUTH_TOKEN') {
         // Clear in-memory token
         memoryToken = null;
-        console.log('[MediaStreamWorker] Auth token cleared via postMessage');
     } else if (event.data?.type === 'PING') {
         // Health check - respond to let main thread know worker is alive
         event.source?.postMessage({ type: 'PONG' });

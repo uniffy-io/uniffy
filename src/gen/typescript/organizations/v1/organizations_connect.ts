@@ -3,9 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMemberRequest, ContentTypeDefaults, CreateOrganizationRequest, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationRequest, GetOrganizationSettingsRequest, GetPermissionDefaultsRequest, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, ListDomainAdminsRequest, ListDomainAdminsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, OrganizationDetail, OrganizationOverview, OrganizationSettings, PermissionDefaultsResponse, RemoveMemberRequest, RemoveMemberResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, UpdateMemberRoleRequest, UpdateOrganizationRequest, UpdateOrganizationSettingsRequest, UpdatePermissionDefaultsRequest } from "./organizations_pb.js";
+import { AddMemberRequest, AddMemberResponse, CreateOrganizationRequest, CreateOrganizationResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetOrganizationSettingsRequest, GetOrganizationSettingsResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, RemoveMemberRequest, RemoveMemberResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdateOrganizationSettingsRequest, UpdateOrganizationSettingsResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse } from "./organizations_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import { DomainAdminInfo, MemberInfo, OrganizationInfo } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from service organizations.v1.OrganizationsService
@@ -41,7 +40,7 @@ export const OrganizationsService = {
     getOrganization: {
       name: "GetOrganization",
       I: GetOrganizationRequest,
-      O: OrganizationDetail,
+      O: GetOrganizationResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -50,7 +49,7 @@ export const OrganizationsService = {
     createOrganization: {
       name: "CreateOrganization",
       I: CreateOrganizationRequest,
-      O: OrganizationInfo,
+      O: CreateOrganizationResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -59,7 +58,7 @@ export const OrganizationsService = {
     updateOrganization: {
       name: "UpdateOrganization",
       I: UpdateOrganizationRequest,
-      O: OrganizationInfo,
+      O: UpdateOrganizationResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -79,7 +78,7 @@ export const OrganizationsService = {
     getOrganizationOverview: {
       name: "GetOrganizationOverview",
       I: GetOrganizationOverviewRequest,
-      O: OrganizationOverview,
+      O: GetOrganizationOverviewResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -99,7 +98,7 @@ export const OrganizationsService = {
     addMember: {
       name: "AddMember",
       I: AddMemberRequest,
-      O: MemberInfo,
+      O: AddMemberResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -108,7 +107,7 @@ export const OrganizationsService = {
     updateMemberRole: {
       name: "UpdateMemberRole",
       I: UpdateMemberRoleRequest,
-      O: MemberInfo,
+      O: UpdateMemberRoleResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -128,7 +127,7 @@ export const OrganizationsService = {
     getPermissionDefaults: {
       name: "GetPermissionDefaults",
       I: GetPermissionDefaultsRequest,
-      O: PermissionDefaultsResponse,
+      O: GetPermissionDefaultsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -137,7 +136,7 @@ export const OrganizationsService = {
     updatePermissionDefaults: {
       name: "UpdatePermissionDefaults",
       I: UpdatePermissionDefaultsRequest,
-      O: ContentTypeDefaults,
+      O: UpdatePermissionDefaultsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -148,7 +147,7 @@ export const OrganizationsService = {
     getOrganizationSettings: {
       name: "GetOrganizationSettings",
       I: GetOrganizationSettingsRequest,
-      O: OrganizationSettings,
+      O: GetOrganizationSettingsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -157,7 +156,7 @@ export const OrganizationsService = {
     updateOrganizationSettings: {
       name: "UpdateOrganizationSettings",
       I: UpdateOrganizationSettingsRequest,
-      O: OrganizationSettings,
+      O: UpdateOrganizationSettingsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -168,7 +167,7 @@ export const OrganizationsService = {
     grantDomainAdmin: {
       name: "GrantDomainAdmin",
       I: GrantDomainAdminRequest,
-      O: DomainAdminInfo,
+      O: GrantDomainAdminResponse,
       kind: MethodKind.Unary,
     },
     /**

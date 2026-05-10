@@ -62,21 +62,21 @@ const (
 // SettingsServiceClient is a client for the settings.v1.SettingsService service.
 type SettingsServiceClient interface {
 	// Create a new settings profile
-	CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.CreateProfileResponse], error)
 	// Get a settings profile by ID
-	GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.GetProfileResponse], error)
 	// Update an existing settings profile (sparse update - only changed values)
-	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error)
 	// Delete a settings profile
 	DeleteProfile(context.Context, *connect.Request[v1.DeleteProfileRequest]) (*connect.Response[v1.DeleteProfileResponse], error)
 	// List all profiles for the current user
 	ListProfiles(context.Context, *connect.Request[v1.ListProfilesRequest]) (*connect.Response[v1.ListProfilesResponse], error)
 	// Get the effective settings for a profile (defaults merged with overrides)
-	GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.EffectiveSettingsResponse], error)
+	GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.GetEffectiveSettingsResponse], error)
 	// Get the schema of available settings with their defaults
-	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.SettingsSchemaResponse], error)
+	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error)
 	// Set a profile as the default for the user
-	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error)
 }
 
 // NewSettingsServiceClient constructs a client for the settings.v1.SettingsService service. By
@@ -90,19 +90,19 @@ func NewSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	settingsServiceMethods := v1.File_settings_v1_settings_proto.Services().ByName("SettingsService").Methods()
 	return &settingsServiceClient{
-		createProfile: connect.NewClient[v1.CreateProfileRequest, v1.ProfileResponse](
+		createProfile: connect.NewClient[v1.CreateProfileRequest, v1.CreateProfileResponse](
 			httpClient,
 			baseURL+SettingsServiceCreateProfileProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("CreateProfile")),
 			connect.WithClientOptions(opts...),
 		),
-		getProfile: connect.NewClient[v1.GetProfileRequest, v1.ProfileResponse](
+		getProfile: connect.NewClient[v1.GetProfileRequest, v1.GetProfileResponse](
 			httpClient,
 			baseURL+SettingsServiceGetProfileProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("GetProfile")),
 			connect.WithClientOptions(opts...),
 		),
-		updateProfile: connect.NewClient[v1.UpdateProfileRequest, v1.ProfileResponse](
+		updateProfile: connect.NewClient[v1.UpdateProfileRequest, v1.UpdateProfileResponse](
 			httpClient,
 			baseURL+SettingsServiceUpdateProfileProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("UpdateProfile")),
@@ -120,19 +120,19 @@ func NewSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(settingsServiceMethods.ByName("ListProfiles")),
 			connect.WithClientOptions(opts...),
 		),
-		getEffectiveSettings: connect.NewClient[v1.GetEffectiveSettingsRequest, v1.EffectiveSettingsResponse](
+		getEffectiveSettings: connect.NewClient[v1.GetEffectiveSettingsRequest, v1.GetEffectiveSettingsResponse](
 			httpClient,
 			baseURL+SettingsServiceGetEffectiveSettingsProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("GetEffectiveSettings")),
 			connect.WithClientOptions(opts...),
 		),
-		getSettingsSchema: connect.NewClient[v1.GetSettingsSchemaRequest, v1.SettingsSchemaResponse](
+		getSettingsSchema: connect.NewClient[v1.GetSettingsSchemaRequest, v1.GetSettingsSchemaResponse](
 			httpClient,
 			baseURL+SettingsServiceGetSettingsSchemaProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("GetSettingsSchema")),
 			connect.WithClientOptions(opts...),
 		),
-		setDefaultProfile: connect.NewClient[v1.SetDefaultProfileRequest, v1.ProfileResponse](
+		setDefaultProfile: connect.NewClient[v1.SetDefaultProfileRequest, v1.SetDefaultProfileResponse](
 			httpClient,
 			baseURL+SettingsServiceSetDefaultProfileProcedure,
 			connect.WithSchema(settingsServiceMethods.ByName("SetDefaultProfile")),
@@ -143,28 +143,28 @@ func NewSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // settingsServiceClient implements SettingsServiceClient.
 type settingsServiceClient struct {
-	createProfile        *connect.Client[v1.CreateProfileRequest, v1.ProfileResponse]
-	getProfile           *connect.Client[v1.GetProfileRequest, v1.ProfileResponse]
-	updateProfile        *connect.Client[v1.UpdateProfileRequest, v1.ProfileResponse]
+	createProfile        *connect.Client[v1.CreateProfileRequest, v1.CreateProfileResponse]
+	getProfile           *connect.Client[v1.GetProfileRequest, v1.GetProfileResponse]
+	updateProfile        *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
 	deleteProfile        *connect.Client[v1.DeleteProfileRequest, v1.DeleteProfileResponse]
 	listProfiles         *connect.Client[v1.ListProfilesRequest, v1.ListProfilesResponse]
-	getEffectiveSettings *connect.Client[v1.GetEffectiveSettingsRequest, v1.EffectiveSettingsResponse]
-	getSettingsSchema    *connect.Client[v1.GetSettingsSchemaRequest, v1.SettingsSchemaResponse]
-	setDefaultProfile    *connect.Client[v1.SetDefaultProfileRequest, v1.ProfileResponse]
+	getEffectiveSettings *connect.Client[v1.GetEffectiveSettingsRequest, v1.GetEffectiveSettingsResponse]
+	getSettingsSchema    *connect.Client[v1.GetSettingsSchemaRequest, v1.GetSettingsSchemaResponse]
+	setDefaultProfile    *connect.Client[v1.SetDefaultProfileRequest, v1.SetDefaultProfileResponse]
 }
 
 // CreateProfile calls settings.v1.SettingsService.CreateProfile.
-func (c *settingsServiceClient) CreateProfile(ctx context.Context, req *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (c *settingsServiceClient) CreateProfile(ctx context.Context, req *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.CreateProfileResponse], error) {
 	return c.createProfile.CallUnary(ctx, req)
 }
 
 // GetProfile calls settings.v1.SettingsService.GetProfile.
-func (c *settingsServiceClient) GetProfile(ctx context.Context, req *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (c *settingsServiceClient) GetProfile(ctx context.Context, req *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.GetProfileResponse], error) {
 	return c.getProfile.CallUnary(ctx, req)
 }
 
 // UpdateProfile calls settings.v1.SettingsService.UpdateProfile.
-func (c *settingsServiceClient) UpdateProfile(ctx context.Context, req *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (c *settingsServiceClient) UpdateProfile(ctx context.Context, req *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error) {
 	return c.updateProfile.CallUnary(ctx, req)
 }
 
@@ -179,38 +179,38 @@ func (c *settingsServiceClient) ListProfiles(ctx context.Context, req *connect.R
 }
 
 // GetEffectiveSettings calls settings.v1.SettingsService.GetEffectiveSettings.
-func (c *settingsServiceClient) GetEffectiveSettings(ctx context.Context, req *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.EffectiveSettingsResponse], error) {
+func (c *settingsServiceClient) GetEffectiveSettings(ctx context.Context, req *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.GetEffectiveSettingsResponse], error) {
 	return c.getEffectiveSettings.CallUnary(ctx, req)
 }
 
 // GetSettingsSchema calls settings.v1.SettingsService.GetSettingsSchema.
-func (c *settingsServiceClient) GetSettingsSchema(ctx context.Context, req *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.SettingsSchemaResponse], error) {
+func (c *settingsServiceClient) GetSettingsSchema(ctx context.Context, req *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error) {
 	return c.getSettingsSchema.CallUnary(ctx, req)
 }
 
 // SetDefaultProfile calls settings.v1.SettingsService.SetDefaultProfile.
-func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, req *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, req *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error) {
 	return c.setDefaultProfile.CallUnary(ctx, req)
 }
 
 // SettingsServiceHandler is an implementation of the settings.v1.SettingsService service.
 type SettingsServiceHandler interface {
 	// Create a new settings profile
-	CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.CreateProfileResponse], error)
 	// Get a settings profile by ID
-	GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.GetProfileResponse], error)
 	// Update an existing settings profile (sparse update - only changed values)
-	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error)
 	// Delete a settings profile
 	DeleteProfile(context.Context, *connect.Request[v1.DeleteProfileRequest]) (*connect.Response[v1.DeleteProfileResponse], error)
 	// List all profiles for the current user
 	ListProfiles(context.Context, *connect.Request[v1.ListProfilesRequest]) (*connect.Response[v1.ListProfilesResponse], error)
 	// Get the effective settings for a profile (defaults merged with overrides)
-	GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.EffectiveSettingsResponse], error)
+	GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.GetEffectiveSettingsResponse], error)
 	// Get the schema of available settings with their defaults
-	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.SettingsSchemaResponse], error)
+	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error)
 	// Set a profile as the default for the user
-	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.ProfileResponse], error)
+	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error)
 }
 
 // NewSettingsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -295,15 +295,15 @@ func NewSettingsServiceHandler(svc SettingsServiceHandler, opts ...connect.Handl
 // UnimplementedSettingsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSettingsServiceHandler struct{}
 
-func (UnimplementedSettingsServiceHandler) CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (UnimplementedSettingsServiceHandler) CreateProfile(context.Context, *connect.Request[v1.CreateProfileRequest]) (*connect.Response[v1.CreateProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.CreateProfile is not implemented"))
 }
 
-func (UnimplementedSettingsServiceHandler) GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (UnimplementedSettingsServiceHandler) GetProfile(context.Context, *connect.Request[v1.GetProfileRequest]) (*connect.Response[v1.GetProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.GetProfile is not implemented"))
 }
 
-func (UnimplementedSettingsServiceHandler) UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (UnimplementedSettingsServiceHandler) UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.UpdateProfile is not implemented"))
 }
 
@@ -315,14 +315,14 @@ func (UnimplementedSettingsServiceHandler) ListProfiles(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.ListProfiles is not implemented"))
 }
 
-func (UnimplementedSettingsServiceHandler) GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.EffectiveSettingsResponse], error) {
+func (UnimplementedSettingsServiceHandler) GetEffectiveSettings(context.Context, *connect.Request[v1.GetEffectiveSettingsRequest]) (*connect.Response[v1.GetEffectiveSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.GetEffectiveSettings is not implemented"))
 }
 
-func (UnimplementedSettingsServiceHandler) GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.SettingsSchemaResponse], error) {
+func (UnimplementedSettingsServiceHandler) GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.GetSettingsSchema is not implemented"))
 }
 
-func (UnimplementedSettingsServiceHandler) SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.ProfileResponse], error) {
+func (UnimplementedSettingsServiceHandler) SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.SetDefaultProfile is not implemented"))
 }

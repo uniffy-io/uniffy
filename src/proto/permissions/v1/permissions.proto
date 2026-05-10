@@ -12,10 +12,10 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/permissions/v1;permiss
 
 service MembersService {
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
-  rpc AddMember(AddMemberRequest) returns (MemberResponse);
-  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (MemberResponse);
+  rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
   rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
-  rpc SetAccessMode(SetAccessModeRequest) returns (AccessModeResponse);
+  rpc SetAccessMode(SetAccessModeRequest) returns (SetAccessModeResponse);
   rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
   rpc ListMemberEvents(ListMemberEventsRequest) returns (ListMemberEventsResponse);
 }
@@ -119,7 +119,7 @@ message SetAccessModeRequest {
   string note = 7;
 }
 
-message AccessModeResponse {
+message SetAccessModeResponse {
   ContentAccessPolicy policy = 1;
 }
 
@@ -135,7 +135,11 @@ message TransferOwnershipResponse {
   ContentAccessPolicy policy = 1;
 }
 
-message MemberResponse {
+message AddMemberResponse {
+  ContentMember member = 1;
+}
+
+message UpdateMemberRoleResponse {
   ContentMember member = 1;
 }
 

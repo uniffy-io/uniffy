@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from tags.v1 import tags_pb2 as _tags_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -121,7 +121,37 @@ class DeleteNoteResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class NoteResponse(_message.Message):
+class CreateNoteResponse(_message.Message):
+    __slots__ = ("note",)
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    note: Note
+    def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
+
+class GetNoteResponse(_message.Message):
+    __slots__ = ("note",)
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    note: Note
+    def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
+
+class UpdateNoteResponse(_message.Message):
+    __slots__ = ("note",)
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    note: Note
+    def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
+
+class RestoreNoteResponse(_message.Message):
+    __slots__ = ("note",)
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    note: Note
+    def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
+
+class MoveNoteResponse(_message.Message):
+    __slots__ = ("note",)
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    note: Note
+    def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
+
+class CopyNoteResponse(_message.Message):
     __slots__ = ("note",)
     NOTE_FIELD_NUMBER: _ClassVar[int]
     note: Note
@@ -203,7 +233,7 @@ class GetBacklinksRequest(_message.Message):
     organization_id: str
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
-class BacklinksResponse(_message.Message):
+class GetBacklinksResponse(_message.Message):
     __slots__ = ("backlinks", "total_count")
     BACKLINKS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -396,7 +426,17 @@ class UnshareNoteFromGroupRequest(_message.Message):
     group_id: str
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
 
-class ShareNoteResponse(_message.Message):
+class ShareNoteWithGroupResponse(_message.Message):
+    __slots__ = ("success", "message", "group_ids")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    group_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class UnshareNoteFromGroupResponse(_message.Message):
     __slots__ = ("success", "message", "group_ids")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
@@ -414,7 +454,7 @@ class GetNoteSharingRequest(_message.Message):
     organization_id: str
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
-class NoteSharingResponse(_message.Message):
+class GetNoteSharingResponse(_message.Message):
     __slots__ = ("access_mode", "owner_id", "group_ids", "permissions", "baseline_role")
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -464,7 +504,15 @@ class RevokePermissionRequest(_message.Message):
     subject_id: str
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ...) -> None: ...
 
-class PermissionResponse(_message.Message):
+class GrantPermissionResponse(_message.Message):
+    __slots__ = ("success", "message")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
+
+class RevokePermissionResponse(_message.Message):
     __slots__ = ("success", "message")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]

@@ -2,30 +2,30 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // SessionsService manages conversation sessions between users and agents.
 service SessionsService {
   // Create a new session (find-or-create for DIRECT kind)
-  rpc CreateSession(CreateSessionRequest) returns (SessionResponse) {}
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {}
 
   // Get a session by ID
-  rpc GetSession(GetSessionRequest) returns (SessionResponse) {}
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {}
 
   // List sessions for the user in an organization
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {}
 
   // Update session settings (display name, model override)
-  rpc UpdateSession(UpdateSessionRequest) returns (SessionResponse) {}
+  rpc UpdateSession(UpdateSessionRequest) returns (UpdateSessionResponse) {}
 
   // Archive a session (soft delete)
   rpc ArchiveSession(ArchiveSessionRequest) returns (ArchiveSessionResponse) {}
 
   // Add a message to a session
-  rpc AddMessage(AddMessageRequest) returns (MessageResponse) {}
+  rpc AddMessage(AddMessageRequest) returns (AddMessageResponse) {}
 
   // List messages in a session
   rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {}
@@ -43,9 +43,9 @@ service SessionsService {
 // Kind of session
 enum SessionKind {
   SESSION_KIND_UNSPECIFIED = 0;
-  SESSION_KIND_DIRECT = 1;    // 1:1 user<->agent
-  SESSION_KIND_GROUP = 2;     // multi-user with agent
-  SESSION_KIND_GLOBAL = 3;    // agent background/automation session
+  SESSION_KIND_DIRECT = 1; // 1:1 user<->agent
+  SESSION_KIND_GROUP = 2; // multi-user with agent
+  SESSION_KIND_GLOBAL = 3; // agent background/automation session
 }
 
 // Role of a message in the conversation
@@ -55,7 +55,7 @@ enum MessageRole {
   MESSAGE_ROLE_ASSISTANT = 2;
   MESSAGE_ROLE_TOOL = 3;
   MESSAGE_ROLE_SYSTEM = 4;
-  MESSAGE_ROLE_SUMMARY = 5;   // compaction output
+  MESSAGE_ROLE_SUMMARY = 5; // compaction output
 }
 
 // Session info returned to clients
@@ -66,15 +66,14 @@ message SessionInfo {
   string user_id = 4;
   SessionKind kind = 5;
   optional string display_name = 6;
-  reserved 7; // was thinking_level
-  optional string model_override = 8;
-  int64 total_input_tokens = 9;
-  int64 total_output_tokens = 10;
-  int32 message_count = 11;
-  optional string last_model_used = 12;
-  bool is_archived = 13;
-  google.protobuf.Timestamp created_at = 14;
-  google.protobuf.Timestamp updated_at = 15;
+  optional string model_override = 7;
+  int64 total_input_tokens = 8;
+  int64 total_output_tokens = 9;
+  int32 message_count = 10;
+  optional string last_model_used = 11;
+  bool is_archived = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
 }
 
 // Message info returned to clients
@@ -104,11 +103,18 @@ message CreateSessionRequest {
   string agent_id = 2;
   SessionKind kind = 3;
   optional string display_name = 4;
-  reserved 5; // was thinking_level
-  optional string model_override = 6;
+  optional string model_override = 5;
 }
 
-message SessionResponse {
+message CreateSessionResponse {
+  SessionInfo session = 1;
+}
+
+message GetSessionResponse {
+  SessionInfo session = 1;
+}
+
+message UpdateSessionResponse {
   SessionInfo session = 1;
 }
 
@@ -134,8 +140,7 @@ message UpdateSessionRequest {
   string organization_id = 1;
   string session_id = 2;
   optional string display_name = 3;
-  reserved 4; // was thinking_level
-  optional string model_override = 5;
+  optional string model_override = 4;
 }
 
 message ArchiveSessionRequest {
@@ -162,7 +167,7 @@ message AddMessageRequest {
   bool is_thinking = 12;
 }
 
-message MessageResponse {
+message AddMessageResponse {
   MessageInfo message = 1;
 }
 

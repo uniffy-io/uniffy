@@ -182,7 +182,6 @@ export async function downloadAsArchive(
         // Mark as complete
         dispatch?.(completeDownload(downloadId));
     } catch (error) {
-        console.error('Archive download failed:', error);
         dispatch?.(failDownload({
             id: downloadId,
             error: error instanceof Error ? error.message : 'Download failed',

@@ -8,7 +8,6 @@ package usersv1
 
 import (
 	context "context"
-	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -39,20 +38,20 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersServiceClient interface {
 	// Self-service profile operations
-	GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*UserProfile, error)
-	UpdateMyProfile(ctx context.Context, in *UpdateMyProfileRequest, opts ...grpc.CallOption) (*UserProfile, error)
+	GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error)
+	UpdateMyProfile(ctx context.Context, in *UpdateMyProfileRequest, opts ...grpc.CallOption) (*UpdateMyProfileResponse, error)
 	// System Admin operations
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserProfile, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserProfile, error)
-	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UserProfile, error)
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
+	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	// Avatar operations
-	UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UserProfile, error)
-	DeleteAvatar(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*UserProfile, error)
+	UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UploadAvatarResponse, error)
+	DeleteAvatar(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*DeleteAvatarResponse, error)
 	// User-Organization operations (System Admin)
 	ListUserOrganizations(ctx context.Context, in *ListUserOrganizationsRequest, opts ...grpc.CallOption) (*ListUserOrganizationsResponse, error)
-	AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error)
+	AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*AddUserToOrganizationResponse, error)
 	RemoveUserFromOrganization(ctx context.Context, in *RemoveUserFromOrganizationRequest, opts ...grpc.CallOption) (*RemoveUserFromOrganizationResponse, error)
 }
 
@@ -64,9 +63,9 @@ func NewUsersServiceClient(cc grpc.ClientConnInterface) UsersServiceClient {
 	return &usersServiceClient{cc}
 }
 
-func (c *usersServiceClient) GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(GetMyProfileResponse)
 	err := c.cc.Invoke(ctx, UsersService_GetMyProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -74,9 +73,9 @@ func (c *usersServiceClient) GetMyProfile(ctx context.Context, in *GetMyProfileR
 	return out, nil
 }
 
-func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, in *UpdateMyProfileRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, in *UpdateMyProfileRequest, opts ...grpc.CallOption) (*UpdateMyProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(UpdateMyProfileResponse)
 	err := c.cc.Invoke(ctx, UsersService_UpdateMyProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -94,9 +93,9 @@ func (c *usersServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest
 	return out, nil
 }
 
-func (c *usersServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(GetUserResponse)
 	err := c.cc.Invoke(ctx, UsersService_GetUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -104,9 +103,9 @@ func (c *usersServiceClient) GetUser(ctx context.Context, in *GetUserRequest, op
 	return out, nil
 }
 
-func (c *usersServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(CreateUserResponse)
 	err := c.cc.Invoke(ctx, UsersService_CreateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -114,9 +113,9 @@ func (c *usersServiceClient) CreateUser(ctx context.Context, in *CreateUserReque
 	return out, nil
 }
 
-func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(UpdateUserResponse)
 	err := c.cc.Invoke(ctx, UsersService_UpdateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -134,9 +133,9 @@ func (c *usersServiceClient) DeleteUser(ctx context.Context, in *DeleteUserReque
 	return out, nil
 }
 
-func (c *usersServiceClient) UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UploadAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(UploadAvatarResponse)
 	err := c.cc.Invoke(ctx, UsersService_UploadAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -144,9 +143,9 @@ func (c *usersServiceClient) UploadAvatar(ctx context.Context, in *UploadAvatarR
 	return out, nil
 }
 
-func (c *usersServiceClient) DeleteAvatar(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*UserProfile, error) {
+func (c *usersServiceClient) DeleteAvatar(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*DeleteAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserProfile)
+	out := new(DeleteAvatarResponse)
 	err := c.cc.Invoke(ctx, UsersService_DeleteAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -164,9 +163,9 @@ func (c *usersServiceClient) ListUserOrganizations(ctx context.Context, in *List
 	return out, nil
 }
 
-func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error) {
+func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*AddUserToOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.MemberInfo)
+	out := new(AddUserToOrganizationResponse)
 	err := c.cc.Invoke(ctx, UsersService_AddUserToOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -189,20 +188,20 @@ func (c *usersServiceClient) RemoveUserFromOrganization(ctx context.Context, in 
 // for forward compatibility.
 type UsersServiceServer interface {
 	// Self-service profile operations
-	GetMyProfile(context.Context, *GetMyProfileRequest) (*UserProfile, error)
-	UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UserProfile, error)
+	GetMyProfile(context.Context, *GetMyProfileRequest) (*GetMyProfileResponse, error)
+	UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UpdateMyProfileResponse, error)
 	// System Admin operations
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	GetUser(context.Context, *GetUserRequest) (*UserProfile, error)
-	CreateUser(context.Context, *CreateUserRequest) (*UserProfile, error)
-	UpdateUser(context.Context, *UpdateUserRequest) (*UserProfile, error)
+	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
+	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
 	// Avatar operations
-	UploadAvatar(context.Context, *UploadAvatarRequest) (*UserProfile, error)
-	DeleteAvatar(context.Context, *DeleteAvatarRequest) (*UserProfile, error)
+	UploadAvatar(context.Context, *UploadAvatarRequest) (*UploadAvatarResponse, error)
+	DeleteAvatar(context.Context, *DeleteAvatarRequest) (*DeleteAvatarResponse, error)
 	// User-Organization operations (System Admin)
 	ListUserOrganizations(context.Context, *ListUserOrganizationsRequest) (*ListUserOrganizationsResponse, error)
-	AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*v1.MemberInfo, error)
+	AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*AddUserToOrganizationResponse, error)
 	RemoveUserFromOrganization(context.Context, *RemoveUserFromOrganizationRequest) (*RemoveUserFromOrganizationResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
@@ -214,37 +213,37 @@ type UsersServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedUsersServiceServer struct{}
 
-func (UnimplementedUsersServiceServer) GetMyProfile(context.Context, *GetMyProfileRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) GetMyProfile(context.Context, *GetMyProfileRequest) (*GetMyProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMyProfile not implemented")
 }
-func (UnimplementedUsersServiceServer) UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UpdateMyProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMyProfile not implemented")
 }
 func (UnimplementedUsersServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
 }
-func (UnimplementedUsersServiceServer) GetUser(context.Context, *GetUserRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
 }
-func (UnimplementedUsersServiceServer) CreateUser(context.Context, *CreateUserRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateUser not implemented")
 }
-func (UnimplementedUsersServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUser not implemented")
 }
 func (UnimplementedUsersServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
 }
-func (UnimplementedUsersServiceServer) UploadAvatar(context.Context, *UploadAvatarRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) UploadAvatar(context.Context, *UploadAvatarRequest) (*UploadAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadAvatar not implemented")
 }
-func (UnimplementedUsersServiceServer) DeleteAvatar(context.Context, *DeleteAvatarRequest) (*UserProfile, error) {
+func (UnimplementedUsersServiceServer) DeleteAvatar(context.Context, *DeleteAvatarRequest) (*DeleteAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAvatar not implemented")
 }
 func (UnimplementedUsersServiceServer) ListUserOrganizations(context.Context, *ListUserOrganizationsRequest) (*ListUserOrganizationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUserOrganizations not implemented")
 }
-func (UnimplementedUsersServiceServer) AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*v1.MemberInfo, error) {
+func (UnimplementedUsersServiceServer) AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*AddUserToOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddUserToOrganization not implemented")
 }
 func (UnimplementedUsersServiceServer) RemoveUserFromOrganization(context.Context, *RemoveUserFromOrganizationRequest) (*RemoveUserFromOrganizationResponse, error) {

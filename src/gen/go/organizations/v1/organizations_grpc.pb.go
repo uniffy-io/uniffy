@@ -8,7 +8,6 @@ package organizationsv1
 
 import (
 	context "context"
-	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -49,25 +48,25 @@ type OrganizationsServiceClient interface {
 	ListMyOrganizations(ctx context.Context, in *ListMyOrganizationsRequest, opts ...grpc.CallOption) (*ListMyOrganizationsResponse, error)
 	// Organization CRUD (System Admin)
 	ListOrganizations(ctx context.Context, in *ListOrganizationsRequest, opts ...grpc.CallOption) (*ListOrganizationsResponse, error)
-	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*OrganizationDetail, error)
-	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*v1.OrganizationInfo, error)
-	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*v1.OrganizationInfo, error)
+	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
+	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
+	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
 	DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
-	GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*OrganizationOverview, error)
+	GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
 	ListMembers(ctx context.Context, in *ListMembersRequest, opts ...grpc.CallOption) (*ListMembersResponse, error)
-	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error)
-	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error)
+	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error)
+	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error)
 	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
 	// Permission defaults (Org Admin)
-	GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*PermissionDefaultsResponse, error)
-	UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*ContentTypeDefaults, error)
+	GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*GetPermissionDefaultsResponse, error)
+	UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*UpdatePermissionDefaultsResponse, error)
 	// Organization settings (Org Admin) — org-scoped JSONB preferences.
-	GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error)
-	UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error)
+	GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*GetOrganizationSettingsResponse, error)
+	UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*UpdateOrganizationSettingsResponse, error)
 	// Domain Admin management (Org Admin)
-	GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error)
+	GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*GrantDomainAdminResponse, error)
 	RevokeDomainAdmin(ctx context.Context, in *RevokeDomainAdminRequest, opts ...grpc.CallOption) (*RevokeDomainAdminResponse, error)
 	ListDomainAdmins(ctx context.Context, in *ListDomainAdminsRequest, opts ...grpc.CallOption) (*ListDomainAdminsResponse, error)
 	GetUserDomainAdmins(ctx context.Context, in *GetUserDomainAdminsRequest, opts ...grpc.CallOption) (*GetUserDomainAdminsResponse, error)
@@ -101,9 +100,9 @@ func (c *organizationsServiceClient) ListOrganizations(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *organizationsServiceClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*OrganizationDetail, error) {
+func (c *organizationsServiceClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrganizationDetail)
+	out := new(GetOrganizationResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_GetOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,9 +110,9 @@ func (c *organizationsServiceClient) GetOrganization(ctx context.Context, in *Ge
 	return out, nil
 }
 
-func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*v1.OrganizationInfo, error) {
+func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.OrganizationInfo)
+	out := new(CreateOrganizationResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_CreateOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -121,9 +120,9 @@ func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*v1.OrganizationInfo, error) {
+func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.OrganizationInfo)
+	out := new(UpdateOrganizationResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdateOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -141,9 +140,9 @@ func (c *organizationsServiceClient) DeleteOrganization(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *organizationsServiceClient) GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*OrganizationOverview, error) {
+func (c *organizationsServiceClient) GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*GetOrganizationOverviewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrganizationOverview)
+	out := new(GetOrganizationOverviewResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_GetOrganizationOverview_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -161,9 +160,9 @@ func (c *organizationsServiceClient) ListMembers(ctx context.Context, in *ListMe
 	return out, nil
 }
 
-func (c *organizationsServiceClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error) {
+func (c *organizationsServiceClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.MemberInfo)
+	out := new(AddMemberResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_AddMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -171,9 +170,9 @@ func (c *organizationsServiceClient) AddMember(ctx context.Context, in *AddMembe
 	return out, nil
 }
 
-func (c *organizationsServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*v1.MemberInfo, error) {
+func (c *organizationsServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.MemberInfo)
+	out := new(UpdateMemberRoleResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdateMemberRole_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -191,9 +190,9 @@ func (c *organizationsServiceClient) RemoveMember(ctx context.Context, in *Remov
 	return out, nil
 }
 
-func (c *organizationsServiceClient) GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*PermissionDefaultsResponse, error) {
+func (c *organizationsServiceClient) GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*GetPermissionDefaultsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionDefaultsResponse)
+	out := new(GetPermissionDefaultsResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_GetPermissionDefaults_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -201,9 +200,9 @@ func (c *organizationsServiceClient) GetPermissionDefaults(ctx context.Context, 
 	return out, nil
 }
 
-func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*ContentTypeDefaults, error) {
+func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*UpdatePermissionDefaultsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ContentTypeDefaults)
+	out := new(UpdatePermissionDefaultsResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdatePermissionDefaults_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -211,9 +210,9 @@ func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Contex
 	return out, nil
 }
 
-func (c *organizationsServiceClient) GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error) {
+func (c *organizationsServiceClient) GetOrganizationSettings(ctx context.Context, in *GetOrganizationSettingsRequest, opts ...grpc.CallOption) (*GetOrganizationSettingsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrganizationSettings)
+	out := new(GetOrganizationSettingsResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_GetOrganizationSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -221,9 +220,9 @@ func (c *organizationsServiceClient) GetOrganizationSettings(ctx context.Context
 	return out, nil
 }
 
-func (c *organizationsServiceClient) UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*OrganizationSettings, error) {
+func (c *organizationsServiceClient) UpdateOrganizationSettings(ctx context.Context, in *UpdateOrganizationSettingsRequest, opts ...grpc.CallOption) (*UpdateOrganizationSettingsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrganizationSettings)
+	out := new(UpdateOrganizationSettingsResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdateOrganizationSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -231,9 +230,9 @@ func (c *organizationsServiceClient) UpdateOrganizationSettings(ctx context.Cont
 	return out, nil
 }
 
-func (c *organizationsServiceClient) GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error) {
+func (c *organizationsServiceClient) GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*GrantDomainAdminResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.DomainAdminInfo)
+	out := new(GrantDomainAdminResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_GrantDomainAdmin_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -279,25 +278,25 @@ type OrganizationsServiceServer interface {
 	ListMyOrganizations(context.Context, *ListMyOrganizationsRequest) (*ListMyOrganizationsResponse, error)
 	// Organization CRUD (System Admin)
 	ListOrganizations(context.Context, *ListOrganizationsRequest) (*ListOrganizationsResponse, error)
-	GetOrganization(context.Context, *GetOrganizationRequest) (*OrganizationDetail, error)
-	CreateOrganization(context.Context, *CreateOrganizationRequest) (*v1.OrganizationInfo, error)
-	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*v1.OrganizationInfo, error)
+	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
+	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
+	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
 	DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
-	GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*OrganizationOverview, error)
+	GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
 	ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error)
-	AddMember(context.Context, *AddMemberRequest) (*v1.MemberInfo, error)
-	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*v1.MemberInfo, error)
+	AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error)
+	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error)
 	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
 	// Permission defaults (Org Admin)
-	GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*PermissionDefaultsResponse, error)
-	UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error)
+	GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*GetPermissionDefaultsResponse, error)
+	UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*UpdatePermissionDefaultsResponse, error)
 	// Organization settings (Org Admin) — org-scoped JSONB preferences.
-	GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*OrganizationSettings, error)
-	UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*OrganizationSettings, error)
+	GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*GetOrganizationSettingsResponse, error)
+	UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*UpdateOrganizationSettingsResponse, error)
 	// Domain Admin management (Org Admin)
-	GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error)
+	GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*GrantDomainAdminResponse, error)
 	RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error)
 	ListDomainAdmins(context.Context, *ListDomainAdminsRequest) (*ListDomainAdminsResponse, error)
 	GetUserDomainAdmins(context.Context, *GetUserDomainAdminsRequest) (*GetUserDomainAdminsResponse, error)
@@ -317,46 +316,46 @@ func (UnimplementedOrganizationsServiceServer) ListMyOrganizations(context.Conte
 func (UnimplementedOrganizationsServiceServer) ListOrganizations(context.Context, *ListOrganizationsRequest) (*ListOrganizationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListOrganizations not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*OrganizationDetail, error) {
+func (UnimplementedOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*v1.OrganizationInfo, error) {
+func (UnimplementedOrganizationsServiceServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOrganization not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*v1.OrganizationInfo, error) {
+func (UnimplementedOrganizationsServiceServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteOrganization not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*OrganizationOverview, error) {
+func (UnimplementedOrganizationsServiceServer) GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganizationOverview not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMembers not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) AddMember(context.Context, *AddMemberRequest) (*v1.MemberInfo, error) {
+func (UnimplementedOrganizationsServiceServer) AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddMember not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*v1.MemberInfo, error) {
+func (UnimplementedOrganizationsServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMemberRole not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveMember not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*PermissionDefaultsResponse, error) {
+func (UnimplementedOrganizationsServiceServer) GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*GetPermissionDefaultsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPermissionDefaults not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error) {
+func (UnimplementedOrganizationsServiceServer) UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*UpdatePermissionDefaultsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePermissionDefaults not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*OrganizationSettings, error) {
+func (UnimplementedOrganizationsServiceServer) GetOrganizationSettings(context.Context, *GetOrganizationSettingsRequest) (*GetOrganizationSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganizationSettings not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*OrganizationSettings, error) {
+func (UnimplementedOrganizationsServiceServer) UpdateOrganizationSettings(context.Context, *UpdateOrganizationSettingsRequest) (*UpdateOrganizationSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrganizationSettings not implemented")
 }
-func (UnimplementedOrganizationsServiceServer) GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error) {
+func (UnimplementedOrganizationsServiceServer) GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*GrantDomainAdminResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantDomainAdmin not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error) {

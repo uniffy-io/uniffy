@@ -9,23 +9,25 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.sessions_pb2 import (
     AddMessageRequest,
+    AddMessageResponse,
     ArchiveSessionRequest,
     ArchiveSessionResponse,
     CompactSessionRequest,
     CompactSessionResponse,
     CreateSessionRequest,
+    CreateSessionResponse,
     GetSessionContextRequest,
     GetSessionContextResponse,
     GetSessionContextStatsRequest,
     GetSessionContextStatsResponse,
     GetSessionRequest,
+    GetSessionResponse,
     ListMessagesRequest,
     ListMessagesResponse,
     ListSessionsRequest,
     ListSessionsResponse,
-    MessageResponse,
-    SessionResponse,
     UpdateSessionRequest,
+    UpdateSessionResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -52,7 +54,7 @@ class SessionsHandlers:
         self,
         request: CreateSessionRequest,
         ctx: RequestContext,
-    ) -> SessionResponse:
+    ) -> CreateSessionResponse:
         """Handle create_session RPC call.
 
         Parameters
@@ -92,7 +94,7 @@ class SessionsHandlers:
                     display_name=display_name,
                     model_override=model_override,
                 )
-                return SessionResponse(session=session_to_proto(agent_session))
+                return CreateSessionResponse(session=session_to_proto(agent_session))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -108,7 +110,7 @@ class SessionsHandlers:
         self,
         request: GetSessionRequest,
         ctx: RequestContext,
-    ) -> SessionResponse:
+    ) -> GetSessionResponse:
         """Handle get_session RPC call.
 
         Parameters
@@ -140,7 +142,7 @@ class SessionsHandlers:
                     organization_id=org_id,
                     session_id=session_id,
                 )
-                return SessionResponse(session=session_to_proto(agent_session))
+                return GetSessionResponse(session=session_to_proto(agent_session))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Session not found")
@@ -239,7 +241,7 @@ class SessionsHandlers:
         self,
         request: UpdateSessionRequest,
         ctx: RequestContext,
-    ) -> SessionResponse:
+    ) -> UpdateSessionResponse:
         """Handle update_session RPC call.
 
         Parameters
@@ -276,7 +278,7 @@ class SessionsHandlers:
                     display_name=display_name,
                     model_override=model_override,
                 )
-                return SessionResponse(session=session_to_proto(agent_session))
+                return UpdateSessionResponse(session=session_to_proto(agent_session))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Session not found")
@@ -342,7 +344,7 @@ class SessionsHandlers:
         self,
         request: AddMessageRequest,
         ctx: RequestContext,
-    ) -> MessageResponse:
+    ) -> AddMessageResponse:
         """Handle add_message RPC call.
 
         Parameters
@@ -398,7 +400,7 @@ class SessionsHandlers:
                     tool_result=tool_result,
                     is_thinking=request.is_thinking,
                 )
-                return MessageResponse(message=message_to_proto(message))
+                return AddMessageResponse(message=message_to_proto(message))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Session not found")

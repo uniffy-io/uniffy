@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package files.v1;
 
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/files/v1;filesv1";
@@ -22,11 +22,11 @@ service FilesService {
   rpc UploadChunk(UploadChunkRequest) returns (UploadChunkResponse);
 
   // Complete an upload after all chunks have been sent.
-  rpc CompleteUpload(CompleteUploadRequest) returns (UploadChunksResponse);
+  rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse);
 
   // Stream file chunks to backend (client streaming RPC - server-to-server only).
   // NOTE: This does not work in browsers due to Fetch API limitations.
-  rpc UploadChunks(stream UploadChunkRequest) returns (UploadChunksResponse);
+  rpc UploadChunks(stream UploadChunksRequest) returns (UploadChunksResponse);
 
   // Get status of an in-progress upload (for resuming after disconnect).
   rpc GetUploadStatus(GetUploadStatusRequest) returns (GetUploadStatusResponse);
@@ -37,7 +37,7 @@ service FilesService {
   // === Download (Server Streaming) ===
 
   // Stream file content from backend to client (server streaming RPC).
-  rpc DownloadFile(DownloadFileRequest) returns (stream DownloadChunkResponse);
+  rpc DownloadFile(DownloadFileRequest) returns (stream DownloadFileResponse);
 
   // Stream file with byte range support for Service Worker media streaming.
   // This RPC supports HTTP Range-like semantics for video/audio seeking.
@@ -46,16 +46,16 @@ service FilesService {
   // === File CRUD ===
 
   // Get a file by ID.
-  rpc GetFile(GetFileRequest) returns (FileResponse);
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
 
   // Update file metadata (rename, tags, description).
-  rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
+  rpc UpdateFile(UpdateFileRequest) returns (UpdateFileResponse);
 
   // Delete a file (soft delete by default).
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
 
   // Restore a soft-deleted file.
-  rpc RestoreFile(RestoreFileRequest) returns (FileResponse);
+  rpc RestoreFile(RestoreFileRequest) returns (RestoreFileResponse);
 
   // List files with pagination and filters.
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
@@ -63,10 +63,10 @@ service FilesService {
   // === Folders ===
 
   // Create a new folder.
-  rpc CreateFolder(CreateFolderRequest) returns (FolderResponse);
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse);
 
   // Update a folder.
-  rpc UpdateFolder(UpdateFolderRequest) returns (FolderResponse);
+  rpc UpdateFolder(UpdateFolderRequest) returns (UpdateFolderResponse);
 
   // Delete a folder.
   rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse);
@@ -82,7 +82,7 @@ service FilesService {
   // Lazily create or fetch the per-user "Recordings" folder. Idempotent under
   // concurrent invocations across backend instances. Used by the screen
   // recording feature to resolve the upload destination on first record.
-  rpc EnsureRecordingsFolder(EnsureRecordingsFolderRequest) returns (FolderResponse);
+  rpc EnsureRecordingsFolder(EnsureRecordingsFolderRequest) returns (EnsureRecordingsFolderResponse);
 
   // === Bulk Operations ===
 
@@ -102,7 +102,7 @@ service FilesService {
   rpc ListTrash(ListTrashRequest) returns (ListTrashResponse);
 
   // Restore a soft-deleted folder (and its contents) back to its parent.
-  rpc RestoreFolder(RestoreFolderRequest) returns (FolderResponse);
+  rpc RestoreFolder(RestoreFolderRequest) returns (RestoreFolderResponse);
 
   // === Versions ===
 
@@ -110,7 +110,7 @@ service FilesService {
   rpc ListFileVersions(ListFileVersionsRequest) returns (ListFileVersionsResponse);
 
   // Restore a previous version of a file.
-  rpc RestoreFileVersion(RestoreFileVersionRequest) returns (FileResponse);
+  rpc RestoreFileVersion(RestoreFileVersionRequest) returns (RestoreFileVersionResponse);
 
   // === Storage Quotas ===
 
@@ -147,13 +147,13 @@ service FilesService {
   // === Saved Filters ===
 
   // Create a new saved filter.
-  rpc CreateSavedFilter(CreateSavedFilterRequest) returns (SavedFilterResponse);
+  rpc CreateSavedFilter(CreateSavedFilterRequest) returns (CreateSavedFilterResponse);
 
   // Get a saved filter by ID.
-  rpc GetSavedFilter(GetSavedFilterRequest) returns (SavedFilterResponse);
+  rpc GetSavedFilter(GetSavedFilterRequest) returns (GetSavedFilterResponse);
 
   // Update a saved filter.
-  rpc UpdateSavedFilter(UpdateSavedFilterRequest) returns (SavedFilterResponse);
+  rpc UpdateSavedFilter(UpdateSavedFilterRequest) returns (UpdateSavedFilterResponse);
 
   // Delete a saved filter.
   rpc DeleteSavedFilter(DeleteSavedFilterRequest) returns (DeleteSavedFilterResponse);
@@ -214,7 +214,7 @@ message InitiateUploadRequest {
 
 message InitiateUploadResponse {
   string upload_id = 1;
-  int32 chunk_size = 2;     // Recommended chunk size in bytes
+  int32 chunk_size = 2; // Recommended chunk size in bytes
   // Expected number of chunks. 0 when total_size was 0 (unknown). Clients
   // streaming an unknown-size upload must not rely on this for progress UI.
   int32 total_chunks = 3;
@@ -222,14 +222,21 @@ message InitiateUploadResponse {
 
 message UploadChunkRequest {
   string upload_id = 1;
-  int32 chunk_number = 2;   // 1-indexed
+  int32 chunk_number = 2; // 1-indexed
+  bytes data = 3;
+  bool is_last = 4;
+}
+
+message UploadChunksRequest {
+  string upload_id = 1;
+  int32 chunk_number = 2; // 1-indexed
   bytes data = 3;
   bool is_last = 4;
 }
 
 message UploadChunkResponse {
   bool success = 1;
-  int32 chunk_number = 2;   // Confirmed chunk number
+  int32 chunk_number = 2; // Confirmed chunk number
   int32 chunks_received = 3; // Total chunks received so far
 }
 
@@ -240,7 +247,11 @@ message CompleteUploadRequest {
 }
 
 message UploadChunksResponse {
-  File file = 1;            // The completed file
+  File file = 1; // The completed file
+}
+
+message CompleteUploadResponse {
+  File file = 1; // The completed file
 }
 
 message GetUploadStatusRequest {
@@ -270,10 +281,10 @@ message AbortUploadResponse {
 message DownloadFileRequest {
   string file_id = 1;
   string organization_id = 2;
-  optional string version_id = 3;   // Download specific version
+  optional string version_id = 3; // Download specific version
 }
 
-message DownloadChunkResponse {
+message DownloadFileResponse {
   bytes data = 1;
   int32 chunk_number = 2;
   int32 total_chunks = 3;
@@ -287,19 +298,19 @@ message DownloadChunkResponse {
 message StreamFileRangeRequest {
   string file_id = 1;
   string organization_id = 2;
-  optional int64 start_byte = 3;  // Range start (inclusive), default 0
-  optional int64 end_byte = 4;    // Range end (inclusive), default EOF
+  optional int64 start_byte = 3; // Range start (inclusive), default 0
+  optional int64 end_byte = 4; // Range end (inclusive), default EOF
 }
 
 // Response for range-based file streaming.
 message StreamFileRangeResponse {
   bytes data = 1;
-  int64 total_size = 2;           // Total file size (for Content-Length)
-  int64 range_start = 3;          // Actual range start returned
-  int64 range_end = 4;            // Actual range end returned
-  string mime_type = 5;           // For Content-Type header
-  string filename = 6;            // For Content-Disposition
-  bool is_first_chunk = 7;        // Metadata only meaningful in first chunk
+  int64 total_size = 2; // Total file size (for Content-Length)
+  int64 range_start = 3; // Actual range start returned
+  int64 range_end = 4; // Actual range end returned
+  string mime_type = 5; // For Content-Type header
+  string filename = 6; // For Content-Disposition
+  bool is_first_chunk = 7; // Metadata only meaningful in first chunk
 }
 
 // FILE MESSAGES
@@ -315,32 +326,31 @@ message File {
   string mime_type = 8;
   int64 size_bytes = 9;
   optional string folder_id = 10;
-  reserved 11;
-  optional string description = 12;
-  int32 version = 13;
-  ExtractionStatus extraction_status = 14;
-  bool is_deleted = 15;
-  google.protobuf.Timestamp created_at = 16;
-  google.protobuf.Timestamp updated_at = 17;
-  optional google.protobuf.Timestamp deleted_at = 18;
+  optional string description = 11;
+  int32 version = 12;
+  ExtractionStatus extraction_status = 13;
+  bool is_deleted = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  optional google.protobuf.Timestamp deleted_at = 17;
 
   // Sharing info (populated based on context)
-  repeated string group_ids = 19;
-  common.v1.ContentRole user_role = 20;
-  optional FileOwner owner_info = 21;
+  repeated string group_ids = 18;
+  common.v1.ContentRole user_role = 19;
+  optional FileOwner owner_info = 20;
 
   // Media metadata (extracted from file content)
-  optional FileMetadata metadata = 22;
+  optional FileMetadata metadata = 21;
 
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 23;
+  optional common.v1.ContentRole baseline_role = 22;
 
   // Unified tags assigned to this file (manual source, hydrated server-side).
-  repeated tags.v1.Tag tags = 24;
+  repeated tags.v1.Tag tags = 23;
 
   // Server-side transcode pipeline state. UI uses this to gate the download
   // button while a WebM screen recording is being remuxed to MP4.
-  TranscodeStatus transcode_status = 25;
+  TranscodeStatus transcode_status = 24;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -352,17 +362,17 @@ message FileTagIds {
 // Metadata extracted from media files (images, videos, PDFs).
 message FileMetadata {
   bool has_thumbnail = 1;
-  optional int32 width = 2;           // Image/video width in pixels
-  optional int32 height = 3;          // Image/video height in pixels
-  optional string format = 4;         // Format details (e.g., "JPEG", "PNG")
-  optional string color_mode = 5;     // Color mode (e.g., "RGB", "CMYK")
+  optional int32 width = 2; // Image/video width in pixels
+  optional int32 height = 3; // Image/video height in pixels
+  optional string format = 4; // Format details (e.g., "JPEG", "PNG")
+  optional string color_mode = 5; // Color mode (e.g., "RGB", "CMYK")
   optional float duration_seconds = 6; // Video/audio duration
-  optional int32 page_count = 7;      // PDF page count
-  map<string, string> exif = 8;       // EXIF data for images
-  optional string error = 9;          // Error message if extraction failed
-  optional int32 bitrate = 10;        // Audio bitrate in bits/sec
-  optional int32 sample_rate = 11;    // Audio sample rate in Hz
-  optional int32 channels = 12;       // Number of audio channels
+  optional int32 page_count = 7; // PDF page count
+  map<string, string> exif = 8; // EXIF data for images
+  optional string error = 9; // Error message if extraction failed
+  optional int32 bitrate = 10; // Audio bitrate in bits/sec
+  optional int32 sample_rate = 11; // Audio sample rate in Hz
+  optional int32 channels = 12; // Number of audio channels
 }
 
 message FileOwner {
@@ -371,7 +381,19 @@ message FileOwner {
   string email = 3;
 }
 
-message FileResponse {
+message GetFileResponse {
+  File file = 1;
+}
+
+message UpdateFileResponse {
+  File file = 1;
+}
+
+message RestoreFileResponse {
+  File file = 1;
+}
+
+message RestoreFileVersionResponse {
   File file = 1;
 }
 
@@ -384,14 +406,12 @@ message UpdateFileRequest {
   string file_id = 1;
   string organization_id = 2;
   optional string filename = 3;
-  reserved 4;
-  reserved "tags";
-  optional string description = 5;
-  optional common.v1.AccessMode access_mode = 6;
-  optional common.v1.ContentRole baseline_role = 7;
+  optional string description = 4;
+  optional common.v1.AccessMode access_mode = 5;
+  optional common.v1.ContentRole baseline_role = 6;
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field unset (HasField=false) leaves manual tags untouched.
-  optional FileTagIds tag_ids = 8;
+  optional FileTagIds tag_ids = 7;
 }
 
 message DeleteFileRequest {
@@ -412,21 +432,19 @@ message RestoreFileRequest {
 
 message ListFilesRequest {
   string organization_id = 1;
-  optional string folder_id = 2;      // null = root, "all" = all files
-  reserved 3;
-  reserved "tags";
-  bool include_deleted = 4;
-  bool personal_only = 5;
-  optional common.v1.AccessMode access_mode = 6;
-  optional string group_id = 7;
-  int32 page = 8;
-  int32 page_size = 9;
-  string sort_by = 10;                // created_at, updated_at, filename, size
-  string sort_order = 11;             // asc, desc
-  bool shared_only = 12;              // Filter for files shared with user (not owned)
+  optional string folder_id = 2; // null = root, "all" = all files
+  bool include_deleted = 3;
+  bool personal_only = 4;
+  optional common.v1.AccessMode access_mode = 5;
+  optional string group_id = 6;
+  int32 page = 7;
+  int32 page_size = 8;
+  string sort_by = 9; // created_at, updated_at, filename, size
+  string sort_order = 10; // asc, desc
+  bool shared_only = 11; // Filter for files shared with user (not owned)
   // Filter to files carrying every tag id in this list (logical AND).
   // Empty = no tag filter.
-  repeated string tag_ids = 13;
+  repeated string tag_ids = 12;
 }
 
 message ListFilesResponse {
@@ -450,11 +468,23 @@ message Folder {
   bool is_deleted = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
-  bool is_system = 11;               // System folders (e.g., Attachments) cannot be deleted
+  bool is_system = 11; // System folders (e.g., Attachments) cannot be deleted
   optional common.v1.ContentRole baseline_role = 12;
 }
 
-message FolderResponse {
+message CreateFolderResponse {
+  Folder folder = 1;
+}
+
+message UpdateFolderResponse {
+  Folder folder = 1;
+}
+
+message EnsureRecordingsFolderResponse {
+  Folder folder = 1;
+}
+
+message RestoreFolderResponse {
   Folder folder = 1;
 }
 
@@ -470,7 +500,7 @@ message UpdateFolderRequest {
   string folder_id = 1;
   string organization_id = 2;
   optional string name = 3;
-  optional string parent_id = 4;      // "" to move to root
+  optional string parent_id = 4; // "" to move to root
   optional common.v1.AccessMode access_mode = 5;
   optional common.v1.ContentRole baseline_role = 6;
 }
@@ -479,7 +509,7 @@ message DeleteFolderRequest {
   string folder_id = 1;
   string organization_id = 2;
   bool permanent = 3;
-  bool recursive = 4;                 // Also delete contents
+  bool recursive = 4; // Also delete contents
 }
 
 message DeleteFolderResponse {
@@ -493,8 +523,8 @@ message DeleteFolderResponse {
 
 message GetFilesTreeRequest {
   string organization_id = 1;
-  optional string root_folder_id = 2;  // null = entire tree
-  bool include_files = 3;              // Include files in tree nodes
+  optional string root_folder_id = 2; // null = entire tree
+  bool include_files = 3; // Include files in tree nodes
   bool personal_only = 4;
 }
 
@@ -508,10 +538,10 @@ message TreeNode {
   bool is_folder = 3;
   optional string parent_id = 4;
   common.v1.AccessMode access_mode = 5;
-  int32 child_count = 6;               // For folders: number of children
-  optional int64 size_bytes = 7;       // For files: file size
-  optional string mime_type = 8;       // For files: MIME type
-  repeated TreeNode children = 9;      // Nested children (if requested)
+  int32 child_count = 6; // For folders: number of children
+  optional int64 size_bytes = 7; // For files: file size
+  optional string mime_type = 8; // For files: MIME type
+  repeated TreeNode children = 9; // Nested children (if requested)
   optional common.v1.ContentRole baseline_role = 10;
 }
 
@@ -521,8 +551,8 @@ message MoveItemsRequest {
   string organization_id = 1;
   repeated string file_ids = 2;
   repeated string folder_ids = 3;
-  optional string target_folder_id = 4;  // null = root
-  optional common.v1.AccessMode target_access_mode = 5;  // Change access mode
+  optional string target_folder_id = 4; // null = root
+  optional common.v1.AccessMode target_access_mode = 5; // Change access mode
   optional common.v1.ContentRole target_baseline_role = 6;
 }
 
@@ -535,7 +565,7 @@ message MoveItemsResponse {
 
 message CopyItemsRequest {
   string organization_id = 1;
-  repeated string file_ids = 2;          // Only files can be copied
+  repeated string file_ids = 2; // Only files can be copied
   optional string target_folder_id = 3;
 }
 
@@ -615,24 +645,22 @@ message RestoreFileVersionRequest {
 
 // Filter criteria for file search/filtering.
 message FilterCriteria {
-  repeated string extensions = 1;           // File extensions without dot (pdf, docx)
-  repeated string mime_categories = 2;      // document, image, video, audio, archive
-  repeated string owner_ids = 3;            // Filter by owner user IDs
-  optional common.v1.AccessMode access_mode = 4;  // Filter by access mode
-  reserved 5;
-  reserved "tags";
-  optional int64 size_min_bytes = 6;        // Minimum file size
-  optional int64 size_max_bytes = 7;        // Maximum file size
-  optional google.protobuf.Timestamp created_after = 8;   // Created after date
-  optional google.protobuf.Timestamp created_before = 9;  // Created before date
+  repeated string extensions = 1; // File extensions without dot (pdf, docx)
+  repeated string mime_categories = 2; // document, image, video, audio, archive
+  repeated string owner_ids = 3; // Filter by owner user IDs
+  optional common.v1.AccessMode access_mode = 4; // Filter by access mode
+  optional int64 size_min_bytes = 5; // Minimum file size
+  optional int64 size_max_bytes = 6; // Maximum file size
+  optional google.protobuf.Timestamp created_after = 7; // Created after date
+  optional google.protobuf.Timestamp created_before = 8; // Created before date
   // Filter to files carrying every tag id in this list (logical AND).
-  repeated string tag_ids = 10;
+  repeated string tag_ids = 9;
 }
 
 // Icon value for saved filters (Phosphor icon or emoji).
 message IconValue {
-  string type = 1;   // "icon" for Phosphor icons, "emoji" for emojis
-  string value = 2;  // Icon name (e.g., "Funnel") or emoji character
+  string type = 1; // "icon" for Phosphor icons, "emoji" for emojis
+  string value = 2; // Icon name (e.g., "Funnel") or emoji character
 }
 
 // A saved file filter configuration.
@@ -642,7 +670,7 @@ message SavedFilter {
   string organization_id = 3;
   string name = 4;
   optional string description = 5;
-  optional IconValue icon = 12;  // Optional icon for the filter
+  optional IconValue icon = 12; // Optional icon for the filter
   FilterCriteria criteria = 6;
   bool is_preset = 7;
   optional string sort_by = 8;
@@ -651,7 +679,15 @@ message SavedFilter {
   google.protobuf.Timestamp updated_at = 11;
 }
 
-message SavedFilterResponse {
+message CreateSavedFilterResponse {
+  SavedFilter filter = 1;
+}
+
+message GetSavedFilterResponse {
+  SavedFilter filter = 1;
+}
+
+message UpdateSavedFilterResponse {
   SavedFilter filter = 1;
 }
 
@@ -659,7 +695,7 @@ message CreateSavedFilterRequest {
   string organization_id = 1;
   string name = 2;
   optional string description = 3;
-  optional IconValue icon = 7;  // Optional icon for the filter
+  optional IconValue icon = 7; // Optional icon for the filter
   FilterCriteria criteria = 4;
   optional string sort_by = 5;
   optional string sort_order = 6;
@@ -675,7 +711,7 @@ message UpdateSavedFilterRequest {
   string organization_id = 2;
   optional string name = 3;
   optional string description = 4;
-  optional IconValue icon = 8;  // Optional icon for the filter
+  optional IconValue icon = 8; // Optional icon for the filter
   optional FilterCriteria criteria = 5;
   optional string sort_by = 6;
   optional string sort_order = 7;
@@ -693,7 +729,7 @@ message DeleteSavedFilterResponse {
 
 message ListSavedFiltersRequest {
   string organization_id = 1;
-  bool include_presets = 2;  // Include system presets in results
+  bool include_presets = 2; // Include system presets in results
 }
 
 message ListSavedFiltersResponse {

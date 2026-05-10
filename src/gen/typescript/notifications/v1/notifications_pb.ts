@@ -1008,15 +1008,15 @@ export class FileUpdatePayload extends Message<FileUpdatePayload> {
 /**
  * Event sent via the streaming RPC
  *
- * @generated from message notifications.v1.StreamNotificationEvent
+ * @generated from message notifications.v1.StreamNotificationsResponse
  */
-export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
+export class StreamNotificationsResponse extends Message<StreamNotificationsResponse> {
   /**
    * Type of this event
    *
-   * @generated from field: notifications.v1.StreamNotificationEvent.EventType event_type = 1;
+   * @generated from field: notifications.v1.StreamNotificationsResponse.EventType event_type = 1;
    */
-  eventType = StreamNotificationEvent_EventType.UNSPECIFIED;
+  eventType = StreamNotificationsResponse_EventType.UNSPECIFIED;
 
   /**
    * The notification (present for NEW_NOTIFICATION events)
@@ -1053,15 +1053,15 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
    */
   mentionStateChanged?: MentionStateChangedPayload;
 
-  constructor(data?: PartialMessage<StreamNotificationEvent>) {
+  constructor(data?: PartialMessage<StreamNotificationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notifications.v1.StreamNotificationEvent";
+  static readonly typeName = "notifications.v1.StreamNotificationsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "event_type", kind: "enum", T: proto3.getEnumType(StreamNotificationEvent_EventType) },
+    { no: 1, name: "event_type", kind: "enum", T: proto3.getEnumType(StreamNotificationsResponse_EventType) },
     { no: 2, name: "notification", kind: "message", T: Notification },
     { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "file_update", kind: "message", T: FileUpdatePayload },
@@ -1069,29 +1069,29 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
     { no: 6, name: "mention_state_changed", kind: "message", T: MentionStateChangedPayload },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamNotificationEvent {
-    return new StreamNotificationEvent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamNotificationsResponse {
+    return new StreamNotificationsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamNotificationEvent {
-    return new StreamNotificationEvent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamNotificationsResponse {
+    return new StreamNotificationsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamNotificationEvent {
-    return new StreamNotificationEvent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamNotificationsResponse {
+    return new StreamNotificationsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StreamNotificationEvent | PlainMessage<StreamNotificationEvent> | undefined, b: StreamNotificationEvent | PlainMessage<StreamNotificationEvent> | undefined): boolean {
-    return proto3.util.equals(StreamNotificationEvent, a, b);
+  static equals(a: StreamNotificationsResponse | PlainMessage<StreamNotificationsResponse> | undefined, b: StreamNotificationsResponse | PlainMessage<StreamNotificationsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamNotificationsResponse, a, b);
   }
 }
 
 /**
  * Event type
  *
- * @generated from enum notifications.v1.StreamNotificationEvent.EventType
+ * @generated from enum notifications.v1.StreamNotificationsResponse.EventType
  */
-export enum StreamNotificationEvent_EventType {
+export enum StreamNotificationsResponse_EventType {
   /**
    * @generated from enum value: EVENT_TYPE_UNSPECIFIED = 0;
    */
@@ -1139,8 +1139,8 @@ export enum StreamNotificationEvent_EventType {
    */
   PERMISSIONS_CHANGED = 6,
 }
-// Retrieve enum metadata with: proto3.getEnumType(StreamNotificationEvent_EventType)
-proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.StreamNotificationEvent.EventType", [
+// Retrieve enum metadata with: proto3.getEnumType(StreamNotificationsResponse_EventType)
+proto3.util.setEnumType(StreamNotificationsResponse_EventType, "notifications.v1.StreamNotificationsResponse.EventType", [
   { no: 0, name: "EVENT_TYPE_UNSPECIFIED" },
   { no: 1, name: "EVENT_TYPE_NEW_NOTIFICATION" },
   { no: 2, name: "EVENT_TYPE_HEARTBEAT" },

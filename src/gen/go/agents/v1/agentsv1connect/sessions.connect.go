@@ -68,17 +68,17 @@ const (
 // SessionsServiceClient is a client for the agents.v1.SessionsService service.
 type SessionsServiceClient interface {
 	// Create a new session (find-or-create for DIRECT kind)
-	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error)
 	// Get a session by ID
-	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
 	// List sessions for the user in an organization
 	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
 	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error)
 	// Archive a session (soft delete)
 	ArchiveSession(context.Context, *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error)
 	// Add a message to a session
-	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.MessageResponse], error)
+	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error)
 	// List messages in a session
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// Get recent messages for LLM context assembly
@@ -100,13 +100,13 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	sessionsServiceMethods := v1.File_agents_v1_sessions_proto.Services().ByName("SessionsService").Methods()
 	return &sessionsServiceClient{
-		createSession: connect.NewClient[v1.CreateSessionRequest, v1.SessionResponse](
+		createSession: connect.NewClient[v1.CreateSessionRequest, v1.CreateSessionResponse](
 			httpClient,
 			baseURL+SessionsServiceCreateSessionProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("CreateSession")),
 			connect.WithClientOptions(opts...),
 		),
-		getSession: connect.NewClient[v1.GetSessionRequest, v1.SessionResponse](
+		getSession: connect.NewClient[v1.GetSessionRequest, v1.GetSessionResponse](
 			httpClient,
 			baseURL+SessionsServiceGetSessionProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("GetSession")),
@@ -118,7 +118,7 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(sessionsServiceMethods.ByName("ListSessions")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSession: connect.NewClient[v1.UpdateSessionRequest, v1.SessionResponse](
+		updateSession: connect.NewClient[v1.UpdateSessionRequest, v1.UpdateSessionResponse](
 			httpClient,
 			baseURL+SessionsServiceUpdateSessionProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("UpdateSession")),
@@ -130,7 +130,7 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(sessionsServiceMethods.ByName("ArchiveSession")),
 			connect.WithClientOptions(opts...),
 		),
-		addMessage: connect.NewClient[v1.AddMessageRequest, v1.MessageResponse](
+		addMessage: connect.NewClient[v1.AddMessageRequest, v1.AddMessageResponse](
 			httpClient,
 			baseURL+SessionsServiceAddMessageProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("AddMessage")),
@@ -165,12 +165,12 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // sessionsServiceClient implements SessionsServiceClient.
 type sessionsServiceClient struct {
-	createSession          *connect.Client[v1.CreateSessionRequest, v1.SessionResponse]
-	getSession             *connect.Client[v1.GetSessionRequest, v1.SessionResponse]
+	createSession          *connect.Client[v1.CreateSessionRequest, v1.CreateSessionResponse]
+	getSession             *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
 	listSessions           *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
-	updateSession          *connect.Client[v1.UpdateSessionRequest, v1.SessionResponse]
+	updateSession          *connect.Client[v1.UpdateSessionRequest, v1.UpdateSessionResponse]
 	archiveSession         *connect.Client[v1.ArchiveSessionRequest, v1.ArchiveSessionResponse]
-	addMessage             *connect.Client[v1.AddMessageRequest, v1.MessageResponse]
+	addMessage             *connect.Client[v1.AddMessageRequest, v1.AddMessageResponse]
 	listMessages           *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
 	getSessionContext      *connect.Client[v1.GetSessionContextRequest, v1.GetSessionContextResponse]
 	getSessionContextStats *connect.Client[v1.GetSessionContextStatsRequest, v1.GetSessionContextStatsResponse]
@@ -178,12 +178,12 @@ type sessionsServiceClient struct {
 }
 
 // CreateSession calls agents.v1.SessionsService.CreateSession.
-func (c *sessionsServiceClient) CreateSession(ctx context.Context, req *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (c *sessionsServiceClient) CreateSession(ctx context.Context, req *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error) {
 	return c.createSession.CallUnary(ctx, req)
 }
 
 // GetSession calls agents.v1.SessionsService.GetSession.
-func (c *sessionsServiceClient) GetSession(ctx context.Context, req *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (c *sessionsServiceClient) GetSession(ctx context.Context, req *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error) {
 	return c.getSession.CallUnary(ctx, req)
 }
 
@@ -193,7 +193,7 @@ func (c *sessionsServiceClient) ListSessions(ctx context.Context, req *connect.R
 }
 
 // UpdateSession calls agents.v1.SessionsService.UpdateSession.
-func (c *sessionsServiceClient) UpdateSession(ctx context.Context, req *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (c *sessionsServiceClient) UpdateSession(ctx context.Context, req *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error) {
 	return c.updateSession.CallUnary(ctx, req)
 }
 
@@ -203,7 +203,7 @@ func (c *sessionsServiceClient) ArchiveSession(ctx context.Context, req *connect
 }
 
 // AddMessage calls agents.v1.SessionsService.AddMessage.
-func (c *sessionsServiceClient) AddMessage(ctx context.Context, req *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.MessageResponse], error) {
+func (c *sessionsServiceClient) AddMessage(ctx context.Context, req *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error) {
 	return c.addMessage.CallUnary(ctx, req)
 }
 
@@ -230,17 +230,17 @@ func (c *sessionsServiceClient) CompactSession(ctx context.Context, req *connect
 // SessionsServiceHandler is an implementation of the agents.v1.SessionsService service.
 type SessionsServiceHandler interface {
 	// Create a new session (find-or-create for DIRECT kind)
-	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error)
 	// Get a session by ID
-	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
 	// List sessions for the user in an organization
 	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
 	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.SessionResponse], error)
+	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error)
 	// Archive a session (soft delete)
 	ArchiveSession(context.Context, *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error)
 	// Add a message to a session
-	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.MessageResponse], error)
+	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error)
 	// List messages in a session
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// Get recent messages for LLM context assembly
@@ -349,11 +349,11 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 // UnimplementedSessionsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSessionsServiceHandler struct{}
 
-func (UnimplementedSessionsServiceHandler) CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (UnimplementedSessionsServiceHandler) CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.CreateSession is not implemented"))
 }
 
-func (UnimplementedSessionsServiceHandler) GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (UnimplementedSessionsServiceHandler) GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.GetSession is not implemented"))
 }
 
@@ -361,7 +361,7 @@ func (UnimplementedSessionsServiceHandler) ListSessions(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.ListSessions is not implemented"))
 }
 
-func (UnimplementedSessionsServiceHandler) UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.SessionResponse], error) {
+func (UnimplementedSessionsServiceHandler) UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.UpdateSession is not implemented"))
 }
 
@@ -369,7 +369,7 @@ func (UnimplementedSessionsServiceHandler) ArchiveSession(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.ArchiveSession is not implemented"))
 }
 
-func (UnimplementedSessionsServiceHandler) AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.MessageResponse], error) {
+func (UnimplementedSessionsServiceHandler) AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.AddMessage is not implemented"))
 }
 

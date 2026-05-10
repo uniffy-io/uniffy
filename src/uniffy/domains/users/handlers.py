@@ -6,15 +6,20 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.common.v1.common_pb2 import MemberInfo, PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 from uniffy_proto.users.v1.users_pb2 import (
     AddUserToOrganizationRequest,
+    AddUserToOrganizationResponse,
     CreateUserRequest,
+    CreateUserResponse,
     DeleteAvatarRequest,
+    DeleteAvatarResponse,
     DeleteUserRequest,
     DeleteUserResponse,
     GetMyProfileRequest,
+    GetMyProfileResponse,
     GetUserRequest,
+    GetUserResponse,
     ListUserOrganizationsRequest,
     ListUserOrganizationsResponse,
     ListUsersRequest,
@@ -22,9 +27,11 @@ from uniffy_proto.users.v1.users_pb2 import (
     RemoveUserFromOrganizationRequest,
     RemoveUserFromOrganizationResponse,
     UpdateMyProfileRequest,
+    UpdateMyProfileResponse,
     UpdateUserRequest,
+    UpdateUserResponse,
     UploadAvatarRequest,
-    UserProfile,
+    UploadAvatarResponse,
 )
 
 from uniffy.core.converters import member_info_to_proto, org_role_from_proto
@@ -44,7 +51,7 @@ class UsersHandlers:
         self,
         request: GetMyProfileRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> GetMyProfileResponse:
         """Get current authenticated user's profile."""
         user_id = get_user_id_from_context(ctx)
 
@@ -52,7 +59,7 @@ class UsersHandlers:
             async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.get_by_id(user_id)
-                return user_to_profile(user)
+                return GetMyProfileResponse(user=user_to_profile(user))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
@@ -63,7 +70,7 @@ class UsersHandlers:
         self,
         request: UpdateMyProfileRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> UpdateMyProfileResponse:
         """Update current user's profile."""
         user_id = get_user_id_from_context(ctx)
 
@@ -77,7 +84,7 @@ class UsersHandlers:
                     accent_color=request.accent_color if request.HasField("accent_color") else None,
                     font_family=request.font_family if request.HasField("font_family") else None,
                 )
-                return user_to_profile(user)
+                return UpdateMyProfileResponse(user=user_to_profile(user))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
@@ -88,7 +95,7 @@ class UsersHandlers:
         self,
         request: UploadAvatarRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> UploadAvatarResponse:
         """Upload user avatar image."""
         user_id = get_user_id_from_context(ctx)
 
@@ -105,7 +112,7 @@ class UsersHandlers:
                     image_data=request.image_data,
                     filename=request.filename,
                 )
-                return user_to_profile(user)
+                return UploadAvatarResponse(user=user_to_profile(user))
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except NotFoundError as e:
@@ -118,7 +125,7 @@ class UsersHandlers:
         self,
         request: DeleteAvatarRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> DeleteAvatarResponse:
         """Delete user avatar."""
         user_id = get_user_id_from_context(ctx)
 
@@ -126,7 +133,7 @@ class UsersHandlers:
             async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.delete_avatar(user_id)
-                return user_to_profile(user)
+                return DeleteAvatarResponse(user=user_to_profile(user))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
@@ -184,7 +191,7 @@ class UsersHandlers:
         self,
         request: GetUserRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> GetUserResponse:
         """Get user by ID (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -199,7 +206,7 @@ class UsersHandlers:
                 await ops.require_system_admin(user_id)
 
                 user = await ops.get_by_id(target_user_id)
-                return user_to_profile(user)
+                return GetUserResponse(user=user_to_profile(user))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -212,7 +219,7 @@ class UsersHandlers:
         self,
         request: CreateUserRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> CreateUserResponse:
         """Create a new user (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -243,7 +250,7 @@ class UsersHandlers:
                     full_name=request.full_name if request.HasField("full_name") else None,
                     is_system_admin=request.is_system_admin,
                 )
-                return user_to_profile(user)
+                return CreateUserResponse(user=user_to_profile(user))
         except ConnectError:
             raise
         except PermissionDeniedError as e:
@@ -256,7 +263,7 @@ class UsersHandlers:
         self,
         request: UpdateUserRequest,
         ctx: RequestContext,
-    ) -> UserProfile:
+    ) -> UpdateUserResponse:
         """Update user details (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -286,7 +293,7 @@ class UsersHandlers:
                     ),
                     hashed_password=hashed_pw,
                 )
-                return user_to_profile(user)
+                return UpdateUserResponse(user=user_to_profile(user))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -364,7 +371,7 @@ class UsersHandlers:
         self,
         request: AddUserToOrganizationRequest,
         ctx: RequestContext,
-    ) -> MemberInfo:
+    ) -> AddUserToOrganizationResponse:
         """Add user to organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -392,7 +399,9 @@ class UsersHandlers:
                 org_ops = OrganizationOperations(session)
                 membership = await org_ops.add_member(target_user_id, org_id, role)
 
-                return member_info_to_proto(target_user, membership)
+                return AddUserToOrganizationResponse(
+                    member=member_info_to_proto(target_user, membership)
+                )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:

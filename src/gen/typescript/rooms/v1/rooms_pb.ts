@@ -800,39 +800,113 @@ export class DeleteRoomResponse extends Message<DeleteRoomResponse> {
 }
 
 /**
- * @generated from message rooms.v1.RoomResponse
+ * @generated from message rooms.v1.CreateRoomResponse
  */
-export class RoomResponse extends Message<RoomResponse> {
+export class CreateRoomResponse extends Message<CreateRoomResponse> {
   /**
    * @generated from field: rooms.v1.Room room = 1;
    */
   room?: Room;
 
-  constructor(data?: PartialMessage<RoomResponse>) {
+  constructor(data?: PartialMessage<CreateRoomResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "rooms.v1.RoomResponse";
+  static readonly typeName = "rooms.v1.CreateRoomResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "room", kind: "message", T: Room },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RoomResponse {
-    return new RoomResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateRoomResponse {
+    return new CreateRoomResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RoomResponse {
-    return new RoomResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateRoomResponse {
+    return new CreateRoomResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RoomResponse {
-    return new RoomResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateRoomResponse {
+    return new CreateRoomResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RoomResponse | PlainMessage<RoomResponse> | undefined, b: RoomResponse | PlainMessage<RoomResponse> | undefined): boolean {
-    return proto3.util.equals(RoomResponse, a, b);
+  static equals(a: CreateRoomResponse | PlainMessage<CreateRoomResponse> | undefined, b: CreateRoomResponse | PlainMessage<CreateRoomResponse> | undefined): boolean {
+    return proto3.util.equals(CreateRoomResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message rooms.v1.GetRoomResponse
+ */
+export class GetRoomResponse extends Message<GetRoomResponse> {
+  /**
+   * @generated from field: rooms.v1.Room room = 1;
+   */
+  room?: Room;
+
+  constructor(data?: PartialMessage<GetRoomResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rooms.v1.GetRoomResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "room", kind: "message", T: Room },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRoomResponse {
+    return new GetRoomResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRoomResponse {
+    return new GetRoomResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRoomResponse {
+    return new GetRoomResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRoomResponse | PlainMessage<GetRoomResponse> | undefined, b: GetRoomResponse | PlainMessage<GetRoomResponse> | undefined): boolean {
+    return proto3.util.equals(GetRoomResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message rooms.v1.UpdateRoomResponse
+ */
+export class UpdateRoomResponse extends Message<UpdateRoomResponse> {
+  /**
+   * @generated from field: rooms.v1.Room room = 1;
+   */
+  room?: Room;
+
+  constructor(data?: PartialMessage<UpdateRoomResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rooms.v1.UpdateRoomResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "room", kind: "message", T: Room },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateRoomResponse {
+    return new UpdateRoomResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateRoomResponse {
+    return new UpdateRoomResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateRoomResponse {
+    return new UpdateRoomResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateRoomResponse | PlainMessage<UpdateRoomResponse> | undefined, b: UpdateRoomResponse | PlainMessage<UpdateRoomResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateRoomResponse, a, b);
   }
 }
 
@@ -1148,39 +1222,113 @@ export class CancelBookingRequest extends Message<CancelBookingRequest> {
 }
 
 /**
- * @generated from message rooms.v1.BookingResponse
+ * @generated from message rooms.v1.CreateBookingResponse
  */
-export class BookingResponse extends Message<BookingResponse> {
+export class CreateBookingResponse extends Message<CreateBookingResponse> {
   /**
    * @generated from field: rooms.v1.RoomBooking booking = 1;
    */
   booking?: RoomBooking;
 
-  constructor(data?: PartialMessage<BookingResponse>) {
+  constructor(data?: PartialMessage<CreateBookingResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "rooms.v1.BookingResponse";
+  static readonly typeName = "rooms.v1.CreateBookingResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "booking", kind: "message", T: RoomBooking },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BookingResponse {
-    return new BookingResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateBookingResponse {
+    return new CreateBookingResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BookingResponse {
-    return new BookingResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateBookingResponse {
+    return new CreateBookingResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BookingResponse {
-    return new BookingResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateBookingResponse {
+    return new CreateBookingResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: BookingResponse | PlainMessage<BookingResponse> | undefined, b: BookingResponse | PlainMessage<BookingResponse> | undefined): boolean {
-    return proto3.util.equals(BookingResponse, a, b);
+  static equals(a: CreateBookingResponse | PlainMessage<CreateBookingResponse> | undefined, b: CreateBookingResponse | PlainMessage<CreateBookingResponse> | undefined): boolean {
+    return proto3.util.equals(CreateBookingResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message rooms.v1.GetBookingResponse
+ */
+export class GetBookingResponse extends Message<GetBookingResponse> {
+  /**
+   * @generated from field: rooms.v1.RoomBooking booking = 1;
+   */
+  booking?: RoomBooking;
+
+  constructor(data?: PartialMessage<GetBookingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rooms.v1.GetBookingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "booking", kind: "message", T: RoomBooking },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetBookingResponse {
+    return new GetBookingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetBookingResponse {
+    return new GetBookingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetBookingResponse {
+    return new GetBookingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetBookingResponse | PlainMessage<GetBookingResponse> | undefined, b: GetBookingResponse | PlainMessage<GetBookingResponse> | undefined): boolean {
+    return proto3.util.equals(GetBookingResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message rooms.v1.CancelBookingResponse
+ */
+export class CancelBookingResponse extends Message<CancelBookingResponse> {
+  /**
+   * @generated from field: rooms.v1.RoomBooking booking = 1;
+   */
+  booking?: RoomBooking;
+
+  constructor(data?: PartialMessage<CancelBookingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rooms.v1.CancelBookingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "booking", kind: "message", T: RoomBooking },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CancelBookingResponse {
+    return new CancelBookingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CancelBookingResponse {
+    return new CancelBookingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CancelBookingResponse {
+    return new CancelBookingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CancelBookingResponse | PlainMessage<CancelBookingResponse> | undefined, b: CancelBookingResponse | PlainMessage<CancelBookingResponse> | undefined): boolean {
+    return proto3.util.equals(CancelBookingResponse, a, b);
   }
 }
 

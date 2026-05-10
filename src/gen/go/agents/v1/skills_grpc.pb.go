@@ -34,13 +34,13 @@ const (
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceClient interface {
 	// Create a new organization skill
-	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error)
+	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
 	// Get a skill by ID
-	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error)
+	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error)
 	// List skills (bundled + organization)
 	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
 	// Update an organization skill
-	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error)
+	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
 }
@@ -53,9 +53,9 @@ func NewSkillsServiceClient(cc grpc.ClientConnInterface) SkillsServiceClient {
 	return &skillsServiceClient{cc}
 }
 
-func (c *skillsServiceClient) CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error) {
+func (c *skillsServiceClient) CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SkillResponse)
+	out := new(CreateSkillResponse)
 	err := c.cc.Invoke(ctx, SkillsService_CreateSkill_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -63,9 +63,9 @@ func (c *skillsServiceClient) CreateSkill(ctx context.Context, in *CreateSkillRe
 	return out, nil
 }
 
-func (c *skillsServiceClient) GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error) {
+func (c *skillsServiceClient) GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SkillResponse)
+	out := new(GetSkillResponse)
 	err := c.cc.Invoke(ctx, SkillsService_GetSkill_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ func (c *skillsServiceClient) ListSkills(ctx context.Context, in *ListSkillsRequ
 	return out, nil
 }
 
-func (c *skillsServiceClient) UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*SkillResponse, error) {
+func (c *skillsServiceClient) UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SkillResponse)
+	out := new(UpdateSkillResponse)
 	err := c.cc.Invoke(ctx, SkillsService_UpdateSkill_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,13 +111,13 @@ func (c *skillsServiceClient) DeleteSkill(ctx context.Context, in *DeleteSkillRe
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceServer interface {
 	// Create a new organization skill
-	CreateSkill(context.Context, *CreateSkillRequest) (*SkillResponse, error)
+	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
 	// Get a skill by ID
-	GetSkill(context.Context, *GetSkillRequest) (*SkillResponse, error)
+	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
 	// List skills (bundled + organization)
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
 	// Update an organization skill
-	UpdateSkill(context.Context, *UpdateSkillRequest) (*SkillResponse, error)
+	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
 	mustEmbedUnimplementedSkillsServiceServer()
@@ -130,16 +130,16 @@ type SkillsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSkillsServiceServer struct{}
 
-func (UnimplementedSkillsServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*SkillResponse, error) {
+func (UnimplementedSkillsServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSkill not implemented")
 }
-func (UnimplementedSkillsServiceServer) GetSkill(context.Context, *GetSkillRequest) (*SkillResponse, error) {
+func (UnimplementedSkillsServiceServer) GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSkill not implemented")
 }
 func (UnimplementedSkillsServiceServer) ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSkills not implemented")
 }
-func (UnimplementedSkillsServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*SkillResponse, error) {
+func (UnimplementedSkillsServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSkill not implemented")
 }
 func (UnimplementedSkillsServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error) {

@@ -4,8 +4,6 @@ package search.v1;
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1";
 
-import "google/protobuf/timestamp.proto";
-
 // The unified search service handling global search and indexing
 service SearchService {
   // Perform a global search across all entities (Spotlight-like)
@@ -25,33 +23,33 @@ service SearchService {
 }
 
 enum SearchResultType {
-  SEARCH_RESULT_TYPE_UNSPECIFIED    = 0;
-  SEARCH_RESULT_TYPE_NOTE           = 1;
-  SEARCH_RESULT_TYPE_FILE           = 2;
-  SEARCH_RESULT_TYPE_CHAT           = 3;
-  SEARCH_RESULT_TYPE_USER           = 4;
+  SEARCH_RESULT_TYPE_UNSPECIFIED = 0;
+  SEARCH_RESULT_TYPE_NOTE = 1;
+  SEARCH_RESULT_TYPE_FILE = 2;
+  SEARCH_RESULT_TYPE_CHAT = 3;
+  SEARCH_RESULT_TYPE_USER = 4;
   SEARCH_RESULT_TYPE_CALENDAR_EVENT = 5;
-  SEARCH_RESULT_TYPE_PROJECT        = 6;
-  SEARCH_RESULT_TYPE_TASK           = 7;
-  SEARCH_RESULT_TYPE_AGENT          = 8;
-  SEARCH_RESULT_TYPE_PROMPT         = 9;
-  SEARCH_RESULT_TYPE_CHAT_MESSAGE   = 10;
-  SEARCH_RESULT_TYPE_ROOM           = 11;
-  SEARCH_RESULT_TYPE_AGENT_CHAT     = 12;
-  SEARCH_RESULT_TYPE_TAG            = 13;
+  SEARCH_RESULT_TYPE_PROJECT = 6;
+  SEARCH_RESULT_TYPE_TASK = 7;
+  SEARCH_RESULT_TYPE_AGENT = 8;
+  SEARCH_RESULT_TYPE_PROMPT = 9;
+  SEARCH_RESULT_TYPE_CHAT_MESSAGE = 10;
+  SEARCH_RESULT_TYPE_ROOM = 11;
+  SEARCH_RESULT_TYPE_AGENT_CHAT = 12;
+  SEARCH_RESULT_TYPE_TAG = 13;
 }
 
 message SearchRequest {
-  string                    organization_id = 1;
-  string                    query           = 2;
-  repeated SearchResultType type_filters    = 3;
-  int32                     limit           = 4;
+  string organization_id = 1;
+  string query = 2;
+  repeated SearchResultType type_filters = 3;
+  int32 limit = 4;
 
   // Advanced filters (parsed from query or set explicitly)
-  repeated string tag_filters     = 5;
+  repeated string tag_filters = 5;
   repeated string project_filters = 6;
-  bool            my_content_only = 7;
-  string          owner_filter    = 8;
+  bool my_content_only = 7;
+  string owner_filter = 8;
 
   // Types to exclude from results (e.g., exclude chat_message when not in chat domain)
   repeated SearchResultType exclude_types = 9;
@@ -65,24 +63,24 @@ message SearchResponse {
 }
 
 message SearchResultItem {
-  string              urn         = 1; // Universal Resource Name (urn:uniffy:note:uuid)
-  string              title       = 2;
-  string              description = 3; // Snippet or subtitle
-  SearchResultType    type        = 4;
-  string              url         = 5; // Frontend route path
-  double              score       = 6; // Relevance score
-  map<string, string> metadata    = 7; // Extra icon info, etc.
-  repeated string     tags        = 8; // Tags associated with the content
+  string urn = 1; // Universal Resource Name (urn:uniffy:note:uuid)
+  string title = 2;
+  string description = 3; // Snippet or subtitle
+  SearchResultType type = 4;
+  string url = 5; // Frontend route path
+  double score = 6; // Relevance score
+  map<string, string> metadata = 7; // Extra icon info, etc.
+  repeated string tags = 8; // Tags associated with the content
 }
 
 message IndexItemRequest {
-  string              organization_id = 1;
-  string              urn             = 2;
-  SearchResultType    type            = 3;
-  string              title           = 4;
-  string              content         = 5; // Content to be indexed for full text
-  string              url             = 6;
-  map<string, string> metadata        = 7;
+  string organization_id = 1;
+  string urn = 2;
+  SearchResultType type = 3;
+  string title = 4;
+  string content = 5; // Content to be indexed for full text
+  string url = 6;
+  map<string, string> metadata = 7;
 }
 
 message IndexItemResponse {
@@ -90,7 +88,7 @@ message IndexItemResponse {
 }
 
 message DeleteItemRequest {
-  string urn             = 1;
+  string urn = 1;
   string organization_id = 2;
 }
 
@@ -132,65 +130,65 @@ message ResolveUrnsResponse {
 
 // Lightweight metadata for a URN
 message UrnMetadata {
-  string              title       = 1;
-  string              description = 2;
-  SearchResultType    type        = 3;
-  string              url         = 4;
-  map<string, string> metadata    = 5;
+  string title = 1;
+  string description = 2;
+  SearchResultType type = 3;
+  string url = 4;
+  map<string, string> metadata = 5;
 
   // Live state fields for mention enrichment
-  string status             = 10;  // task status, project status
-  string due_date           = 11;  // task due date (ISO date string)
-  string assignee_name      = 12;  // task assignee display name
-  string processing_status  = 15;  // file extraction/processing status
-  int32  completed_tasks    = 16;  // project completed task count
-  int32  total_tasks        = 17;  // project total task count
-  int32  member_count       = 18;  // group/chat member count
-  string updated_by_name    = 19;  // who last modified the content
+  string status = 10; // task status, project status
+  string due_date = 11; // task due date (ISO date string)
+  string assignee_name = 12; // task assignee display name
+  string processing_status = 15; // file extraction/processing status
+  int32 completed_tasks = 16; // project completed task count
+  int32 total_tasks = 17; // project total task count
+  int32 member_count = 18; // group/chat member count
+  string updated_by_name = 19; // who last modified the content
 
   // Task enrichment
-  string priority           = 20;  // task priority option ID
-  string priority_label     = 21;  // resolved label (e.g., "High")
-  string priority_color     = 22;  // resolved hex color (e.g., "#ef4444")
-  string status_label       = 23;  // resolved label (e.g., "In Progress")
-  string status_color       = 24;  // resolved hex color (e.g., "#3b82f6")
-  string task_type          = 25;  // task/bug/feature/story/epic
-  int32  task_number        = 26;  // sequential number within project
-  string project_name       = 27;  // parent project name
-  string project_slug       = 28;  // parent project slug for "SLUG-123" display
-  string project_color      = 29;  // parent project hex color
-  int32  subtask_completed  = 30;  // completed subtask count
-  int32  subtask_total      = 31;  // total subtask count
-  int32  blocked_by_count   = 32;  // number of blocking tasks
+  string priority = 20; // task priority option ID
+  string priority_label = 21; // resolved label (e.g., "High")
+  string priority_color = 22; // resolved hex color (e.g., "#ef4444")
+  string status_label = 23; // resolved label (e.g., "In Progress")
+  string status_color = 24; // resolved hex color (e.g., "#3b82f6")
+  string task_type = 25; // task/bug/feature/story/epic
+  int32 task_number = 26; // sequential number within project
+  string project_name = 27; // parent project name
+  string project_slug = 28; // parent project slug for "SLUG-123" display
+  string project_color = 29; // parent project hex color
+  int32 subtask_completed = 30; // completed subtask count
+  int32 subtask_total = 31; // total subtask count
+  int32 blocked_by_count = 32; // number of blocking tasks
 
   // Calendar enrichment
-  string event_start_time   = 33;  // ISO datetime
-  string event_end_time     = 34;  // ISO datetime
-  bool   event_is_all_day   = 35;  // all-day flag
-  string event_location     = 36;  // location text
-  string event_meeting_url  = 37;  // video call URL
+  string event_start_time = 33; // ISO datetime
+  string event_end_time = 34; // ISO datetime
+  bool event_is_all_day = 35; // all-day flag
+  string event_location = 36; // location text
+  string event_meeting_url = 37; // video call URL
 
   // File enrichment
-  string file_mime_type     = 38;  // MIME type
-  int64  file_size          = 39;  // size in bytes
+  string file_mime_type = 38; // MIME type
+  int64 file_size = 39; // size in bytes
 
   // Note enrichment
-  string note_node_type     = 40;  // NOTE/FOLDER/TEMPLATE/CANVAS
+  string note_node_type = 40; // NOTE/FOLDER/TEMPLATE/CANVAS
 
   // Chat enrichment
-  string channel_type       = 41;  // PUBLIC/PRIVATE/DIRECT/GROUP_DM
+  string channel_type = 41; // PUBLIC/PRIVATE/DIRECT/GROUP_DM
 
   // Agent enrichment
-  string agent_emoji        = 42;  // avatar emoji
-  string agent_theme_color  = 43;  // theme color hex
+  string agent_emoji = 42; // avatar emoji
+  string agent_theme_color = 43; // theme color hex
 
   // User enrichment
-  string user_avatar_url    = 44;  // avatar image URL
-  string user_email         = 45;  // email address
+  string user_avatar_url = 44; // avatar image URL
+  string user_email = 45; // email address
 
   // Shared
-  repeated string assignee_ids = 46;  // user IDs for avatar rendering
-  repeated string content_tags = 47;  // content tags
+  repeated string assignee_ids = 46; // user IDs for avatar rendering
+  repeated string content_tags = 47; // content tags
 
   // Tombstone marker for mentions whose target was deleted or is no
   // longer accessible. Empty/"OK" for live URNs, "DELETED" for missing

@@ -230,39 +230,113 @@ export class CreateSkillRequest extends Message<CreateSkillRequest> {
 }
 
 /**
- * @generated from message agents.v1.SkillResponse
+ * @generated from message agents.v1.CreateSkillResponse
  */
-export class SkillResponse extends Message<SkillResponse> {
+export class CreateSkillResponse extends Message<CreateSkillResponse> {
   /**
    * @generated from field: agents.v1.SkillInfo skill = 1;
    */
   skill?: SkillInfo;
 
-  constructor(data?: PartialMessage<SkillResponse>) {
+  constructor(data?: PartialMessage<CreateSkillResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.SkillResponse";
+  static readonly typeName = "agents.v1.CreateSkillResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "skill", kind: "message", T: SkillInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SkillResponse {
-    return new SkillResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSkillResponse {
+    return new CreateSkillResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SkillResponse {
-    return new SkillResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSkillResponse {
+    return new CreateSkillResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SkillResponse {
-    return new SkillResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSkillResponse {
+    return new CreateSkillResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SkillResponse | PlainMessage<SkillResponse> | undefined, b: SkillResponse | PlainMessage<SkillResponse> | undefined): boolean {
-    return proto3.util.equals(SkillResponse, a, b);
+  static equals(a: CreateSkillResponse | PlainMessage<CreateSkillResponse> | undefined, b: CreateSkillResponse | PlainMessage<CreateSkillResponse> | undefined): boolean {
+    return proto3.util.equals(CreateSkillResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetSkillResponse
+ */
+export class GetSkillResponse extends Message<GetSkillResponse> {
+  /**
+   * @generated from field: agents.v1.SkillInfo skill = 1;
+   */
+  skill?: SkillInfo;
+
+  constructor(data?: PartialMessage<GetSkillResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetSkillResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "skill", kind: "message", T: SkillInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSkillResponse {
+    return new GetSkillResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSkillResponse {
+    return new GetSkillResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSkillResponse {
+    return new GetSkillResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSkillResponse | PlainMessage<GetSkillResponse> | undefined, b: GetSkillResponse | PlainMessage<GetSkillResponse> | undefined): boolean {
+    return proto3.util.equals(GetSkillResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdateSkillResponse
+ */
+export class UpdateSkillResponse extends Message<UpdateSkillResponse> {
+  /**
+   * @generated from field: agents.v1.SkillInfo skill = 1;
+   */
+  skill?: SkillInfo;
+
+  constructor(data?: PartialMessage<UpdateSkillResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdateSkillResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "skill", kind: "message", T: SkillInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSkillResponse {
+    return new UpdateSkillResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSkillResponse {
+    return new UpdateSkillResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSkillResponse {
+    return new UpdateSkillResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSkillResponse | PlainMessage<UpdateSkillResponse> | undefined, b: UpdateSkillResponse | PlainMessage<UpdateSkillResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateSkillResponse, a, b);
   }
 }
 

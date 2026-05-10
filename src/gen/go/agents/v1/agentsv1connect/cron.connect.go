@@ -58,13 +58,13 @@ const (
 // CronServiceClient is a client for the agents.v1.CronService service.
 type CronServiceClient interface {
 	// Create a new scheduled task
-	CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CreateCronTaskResponse], error)
 	// Get a scheduled task by ID
-	GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.GetCronTaskResponse], error)
 	// List scheduled tasks for an organization
 	ListCronTasks(context.Context, *connect.Request[v1.ListCronTasksRequest]) (*connect.Response[v1.ListCronTasksResponse], error)
 	// Update a scheduled task
-	UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.UpdateCronTaskResponse], error)
 	// Delete a scheduled task
 	DeleteCronTask(context.Context, *connect.Request[v1.DeleteCronTaskRequest]) (*connect.Response[v1.DeleteCronTaskResponse], error)
 	// List execution history for a task
@@ -84,13 +84,13 @@ func NewCronServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	cronServiceMethods := v1.File_agents_v1_cron_proto.Services().ByName("CronService").Methods()
 	return &cronServiceClient{
-		createCronTask: connect.NewClient[v1.CreateCronTaskRequest, v1.CronTaskResponse](
+		createCronTask: connect.NewClient[v1.CreateCronTaskRequest, v1.CreateCronTaskResponse](
 			httpClient,
 			baseURL+CronServiceCreateCronTaskProcedure,
 			connect.WithSchema(cronServiceMethods.ByName("CreateCronTask")),
 			connect.WithClientOptions(opts...),
 		),
-		getCronTask: connect.NewClient[v1.GetCronTaskRequest, v1.CronTaskResponse](
+		getCronTask: connect.NewClient[v1.GetCronTaskRequest, v1.GetCronTaskResponse](
 			httpClient,
 			baseURL+CronServiceGetCronTaskProcedure,
 			connect.WithSchema(cronServiceMethods.ByName("GetCronTask")),
@@ -102,7 +102,7 @@ func NewCronServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(cronServiceMethods.ByName("ListCronTasks")),
 			connect.WithClientOptions(opts...),
 		),
-		updateCronTask: connect.NewClient[v1.UpdateCronTaskRequest, v1.CronTaskResponse](
+		updateCronTask: connect.NewClient[v1.UpdateCronTaskRequest, v1.UpdateCronTaskResponse](
 			httpClient,
 			baseURL+CronServiceUpdateCronTaskProcedure,
 			connect.WithSchema(cronServiceMethods.ByName("UpdateCronTask")),
@@ -131,22 +131,22 @@ func NewCronServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // cronServiceClient implements CronServiceClient.
 type cronServiceClient struct {
-	createCronTask  *connect.Client[v1.CreateCronTaskRequest, v1.CronTaskResponse]
-	getCronTask     *connect.Client[v1.GetCronTaskRequest, v1.CronTaskResponse]
+	createCronTask  *connect.Client[v1.CreateCronTaskRequest, v1.CreateCronTaskResponse]
+	getCronTask     *connect.Client[v1.GetCronTaskRequest, v1.GetCronTaskResponse]
 	listCronTasks   *connect.Client[v1.ListCronTasksRequest, v1.ListCronTasksResponse]
-	updateCronTask  *connect.Client[v1.UpdateCronTaskRequest, v1.CronTaskResponse]
+	updateCronTask  *connect.Client[v1.UpdateCronTaskRequest, v1.UpdateCronTaskResponse]
 	deleteCronTask  *connect.Client[v1.DeleteCronTaskRequest, v1.DeleteCronTaskResponse]
 	listCronRunLogs *connect.Client[v1.ListCronRunLogsRequest, v1.ListCronRunLogsResponse]
 	triggerCronTask *connect.Client[v1.TriggerCronTaskRequest, v1.TriggerCronTaskResponse]
 }
 
 // CreateCronTask calls agents.v1.CronService.CreateCronTask.
-func (c *cronServiceClient) CreateCronTask(ctx context.Context, req *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (c *cronServiceClient) CreateCronTask(ctx context.Context, req *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CreateCronTaskResponse], error) {
 	return c.createCronTask.CallUnary(ctx, req)
 }
 
 // GetCronTask calls agents.v1.CronService.GetCronTask.
-func (c *cronServiceClient) GetCronTask(ctx context.Context, req *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (c *cronServiceClient) GetCronTask(ctx context.Context, req *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.GetCronTaskResponse], error) {
 	return c.getCronTask.CallUnary(ctx, req)
 }
 
@@ -156,7 +156,7 @@ func (c *cronServiceClient) ListCronTasks(ctx context.Context, req *connect.Requ
 }
 
 // UpdateCronTask calls agents.v1.CronService.UpdateCronTask.
-func (c *cronServiceClient) UpdateCronTask(ctx context.Context, req *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (c *cronServiceClient) UpdateCronTask(ctx context.Context, req *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.UpdateCronTaskResponse], error) {
 	return c.updateCronTask.CallUnary(ctx, req)
 }
 
@@ -178,13 +178,13 @@ func (c *cronServiceClient) TriggerCronTask(ctx context.Context, req *connect.Re
 // CronServiceHandler is an implementation of the agents.v1.CronService service.
 type CronServiceHandler interface {
 	// Create a new scheduled task
-	CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CreateCronTaskResponse], error)
 	// Get a scheduled task by ID
-	GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.GetCronTaskResponse], error)
 	// List scheduled tasks for an organization
 	ListCronTasks(context.Context, *connect.Request[v1.ListCronTasksRequest]) (*connect.Response[v1.ListCronTasksResponse], error)
 	// Update a scheduled task
-	UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error)
+	UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.UpdateCronTaskResponse], error)
 	// Delete a scheduled task
 	DeleteCronTask(context.Context, *connect.Request[v1.DeleteCronTaskRequest]) (*connect.Response[v1.DeleteCronTaskResponse], error)
 	// List execution history for a task
@@ -267,11 +267,11 @@ func NewCronServiceHandler(svc CronServiceHandler, opts ...connect.HandlerOption
 // UnimplementedCronServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCronServiceHandler struct{}
 
-func (UnimplementedCronServiceHandler) CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (UnimplementedCronServiceHandler) CreateCronTask(context.Context, *connect.Request[v1.CreateCronTaskRequest]) (*connect.Response[v1.CreateCronTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.CronService.CreateCronTask is not implemented"))
 }
 
-func (UnimplementedCronServiceHandler) GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (UnimplementedCronServiceHandler) GetCronTask(context.Context, *connect.Request[v1.GetCronTaskRequest]) (*connect.Response[v1.GetCronTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.CronService.GetCronTask is not implemented"))
 }
 
@@ -279,7 +279,7 @@ func (UnimplementedCronServiceHandler) ListCronTasks(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.CronService.ListCronTasks is not implemented"))
 }
 
-func (UnimplementedCronServiceHandler) UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.CronTaskResponse], error) {
+func (UnimplementedCronServiceHandler) UpdateCronTask(context.Context, *connect.Request[v1.UpdateCronTaskRequest]) (*connect.Response[v1.UpdateCronTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.CronService.UpdateCronTask is not implemented"))
 }
 

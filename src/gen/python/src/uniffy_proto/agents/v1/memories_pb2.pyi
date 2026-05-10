@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -98,7 +98,13 @@ class UpdateMemoryRequest(_message.Message):
     importance: float
     def __init__(self, organization_id: _Optional[str] = ..., memory_id: _Optional[str] = ..., content: _Optional[str] = ..., category: _Optional[_Union[MemoryCategory, str]] = ..., importance: _Optional[float] = ...) -> None: ...
 
-class MemoryResponse(_message.Message):
+class CreateMemoryResponse(_message.Message):
+    __slots__ = ("memory",)
+    MEMORY_FIELD_NUMBER: _ClassVar[int]
+    memory: MemoryInfo
+    def __init__(self, memory: _Optional[_Union[MemoryInfo, _Mapping]] = ...) -> None: ...
+
+class UpdateMemoryResponse(_message.Message):
     __slots__ = ("memory",)
     MEMORY_FIELD_NUMBER: _ClassVar[int]
     memory: MemoryInfo

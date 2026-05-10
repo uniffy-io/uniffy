@@ -11,23 +11,27 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.cal.v1.calendar_pb2 import (
     AddAttendeesRequest,
-    CategoryResponse,
+    AddAttendeesResponse,
     CreateCategoryRequest,
+    CreateCategoryResponse,
     CreateEventRequest,
+    CreateEventResponse,
     CreateEventTemplateRequest,
+    CreateEventTemplateResponse,
     DeleteCategoryRequest,
     DeleteCategoryResponse,
     DeleteEventRequest,
     DeleteEventResponse,
     DeleteEventTemplateRequest,
     DeleteEventTemplateResponse,
-    EventResponse,
-    EventTemplateResponse,
     GetCategoryRequest,
+    GetCategoryResponse,
     GetEventRequest,
+    GetEventResponse,
     GetEventsInRangeRequest,
     GetEventsInRangeResponse,
     GetEventTemplateRequest,
+    GetEventTemplateResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
     ListEventsRequest,
@@ -35,11 +39,15 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     ListEventTemplatesRequest,
     ListEventTemplatesResponse,
     RemoveAttendeesRequest,
+    RemoveAttendeesResponse,
     UpdateAttendeeStatusRequest,
     UpdateAttendeeStatusResponse,
     UpdateCategoryRequest,
+    UpdateCategoryResponse,
     UpdateEventRequest,
+    UpdateEventResponse,
     UpdateEventTemplateRequest,
+    UpdateEventTemplateResponse,
 )
 
 from uniffy.core.converters.common_proto import (
@@ -165,7 +173,7 @@ class CalendarHandlers:
         self,
         request: CreateEventRequest,
         ctx: RequestContext,
-    ) -> EventResponse:
+    ) -> CreateEventResponse:
         """Create a new calendar event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -246,7 +254,7 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
-                return EventResponse(
+                return CreateEventResponse(
                     event=event_to_proto(
                         event,
                         attendees,
@@ -266,7 +274,7 @@ class CalendarHandlers:
         self,
         request: GetEventRequest,
         ctx: RequestContext,
-    ) -> EventResponse:
+    ) -> GetEventResponse:
         """Get a single event (requires view access)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -282,7 +290,7 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
-                return EventResponse(
+                return GetEventResponse(
                     event=event_to_proto(
                         event,
                         attendees,
@@ -302,7 +310,7 @@ class CalendarHandlers:
         self,
         request: UpdateEventRequest,
         ctx: RequestContext,
-    ) -> EventResponse:
+    ) -> UpdateEventResponse:
         """Update event metadata."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -379,7 +387,7 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
-                return EventResponse(
+                return UpdateEventResponse(
                     event=event_to_proto(
                         event,
                         attendees,
@@ -615,7 +623,7 @@ class CalendarHandlers:
         self,
         request: CreateCategoryRequest,
         ctx: RequestContext,
-    ) -> CategoryResponse:
+    ) -> CreateCategoryResponse:
         """Create a new category."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -630,7 +638,7 @@ class CalendarHandlers:
                     color=request.color,
                     icon=request.icon if request.HasField("icon") else None,
                 )
-                return CategoryResponse(category=category_to_proto(category))
+                return CreateCategoryResponse(category=category_to_proto(category))
         except ConnectError:
             raise
         except Exception as exc:
@@ -640,7 +648,7 @@ class CalendarHandlers:
         self,
         request: GetCategoryRequest,
         ctx: RequestContext,
-    ) -> CategoryResponse:
+    ) -> GetCategoryResponse:
         """Get a category by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -650,7 +658,7 @@ class CalendarHandlers:
             async with open_session() as session:
                 ops = CategoryOperations(session)
                 category = await ops.get_by_id(user_id, category_id, organization_id)
-                return CategoryResponse(category=category_to_proto(category))
+                return GetCategoryResponse(category=category_to_proto(category))
         except ConnectError:
             raise
         except Exception as exc:
@@ -660,7 +668,7 @@ class CalendarHandlers:
         self,
         request: UpdateCategoryRequest,
         ctx: RequestContext,
-    ) -> CategoryResponse:
+    ) -> UpdateCategoryResponse:
         """Update a category."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -678,7 +686,7 @@ class CalendarHandlers:
                     icon=request.icon if request.HasField("icon") else None,
                     sort_order=request.sort_order if request.HasField("sort_order") else None,
                 )
-                return CategoryResponse(category=category_to_proto(category))
+                return UpdateCategoryResponse(category=category_to_proto(category))
         except ConnectError:
             raise
         except Exception as exc:
@@ -756,7 +764,7 @@ class CalendarHandlers:
         self,
         request: AddAttendeesRequest,
         ctx: RequestContext,
-    ) -> EventResponse:
+    ) -> AddAttendeesResponse:
         """Add attendees to an event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -779,7 +787,7 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
-                return EventResponse(
+                return AddAttendeesResponse(
                     event=event_to_proto(
                         event,
                         attendees,
@@ -798,7 +806,7 @@ class CalendarHandlers:
         self,
         request: RemoveAttendeesRequest,
         ctx: RequestContext,
-    ) -> EventResponse:
+    ) -> RemoveAttendeesResponse:
         """Remove attendees from an event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -819,7 +827,7 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
-                return EventResponse(
+                return RemoveAttendeesResponse(
                     event=event_to_proto(
                         event,
                         attendees,
@@ -840,7 +848,7 @@ class CalendarHandlers:
         self,
         request: CreateEventTemplateRequest,
         ctx: RequestContext,
-    ) -> EventTemplateResponse:
+    ) -> CreateEventTemplateResponse:
         """Create an event template."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -871,7 +879,7 @@ class CalendarHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return EventTemplateResponse(template=template_to_proto(template))
+                return CreateEventTemplateResponse(template=template_to_proto(template))
         except ConnectError:
             raise
         except Exception as exc:
@@ -881,7 +889,7 @@ class CalendarHandlers:
         self,
         request: GetEventTemplateRequest,
         ctx: RequestContext,
-    ) -> EventTemplateResponse:
+    ) -> GetEventTemplateResponse:
         """Get an event template by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -891,7 +899,7 @@ class CalendarHandlers:
             async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 template = await ops.get_by_id(template_id, organization_id, user_id)
-                return EventTemplateResponse(template=template_to_proto(template))
+                return GetEventTemplateResponse(template=template_to_proto(template))
         except ConnectError:
             raise
         except Exception as exc:
@@ -901,7 +909,7 @@ class CalendarHandlers:
         self,
         request: UpdateEventTemplateRequest,
         ctx: RequestContext,
-    ) -> EventTemplateResponse:
+    ) -> UpdateEventTemplateResponse:
         """Update an event template."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -935,7 +943,7 @@ class CalendarHandlers:
                     user_id=user_id,
                     **update_data,
                 )
-                return EventTemplateResponse(template=template_to_proto(template))
+                return UpdateEventTemplateResponse(template=template_to_proto(template))
         except ConnectError:
             raise
         except Exception as exc:

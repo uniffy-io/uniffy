@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CreateFieldRequest, CreateProjectRequest, CreateSprintRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTasksRequest, ListTasksResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, MoveTaskRequest, ProjectResponse, SprintResponse, StartSprintRequest, TaskResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateSprintRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
+import { BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTasksRequest, ListTasksResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, MoveTaskRequest, MoveTaskResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse } from "./projects_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -20,7 +20,7 @@ export const ProjectsService = {
     createProject: {
       name: "CreateProject",
       I: CreateProjectRequest,
-      O: ProjectResponse,
+      O: CreateProjectResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -29,7 +29,7 @@ export const ProjectsService = {
     getProject: {
       name: "GetProject",
       I: GetProjectRequest,
-      O: ProjectResponse,
+      O: GetProjectResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -38,7 +38,7 @@ export const ProjectsService = {
     updateProject: {
       name: "UpdateProject",
       I: UpdateProjectRequest,
-      O: ProjectResponse,
+      O: UpdateProjectResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -67,7 +67,7 @@ export const ProjectsService = {
     createTask: {
       name: "CreateTask",
       I: CreateTaskRequest,
-      O: TaskResponse,
+      O: CreateTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -76,7 +76,7 @@ export const ProjectsService = {
     getTask: {
       name: "GetTask",
       I: GetTaskRequest,
-      O: TaskResponse,
+      O: GetTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -85,7 +85,7 @@ export const ProjectsService = {
     updateTask: {
       name: "UpdateTask",
       I: UpdateTaskRequest,
-      O: TaskResponse,
+      O: UpdateTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -112,7 +112,7 @@ export const ProjectsService = {
     moveTask: {
       name: "MoveTask",
       I: MoveTaskRequest,
-      O: TaskResponse,
+      O: MoveTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -141,7 +141,7 @@ export const ProjectsService = {
     createField: {
       name: "CreateField",
       I: CreateFieldRequest,
-      O: FieldResponse,
+      O: CreateFieldResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -150,7 +150,7 @@ export const ProjectsService = {
     updateField: {
       name: "UpdateField",
       I: UpdateFieldRequest,
-      O: FieldResponse,
+      O: UpdateFieldResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -170,7 +170,7 @@ export const ProjectsService = {
     createView: {
       name: "CreateView",
       I: CreateViewRequest,
-      O: ViewResponse,
+      O: CreateViewResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -179,7 +179,7 @@ export const ProjectsService = {
     updateView: {
       name: "UpdateView",
       I: UpdateViewRequest,
-      O: ViewResponse,
+      O: UpdateViewResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -210,7 +210,7 @@ export const ProjectsService = {
     createSprint: {
       name: "CreateSprint",
       I: CreateSprintRequest,
-      O: SprintResponse,
+      O: CreateSprintResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -219,7 +219,7 @@ export const ProjectsService = {
     updateSprint: {
       name: "UpdateSprint",
       I: UpdateSprintRequest,
-      O: SprintResponse,
+      O: UpdateSprintResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -228,7 +228,7 @@ export const ProjectsService = {
     startSprint: {
       name: "StartSprint",
       I: StartSprintRequest,
-      O: SprintResponse,
+      O: StartSprintResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -237,7 +237,7 @@ export const ProjectsService = {
     completeSprint: {
       name: "CompleteSprint",
       I: CompleteSprintRequest,
-      O: SprintResponse,
+      O: CompleteSprintResponse,
       kind: MethodKind.Unary,
     },
     /**

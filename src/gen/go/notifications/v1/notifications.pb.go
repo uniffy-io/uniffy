@@ -118,27 +118,27 @@ func (NotificationType) EnumDescriptor() ([]byte, []int) {
 }
 
 // Event type
-type StreamNotificationEvent_EventType int32
+type StreamNotificationsResponse_EventType int32
 
 const (
-	StreamNotificationEvent_EVENT_TYPE_UNSPECIFIED StreamNotificationEvent_EventType = 0
+	StreamNotificationsResponse_EVENT_TYPE_UNSPECIFIED StreamNotificationsResponse_EventType = 0
 	// New notification received
-	StreamNotificationEvent_EVENT_TYPE_NEW_NOTIFICATION StreamNotificationEvent_EventType = 1
+	StreamNotificationsResponse_EVENT_TYPE_NEW_NOTIFICATION StreamNotificationsResponse_EventType = 1
 	// Heartbeat (keep-alive)
-	StreamNotificationEvent_EVENT_TYPE_HEARTBEAT StreamNotificationEvent_EventType = 2
+	StreamNotificationsResponse_EVENT_TYPE_HEARTBEAT StreamNotificationsResponse_EventType = 2
 	// File processing completed
-	StreamNotificationEvent_EVENT_TYPE_FILE_UPDATED StreamNotificationEvent_EventType = 3
+	StreamNotificationsResponse_EVENT_TYPE_FILE_UPDATED StreamNotificationsResponse_EventType = 3
 	// Presence state changed for a user
-	StreamNotificationEvent_EVENT_TYPE_PRESENCE_CHANGED StreamNotificationEvent_EventType = 4
+	StreamNotificationsResponse_EVENT_TYPE_PRESENCE_CHANGED StreamNotificationsResponse_EventType = 4
 	// Mention state changed for content (task status, event time, etc.)
-	StreamNotificationEvent_EVENT_TYPE_MENTION_STATE_CHANGED StreamNotificationEvent_EventType = 5
+	StreamNotificationsResponse_EVENT_TYPE_MENTION_STATE_CHANGED StreamNotificationsResponse_EventType = 5
 	// User's permissions changed (domain admin granted/revoked) - triggers refetch
-	StreamNotificationEvent_EVENT_TYPE_PERMISSIONS_CHANGED StreamNotificationEvent_EventType = 6
+	StreamNotificationsResponse_EVENT_TYPE_PERMISSIONS_CHANGED StreamNotificationsResponse_EventType = 6
 )
 
-// Enum value maps for StreamNotificationEvent_EventType.
+// Enum value maps for StreamNotificationsResponse_EventType.
 var (
-	StreamNotificationEvent_EventType_name = map[int32]string{
+	StreamNotificationsResponse_EventType_name = map[int32]string{
 		0: "EVENT_TYPE_UNSPECIFIED",
 		1: "EVENT_TYPE_NEW_NOTIFICATION",
 		2: "EVENT_TYPE_HEARTBEAT",
@@ -147,7 +147,7 @@ var (
 		5: "EVENT_TYPE_MENTION_STATE_CHANGED",
 		6: "EVENT_TYPE_PERMISSIONS_CHANGED",
 	}
-	StreamNotificationEvent_EventType_value = map[string]int32{
+	StreamNotificationsResponse_EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":           0,
 		"EVENT_TYPE_NEW_NOTIFICATION":      1,
 		"EVENT_TYPE_HEARTBEAT":             2,
@@ -158,30 +158,30 @@ var (
 	}
 )
 
-func (x StreamNotificationEvent_EventType) Enum() *StreamNotificationEvent_EventType {
-	p := new(StreamNotificationEvent_EventType)
+func (x StreamNotificationsResponse_EventType) Enum() *StreamNotificationsResponse_EventType {
+	p := new(StreamNotificationsResponse_EventType)
 	*p = x
 	return p
 }
 
-func (x StreamNotificationEvent_EventType) String() string {
+func (x StreamNotificationsResponse_EventType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (StreamNotificationEvent_EventType) Descriptor() protoreflect.EnumDescriptor {
+func (StreamNotificationsResponse_EventType) Descriptor() protoreflect.EnumDescriptor {
 	return file_notifications_v1_notifications_proto_enumTypes[1].Descriptor()
 }
 
-func (StreamNotificationEvent_EventType) Type() protoreflect.EnumType {
+func (StreamNotificationsResponse_EventType) Type() protoreflect.EnumType {
 	return &file_notifications_v1_notifications_proto_enumTypes[1]
 }
 
-func (x StreamNotificationEvent_EventType) Number() protoreflect.EnumNumber {
+func (x StreamNotificationsResponse_EventType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use StreamNotificationEvent_EventType.Descriptor instead.
-func (StreamNotificationEvent_EventType) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use StreamNotificationsResponse_EventType.Descriptor instead.
+func (StreamNotificationsResponse_EventType) EnumDescriptor() ([]byte, []int) {
 	return file_notifications_v1_notifications_proto_rawDescGZIP(), []int{17, 0}
 }
 
@@ -1175,10 +1175,10 @@ func (x *FileUpdatePayload) GetOrganizationId() string {
 }
 
 // Event sent via the streaming RPC
-type StreamNotificationEvent struct {
+type StreamNotificationsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Type of this event
-	EventType StreamNotificationEvent_EventType `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=notifications.v1.StreamNotificationEvent_EventType" json:"event_type,omitempty"`
+	EventType StreamNotificationsResponse_EventType `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=notifications.v1.StreamNotificationsResponse_EventType" json:"event_type,omitempty"`
 	// The notification (present for NEW_NOTIFICATION events)
 	Notification *Notification `protobuf:"bytes,2,opt,name=notification,proto3" json:"notification,omitempty"`
 	// Server timestamp (present for HEARTBEAT events)
@@ -1193,20 +1193,20 @@ type StreamNotificationEvent struct {
 	sizeCache           protoimpl.SizeCache
 }
 
-func (x *StreamNotificationEvent) Reset() {
-	*x = StreamNotificationEvent{}
+func (x *StreamNotificationsResponse) Reset() {
+	*x = StreamNotificationsResponse{}
 	mi := &file_notifications_v1_notifications_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StreamNotificationEvent) String() string {
+func (x *StreamNotificationsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StreamNotificationEvent) ProtoMessage() {}
+func (*StreamNotificationsResponse) ProtoMessage() {}
 
-func (x *StreamNotificationEvent) ProtoReflect() protoreflect.Message {
+func (x *StreamNotificationsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_notifications_v1_notifications_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1218,47 +1218,47 @@ func (x *StreamNotificationEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StreamNotificationEvent.ProtoReflect.Descriptor instead.
-func (*StreamNotificationEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use StreamNotificationsResponse.ProtoReflect.Descriptor instead.
+func (*StreamNotificationsResponse) Descriptor() ([]byte, []int) {
 	return file_notifications_v1_notifications_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *StreamNotificationEvent) GetEventType() StreamNotificationEvent_EventType {
+func (x *StreamNotificationsResponse) GetEventType() StreamNotificationsResponse_EventType {
 	if x != nil {
 		return x.EventType
 	}
-	return StreamNotificationEvent_EVENT_TYPE_UNSPECIFIED
+	return StreamNotificationsResponse_EVENT_TYPE_UNSPECIFIED
 }
 
-func (x *StreamNotificationEvent) GetNotification() *Notification {
+func (x *StreamNotificationsResponse) GetNotification() *Notification {
 	if x != nil {
 		return x.Notification
 	}
 	return nil
 }
 
-func (x *StreamNotificationEvent) GetTimestamp() *timestamppb.Timestamp {
+func (x *StreamNotificationsResponse) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
 	}
 	return nil
 }
 
-func (x *StreamNotificationEvent) GetFileUpdate() *FileUpdatePayload {
+func (x *StreamNotificationsResponse) GetFileUpdate() *FileUpdatePayload {
 	if x != nil {
 		return x.FileUpdate
 	}
 	return nil
 }
 
-func (x *StreamNotificationEvent) GetPresenceChanged() *PresenceChangedPayload {
+func (x *StreamNotificationsResponse) GetPresenceChanged() *PresenceChangedPayload {
 	if x != nil {
 		return x.PresenceChanged
 	}
 	return nil
 }
 
-func (x *StreamNotificationEvent) GetMentionStateChanged() *MentionStateChangedPayload {
+func (x *StreamNotificationsResponse) GetMentionStateChanged() *MentionStateChangedPayload {
 	if x != nil {
 		return x.MentionStateChanged
 	}
@@ -2194,10 +2194,10 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"U\n" +
 	"\x11FileUpdatePayload\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xd5\x05\n" +
-	"\x17StreamNotificationEvent\x12R\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xdd\x05\n" +
+	"\x1bStreamNotificationsResponse\x12V\n" +
 	"\n" +
-	"event_type\x18\x01 \x01(\x0e23.notifications.v1.StreamNotificationEvent.EventTypeR\teventType\x12B\n" +
+	"event_type\x18\x01 \x01(\x0e27.notifications.v1.StreamNotificationsResponse.EventTypeR\teventType\x12B\n" +
 	"\fnotification\x18\x02 \x01(\v2\x1e.notifications.v1.NotificationR\fnotification\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12D\n" +
 	"\vfile_update\x18\x04 \x01(\v2#.notifications.v1.FileUpdatePayloadR\n" +
@@ -2296,7 +2296,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x19NOTIFICATION_TYPE_CHAT_DM\x10\x0e\x12)\n" +
 	"%NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE\x10\x0f\x12*\n" +
 	"&NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED\x10\x10\x12'\n" +
-	"#NOTIFICATION_TYPE_CHAT_THREAD_REPLY\x10\x112\xee\v\n" +
+	"#NOTIFICATION_TYPE_CHAT_THREAD_REPLY\x10\x112\xf2\v\n" +
 	"\x14NotificationsService\x12n\n" +
 	"\x11ListNotifications\x12*.notifications.v1.ListNotificationsRequest\x1a+.notifications.v1.ListNotificationsResponse\"\x00\x12e\n" +
 	"\x0eGetUnreadCount\x12'.notifications.v1.GetUnreadCountRequest\x1a(.notifications.v1.GetUnreadCountResponse\"\x00\x12Y\n" +
@@ -2305,8 +2305,8 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\rMarkAllAsRead\x12&.notifications.v1.MarkAllAsReadRequest\x1a'.notifications.v1.MarkAllAsReadResponse\"\x00\x12q\n" +
 	"\x12DeleteNotification\x12+.notifications.v1.DeleteNotificationRequest\x1a,.notifications.v1.DeleteNotificationResponse\"\x00\x12\x83\x01\n" +
 	"\x18RegisterPushSubscription\x121.notifications.v1.RegisterPushSubscriptionRequest\x1a2.notifications.v1.RegisterPushSubscriptionResponse\"\x00\x12\x89\x01\n" +
-	"\x1aUnregisterPushSubscription\x123.notifications.v1.UnregisterPushSubscriptionRequest\x1a4.notifications.v1.UnregisterPushSubscriptionResponse\"\x00\x12r\n" +
-	"\x13StreamNotifications\x12,.notifications.v1.StreamNotificationsRequest\x1a).notifications.v1.StreamNotificationEvent\"\x000\x01\x12n\n" +
+	"\x1aUnregisterPushSubscription\x123.notifications.v1.UnregisterPushSubscriptionRequest\x1a4.notifications.v1.UnregisterPushSubscriptionResponse\"\x00\x12v\n" +
+	"\x13StreamNotifications\x12,.notifications.v1.StreamNotificationsRequest\x1a-.notifications.v1.StreamNotificationsResponse\"\x000\x01\x12n\n" +
 	"\x11GetVapidPublicKey\x12*.notifications.v1.GetVapidPublicKeyRequest\x1a+.notifications.v1.GetVapidPublicKeyResponse\"\x00\x12t\n" +
 	"\x13SearchNotifications\x12,.notifications.v1.SearchNotificationsRequest\x1a-.notifications.v1.SearchNotificationsResponse\"\x00\x12w\n" +
 	"\x14GetNotificationStats\x12-.notifications.v1.GetNotificationStatsRequest\x1a..notifications.v1.GetNotificationStatsResponse\"\x00\x12e\n" +
@@ -2329,7 +2329,7 @@ var file_notifications_v1_notifications_proto_enumTypes = make([]protoimpl.EnumI
 var file_notifications_v1_notifications_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_notifications_v1_notifications_proto_goTypes = []any{
 	(NotificationType)(0),                      // 0: notifications.v1.NotificationType
-	(StreamNotificationEvent_EventType)(0),     // 1: notifications.v1.StreamNotificationEvent.EventType
+	(StreamNotificationsResponse_EventType)(0), // 1: notifications.v1.StreamNotificationsResponse.EventType
 	(*Notification)(nil),                       // 2: notifications.v1.Notification
 	(*ListNotificationsRequest)(nil),           // 3: notifications.v1.ListNotificationsRequest
 	(*ListNotificationsResponse)(nil),          // 4: notifications.v1.ListNotificationsResponse
@@ -2347,7 +2347,7 @@ var file_notifications_v1_notifications_proto_goTypes = []any{
 	(*UnregisterPushSubscriptionResponse)(nil), // 16: notifications.v1.UnregisterPushSubscriptionResponse
 	(*StreamNotificationsRequest)(nil),         // 17: notifications.v1.StreamNotificationsRequest
 	(*FileUpdatePayload)(nil),                  // 18: notifications.v1.FileUpdatePayload
-	(*StreamNotificationEvent)(nil),            // 19: notifications.v1.StreamNotificationEvent
+	(*StreamNotificationsResponse)(nil),        // 19: notifications.v1.StreamNotificationsResponse
 	(*PresenceChangedPayload)(nil),             // 20: notifications.v1.PresenceChangedPayload
 	(*MentionStateChangedPayload)(nil),         // 21: notifications.v1.MentionStateChangedPayload
 	(*GetVapidPublicKeyRequest)(nil),           // 22: notifications.v1.GetVapidPublicKeyRequest
@@ -2373,12 +2373,12 @@ var file_notifications_v1_notifications_proto_depIdxs = []int32{
 	0,  // 4: notifications.v1.ListNotificationsRequest.notification_types:type_name -> notifications.v1.NotificationType
 	2,  // 5: notifications.v1.ListNotificationsResponse.notifications:type_name -> notifications.v1.Notification
 	2,  // 6: notifications.v1.MarkAsReadResponse.notification:type_name -> notifications.v1.Notification
-	1,  // 7: notifications.v1.StreamNotificationEvent.event_type:type_name -> notifications.v1.StreamNotificationEvent.EventType
-	2,  // 8: notifications.v1.StreamNotificationEvent.notification:type_name -> notifications.v1.Notification
-	35, // 9: notifications.v1.StreamNotificationEvent.timestamp:type_name -> google.protobuf.Timestamp
-	18, // 10: notifications.v1.StreamNotificationEvent.file_update:type_name -> notifications.v1.FileUpdatePayload
-	20, // 11: notifications.v1.StreamNotificationEvent.presence_changed:type_name -> notifications.v1.PresenceChangedPayload
-	21, // 12: notifications.v1.StreamNotificationEvent.mention_state_changed:type_name -> notifications.v1.MentionStateChangedPayload
+	1,  // 7: notifications.v1.StreamNotificationsResponse.event_type:type_name -> notifications.v1.StreamNotificationsResponse.EventType
+	2,  // 8: notifications.v1.StreamNotificationsResponse.notification:type_name -> notifications.v1.Notification
+	35, // 9: notifications.v1.StreamNotificationsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 10: notifications.v1.StreamNotificationsResponse.file_update:type_name -> notifications.v1.FileUpdatePayload
+	20, // 11: notifications.v1.StreamNotificationsResponse.presence_changed:type_name -> notifications.v1.PresenceChangedPayload
+	21, // 12: notifications.v1.StreamNotificationsResponse.mention_state_changed:type_name -> notifications.v1.MentionStateChangedPayload
 	35, // 13: notifications.v1.PresenceChangedPayload.last_active:type_name -> google.protobuf.Timestamp
 	35, // 14: notifications.v1.PresenceChangedPayload.status_expires_at:type_name -> google.protobuf.Timestamp
 	34, // 15: notifications.v1.MentionStateChangedPayload.changes:type_name -> notifications.v1.MentionStateChangedPayload.ChangesEntry
@@ -2409,7 +2409,7 @@ var file_notifications_v1_notifications_proto_depIdxs = []int32{
 	12, // 40: notifications.v1.NotificationsService.DeleteNotification:output_type -> notifications.v1.DeleteNotificationResponse
 	14, // 41: notifications.v1.NotificationsService.RegisterPushSubscription:output_type -> notifications.v1.RegisterPushSubscriptionResponse
 	16, // 42: notifications.v1.NotificationsService.UnregisterPushSubscription:output_type -> notifications.v1.UnregisterPushSubscriptionResponse
-	19, // 43: notifications.v1.NotificationsService.StreamNotifications:output_type -> notifications.v1.StreamNotificationEvent
+	19, // 43: notifications.v1.NotificationsService.StreamNotifications:output_type -> notifications.v1.StreamNotificationsResponse
 	23, // 44: notifications.v1.NotificationsService.GetVapidPublicKey:output_type -> notifications.v1.GetVapidPublicKeyResponse
 	25, // 45: notifications.v1.NotificationsService.SearchNotifications:output_type -> notifications.v1.SearchNotificationsResponse
 	29, // 46: notifications.v1.NotificationsService.GetNotificationStats:output_type -> notifications.v1.GetNotificationStatsResponse

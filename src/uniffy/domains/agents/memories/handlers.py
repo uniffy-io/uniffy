@@ -9,12 +9,13 @@ from loguru import logger
 from uniffy_proto.agents.v1.memories_pb2 import (
     MEMORY_CATEGORY_UNSPECIFIED,
     CreateMemoryRequest,
+    CreateMemoryResponse,
     DeleteMemoryRequest,
     DeleteMemoryResponse,
     ListMemoriesRequest,
     ListMemoriesResponse,
-    MemoryResponse,
     UpdateMemoryRequest,
+    UpdateMemoryResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -32,7 +33,7 @@ class MemoriesHandlers:
         self,
         request: CreateMemoryRequest,
         ctx: RequestContext,
-    ) -> MemoryResponse:
+    ) -> CreateMemoryResponse:
         """Handle create_memory RPC call.
 
         Parameters
@@ -78,7 +79,7 @@ class MemoriesHandlers:
                     category=category,
                     importance=importance,
                 )
-                return MemoryResponse(memory=memory_to_proto(memory))
+                return CreateMemoryResponse(memory=memory_to_proto(memory))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -170,7 +171,7 @@ class MemoriesHandlers:
         self,
         request: UpdateMemoryRequest,
         ctx: RequestContext,
-    ) -> MemoryResponse:
+    ) -> UpdateMemoryResponse:
         """Handle update_memory RPC call.
 
         Parameters
@@ -213,7 +214,7 @@ class MemoriesHandlers:
                     category=category,
                     importance=importance,
                 )
-                return MemoryResponse(memory=memory_to_proto(memory))
+                return UpdateMemoryResponse(memory=memory_to_proto(memory))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Memory not found")

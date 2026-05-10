@@ -8,13 +8,15 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.skills_pb2 import (
     CreateSkillRequest,
+    CreateSkillResponse,
     DeleteSkillRequest,
     DeleteSkillResponse,
     GetSkillRequest,
+    GetSkillResponse,
     ListSkillsRequest,
     ListSkillsResponse,
-    SkillResponse,
     UpdateSkillRequest,
+    UpdateSkillResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -32,7 +34,7 @@ class SkillsHandlers:
         self,
         request: CreateSkillRequest,
         ctx: RequestContext,
-    ) -> SkillResponse:
+    ) -> CreateSkillResponse:
         """Handle create_skill RPC call.
 
         Parameters
@@ -76,7 +78,7 @@ class SkillsHandlers:
                     always_active=always_active,
                     owner_id=owner_id,
                 )
-                return SkillResponse(skill=skill_to_proto(skill))
+                return CreateSkillResponse(skill=skill_to_proto(skill))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -92,7 +94,7 @@ class SkillsHandlers:
         self,
         request: GetSkillRequest,
         ctx: RequestContext,
-    ) -> SkillResponse:
+    ) -> GetSkillResponse:
         """Handle get_skill RPC call.
 
         Parameters
@@ -124,7 +126,7 @@ class SkillsHandlers:
                     organization_id=org_id,
                     skill_id=skill_id,
                 )
-                return SkillResponse(skill=skill_to_proto(skill))
+                return GetSkillResponse(skill=skill_to_proto(skill))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Skill not found")
@@ -204,7 +206,7 @@ class SkillsHandlers:
         self,
         request: UpdateSkillRequest,
         ctx: RequestContext,
-    ) -> SkillResponse:
+    ) -> UpdateSkillResponse:
         """Handle update_skill RPC call.
 
         Parameters
@@ -247,7 +249,7 @@ class SkillsHandlers:
                     content=content,
                     always_active=always_active,
                 )
-                return SkillResponse(skill=skill_to_proto(skill))
+                return UpdateSkillResponse(skill=skill_to_proto(skill))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Skill not found")

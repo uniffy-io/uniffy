@@ -734,7 +734,6 @@ export function CrepeEditor({
     // inline embeds via the "Embed" button in the hover preview.
     const mentionType = schema.nodes.mention;
     if (!mentionType) {
-      console.error('[CrepeEditor] Mention node type not found in schema');
       setMentionPopup(null);
       return;
     }

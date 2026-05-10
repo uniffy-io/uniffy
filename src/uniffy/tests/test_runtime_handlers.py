@@ -18,7 +18,11 @@ from uuid import UUID
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.agents.v1.runtime_pb2 import SendMessageRequest, SubscribeToRunRequest
+from uniffy_proto.agents.v1.runtime_pb2 import (
+    SendMessageRequest,
+    StreamSendMessageRequest,
+    SubscribeToRunRequest,
+)
 
 from uniffy.core.errors import (
     NotFoundError,
@@ -222,6 +226,25 @@ def _build_request(
     content: str = "hi there",
     file_ids: list[str] | None = None,
     user_timezone: str | None = None,
+) -> StreamSendMessageRequest:
+    request = StreamSendMessageRequest()
+    request.organization_id = str(organization_id)
+    request.session_id = str(session_id)
+    request.content = content
+    if file_ids:
+        request.file_ids.extend(file_ids)
+    if user_timezone:
+        request.user_timezone = user_timezone
+    return request
+
+
+def _build_unary_request(
+    *,
+    organization_id: UUID,
+    session_id: UUID,
+    content: str = "hi there",
+    file_ids: list[str] | None = None,
+    user_timezone: str | None = None,
 ) -> SendMessageRequest:
     request = SendMessageRequest()
     request.organization_id = str(organization_id)
@@ -240,7 +263,7 @@ class TestStreamSendMessage:
         queue = _install_queue(monkeypatch)
         _install_open_session(monkeypatch)
 
-        request = SendMessageRequest()
+        request = StreamSendMessageRequest()
         request.organization_id = "not-a-uuid"
         request.session_id = "also-bad"
         request.content = "hi"
@@ -529,7 +552,7 @@ class TestSendMessageUnary:
         ]
         _install_subscribe(monkeypatch, events)
 
-        request = _build_request(organization_id=org_id, session_id=session_id)
+        request = _build_unary_request(organization_id=org_id, session_id=session_id)
 
         async def run() -> Any:
             handlers = RuntimeHandlers()
@@ -560,7 +583,7 @@ class TestSendMessageUnary:
             [RuntimeErrorEvent(error="provider blew up")],
         )
 
-        request = _build_request(organization_id=org_id, session_id=session_id)
+        request = _build_unary_request(organization_id=org_id, session_id=session_id)
 
         async def run() -> Any:
             handlers = RuntimeHandlers()
@@ -593,7 +616,7 @@ class TestSendMessageUnary:
             [RuntimeErrorEvent(error=handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE)],
         )
 
-        request = _build_request(organization_id=org_id, session_id=session_id)
+        request = _build_unary_request(organization_id=org_id, session_id=session_id)
 
         async def run() -> Any:
             handlers = RuntimeHandlers()

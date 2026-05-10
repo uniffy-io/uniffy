@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateCronTaskRequest, CronTaskResponse, DeleteCronTaskRequest, DeleteCronTaskResponse, GetCronTaskRequest, ListCronRunLogsRequest, ListCronRunLogsResponse, ListCronTasksRequest, ListCronTasksResponse, TriggerCronTaskRequest, TriggerCronTaskResponse, UpdateCronTaskRequest } from "./cron_pb.js";
+import { CreateCronTaskRequest, CreateCronTaskResponse, DeleteCronTaskRequest, DeleteCronTaskResponse, GetCronTaskRequest, GetCronTaskResponse, ListCronRunLogsRequest, ListCronRunLogsResponse, ListCronTasksRequest, ListCronTasksResponse, TriggerCronTaskRequest, TriggerCronTaskResponse, UpdateCronTaskRequest, UpdateCronTaskResponse } from "./cron_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const CronService = {
     createCronTask: {
       name: "CreateCronTask",
       I: CreateCronTaskRequest,
-      O: CronTaskResponse,
+      O: CreateCronTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -33,7 +33,7 @@ export const CronService = {
     getCronTask: {
       name: "GetCronTask",
       I: GetCronTaskRequest,
-      O: CronTaskResponse,
+      O: GetCronTaskResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -55,7 +55,7 @@ export const CronService = {
     updateCronTask: {
       name: "UpdateCronTask",
       I: UpdateCronTaskRequest,
-      O: CronTaskResponse,
+      O: UpdateCronTaskResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from chat.v1 import chat_pb2 as _chat_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -255,7 +255,7 @@ class StreamUserChatEventsRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
-class UserChatEvent(_message.Message):
+class StreamUserChatEventsResponse(_message.Message):
     __slots__ = ("event_type", "timestamp", "unread_count", "thread_activity", "mention_received", "channel_event")
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]

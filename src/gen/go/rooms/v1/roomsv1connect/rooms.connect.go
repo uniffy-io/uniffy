@@ -65,15 +65,15 @@ const (
 // RoomsServiceClient is a client for the rooms.v1.RoomsService service.
 type RoomsServiceClient interface {
 	// ----- Room CRUD -----
-	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.RoomResponse], error)
-	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.RoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.RoomResponse], error)
+	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
+	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
+	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error)
 	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error)
 	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
 	// ----- Booking CRUD -----
-	CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.BookingResponse], error)
-	GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.BookingResponse], error)
-	CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.BookingResponse], error)
+	CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.CreateBookingResponse], error)
+	GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.GetBookingResponse], error)
+	CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.CancelBookingResponse], error)
 	ListBookings(context.Context, *connect.Request[v1.ListBookingsRequest]) (*connect.Response[v1.ListBookingsResponse], error)
 	// ----- Availability -----
 	CheckAvailability(context.Context, *connect.Request[v1.CheckAvailabilityRequest]) (*connect.Response[v1.CheckAvailabilityResponse], error)
@@ -91,19 +91,19 @@ func NewRoomsServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 	baseURL = strings.TrimRight(baseURL, "/")
 	roomsServiceMethods := v1.File_rooms_v1_rooms_proto.Services().ByName("RoomsService").Methods()
 	return &roomsServiceClient{
-		createRoom: connect.NewClient[v1.CreateRoomRequest, v1.RoomResponse](
+		createRoom: connect.NewClient[v1.CreateRoomRequest, v1.CreateRoomResponse](
 			httpClient,
 			baseURL+RoomsServiceCreateRoomProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("CreateRoom")),
 			connect.WithClientOptions(opts...),
 		),
-		getRoom: connect.NewClient[v1.GetRoomRequest, v1.RoomResponse](
+		getRoom: connect.NewClient[v1.GetRoomRequest, v1.GetRoomResponse](
 			httpClient,
 			baseURL+RoomsServiceGetRoomProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("GetRoom")),
 			connect.WithClientOptions(opts...),
 		),
-		updateRoom: connect.NewClient[v1.UpdateRoomRequest, v1.RoomResponse](
+		updateRoom: connect.NewClient[v1.UpdateRoomRequest, v1.UpdateRoomResponse](
 			httpClient,
 			baseURL+RoomsServiceUpdateRoomProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("UpdateRoom")),
@@ -121,19 +121,19 @@ func NewRoomsServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(roomsServiceMethods.ByName("ListRooms")),
 			connect.WithClientOptions(opts...),
 		),
-		createBooking: connect.NewClient[v1.CreateBookingRequest, v1.BookingResponse](
+		createBooking: connect.NewClient[v1.CreateBookingRequest, v1.CreateBookingResponse](
 			httpClient,
 			baseURL+RoomsServiceCreateBookingProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("CreateBooking")),
 			connect.WithClientOptions(opts...),
 		),
-		getBooking: connect.NewClient[v1.GetBookingRequest, v1.BookingResponse](
+		getBooking: connect.NewClient[v1.GetBookingRequest, v1.GetBookingResponse](
 			httpClient,
 			baseURL+RoomsServiceGetBookingProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("GetBooking")),
 			connect.WithClientOptions(opts...),
 		),
-		cancelBooking: connect.NewClient[v1.CancelBookingRequest, v1.BookingResponse](
+		cancelBooking: connect.NewClient[v1.CancelBookingRequest, v1.CancelBookingResponse](
 			httpClient,
 			baseURL+RoomsServiceCancelBookingProcedure,
 			connect.WithSchema(roomsServiceMethods.ByName("CancelBooking")),
@@ -162,31 +162,31 @@ func NewRoomsServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // roomsServiceClient implements RoomsServiceClient.
 type roomsServiceClient struct {
-	createRoom         *connect.Client[v1.CreateRoomRequest, v1.RoomResponse]
-	getRoom            *connect.Client[v1.GetRoomRequest, v1.RoomResponse]
-	updateRoom         *connect.Client[v1.UpdateRoomRequest, v1.RoomResponse]
+	createRoom         *connect.Client[v1.CreateRoomRequest, v1.CreateRoomResponse]
+	getRoom            *connect.Client[v1.GetRoomRequest, v1.GetRoomResponse]
+	updateRoom         *connect.Client[v1.UpdateRoomRequest, v1.UpdateRoomResponse]
 	deleteRoom         *connect.Client[v1.DeleteRoomRequest, v1.DeleteRoomResponse]
 	listRooms          *connect.Client[v1.ListRoomsRequest, v1.ListRoomsResponse]
-	createBooking      *connect.Client[v1.CreateBookingRequest, v1.BookingResponse]
-	getBooking         *connect.Client[v1.GetBookingRequest, v1.BookingResponse]
-	cancelBooking      *connect.Client[v1.CancelBookingRequest, v1.BookingResponse]
+	createBooking      *connect.Client[v1.CreateBookingRequest, v1.CreateBookingResponse]
+	getBooking         *connect.Client[v1.GetBookingRequest, v1.GetBookingResponse]
+	cancelBooking      *connect.Client[v1.CancelBookingRequest, v1.CancelBookingResponse]
 	listBookings       *connect.Client[v1.ListBookingsRequest, v1.ListBookingsResponse]
 	checkAvailability  *connect.Client[v1.CheckAvailabilityRequest, v1.CheckAvailabilityResponse]
 	findAvailableRooms *connect.Client[v1.FindAvailableRoomsRequest, v1.FindAvailableRoomsResponse]
 }
 
 // CreateRoom calls rooms.v1.RoomsService.CreateRoom.
-func (c *roomsServiceClient) CreateRoom(ctx context.Context, req *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (c *roomsServiceClient) CreateRoom(ctx context.Context, req *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error) {
 	return c.createRoom.CallUnary(ctx, req)
 }
 
 // GetRoom calls rooms.v1.RoomsService.GetRoom.
-func (c *roomsServiceClient) GetRoom(ctx context.Context, req *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (c *roomsServiceClient) GetRoom(ctx context.Context, req *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error) {
 	return c.getRoom.CallUnary(ctx, req)
 }
 
 // UpdateRoom calls rooms.v1.RoomsService.UpdateRoom.
-func (c *roomsServiceClient) UpdateRoom(ctx context.Context, req *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (c *roomsServiceClient) UpdateRoom(ctx context.Context, req *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error) {
 	return c.updateRoom.CallUnary(ctx, req)
 }
 
@@ -201,17 +201,17 @@ func (c *roomsServiceClient) ListRooms(ctx context.Context, req *connect.Request
 }
 
 // CreateBooking calls rooms.v1.RoomsService.CreateBooking.
-func (c *roomsServiceClient) CreateBooking(ctx context.Context, req *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (c *roomsServiceClient) CreateBooking(ctx context.Context, req *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.CreateBookingResponse], error) {
 	return c.createBooking.CallUnary(ctx, req)
 }
 
 // GetBooking calls rooms.v1.RoomsService.GetBooking.
-func (c *roomsServiceClient) GetBooking(ctx context.Context, req *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (c *roomsServiceClient) GetBooking(ctx context.Context, req *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.GetBookingResponse], error) {
 	return c.getBooking.CallUnary(ctx, req)
 }
 
 // CancelBooking calls rooms.v1.RoomsService.CancelBooking.
-func (c *roomsServiceClient) CancelBooking(ctx context.Context, req *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (c *roomsServiceClient) CancelBooking(ctx context.Context, req *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.CancelBookingResponse], error) {
 	return c.cancelBooking.CallUnary(ctx, req)
 }
 
@@ -233,15 +233,15 @@ func (c *roomsServiceClient) FindAvailableRooms(ctx context.Context, req *connec
 // RoomsServiceHandler is an implementation of the rooms.v1.RoomsService service.
 type RoomsServiceHandler interface {
 	// ----- Room CRUD -----
-	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.RoomResponse], error)
-	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.RoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.RoomResponse], error)
+	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
+	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
+	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error)
 	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error)
 	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
 	// ----- Booking CRUD -----
-	CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.BookingResponse], error)
-	GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.BookingResponse], error)
-	CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.BookingResponse], error)
+	CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.CreateBookingResponse], error)
+	GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.GetBookingResponse], error)
+	CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.CancelBookingResponse], error)
 	ListBookings(context.Context, *connect.Request[v1.ListBookingsRequest]) (*connect.Response[v1.ListBookingsResponse], error)
 	// ----- Availability -----
 	CheckAvailability(context.Context, *connect.Request[v1.CheckAvailabilityRequest]) (*connect.Response[v1.CheckAvailabilityResponse], error)
@@ -354,15 +354,15 @@ func NewRoomsServiceHandler(svc RoomsServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedRoomsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRoomsServiceHandler struct{}
 
-func (UnimplementedRoomsServiceHandler) CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (UnimplementedRoomsServiceHandler) CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.CreateRoom is not implemented"))
 }
 
-func (UnimplementedRoomsServiceHandler) GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (UnimplementedRoomsServiceHandler) GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.GetRoom is not implemented"))
 }
 
-func (UnimplementedRoomsServiceHandler) UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.RoomResponse], error) {
+func (UnimplementedRoomsServiceHandler) UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.UpdateRoom is not implemented"))
 }
 
@@ -374,15 +374,15 @@ func (UnimplementedRoomsServiceHandler) ListRooms(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.ListRooms is not implemented"))
 }
 
-func (UnimplementedRoomsServiceHandler) CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (UnimplementedRoomsServiceHandler) CreateBooking(context.Context, *connect.Request[v1.CreateBookingRequest]) (*connect.Response[v1.CreateBookingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.CreateBooking is not implemented"))
 }
 
-func (UnimplementedRoomsServiceHandler) GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (UnimplementedRoomsServiceHandler) GetBooking(context.Context, *connect.Request[v1.GetBookingRequest]) (*connect.Response[v1.GetBookingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.GetBooking is not implemented"))
 }
 
-func (UnimplementedRoomsServiceHandler) CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.BookingResponse], error) {
+func (UnimplementedRoomsServiceHandler) CancelBooking(context.Context, *connect.Request[v1.CancelBookingRequest]) (*connect.Response[v1.CancelBookingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rooms.v1.RoomsService.CancelBooking is not implemented"))
 }
 

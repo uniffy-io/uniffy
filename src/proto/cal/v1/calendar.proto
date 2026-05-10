@@ -2,76 +2,76 @@ syntax = "proto3";
 
 package cal.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 import "tags/v1/tags.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1";
 
 // Enums
 
 // Recurrence patterns for repeating events
 enum RecurrencePattern {
   RECURRENCE_PATTERN_UNSPECIFIED = 0;
-  RECURRENCE_PATTERN_NONE        = 1;
-  RECURRENCE_PATTERN_DAILY       = 2;
-  RECURRENCE_PATTERN_WEEKLY      = 3;
-  RECURRENCE_PATTERN_BIWEEKLY    = 4;
-  RECURRENCE_PATTERN_MONTHLY     = 5;
-  RECURRENCE_PATTERN_YEARLY      = 6;
+  RECURRENCE_PATTERN_NONE = 1;
+  RECURRENCE_PATTERN_DAILY = 2;
+  RECURRENCE_PATTERN_WEEKLY = 3;
+  RECURRENCE_PATTERN_BIWEEKLY = 4;
+  RECURRENCE_PATTERN_MONTHLY = 5;
+  RECURRENCE_PATTERN_YEARLY = 6;
 }
 
 // Days of the week
 enum DayOfWeek {
   DAY_OF_WEEK_UNSPECIFIED = 0;
-  DAY_OF_WEEK_MONDAY      = 1;
-  DAY_OF_WEEK_TUESDAY     = 2;
-  DAY_OF_WEEK_WEDNESDAY   = 3;
-  DAY_OF_WEEK_THURSDAY    = 4;
-  DAY_OF_WEEK_FRIDAY      = 5;
-  DAY_OF_WEEK_SATURDAY    = 6;
-  DAY_OF_WEEK_SUNDAY      = 7;
+  DAY_OF_WEEK_MONDAY = 1;
+  DAY_OF_WEEK_TUESDAY = 2;
+  DAY_OF_WEEK_WEDNESDAY = 3;
+  DAY_OF_WEEK_THURSDAY = 4;
+  DAY_OF_WEEK_FRIDAY = 5;
+  DAY_OF_WEEK_SATURDAY = 6;
+  DAY_OF_WEEK_SUNDAY = 7;
 }
 
 // Attendee response status
 enum AttendeeStatus {
   ATTENDEE_STATUS_UNSPECIFIED = 0;
-  ATTENDEE_STATUS_PENDING     = 1;
-  ATTENDEE_STATUS_ACCEPTED    = 2;
-  ATTENDEE_STATUS_TENTATIVE   = 3;
-  ATTENDEE_STATUS_DECLINED    = 4;
+  ATTENDEE_STATUS_PENDING = 1;
+  ATTENDEE_STATUS_ACCEPTED = 2;
+  ATTENDEE_STATUS_TENTATIVE = 3;
+  ATTENDEE_STATUS_DECLINED = 4;
 }
 
 // Attendee role in the event
 enum AttendeeRole {
   ATTENDEE_ROLE_UNSPECIFIED = 0;
-  ATTENDEE_ROLE_ORGANIZER   = 1;
-  ATTENDEE_ROLE_REQUIRED    = 2;
-  ATTENDEE_ROLE_OPTIONAL    = 3;
+  ATTENDEE_ROLE_ORGANIZER = 1;
+  ATTENDEE_ROLE_REQUIRED = 2;
+  ATTENDEE_ROLE_OPTIONAL = 3;
 }
 
 // Calendar types
 enum CalendarType {
   CALENDAR_TYPE_UNSPECIFIED = 0;
-  CALENDAR_TYPE_PERSONAL    = 1;
-  CALENDAR_TYPE_WORK        = 2;
-  CALENDAR_TYPE_TEAM        = 3;
-  CALENDAR_TYPE_SHARED      = 4;
+  CALENDAR_TYPE_PERSONAL = 1;
+  CALENDAR_TYPE_WORK = 2;
+  CALENDAR_TYPE_TEAM = 3;
+  CALENDAR_TYPE_SHARED = 4;
 }
 
 // Linked resource types
 enum ResourceType {
   RESOURCE_TYPE_UNSPECIFIED = 0;
-  RESOURCE_TYPE_NOTE        = 1;
-  RESOURCE_TYPE_FILE        = 2;
-  RESOURCE_TYPE_CHAT        = 3;
+  RESOURCE_TYPE_NOTE = 1;
+  RESOURCE_TYPE_FILE = 2;
+  RESOURCE_TYPE_CHAT = 3;
 }
 
 // Scope for editing or deleting recurring events
 enum RecurrenceEditScope {
-  RECURRENCE_EDIT_SCOPE_UNSPECIFIED        = 0;
-  RECURRENCE_EDIT_SCOPE_THIS_EVENT         = 1;
-  RECURRENCE_EDIT_SCOPE_ALL_EVENTS         = 2;
+  RECURRENCE_EDIT_SCOPE_UNSPECIFIED = 0;
+  RECURRENCE_EDIT_SCOPE_THIS_EVENT = 1;
+  RECURRENCE_EDIT_SCOPE_ALL_EVENTS = 2;
   RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING = 3;
 }
 
@@ -82,13 +82,13 @@ service CalendarService {
   // === Event Operations ===
 
   // Create a new calendar event
-  rpc CreateEvent(CreateEventRequest) returns (EventResponse) {}
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse) {}
 
   // Get an event by ID
-  rpc GetEvent(GetEventRequest) returns (EventResponse) {}
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse) {}
 
   // Update an existing event
-  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse) {}
+  rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse) {}
 
   // Delete an event (soft delete)
   rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse) {}
@@ -102,13 +102,13 @@ service CalendarService {
   // === Calendar Operations ===
 
   // Create a new calendar
-  rpc CreateCalendar(CreateCalendarRequest) returns (CalendarResponse) {}
+  rpc CreateCalendar(CreateCalendarRequest) returns (CreateCalendarResponse) {}
 
   // Get a calendar by ID
-  rpc GetCalendar(GetCalendarRequest) returns (CalendarResponse) {}
+  rpc GetCalendar(GetCalendarRequest) returns (GetCalendarResponse) {}
 
   // Update a calendar
-  rpc UpdateCalendar(UpdateCalendarRequest) returns (CalendarResponse) {}
+  rpc UpdateCalendar(UpdateCalendarRequest) returns (UpdateCalendarResponse) {}
 
   // Delete a calendar
   rpc DeleteCalendar(DeleteCalendarRequest) returns (DeleteCalendarResponse) {}
@@ -119,13 +119,13 @@ service CalendarService {
   // === Category Operations ===
 
   // Create a new category
-  rpc CreateCategory(CreateCategoryRequest) returns (CategoryResponse) {}
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse) {}
 
   // Get a category by ID
-  rpc GetCategory(GetCategoryRequest) returns (CategoryResponse) {}
+  rpc GetCategory(GetCategoryRequest) returns (GetCategoryResponse) {}
 
   // Update a category
-  rpc UpdateCategory(UpdateCategoryRequest) returns (CategoryResponse) {}
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse) {}
 
   // Delete a category
   rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse) {}
@@ -139,21 +139,21 @@ service CalendarService {
   rpc UpdateAttendeeStatus(UpdateAttendeeStatusRequest) returns (UpdateAttendeeStatusResponse) {}
 
   // Add attendees to an event
-  rpc AddAttendees(AddAttendeesRequest) returns (EventResponse) {}
+  rpc AddAttendees(AddAttendeesRequest) returns (AddAttendeesResponse) {}
 
   // Remove attendees from an event
-  rpc RemoveAttendees(RemoveAttendeesRequest) returns (EventResponse) {}
+  rpc RemoveAttendees(RemoveAttendeesRequest) returns (RemoveAttendeesResponse) {}
 
   // === Template Operations ===
 
   // Create a new event template
-  rpc CreateEventTemplate(CreateEventTemplateRequest) returns (EventTemplateResponse) {}
+  rpc CreateEventTemplate(CreateEventTemplateRequest) returns (CreateEventTemplateResponse) {}
 
   // Get an event template by ID
-  rpc GetEventTemplate(GetEventTemplateRequest) returns (EventTemplateResponse) {}
+  rpc GetEventTemplate(GetEventTemplateRequest) returns (GetEventTemplateResponse) {}
 
   // Update an existing event template
-  rpc UpdateEventTemplate(UpdateEventTemplateRequest) returns (EventTemplateResponse) {}
+  rpc UpdateEventTemplate(UpdateEventTemplateRequest) returns (UpdateEventTemplateResponse) {}
 
   // Delete an event template
   rpc DeleteEventTemplate(DeleteEventTemplateRequest) returns (DeleteEventTemplateResponse) {}
@@ -198,39 +198,38 @@ message CalendarEvent {
   optional RecurrenceConfig recurrence = 15;
   // Whether this event is marked as focus/deep work time
   bool is_focus_time = 16;
-  reserved 17;
   // Linked resources (notes, files, chats)
-  repeated LinkedResource linked_resources = 18;
+  repeated LinkedResource linked_resources = 17;
   // Access mode
-  common.v1.AccessMode access_mode = 19;
+  common.v1.AccessMode access_mode = 18;
   // Is deleted flag (soft delete)
-  bool is_deleted = 20;
+  bool is_deleted = 19;
   // URNs referenced in this event's description (outgoing links)
-  repeated string outgoing_references = 21;
+  repeated string outgoing_references = 20;
   // Created timestamp
-  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp created_at = 21;
   // Updated timestamp
-  google.protobuf.Timestamp updated_at = 23;
+  google.protobuf.Timestamp updated_at = 22;
   // Deleted timestamp (if soft-deleted)
-  optional google.protobuf.Timestamp deleted_at = 24;
+  optional google.protobuf.Timestamp deleted_at = 23;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
-  repeated int32 reminders = 25;
+  repeated int32 reminders = 24;
   // Whether this is a recurring event (has recurrence pattern other than NONE)
-  bool is_recurring = 26;
+  bool is_recurring = 25;
   // If this is an override of a recurring occurrence, the master event ID
-  optional string recurrence_id = 27;
+  optional string recurrence_id = 26;
   // For expanded instances: the specific occurrence date (YYYY-MM-DD)
-  optional string occurrence_date = 28;
+  optional string occurrence_date = 27;
   // Room booking fields (read-only, populated by handler)
-  optional string room_id = 29;
-  optional string room_name = 30;
-  optional string room_location = 31;
-  optional int32 room_capacity = 32;
-  repeated string room_amenities = 33;
+  optional string room_id = 28;
+  optional string room_name = 29;
+  optional string room_location = 30;
+  optional int32 room_capacity = 31;
+  repeated string room_amenities = 32;
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 34;
+  optional common.v1.ContentRole baseline_role = 33;
   // Hydrated tags applied to this event (server-side from TagOperations).
-  repeated tags.v1.Tag tags = 35;
+  repeated tags.v1.Tag tags = 34;
 }
 
 // Event attendee
@@ -311,20 +310,18 @@ message CreateEventRequest {
   optional RecurrenceConfig recurrence = 13;
   // Whether this event is focus time
   bool is_focus_time = 14;
-  reserved 15;
-  reserved "tags";
   // Linked resource URNs
-  repeated string linked_resource_urns = 16;
+  repeated string linked_resource_urns = 15;
   // Access mode (defaults to OWNER_ONLY)
-  optional common.v1.AccessMode access_mode = 17;
+  optional common.v1.AccessMode access_mode = 16;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
-  repeated int32 reminders = 18;
+  repeated int32 reminders = 17;
   // Optional room ID to book alongside the event
-  optional string room_id = 19;
+  optional string room_id = 18;
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 20;
+  optional common.v1.ContentRole baseline_role = 19;
   // Optional unified-tag ids to assign on create
-  repeated string tag_ids = 21;
+  repeated string tag_ids = 20;
 }
 
 // Request to get an event
@@ -365,27 +362,25 @@ message UpdateEventRequest {
   optional RecurrenceConfig recurrence = 13;
   // Updated focus time flag
   optional bool is_focus_time = 14;
-  reserved 15;
-  reserved "tags";
   // Updated linked resource URNs (replaces existing)
-  repeated string linked_resource_urns = 16;
+  repeated string linked_resource_urns = 15;
   // Updated access mode
-  optional common.v1.AccessMode access_mode = 17;
+  optional common.v1.AccessMode access_mode = 16;
   // Updated attendee IDs (replaces existing list)
-  repeated string attendee_ids = 18;
+  repeated string attendee_ids = 17;
   // Updated reminder intervals in minutes before event
-  repeated int32 reminders = 19;
+  repeated int32 reminders = 18;
   // Edit scope for recurring events
-  optional RecurrenceEditScope recurrence_edit_scope = 20;
+  optional RecurrenceEditScope recurrence_edit_scope = 19;
   // For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
-  optional string occurrence_date = 21;
+  optional string occurrence_date = 20;
   // Optional room ID to book/change for this event
-  optional string room_id = 22;
+  optional string room_id = 21;
   // Updated baseline role granted by access mode
-  optional common.v1.ContentRole baseline_role = 23;
+  optional common.v1.ContentRole baseline_role = 22;
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field is unset (HasField=false) to leave manual tags untouched.
-  optional EventTagIds tag_ids = 24;
+  optional EventTagIds tag_ids = 23;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -411,12 +406,32 @@ message DeleteEventRequest {
 
 // Response for delete event operation
 message DeleteEventResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
-// Response containing an event
-message EventResponse {
+// Response containing an event (Create)
+message CreateEventResponse {
+  CalendarEvent event = 1;
+}
+
+// Response containing an event (Get)
+message GetEventResponse {
+  CalendarEvent event = 1;
+}
+
+// Response containing an event (Update)
+message UpdateEventResponse {
+  CalendarEvent event = 1;
+}
+
+// Response containing an event (AddAttendees)
+message AddAttendeesResponse {
+  CalendarEvent event = 1;
+}
+
+// Response containing an event (RemoveAttendees)
+message RemoveAttendeesResponse {
   CalendarEvent event = 1;
 }
 
@@ -434,27 +449,25 @@ message ListEventsRequest {
   optional google.protobuf.Timestamp end_date = 5;
   // Include deleted events
   bool include_deleted = 6;
-  reserved 7;
-  reserved "tags";
   // Pagination: page number (1-indexed)
-  int32 page = 8;
+  int32 page = 7;
   // Pagination: page size (default: 50, max: 100)
-  int32 page_size = 9;
+  int32 page_size = 8;
   // Sort by field (start_time, created_at, title)
-  string sort_by = 10;
+  string sort_by = 9;
   // Sort order (asc, desc)
-  string sort_order = 11;
+  string sort_order = 10;
   // Filter events that have ALL of the provided tag ids (logical AND).
-  repeated string tag_ids = 12;
+  repeated string tag_ids = 11;
 }
 
 // Response for listing events
 message ListEventsResponse {
-  repeated CalendarEvent events      = 1;
-  int32                  total_count = 2;
-  int32                  page        = 3;
-  int32                  page_size   = 4;
-  int32                  total_pages = 5;
+  repeated CalendarEvent events = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
 }
 
 // Request to get events in a date range (optimized for calendar views)
@@ -552,12 +565,22 @@ message DeleteCalendarRequest {
 
 // Response for delete calendar operation
 message DeleteCalendarResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
-// Response containing a calendar
-message CalendarResponse {
+// Response containing a calendar (Create)
+message CreateCalendarResponse {
+  Calendar calendar = 1;
+}
+
+// Response containing a calendar (Get)
+message GetCalendarResponse {
+  Calendar calendar = 1;
+}
+
+// Response containing a calendar (Update)
+message UpdateCalendarResponse {
   Calendar calendar = 1;
 }
 
@@ -644,12 +667,22 @@ message DeleteCategoryRequest {
 
 // Response for delete category operation
 message DeleteCategoryResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
-// Response containing a category
-message CategoryResponse {
+// Response containing a category (Create)
+message CreateCategoryResponse {
+  Category category = 1;
+}
+
+// Response containing a category (Get)
+message GetCategoryResponse {
+  Category category = 1;
+}
+
+// Response containing a category (Update)
+message UpdateCategoryResponse {
   Category category = 1;
 }
 
@@ -678,7 +711,7 @@ message UpdateAttendeeStatusRequest {
 
 // Response for update attendee status
 message UpdateAttendeeStatusResponse {
-  bool   success = 1;
+  bool success = 1;
   string message = 2;
 }
 
@@ -780,7 +813,15 @@ message DeleteEventTemplateResponse {
   string message = 2;
 }
 
-message EventTemplateResponse {
+message CreateEventTemplateResponse {
+  EventTemplate template = 1;
+}
+
+message GetEventTemplateResponse {
+  EventTemplate template = 1;
+}
+
+message UpdateEventTemplateResponse {
   EventTemplate template = 1;
 }
 

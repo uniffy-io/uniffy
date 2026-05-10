@@ -59,7 +59,25 @@ class DeleteProfileResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class ProfileResponse(_message.Message):
+class CreateProfileResponse(_message.Message):
+    __slots__ = ("profile",)
+    PROFILE_FIELD_NUMBER: _ClassVar[int]
+    profile: SettingsProfile
+    def __init__(self, profile: _Optional[_Union[SettingsProfile, _Mapping]] = ...) -> None: ...
+
+class GetProfileResponse(_message.Message):
+    __slots__ = ("profile",)
+    PROFILE_FIELD_NUMBER: _ClassVar[int]
+    profile: SettingsProfile
+    def __init__(self, profile: _Optional[_Union[SettingsProfile, _Mapping]] = ...) -> None: ...
+
+class UpdateProfileResponse(_message.Message):
+    __slots__ = ("profile",)
+    PROFILE_FIELD_NUMBER: _ClassVar[int]
+    profile: SettingsProfile
+    def __init__(self, profile: _Optional[_Union[SettingsProfile, _Mapping]] = ...) -> None: ...
+
+class SetDefaultProfileResponse(_message.Message):
     __slots__ = ("profile",)
     PROFILE_FIELD_NUMBER: _ClassVar[int]
     profile: SettingsProfile
@@ -83,7 +101,7 @@ class GetEffectiveSettingsRequest(_message.Message):
     profile_id: str
     def __init__(self, profile_id: _Optional[str] = ...) -> None: ...
 
-class EffectiveSettingsResponse(_message.Message):
+class GetEffectiveSettingsResponse(_message.Message):
     __slots__ = ("profile", "effective_settings")
     PROFILE_FIELD_NUMBER: _ClassVar[int]
     EFFECTIVE_SETTINGS_FIELD_NUMBER: _ClassVar[int]
@@ -95,7 +113,7 @@ class GetSettingsSchemaRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class SettingsSchemaResponse(_message.Message):
+class GetSettingsSchemaResponse(_message.Message):
     __slots__ = ("appearance_defaults", "keyboard_shortcuts_defaults", "notifications_defaults")
     APPEARANCE_DEFAULTS_FIELD_NUMBER: _ClassVar[int]
     KEYBOARD_SHORTCUTS_DEFAULTS_FIELD_NUMBER: _ClassVar[int]

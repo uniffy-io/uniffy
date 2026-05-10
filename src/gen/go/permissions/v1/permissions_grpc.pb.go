@@ -33,10 +33,10 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MembersServiceClient interface {
 	ListMembers(ctx context.Context, in *ListMembersRequest, opts ...grpc.CallOption) (*ListMembersResponse, error)
-	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
-	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error)
+	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error)
 	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
-	SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*AccessModeResponse, error)
+	SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*SetAccessModeResponse, error)
 	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
 	ListMemberEvents(ctx context.Context, in *ListMemberEventsRequest, opts ...grpc.CallOption) (*ListMemberEventsResponse, error)
 }
@@ -59,9 +59,9 @@ func (c *membersServiceClient) ListMembers(ctx context.Context, in *ListMembersR
 	return out, nil
 }
 
-func (c *membersServiceClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
+func (c *membersServiceClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MemberResponse)
+	out := new(AddMemberResponse)
 	err := c.cc.Invoke(ctx, MembersService_AddMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -69,9 +69,9 @@ func (c *membersServiceClient) AddMember(ctx context.Context, in *AddMemberReque
 	return out, nil
 }
 
-func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
+func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MemberResponse)
+	out := new(UpdateMemberRoleResponse)
 	err := c.cc.Invoke(ctx, MembersService_UpdateMemberRole_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -89,9 +89,9 @@ func (c *membersServiceClient) RemoveMember(ctx context.Context, in *RemoveMembe
 	return out, nil
 }
 
-func (c *membersServiceClient) SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*AccessModeResponse, error) {
+func (c *membersServiceClient) SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*SetAccessModeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AccessModeResponse)
+	out := new(SetAccessModeResponse)
 	err := c.cc.Invoke(ctx, MembersService_SetAccessMode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -124,10 +124,10 @@ func (c *membersServiceClient) ListMemberEvents(ctx context.Context, in *ListMem
 // for forward compatibility.
 type MembersServiceServer interface {
 	ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error)
-	AddMember(context.Context, *AddMemberRequest) (*MemberResponse, error)
-	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*MemberResponse, error)
+	AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error)
+	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error)
 	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
-	SetAccessMode(context.Context, *SetAccessModeRequest) (*AccessModeResponse, error)
+	SetAccessMode(context.Context, *SetAccessModeRequest) (*SetAccessModeResponse, error)
 	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
 	ListMemberEvents(context.Context, *ListMemberEventsRequest) (*ListMemberEventsResponse, error)
 	mustEmbedUnimplementedMembersServiceServer()
@@ -143,16 +143,16 @@ type UnimplementedMembersServiceServer struct{}
 func (UnimplementedMembersServiceServer) ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMembers not implemented")
 }
-func (UnimplementedMembersServiceServer) AddMember(context.Context, *AddMemberRequest) (*MemberResponse, error) {
+func (UnimplementedMembersServiceServer) AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddMember not implemented")
 }
-func (UnimplementedMembersServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*MemberResponse, error) {
+func (UnimplementedMembersServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMemberRole not implemented")
 }
 func (UnimplementedMembersServiceServer) RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveMember not implemented")
 }
-func (UnimplementedMembersServiceServer) SetAccessMode(context.Context, *SetAccessModeRequest) (*AccessModeResponse, error) {
+func (UnimplementedMembersServiceServer) SetAccessMode(context.Context, *SetAccessModeRequest) (*SetAccessModeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetAccessMode not implemented")
 }
 func (UnimplementedMembersServiceServer) TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {

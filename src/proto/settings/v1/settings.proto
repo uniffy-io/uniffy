@@ -2,20 +2,20 @@ syntax = "proto3";
 
 package settings.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1";
 
 // SettingsService provides user settings management functionality
 service SettingsService {
   // Create a new settings profile
-  rpc CreateProfile(CreateProfileRequest) returns (ProfileResponse) {}
+  rpc CreateProfile(CreateProfileRequest) returns (CreateProfileResponse) {}
 
   // Get a settings profile by ID
-  rpc GetProfile(GetProfileRequest) returns (ProfileResponse) {}
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse) {}
 
   // Update an existing settings profile (sparse update - only changed values)
-  rpc UpdateProfile(UpdateProfileRequest) returns (ProfileResponse) {}
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {}
 
   // Delete a settings profile
   rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse) {}
@@ -24,13 +24,13 @@ service SettingsService {
   rpc ListProfiles(ListProfilesRequest) returns (ListProfilesResponse) {}
 
   // Get the effective settings for a profile (defaults merged with overrides)
-  rpc GetEffectiveSettings(GetEffectiveSettingsRequest) returns (EffectiveSettingsResponse) {}
+  rpc GetEffectiveSettings(GetEffectiveSettingsRequest) returns (GetEffectiveSettingsResponse) {}
 
   // Get the schema of available settings with their defaults
-  rpc GetSettingsSchema(GetSettingsSchemaRequest) returns (SettingsSchemaResponse) {}
+  rpc GetSettingsSchema(GetSettingsSchemaRequest) returns (GetSettingsSchemaResponse) {}
 
   // Set a profile as the default for the user
-  rpc SetDefaultProfile(SetDefaultProfileRequest) returns (ProfileResponse) {}
+  rpc SetDefaultProfile(SetDefaultProfileRequest) returns (SetDefaultProfileResponse) {}
 }
 
 // Request to create a new settings profile
@@ -83,8 +83,26 @@ message DeleteProfileResponse {
   string message = 2;
 }
 
-// Response containing a single profile
-message ProfileResponse {
+// Response containing a single profile (Create)
+message CreateProfileResponse {
+  // The profile data
+  SettingsProfile profile = 1;
+}
+
+// Response containing a single profile (Get)
+message GetProfileResponse {
+  // The profile data
+  SettingsProfile profile = 1;
+}
+
+// Response containing a single profile (Update)
+message UpdateProfileResponse {
+  // The profile data
+  SettingsProfile profile = 1;
+}
+
+// Response containing a single profile (SetDefaultProfile)
+message SetDefaultProfileResponse {
   // The profile data
   SettingsProfile profile = 1;
 }
@@ -109,7 +127,7 @@ message GetEffectiveSettingsRequest {
 }
 
 // Response with effective settings (defaults merged with overrides)
-message EffectiveSettingsResponse {
+message GetEffectiveSettingsResponse {
   // The profile used
   SettingsProfile profile = 1;
   // Merged effective settings
@@ -122,7 +140,7 @@ message GetSettingsSchemaRequest {
 }
 
 // Response with settings schema
-message SettingsSchemaResponse {
+message GetSettingsSchemaResponse {
   // Default appearance settings
   AppearanceSettings appearance_defaults = 1;
   // Default keyboard shortcuts
@@ -222,10 +240,8 @@ message NotificationsSettings {
 message NotificationChannelPreference {
   // Enable in-app notifications
   optional bool in_app = 1;
-  // Reserved: was "desktop" (collapsed into "browser")
-  reserved 2;
   // Enable browser push notifications
-  optional bool browser = 3;
+  optional bool browser = 2;
   // Enable email notifications
-  optional bool email = 4;
+  optional bool email = 3;
 }

@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package auth.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
-
 import "common/v1/common.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
 
 // AuthService - Authentication only
 
@@ -14,16 +14,16 @@ import "common/v1/common.proto";
 // For group management, see groups.v1.GroupsService.
 service AuthService {
   // Register a new user account
-  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
 
   // Login with email and password
-  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
 
   // Refresh access token using refresh token
-  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 
   // Get current authenticated user info
-  rpc GetCurrentUser(GetCurrentUserRequest) returns (CurrentUserResponse);
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
 
   // Logout (invalidate tokens)
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -50,22 +50,22 @@ service AuthService {
 message RegisterRequest {
   string email = 1;
   string username = 2;
-  string password = 3;  // Min 8 characters
+  string password = 3; // Min 8 characters
   optional string full_name = 4;
-  optional string organization_slug = 5;  // Join org after registration
+  optional string organization_slug = 5; // Join org after registration
 }
 
 // Request to login
 message LoginRequest {
   string email = 1;
   string password = 2;
-  optional string organization_slug = 3;  // Authenticate into specific org
+  optional string organization_slug = 3; // Authenticate into specific org
 }
 
 // Request to refresh access token
 message RefreshTokenRequest {
   string refresh_token = 1;
-  optional string organization_slug = 2;  // Switch org context
+  optional string organization_slug = 2; // Switch org context
 }
 
 // Request to get current user info
@@ -73,7 +73,7 @@ message GetCurrentUserRequest {}
 
 // Request to logout
 message LogoutRequest {
-  optional string refresh_token = 1;  // If provided, invalidates specific token
+  optional string refresh_token = 1; // If provided, invalidates specific token
 }
 
 // Request to list active sessions
@@ -89,20 +89,44 @@ message RevokeOtherSessionsRequest {}
 
 // Response Messages
 
-// Authentication response with tokens
-message AuthResponse {
+// Authentication response with tokens (Register)
+message RegisterResponse {
   string access_token = 1;
   string refresh_token = 2;
-  string token_type = 3;  // Always "bearer"
+  string token_type = 3; // Always "bearer"
   string user_id = 4;
-  optional string organization_id = 5;  // If authenticated into specific org
-  optional string organization_role = 6;  // User's role in the org: MEMBER, ADMIN, or OWNER
-  optional string session_id = 7;  // Server-side session identifier
-  repeated common.v1.DomainType domain_admin_domains = 8;  // Domains where user is domain admin
+  optional string organization_id = 5; // If authenticated into specific org
+  optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
+  optional string session_id = 7; // Server-side session identifier
+  repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
+}
+
+// Authentication response with tokens (Login)
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3; // Always "bearer"
+  string user_id = 4;
+  optional string organization_id = 5; // If authenticated into specific org
+  optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
+  optional string session_id = 7; // Server-side session identifier
+  repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
+}
+
+// Authentication response with tokens (RefreshToken)
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3; // Always "bearer"
+  string user_id = 4;
+  optional string organization_id = 5; // If authenticated into specific org
+  optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
+  optional string session_id = 7; // Server-side session identifier
+  repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
 }
 
 // Current user info response
-message CurrentUserResponse {
+message GetCurrentUserResponse {
   string id = 1;
   string email = 2;
   string username = 3;
@@ -124,12 +148,11 @@ message LogoutResponse {
 // Active session information
 message SessionInfo {
   string id = 1;
-  reserved 2;  // removed ip_address
-  string user_agent = 3;
-  string device_label = 4;
-  string created_at = 5;  // ISO 8601 timestamp
-  string last_activity = 6;  // ISO 8601 timestamp
-  bool is_current = 7;
+  string user_agent = 2;
+  string device_label = 3;
+  string created_at = 4; // ISO 8601 timestamp
+  string last_activity = 5; // ISO 8601 timestamp
+  bool is_current = 6;
 }
 
 // Response containing list of active sessions
@@ -152,7 +175,7 @@ message GetCacheKeySeedRequest {}
 
 // Response containing the cache key seed
 message GetCacheKeySeedResponse {
-  bytes cache_key_seed = 1;  // 32-byte seed for deriving encryption keys
+  bytes cache_key_seed = 1; // 32-byte seed for deriving encryption keys
 }
 
 // Request to rotate cache key seed
@@ -164,5 +187,5 @@ message RotateCacheKeySeedRequest {
 
 // Response containing the new cache key seed after rotation
 message RotateCacheKeySeedResponse {
-  bytes new_cache_key_seed = 1;  // New 32-byte seed
+  bytes new_cache_key_seed = 1; // New 32-byte seed
 }

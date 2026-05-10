@@ -10,9 +10,11 @@ from uniffy_proto.tags.v1.tags_pb2 import (
     AssignTagsRequest,
     AssignTagsResponse,
     CreateTagRequest,
+    CreateTagResponse,
     DeleteTagRequest,
     DeleteTagResponse,
     GetTagRequest,
+    GetTagResponse,
     GetTagsForUrnsRequest,
     GetTagsForUrnsResponse,
     ListContentByTagRequest,
@@ -20,12 +22,13 @@ from uniffy_proto.tags.v1.tags_pb2 import (
     ListTagsRequest,
     ListTagsResponse,
     MergeTagsRequest,
+    MergeTagsResponse,
     SuggestTagsRequest,
     SuggestTagsResponse,
-    TagResponse,
     UnassignTagsRequest,
     UnassignTagsResponse,
     UpdateTagRequest,
+    UpdateTagResponse,
     UrnTags,
 )
 
@@ -116,7 +119,7 @@ class TagsHandlers:
         self,
         request: CreateTagRequest,
         ctx: RequestContext,
-    ) -> TagResponse:
+    ) -> CreateTagResponse:
         actor_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
 
@@ -134,7 +137,7 @@ class TagsHandlers:
                     description=request.description or None,
                 )
                 count = await ops._get_usage_count(organization_id, tag.id)
-            return TagResponse(tag=tag_to_proto(tag, usage_count=count))
+            return CreateTagResponse(tag=tag_to_proto(tag, usage_count=count))
         except ConnectError:
             raise
         except Exception as exc:
@@ -145,7 +148,7 @@ class TagsHandlers:
         self,
         request: UpdateTagRequest,
         ctx: RequestContext,
-    ) -> TagResponse:
+    ) -> UpdateTagResponse:
         actor_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
         tag_id = _parse_uuid(request.tag_id, "tag_id")
@@ -184,7 +187,7 @@ class TagsHandlers:
                             "Failed to enqueue reindex_tag_urns after rename",
                             component="tags.handlers",
                         )
-            return TagResponse(tag=tag_to_proto(tag, usage_count=count))
+            return UpdateTagResponse(tag=tag_to_proto(tag, usage_count=count))
         except ConnectError:
             raise
         except Exception as exc:
@@ -233,7 +236,7 @@ class TagsHandlers:
         self,
         request: GetTagRequest,
         ctx: RequestContext,
-    ) -> TagResponse:
+    ) -> GetTagResponse:
         actor_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
 
@@ -249,7 +252,7 @@ class TagsHandlers:
                     actor_id=actor_id,
                 )
                 count = await ops._get_usage_count(organization_id, tag.id)
-            return TagResponse(tag=tag_to_proto(tag, usage_count=count))
+            return GetTagResponse(tag=tag_to_proto(tag, usage_count=count))
         except ConnectError:
             raise
         except Exception as exc:
@@ -475,7 +478,7 @@ class TagsHandlers:
         self,
         request: MergeTagsRequest,
         ctx: RequestContext,
-    ) -> TagResponse:
+    ) -> MergeTagsResponse:
         actor_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
         source_id = _parse_uuid(request.source_tag_id, "source_tag_id")
@@ -507,7 +510,7 @@ class TagsHandlers:
                             "Failed to enqueue reindex_tag_urns after merge",
                             component="tags.handlers",
                         )
-            return TagResponse(tag=tag_to_proto(target, usage_count=count))
+            return MergeTagsResponse(tag=tag_to_proto(target, usage_count=count))
         except ConnectError:
             raise
         except Exception as exc:

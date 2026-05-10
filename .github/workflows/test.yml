@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
   checks: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   changes:
@@ -39,6 +39,30 @@ jobs:
               - 'src/proto/**'
               - 'buf.gen.yaml'
               - 'buf.yaml'
+
+  lint-proto:
+    needs: changes
+    if: needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+
+      - name: buf lint
+        run: buf lint
+
+      - name: buf format check
+        run: buf format -d --exit-code
+
+      - name: buf breaking (against main)
+        if: github.event_name == 'pull_request'
+        run: buf breaking --against ".git#branch=origin/main"
 
   lint-python:
     needs: changes
@@ -173,6 +197,9 @@ jobs:
           check_name: Pytest Results
           require_tests: true
           detailed_summary: true
+          comment: true
+          updateComment: true
+          job_summary: true
 
   test-frontend:
     needs: changes
@@ -218,6 +245,9 @@ jobs:
           check_name: Vitest Results
           require_tests: true
           detailed_summary: true
+          comment: true
+          updateComment: true
+          job_summary: true
 
   benchmark-python:
     needs: changes
@@ -266,3 +296,24 @@ jobs:
           path: reports/benchmark.json
           if-no-files-found: warn
           retention-days: 14
+
+  all-green:
+    name: All checks passed
+    if: always()
+    needs:
+      - changes
+      - lint-proto
+      - lint-python
+      - lint-frontend
+      - build-frontend
+      - test-python
+      - test-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs succeeded or were skipped
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS_JSON"
+          echo "$NEEDS_JSON" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null
+          echo "All required jobs passed."

@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -220,7 +220,19 @@ class DeleteRoomResponse(_message.Message):
     message: str
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
-class RoomResponse(_message.Message):
+class CreateRoomResponse(_message.Message):
+    __slots__ = ("room",)
+    ROOM_FIELD_NUMBER: _ClassVar[int]
+    room: Room
+    def __init__(self, room: _Optional[_Union[Room, _Mapping]] = ...) -> None: ...
+
+class GetRoomResponse(_message.Message):
+    __slots__ = ("room",)
+    ROOM_FIELD_NUMBER: _ClassVar[int]
+    room: Room
+    def __init__(self, room: _Optional[_Union[Room, _Mapping]] = ...) -> None: ...
+
+class UpdateRoomResponse(_message.Message):
     __slots__ = ("room",)
     ROOM_FIELD_NUMBER: _ClassVar[int]
     room: Room
@@ -298,7 +310,19 @@ class CancelBookingRequest(_message.Message):
     organization_id: str
     def __init__(self, booking_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
-class BookingResponse(_message.Message):
+class CreateBookingResponse(_message.Message):
+    __slots__ = ("booking",)
+    BOOKING_FIELD_NUMBER: _ClassVar[int]
+    booking: RoomBooking
+    def __init__(self, booking: _Optional[_Union[RoomBooking, _Mapping]] = ...) -> None: ...
+
+class GetBookingResponse(_message.Message):
+    __slots__ = ("booking",)
+    BOOKING_FIELD_NUMBER: _ClassVar[int]
+    booking: RoomBooking
+    def __init__(self, booking: _Optional[_Union[RoomBooking, _Mapping]] = ...) -> None: ...
+
+class CancelBookingResponse(_message.Message):
     __slots__ = ("booking",)
     BOOKING_FIELD_NUMBER: _ClassVar[int]
     booking: RoomBooking

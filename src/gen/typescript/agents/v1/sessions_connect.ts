@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMessageRequest, ArchiveSessionRequest, ArchiveSessionResponse, CompactSessionRequest, CompactSessionResponse, CreateSessionRequest, GetSessionContextRequest, GetSessionContextResponse, GetSessionContextStatsRequest, GetSessionContextStatsResponse, GetSessionRequest, ListMessagesRequest, ListMessagesResponse, ListSessionsRequest, ListSessionsResponse, MessageResponse, SessionResponse, UpdateSessionRequest } from "./sessions_pb.js";
+import { AddMessageRequest, AddMessageResponse, ArchiveSessionRequest, ArchiveSessionResponse, CompactSessionRequest, CompactSessionResponse, CreateSessionRequest, CreateSessionResponse, GetSessionContextRequest, GetSessionContextResponse, GetSessionContextStatsRequest, GetSessionContextStatsResponse, GetSessionRequest, GetSessionResponse, ListMessagesRequest, ListMessagesResponse, ListSessionsRequest, ListSessionsResponse, UpdateSessionRequest, UpdateSessionResponse } from "./sessions_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,7 +22,7 @@ export const SessionsService = {
     createSession: {
       name: "CreateSession",
       I: CreateSessionRequest,
-      O: SessionResponse,
+      O: CreateSessionResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -33,7 +33,7 @@ export const SessionsService = {
     getSession: {
       name: "GetSession",
       I: GetSessionRequest,
-      O: SessionResponse,
+      O: GetSessionResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -55,7 +55,7 @@ export const SessionsService = {
     updateSession: {
       name: "UpdateSession",
       I: UpdateSessionRequest,
-      O: SessionResponse,
+      O: UpdateSessionResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,7 +77,7 @@ export const SessionsService = {
     addMessage: {
       name: "AddMessage",
       I: AddMessageRequest,
-      O: MessageResponse,
+      O: AddMessageResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -191,8 +191,7 @@ export function NotesSidebar() {
             navigate(`/notes/${noteId}`);
             try {
                 await dispatch(fetchNote(noteId)).unwrap();
-            } catch (err) {
-                console.error('Failed to fetch note:', err);
+            } catch {
                 dispatch(setCurrentNote(null));
             }
         },
@@ -212,8 +211,7 @@ export function NotesSidebar() {
                 ).unwrap();
                 navigate(`/notes/${result.id}`);
                 setEditingId(result.id);
-            } catch (err) {
-                console.error('Failed to create note:', err);
+            } catch {
             }
         },
         [dispatch, navigate]
@@ -233,8 +231,7 @@ export function NotesSidebar() {
                 ).unwrap();
                 navigate(`/notes/${result.id}`);
                 setEditingId(result.id);
-            } catch (err) {
-                console.error('Failed to create canvas:', err);
+            } catch {
             }
         },
         [dispatch, navigate]
@@ -253,8 +250,7 @@ export function NotesSidebar() {
                     })
                 ).unwrap();
                 setEditingId(result.id);
-            } catch (err) {
-                console.error('Failed to create folder:', err);
+            } catch {
             }
         },
         [dispatch]
@@ -285,8 +281,7 @@ export function NotesSidebar() {
                 ).unwrap();
                 navigate(`/notes/${result.id}`);
                 setEditingId(result.id);
-            } catch (err) {
-                console.error('Failed to create note:', err);
+            } catch {
             }
         },
         [dispatch, findNodeVisibility, navigate]
@@ -309,8 +304,7 @@ export function NotesSidebar() {
                 ).unwrap();
                 navigate(`/notes/${result.id}`);
                 setEditingId(result.id);
-            } catch (err) {
-                console.error('Failed to create canvas:', err);
+            } catch {
             }
         },
         [dispatch, findNodeVisibility, navigate]
@@ -322,8 +316,7 @@ export function NotesSidebar() {
             dispatch(updateNodeTitle({ nodeId, title: newTitle }));
             try {
                 await dispatch(updateNote({ noteId: nodeId, title: newTitle })).unwrap();
-            } catch (err) {
-                console.error('Failed to rename note/folder:', err);
+            } catch {
                 dispatch(initializeNotesData({ forceRefresh: true }));
             }
         },
@@ -337,8 +330,7 @@ export function NotesSidebar() {
                 if (currentNoteId === noteId) {
                     dispatch(setCurrentNote(null));
                 }
-            } catch (err) {
-                console.error('Failed to delete item:', err);
+            } catch {
             }
         },
         [dispatch, currentNoteId]
@@ -361,8 +353,7 @@ export function NotesSidebar() {
                 })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
                 navigate(`/notes/${result.id}`);
-            } catch (err) {
-                console.error('Failed to copy note:', err);
+            } catch {
             }
         },
         [findNodeVisibility, findNodeRecursively, tree, dispatch, navigate]
@@ -409,8 +400,7 @@ export function NotesSidebar() {
                 }
                 await dispatch(updateNote({ noteId: droppedNodeId, parentId: targetFolderId })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
-            } catch (err) {
-                console.error('Failed to move note:', err);
+            } catch {
                 dispatch(initializeNotesData({ forceRefresh: true }));
             }
         },
@@ -435,8 +425,7 @@ export function NotesSidebar() {
                 }
                 await dispatch(updateNote({ noteId: droppedNodeId, parentId: '' })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
-            } catch (err) {
-                console.error('Failed to move note to section:', err);
+            } catch {
                 dispatch(initializeNotesData({ forceRefresh: true }));
             }
         },
@@ -451,8 +440,7 @@ export function NotesSidebar() {
             await dispatch(moveNote({ noteId, targetAccessMode })).unwrap();
             await dispatch(updateNote({ noteId, parentId: targetFolderId ?? '' })).unwrap();
             dispatch(initializeNotesData({ forceRefresh: true }));
-        } catch (err) {
-            console.error('Failed to move note:', err);
+        } catch {
             dispatch(initializeNotesData({ forceRefresh: true }));
         } finally {
             setPendingOrgMove(null);

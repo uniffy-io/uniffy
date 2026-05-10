@@ -15,11 +15,10 @@
  *   falling-behind / auto-stop and fires `onBackpressure` so the slice can
  *   surface a banner and the thunk can auto-stop on overflow.
  *
- * Threading: the original Phase 0 plan called for moving the upload loop
- * into a Web Worker. After measuring main-thread cost on a 5 MB / 5 s
- * cadence (`Blob.slice` is metadata-only, `Blob.arrayBuffer()` is
- * async-yielded by the browser, ConnectRPC's protobuf encoding for an
- * `UploadChunkRequest` is sub-millisecond at this size), the jank is not
+ * Threading: measured main-thread cost on a 5 MB / 5 s cadence
+ * (`Blob.slice` is metadata-only, `Blob.arrayBuffer()` is async-yielded
+ * by the browser, ConnectRPC's protobuf encoding for an
+ * `UploadChunksRequest` is sub-millisecond at this size); jank is not
  * observable on Chrome / Brave. Worker form is held in reserve for a
  * profiler-driven follow-up if the recording UI ever shows frame drops
  * during upload bursts.

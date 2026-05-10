@@ -8,18 +8,20 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.auth.v1.auth_pb2 import (
-    AuthResponse,
-    CurrentUserResponse,
     GetCacheKeySeedRequest,
     GetCacheKeySeedResponse,
     GetCurrentUserRequest,
+    GetCurrentUserResponse,
     ListSessionsRequest,
     ListSessionsResponse,
     LoginRequest,
+    LoginResponse,
     LogoutRequest,
     LogoutResponse,
     RefreshTokenRequest,
+    RefreshTokenResponse,
     RegisterRequest,
+    RegisterResponse,
     RevokeOtherSessionsRequest,
     RevokeOtherSessionsResponse,
     RevokeSessionRequest,
@@ -65,7 +67,7 @@ class AuthHandlers:
         self,
         request: RegisterRequest,
         ctx: RequestContext,
-    ) -> AuthResponse:
+    ) -> RegisterResponse:
         """Register a new user."""
         try:
             user_agent = get_user_agent_from_context(ctx)
@@ -80,7 +82,7 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
-                return AuthResponse(
+                return RegisterResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
                     token_type="bearer",
@@ -101,7 +103,7 @@ class AuthHandlers:
         self,
         request: LoginRequest,
         ctx: RequestContext,
-    ) -> AuthResponse:
+    ) -> LoginResponse:
         """Authenticate user."""
         try:
             user_agent = get_user_agent_from_context(ctx)
@@ -117,7 +119,7 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
-                return AuthResponse(
+                return LoginResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
                     token_type="bearer",
@@ -138,7 +140,7 @@ class AuthHandlers:
         self,
         request: RefreshTokenRequest,
         ctx: RequestContext,
-    ) -> AuthResponse:
+    ) -> RefreshTokenResponse:
         """Refresh access token."""
         try:
             async with open_session() as session:
@@ -150,7 +152,7 @@ class AuthHandlers:
                     ),
                 )
 
-                return AuthResponse(
+                return RefreshTokenResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
                     token_type="bearer",
@@ -171,7 +173,7 @@ class AuthHandlers:
         self,
         request: GetCurrentUserRequest,
         ctx: RequestContext,
-    ) -> CurrentUserResponse:
+    ) -> GetCurrentUserResponse:
         """Get current authenticated user info."""
         user_id = get_user_id_from_context(ctx)
 

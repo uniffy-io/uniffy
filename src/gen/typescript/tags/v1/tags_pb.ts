@@ -493,39 +493,150 @@ export class GetTagRequest extends Message<GetTagRequest> {
 }
 
 /**
- * @generated from message tags.v1.TagResponse
+ * @generated from message tags.v1.CreateTagResponse
  */
-export class TagResponse extends Message<TagResponse> {
+export class CreateTagResponse extends Message<CreateTagResponse> {
   /**
    * @generated from field: tags.v1.Tag tag = 1;
    */
   tag?: Tag;
 
-  constructor(data?: PartialMessage<TagResponse>) {
+  constructor(data?: PartialMessage<CreateTagResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.TagResponse";
+  static readonly typeName = "tags.v1.CreateTagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "tag", kind: "message", T: Tag },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TagResponse {
-    return new TagResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateTagResponse {
+    return new CreateTagResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TagResponse {
-    return new TagResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateTagResponse {
+    return new CreateTagResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TagResponse {
-    return new TagResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateTagResponse {
+    return new CreateTagResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TagResponse | PlainMessage<TagResponse> | undefined, b: TagResponse | PlainMessage<TagResponse> | undefined): boolean {
-    return proto3.util.equals(TagResponse, a, b);
+  static equals(a: CreateTagResponse | PlainMessage<CreateTagResponse> | undefined, b: CreateTagResponse | PlainMessage<CreateTagResponse> | undefined): boolean {
+    return proto3.util.equals(CreateTagResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message tags.v1.UpdateTagResponse
+ */
+export class UpdateTagResponse extends Message<UpdateTagResponse> {
+  /**
+   * @generated from field: tags.v1.Tag tag = 1;
+   */
+  tag?: Tag;
+
+  constructor(data?: PartialMessage<UpdateTagResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "tags.v1.UpdateTagResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "tag", kind: "message", T: Tag },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateTagResponse {
+    return new UpdateTagResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateTagResponse {
+    return new UpdateTagResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateTagResponse {
+    return new UpdateTagResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateTagResponse | PlainMessage<UpdateTagResponse> | undefined, b: UpdateTagResponse | PlainMessage<UpdateTagResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateTagResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message tags.v1.GetTagResponse
+ */
+export class GetTagResponse extends Message<GetTagResponse> {
+  /**
+   * @generated from field: tags.v1.Tag tag = 1;
+   */
+  tag?: Tag;
+
+  constructor(data?: PartialMessage<GetTagResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "tags.v1.GetTagResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "tag", kind: "message", T: Tag },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTagResponse {
+    return new GetTagResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTagResponse {
+    return new GetTagResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTagResponse {
+    return new GetTagResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetTagResponse | PlainMessage<GetTagResponse> | undefined, b: GetTagResponse | PlainMessage<GetTagResponse> | undefined): boolean {
+    return proto3.util.equals(GetTagResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message tags.v1.MergeTagsResponse
+ */
+export class MergeTagsResponse extends Message<MergeTagsResponse> {
+  /**
+   * @generated from field: tags.v1.Tag tag = 1;
+   */
+  tag?: Tag;
+
+  constructor(data?: PartialMessage<MergeTagsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "tags.v1.MergeTagsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "tag", kind: "message", T: Tag },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MergeTagsResponse {
+    return new MergeTagsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MergeTagsResponse {
+    return new MergeTagsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MergeTagsResponse {
+    return new MergeTagsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MergeTagsResponse | PlainMessage<MergeTagsResponse> | undefined, b: MergeTagsResponse | PlainMessage<MergeTagsResponse> | undefined): boolean {
+    return proto3.util.equals(MergeTagsResponse, a, b);
   }
 }
 
@@ -1547,46 +1658,83 @@ export class SavedTagFilter extends Message<SavedTagFilter> {
 }
 
 /**
- * @generated from message tags.v1.SavedTagFilterResponse
+ * @generated from message tags.v1.CreateSavedFilterResponse
  */
-export class SavedTagFilterResponse extends Message<SavedTagFilterResponse> {
+export class CreateSavedFilterResponse extends Message<CreateSavedFilterResponse> {
   /**
    * @generated from field: tags.v1.SavedTagFilter filter = 1;
    */
   filter?: SavedTagFilter;
 
-  constructor(data?: PartialMessage<SavedTagFilterResponse>) {
+  constructor(data?: PartialMessage<CreateSavedFilterResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.SavedTagFilterResponse";
+  static readonly typeName = "tags.v1.CreateSavedFilterResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "filter", kind: "message", T: SavedTagFilter },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SavedTagFilterResponse {
-    return new SavedTagFilterResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SavedTagFilterResponse {
-    return new SavedTagFilterResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SavedTagFilterResponse {
-    return new SavedTagFilterResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSavedFilterResponse {
+    return new CreateSavedFilterResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SavedTagFilterResponse | PlainMessage<SavedTagFilterResponse> | undefined, b: SavedTagFilterResponse | PlainMessage<SavedTagFilterResponse> | undefined): boolean {
-    return proto3.util.equals(SavedTagFilterResponse, a, b);
+  static equals(a: CreateSavedFilterResponse | PlainMessage<CreateSavedFilterResponse> | undefined, b: CreateSavedFilterResponse | PlainMessage<CreateSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(CreateSavedFilterResponse, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.CreateSavedTagFilterRequest
+ * @generated from message tags.v1.UpdateSavedFilterResponse
  */
-export class CreateSavedTagFilterRequest extends Message<CreateSavedTagFilterRequest> {
+export class UpdateSavedFilterResponse extends Message<UpdateSavedFilterResponse> {
+  /**
+   * @generated from field: tags.v1.SavedTagFilter filter = 1;
+   */
+  filter?: SavedTagFilter;
+
+  constructor(data?: PartialMessage<UpdateSavedFilterResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "tags.v1.UpdateSavedFilterResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "filter", kind: "message", T: SavedTagFilter },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSavedFilterResponse {
+    return new UpdateSavedFilterResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSavedFilterResponse | PlainMessage<UpdateSavedFilterResponse> | undefined, b: UpdateSavedFilterResponse | PlainMessage<UpdateSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateSavedFilterResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message tags.v1.CreateSavedFilterRequest
+ */
+export class CreateSavedFilterRequest extends Message<CreateSavedFilterRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -1622,13 +1770,13 @@ export class CreateSavedTagFilterRequest extends Message<CreateSavedTagFilterReq
    */
   sortOrder?: string;
 
-  constructor(data?: PartialMessage<CreateSavedTagFilterRequest>) {
+  constructor(data?: PartialMessage<CreateSavedFilterRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.CreateSavedTagFilterRequest";
+  static readonly typeName = "tags.v1.CreateSavedFilterRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1639,27 +1787,27 @@ export class CreateSavedTagFilterRequest extends Message<CreateSavedTagFilterReq
     { no: 7, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSavedTagFilterRequest {
-    return new CreateSavedTagFilterRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSavedFilterRequest {
+    return new CreateSavedFilterRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSavedTagFilterRequest {
-    return new CreateSavedTagFilterRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSavedFilterRequest {
+    return new CreateSavedFilterRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSavedTagFilterRequest {
-    return new CreateSavedTagFilterRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSavedFilterRequest {
+    return new CreateSavedFilterRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateSavedTagFilterRequest | PlainMessage<CreateSavedTagFilterRequest> | undefined, b: CreateSavedTagFilterRequest | PlainMessage<CreateSavedTagFilterRequest> | undefined): boolean {
-    return proto3.util.equals(CreateSavedTagFilterRequest, a, b);
+  static equals(a: CreateSavedFilterRequest | PlainMessage<CreateSavedFilterRequest> | undefined, b: CreateSavedFilterRequest | PlainMessage<CreateSavedFilterRequest> | undefined): boolean {
+    return proto3.util.equals(CreateSavedFilterRequest, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.UpdateSavedTagFilterRequest
+ * @generated from message tags.v1.UpdateSavedFilterRequest
  */
-export class UpdateSavedTagFilterRequest extends Message<UpdateSavedTagFilterRequest> {
+export class UpdateSavedFilterRequest extends Message<UpdateSavedFilterRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -1700,13 +1848,13 @@ export class UpdateSavedTagFilterRequest extends Message<UpdateSavedTagFilterReq
    */
   sortOrder?: string;
 
-  constructor(data?: PartialMessage<UpdateSavedTagFilterRequest>) {
+  constructor(data?: PartialMessage<UpdateSavedFilterRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.UpdateSavedTagFilterRequest";
+  static readonly typeName = "tags.v1.UpdateSavedFilterRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "filter_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1718,27 +1866,27 @@ export class UpdateSavedTagFilterRequest extends Message<UpdateSavedTagFilterReq
     { no: 8, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSavedTagFilterRequest {
-    return new UpdateSavedTagFilterRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSavedFilterRequest {
+    return new UpdateSavedFilterRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSavedTagFilterRequest {
-    return new UpdateSavedTagFilterRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSavedFilterRequest {
+    return new UpdateSavedFilterRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSavedTagFilterRequest {
-    return new UpdateSavedTagFilterRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSavedFilterRequest {
+    return new UpdateSavedFilterRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateSavedTagFilterRequest | PlainMessage<UpdateSavedTagFilterRequest> | undefined, b: UpdateSavedTagFilterRequest | PlainMessage<UpdateSavedTagFilterRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateSavedTagFilterRequest, a, b);
+  static equals(a: UpdateSavedFilterRequest | PlainMessage<UpdateSavedFilterRequest> | undefined, b: UpdateSavedFilterRequest | PlainMessage<UpdateSavedFilterRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateSavedFilterRequest, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.DeleteSavedTagFilterRequest
+ * @generated from message tags.v1.DeleteSavedFilterRequest
  */
-export class DeleteSavedTagFilterRequest extends Message<DeleteSavedTagFilterRequest> {
+export class DeleteSavedFilterRequest extends Message<DeleteSavedFilterRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -1749,76 +1897,76 @@ export class DeleteSavedTagFilterRequest extends Message<DeleteSavedTagFilterReq
    */
   filterId = "";
 
-  constructor(data?: PartialMessage<DeleteSavedTagFilterRequest>) {
+  constructor(data?: PartialMessage<DeleteSavedFilterRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.DeleteSavedTagFilterRequest";
+  static readonly typeName = "tags.v1.DeleteSavedFilterRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "filter_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSavedTagFilterRequest {
-    return new DeleteSavedTagFilterRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSavedFilterRequest {
+    return new DeleteSavedFilterRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSavedTagFilterRequest {
-    return new DeleteSavedTagFilterRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSavedFilterRequest {
+    return new DeleteSavedFilterRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSavedTagFilterRequest {
-    return new DeleteSavedTagFilterRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSavedFilterRequest {
+    return new DeleteSavedFilterRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteSavedTagFilterRequest | PlainMessage<DeleteSavedTagFilterRequest> | undefined, b: DeleteSavedTagFilterRequest | PlainMessage<DeleteSavedTagFilterRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteSavedTagFilterRequest, a, b);
+  static equals(a: DeleteSavedFilterRequest | PlainMessage<DeleteSavedFilterRequest> | undefined, b: DeleteSavedFilterRequest | PlainMessage<DeleteSavedFilterRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteSavedFilterRequest, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.DeleteSavedTagFilterResponse
+ * @generated from message tags.v1.DeleteSavedFilterResponse
  */
-export class DeleteSavedTagFilterResponse extends Message<DeleteSavedTagFilterResponse> {
+export class DeleteSavedFilterResponse extends Message<DeleteSavedFilterResponse> {
   /**
    * @generated from field: bool success = 1;
    */
   success = false;
 
-  constructor(data?: PartialMessage<DeleteSavedTagFilterResponse>) {
+  constructor(data?: PartialMessage<DeleteSavedFilterResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.DeleteSavedTagFilterResponse";
+  static readonly typeName = "tags.v1.DeleteSavedFilterResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSavedTagFilterResponse {
-    return new DeleteSavedTagFilterResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSavedFilterResponse {
+    return new DeleteSavedFilterResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSavedTagFilterResponse {
-    return new DeleteSavedTagFilterResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSavedFilterResponse {
+    return new DeleteSavedFilterResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSavedTagFilterResponse {
-    return new DeleteSavedTagFilterResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSavedFilterResponse {
+    return new DeleteSavedFilterResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteSavedTagFilterResponse | PlainMessage<DeleteSavedTagFilterResponse> | undefined, b: DeleteSavedTagFilterResponse | PlainMessage<DeleteSavedTagFilterResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteSavedTagFilterResponse, a, b);
+  static equals(a: DeleteSavedFilterResponse | PlainMessage<DeleteSavedFilterResponse> | undefined, b: DeleteSavedFilterResponse | PlainMessage<DeleteSavedFilterResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteSavedFilterResponse, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.ListSavedTagFiltersRequest
+ * @generated from message tags.v1.ListSavedFiltersRequest
  */
-export class ListSavedTagFiltersRequest extends Message<ListSavedTagFiltersRequest> {
+export class ListSavedFiltersRequest extends Message<ListSavedFiltersRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -1831,69 +1979,69 @@ export class ListSavedTagFiltersRequest extends Message<ListSavedTagFiltersReque
    */
   includePresets = false;
 
-  constructor(data?: PartialMessage<ListSavedTagFiltersRequest>) {
+  constructor(data?: PartialMessage<ListSavedFiltersRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.ListSavedTagFiltersRequest";
+  static readonly typeName = "tags.v1.ListSavedFiltersRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "include_presets", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSavedTagFiltersRequest {
-    return new ListSavedTagFiltersRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSavedFiltersRequest {
+    return new ListSavedFiltersRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSavedTagFiltersRequest {
-    return new ListSavedTagFiltersRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSavedFiltersRequest {
+    return new ListSavedFiltersRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSavedTagFiltersRequest {
-    return new ListSavedTagFiltersRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSavedFiltersRequest {
+    return new ListSavedFiltersRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListSavedTagFiltersRequest | PlainMessage<ListSavedTagFiltersRequest> | undefined, b: ListSavedTagFiltersRequest | PlainMessage<ListSavedTagFiltersRequest> | undefined): boolean {
-    return proto3.util.equals(ListSavedTagFiltersRequest, a, b);
+  static equals(a: ListSavedFiltersRequest | PlainMessage<ListSavedFiltersRequest> | undefined, b: ListSavedFiltersRequest | PlainMessage<ListSavedFiltersRequest> | undefined): boolean {
+    return proto3.util.equals(ListSavedFiltersRequest, a, b);
   }
 }
 
 /**
- * @generated from message tags.v1.ListSavedTagFiltersResponse
+ * @generated from message tags.v1.ListSavedFiltersResponse
  */
-export class ListSavedTagFiltersResponse extends Message<ListSavedTagFiltersResponse> {
+export class ListSavedFiltersResponse extends Message<ListSavedFiltersResponse> {
   /**
    * @generated from field: repeated tags.v1.SavedTagFilter filters = 1;
    */
   filters: SavedTagFilter[] = [];
 
-  constructor(data?: PartialMessage<ListSavedTagFiltersResponse>) {
+  constructor(data?: PartialMessage<ListSavedFiltersResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "tags.v1.ListSavedTagFiltersResponse";
+  static readonly typeName = "tags.v1.ListSavedFiltersResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "filters", kind: "message", T: SavedTagFilter, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSavedTagFiltersResponse {
-    return new ListSavedTagFiltersResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSavedFiltersResponse {
+    return new ListSavedFiltersResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSavedTagFiltersResponse {
-    return new ListSavedTagFiltersResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSavedFiltersResponse {
+    return new ListSavedFiltersResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSavedTagFiltersResponse {
-    return new ListSavedTagFiltersResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSavedFiltersResponse {
+    return new ListSavedFiltersResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListSavedTagFiltersResponse | PlainMessage<ListSavedTagFiltersResponse> | undefined, b: ListSavedTagFiltersResponse | PlainMessage<ListSavedTagFiltersResponse> | undefined): boolean {
-    return proto3.util.equals(ListSavedTagFiltersResponse, a, b);
+  static equals(a: ListSavedFiltersResponse | PlainMessage<ListSavedFiltersResponse> | undefined, b: ListSavedFiltersResponse | PlainMessage<ListSavedFiltersResponse> | undefined): boolean {
+    return proto3.util.equals(ListSavedFiltersResponse, a, b);
   }
 }
 

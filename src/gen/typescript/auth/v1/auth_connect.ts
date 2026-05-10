@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AuthResponse, CurrentUserResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, ListSessionsRequest, ListSessionsResponse, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse } from "./auth_pb.js";
+import { GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -25,7 +25,7 @@ export const AuthService = {
     register: {
       name: "Register",
       I: RegisterRequest,
-      O: AuthResponse,
+      O: RegisterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -36,7 +36,7 @@ export const AuthService = {
     login: {
       name: "Login",
       I: LoginRequest,
-      O: AuthResponse,
+      O: LoginResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -47,7 +47,7 @@ export const AuthService = {
     refreshToken: {
       name: "RefreshToken",
       I: RefreshTokenRequest,
-      O: AuthResponse,
+      O: RefreshTokenResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -58,7 +58,7 @@ export const AuthService = {
     getCurrentUser: {
       name: "GetCurrentUser",
       I: GetCurrentUserRequest,
-      O: CurrentUserResponse,
+      O: GetCurrentUserResponse,
       kind: MethodKind.Unary,
     },
     /**

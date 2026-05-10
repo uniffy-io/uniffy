@@ -155,6 +155,22 @@ class SendMessageRequest(_message.Message):
     chat_context: ChatChannelContext
     def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
 
+class StreamSendMessageRequest(_message.Message):
+    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    FILE_IDS_FIELD_NUMBER: _ClassVar[int]
+    USER_TIMEZONE_FIELD_NUMBER: _ClassVar[int]
+    CHAT_CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    session_id: str
+    content: str
+    file_ids: _containers.RepeatedScalarFieldContainer[str]
+    user_timezone: str
+    chat_context: ChatChannelContext
+    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
+
 class ChatChannelContext(_message.Message):
     __slots__ = ("channel_id", "agent_id", "trigger_message_id", "context_urn")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
@@ -177,7 +193,7 @@ class SendMessageResponse(_message.Message):
     model_used: str
     def __init__(self, user_message: _Optional[_Union[_sessions_pb2.MessageInfo, _Mapping]] = ..., assistant_message: _Optional[_Union[_sessions_pb2.MessageInfo, _Mapping]] = ..., model_used: _Optional[str] = ...) -> None: ...
 
-class ConfirmationResponse(_message.Message):
+class RespondToConfirmationRequest(_message.Message):
     __slots__ = ("organization_id", "session_id", "tool_call_id", "approved")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -197,13 +213,33 @@ class SubscribeToRunRequest(_message.Message):
     organization_id: str
     def __init__(self, run_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
-class ConfirmationResponseAck(_message.Message):
+class RespondToConfirmationResponse(_message.Message):
     __slots__ = ("accepted",)
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
     accepted: bool
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
-class StreamSendMessageEvent(_message.Message):
+class StreamSendMessageResponse(_message.Message):
+    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "run_id")
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
+    TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_STORED_FIELD_NUMBER: _ClassVar[int]
+    DONE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    token: StreamTokenEvent
+    tool_call: StreamToolCallEvent
+    tool_result: StreamToolResultEvent
+    message_stored: StreamMessageStoredEvent
+    done: StreamDoneEvent
+    error: StreamErrorEvent
+    confirmation_required: StreamConfirmationRequiredEvent
+    run_id: str
+    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+
+class SubscribeToRunResponse(_message.Message):
     __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]

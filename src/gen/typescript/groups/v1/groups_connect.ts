@@ -3,9 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddGroupMemberRequest, CreateGroupRequest, DeleteGroupRequest, DeleteGroupResponse, GetGroupRequest, GetUserGroupsRequest, GetUserGroupsResponse, ListGroupMembersRequest, ListGroupMembersResponse, ListGroupsRequest, ListGroupsResponse, RemoveGroupMemberRequest, RemoveGroupMemberResponse, UpdateGroupMemberRequest, UpdateGroupRequest } from "./groups_pb.js";
+import { AddGroupMemberRequest, AddGroupMemberResponse, CreateGroupRequest, CreateGroupResponse, DeleteGroupRequest, DeleteGroupResponse, GetGroupRequest, GetGroupResponse, GetUserGroupsRequest, GetUserGroupsResponse, ListGroupMembersRequest, ListGroupMembersResponse, ListGroupsRequest, ListGroupsResponse, RemoveGroupMemberRequest, RemoveGroupMemberResponse, UpdateGroupMemberRequest, UpdateGroupMemberResponse, UpdateGroupRequest, UpdateGroupResponse } from "./groups_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import { GroupInfo, GroupMemberInfo } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from service groups.v1.GroupsService
@@ -30,7 +29,7 @@ export const GroupsService = {
     getGroup: {
       name: "GetGroup",
       I: GetGroupRequest,
-      O: GroupInfo,
+      O: GetGroupResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -39,7 +38,7 @@ export const GroupsService = {
     createGroup: {
       name: "CreateGroup",
       I: CreateGroupRequest,
-      O: GroupInfo,
+      O: CreateGroupResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -48,7 +47,7 @@ export const GroupsService = {
     updateGroup: {
       name: "UpdateGroup",
       I: UpdateGroupRequest,
-      O: GroupInfo,
+      O: UpdateGroupResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,7 +76,7 @@ export const GroupsService = {
     addGroupMember: {
       name: "AddGroupMember",
       I: AddGroupMemberRequest,
-      O: GroupMemberInfo,
+      O: AddGroupMemberResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -86,7 +85,7 @@ export const GroupsService = {
     updateGroupMember: {
       name: "UpdateGroupMember",
       I: UpdateGroupMemberRequest,
-      O: GroupMemberInfo,
+      O: UpdateGroupMemberResponse,
       kind: MethodKind.Unary,
     },
     /**

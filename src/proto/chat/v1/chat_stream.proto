@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package chat.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
-
-import "google/protobuf/timestamp.proto";
 import "chat/v1/chat.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
 
 // ChatStreamService provides real-time event streaming for chat.
 // Wrapped in StreamDisconnectMiddleware for graceful cleanup.
@@ -14,7 +14,7 @@ service ChatStreamService {
   // Opens a single persistent connection per user. Channel events are fanned out
   // server-side to each member's Valkey channel, so no reconnection is needed
   // when switching channels - the frontend filters by channel_id.
-  rpc StreamUserChatEvents(StreamUserChatEventsRequest) returns (stream UserChatEvent) {}
+  rpc StreamUserChatEvents(StreamUserChatEventsRequest) returns (stream StreamUserChatEventsResponse) {}
 }
 
 enum ChatEventType {
@@ -213,7 +213,7 @@ enum UserChatEventType {
   USER_CHAT_EVENT_TYPE_CHANNEL_EVENT = 5;
 }
 
-message UserChatEvent {
+message StreamUserChatEventsResponse {
   UserChatEventType event_type = 1;
   google.protobuf.Timestamp timestamp = 2;
 

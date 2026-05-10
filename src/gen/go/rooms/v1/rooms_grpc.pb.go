@@ -37,15 +37,15 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RoomsServiceClient interface {
 	// ----- Room CRUD -----
-	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
-	GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
-	UpdateRoom(ctx context.Context, in *UpdateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
+	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*CreateRoomResponse, error)
+	GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomResponse, error)
+	UpdateRoom(ctx context.Context, in *UpdateRoomRequest, opts ...grpc.CallOption) (*UpdateRoomResponse, error)
 	DeleteRoom(ctx context.Context, in *DeleteRoomRequest, opts ...grpc.CallOption) (*DeleteRoomResponse, error)
 	ListRooms(ctx context.Context, in *ListRoomsRequest, opts ...grpc.CallOption) (*ListRoomsResponse, error)
 	// ----- Booking CRUD -----
-	CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error)
-	GetBooking(ctx context.Context, in *GetBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error)
-	CancelBooking(ctx context.Context, in *CancelBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error)
+	CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*CreateBookingResponse, error)
+	GetBooking(ctx context.Context, in *GetBookingRequest, opts ...grpc.CallOption) (*GetBookingResponse, error)
+	CancelBooking(ctx context.Context, in *CancelBookingRequest, opts ...grpc.CallOption) (*CancelBookingResponse, error)
 	ListBookings(ctx context.Context, in *ListBookingsRequest, opts ...grpc.CallOption) (*ListBookingsResponse, error)
 	// ----- Availability -----
 	CheckAvailability(ctx context.Context, in *CheckAvailabilityRequest, opts ...grpc.CallOption) (*CheckAvailabilityResponse, error)
@@ -60,9 +60,9 @@ func NewRoomsServiceClient(cc grpc.ClientConnInterface) RoomsServiceClient {
 	return &roomsServiceClient{cc}
 }
 
-func (c *roomsServiceClient) CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
+func (c *roomsServiceClient) CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*CreateRoomResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RoomResponse)
+	out := new(CreateRoomResponse)
 	err := c.cc.Invoke(ctx, RoomsService_CreateRoom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -70,9 +70,9 @@ func (c *roomsServiceClient) CreateRoom(ctx context.Context, in *CreateRoomReque
 	return out, nil
 }
 
-func (c *roomsServiceClient) GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
+func (c *roomsServiceClient) GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RoomResponse)
+	out := new(GetRoomResponse)
 	err := c.cc.Invoke(ctx, RoomsService_GetRoom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -80,9 +80,9 @@ func (c *roomsServiceClient) GetRoom(ctx context.Context, in *GetRoomRequest, op
 	return out, nil
 }
 
-func (c *roomsServiceClient) UpdateRoom(ctx context.Context, in *UpdateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
+func (c *roomsServiceClient) UpdateRoom(ctx context.Context, in *UpdateRoomRequest, opts ...grpc.CallOption) (*UpdateRoomResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RoomResponse)
+	out := new(UpdateRoomResponse)
 	err := c.cc.Invoke(ctx, RoomsService_UpdateRoom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -110,9 +110,9 @@ func (c *roomsServiceClient) ListRooms(ctx context.Context, in *ListRoomsRequest
 	return out, nil
 }
 
-func (c *roomsServiceClient) CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error) {
+func (c *roomsServiceClient) CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*CreateBookingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BookingResponse)
+	out := new(CreateBookingResponse)
 	err := c.cc.Invoke(ctx, RoomsService_CreateBooking_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -120,9 +120,9 @@ func (c *roomsServiceClient) CreateBooking(ctx context.Context, in *CreateBookin
 	return out, nil
 }
 
-func (c *roomsServiceClient) GetBooking(ctx context.Context, in *GetBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error) {
+func (c *roomsServiceClient) GetBooking(ctx context.Context, in *GetBookingRequest, opts ...grpc.CallOption) (*GetBookingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BookingResponse)
+	out := new(GetBookingResponse)
 	err := c.cc.Invoke(ctx, RoomsService_GetBooking_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -130,9 +130,9 @@ func (c *roomsServiceClient) GetBooking(ctx context.Context, in *GetBookingReque
 	return out, nil
 }
 
-func (c *roomsServiceClient) CancelBooking(ctx context.Context, in *CancelBookingRequest, opts ...grpc.CallOption) (*BookingResponse, error) {
+func (c *roomsServiceClient) CancelBooking(ctx context.Context, in *CancelBookingRequest, opts ...grpc.CallOption) (*CancelBookingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BookingResponse)
+	out := new(CancelBookingResponse)
 	err := c.cc.Invoke(ctx, RoomsService_CancelBooking_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -175,15 +175,15 @@ func (c *roomsServiceClient) FindAvailableRooms(ctx context.Context, in *FindAva
 // for forward compatibility.
 type RoomsServiceServer interface {
 	// ----- Room CRUD -----
-	CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error)
-	GetRoom(context.Context, *GetRoomRequest) (*RoomResponse, error)
-	UpdateRoom(context.Context, *UpdateRoomRequest) (*RoomResponse, error)
+	CreateRoom(context.Context, *CreateRoomRequest) (*CreateRoomResponse, error)
+	GetRoom(context.Context, *GetRoomRequest) (*GetRoomResponse, error)
+	UpdateRoom(context.Context, *UpdateRoomRequest) (*UpdateRoomResponse, error)
 	DeleteRoom(context.Context, *DeleteRoomRequest) (*DeleteRoomResponse, error)
 	ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error)
 	// ----- Booking CRUD -----
-	CreateBooking(context.Context, *CreateBookingRequest) (*BookingResponse, error)
-	GetBooking(context.Context, *GetBookingRequest) (*BookingResponse, error)
-	CancelBooking(context.Context, *CancelBookingRequest) (*BookingResponse, error)
+	CreateBooking(context.Context, *CreateBookingRequest) (*CreateBookingResponse, error)
+	GetBooking(context.Context, *GetBookingRequest) (*GetBookingResponse, error)
+	CancelBooking(context.Context, *CancelBookingRequest) (*CancelBookingResponse, error)
 	ListBookings(context.Context, *ListBookingsRequest) (*ListBookingsResponse, error)
 	// ----- Availability -----
 	CheckAvailability(context.Context, *CheckAvailabilityRequest) (*CheckAvailabilityResponse, error)
@@ -198,13 +198,13 @@ type RoomsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedRoomsServiceServer struct{}
 
-func (UnimplementedRoomsServiceServer) CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error) {
+func (UnimplementedRoomsServiceServer) CreateRoom(context.Context, *CreateRoomRequest) (*CreateRoomResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRoom not implemented")
 }
-func (UnimplementedRoomsServiceServer) GetRoom(context.Context, *GetRoomRequest) (*RoomResponse, error) {
+func (UnimplementedRoomsServiceServer) GetRoom(context.Context, *GetRoomRequest) (*GetRoomResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRoom not implemented")
 }
-func (UnimplementedRoomsServiceServer) UpdateRoom(context.Context, *UpdateRoomRequest) (*RoomResponse, error) {
+func (UnimplementedRoomsServiceServer) UpdateRoom(context.Context, *UpdateRoomRequest) (*UpdateRoomResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateRoom not implemented")
 }
 func (UnimplementedRoomsServiceServer) DeleteRoom(context.Context, *DeleteRoomRequest) (*DeleteRoomResponse, error) {
@@ -213,13 +213,13 @@ func (UnimplementedRoomsServiceServer) DeleteRoom(context.Context, *DeleteRoomRe
 func (UnimplementedRoomsServiceServer) ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRooms not implemented")
 }
-func (UnimplementedRoomsServiceServer) CreateBooking(context.Context, *CreateBookingRequest) (*BookingResponse, error) {
+func (UnimplementedRoomsServiceServer) CreateBooking(context.Context, *CreateBookingRequest) (*CreateBookingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBooking not implemented")
 }
-func (UnimplementedRoomsServiceServer) GetBooking(context.Context, *GetBookingRequest) (*BookingResponse, error) {
+func (UnimplementedRoomsServiceServer) GetBooking(context.Context, *GetBookingRequest) (*GetBookingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBooking not implemented")
 }
-func (UnimplementedRoomsServiceServer) CancelBooking(context.Context, *CancelBookingRequest) (*BookingResponse, error) {
+func (UnimplementedRoomsServiceServer) CancelBooking(context.Context, *CancelBookingRequest) (*CancelBookingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelBooking not implemented")
 }
 func (UnimplementedRoomsServiceServer) ListBookings(context.Context, *ListBookingsRequest) (*ListBookingsResponse, error) {

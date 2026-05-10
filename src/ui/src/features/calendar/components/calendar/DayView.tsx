@@ -149,8 +149,7 @@ export function DayView() {
         startTime: newStartTime,
         endTime: newEndTime,
       })).unwrap();
-    } catch (error) {
-      console.error('Failed to reschedule event:', error);
+    } catch {
     }
   }, [draggedEventId, getSlotFromCoordinates, currentDate, positionedEvents, dispatch]);
 

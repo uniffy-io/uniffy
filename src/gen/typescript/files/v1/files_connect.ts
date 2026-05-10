@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CheckStorageQuotaRequest, CheckStorageQuotaResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateFolderTreeRequest, CreateFolderTreeResponse, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, EnsureRecordingsFolderRequest, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetOrgStorageQuotaRequest, GetOrgStorageQuotaResponse, GetSavedFilterRequest, GetStorageUsageRequest, GetStorageUsageResponse, GetUploadStatusRequest, GetUploadStatusResponse, GetUserStorageQuotaRequest, GetUserStorageQuotaResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListOrgStorageUsageRequest, ListOrgStorageUsageResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTrashRequest, ListTrashResponse, ListUserStorageQuotaOverridesRequest, ListUserStorageQuotaOverridesResponse, MoveItemsRequest, MoveItemsResponse, RecalculateStorageUsageRequest, RecalculateStorageUsageResponse, RemoveUserStorageQuotaOverrideRequest, RemoveUserStorageQuotaOverrideResponse, RestoreFileRequest, RestoreFileVersionRequest, RestoreFolderRequest, SavedFilterResponse, SetOrgStorageQuotaRequest, SetOrgStorageQuotaResponse, SetUserStorageQuotaOverrideRequest, SetUserStorageQuotaOverrideResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
+import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CheckStorageQuotaRequest, CheckStorageQuotaResponse, CompleteUploadRequest, CompleteUploadResponse, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateFolderResponse, CreateFolderTreeRequest, CreateFolderTreeResponse, CreateSavedFilterRequest, CreateSavedFilterResponse, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadFileRequest, DownloadFileResponse, EmptyTrashRequest, EmptyTrashResponse, EnsureRecordingsFolderRequest, EnsureRecordingsFolderResponse, GetFileRequest, GetFileResponse, GetFilesTreeRequest, GetFilesTreeResponse, GetOrgStorageQuotaRequest, GetOrgStorageQuotaResponse, GetSavedFilterRequest, GetSavedFilterResponse, GetStorageUsageRequest, GetStorageUsageResponse, GetUploadStatusRequest, GetUploadStatusResponse, GetUserStorageQuotaRequest, GetUserStorageQuotaResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListOrgStorageUsageRequest, ListOrgStorageUsageResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, ListTrashRequest, ListTrashResponse, ListUserStorageQuotaOverridesRequest, ListUserStorageQuotaOverridesResponse, MoveItemsRequest, MoveItemsResponse, RecalculateStorageUsageRequest, RecalculateStorageUsageResponse, RemoveUserStorageQuotaOverrideRequest, RemoveUserStorageQuotaOverrideResponse, RestoreFileRequest, RestoreFileResponse, RestoreFileVersionRequest, RestoreFileVersionResponse, RestoreFolderRequest, RestoreFolderResponse, SetOrgStorageQuotaRequest, SetOrgStorageQuotaResponse, SetUserStorageQuotaOverrideRequest, SetUserStorageQuotaOverrideResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFileResponse, UpdateFolderRequest, UpdateFolderResponse, UpdateSavedFilterRequest, UpdateSavedFilterResponse, UploadChunkRequest, UploadChunkResponse, UploadChunksRequest, UploadChunksResponse } from "./files_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -47,7 +47,7 @@ export const FilesService = {
     completeUpload: {
       name: "CompleteUpload",
       I: CompleteUploadRequest,
-      O: UploadChunksResponse,
+      O: CompleteUploadResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -58,7 +58,7 @@ export const FilesService = {
      */
     uploadChunks: {
       name: "UploadChunks",
-      I: UploadChunkRequest,
+      I: UploadChunksRequest,
       O: UploadChunksResponse,
       kind: MethodKind.ClientStreaming,
     },
@@ -92,7 +92,7 @@ export const FilesService = {
     downloadFile: {
       name: "DownloadFile",
       I: DownloadFileRequest,
-      O: DownloadChunkResponse,
+      O: DownloadFileResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**
@@ -115,7 +115,7 @@ export const FilesService = {
     getFile: {
       name: "GetFile",
       I: GetFileRequest,
-      O: FileResponse,
+      O: GetFileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -126,7 +126,7 @@ export const FilesService = {
     updateFile: {
       name: "UpdateFile",
       I: UpdateFileRequest,
-      O: FileResponse,
+      O: UpdateFileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -148,7 +148,7 @@ export const FilesService = {
     restoreFile: {
       name: "RestoreFile",
       I: RestoreFileRequest,
-      O: FileResponse,
+      O: RestoreFileResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -170,7 +170,7 @@ export const FilesService = {
     createFolder: {
       name: "CreateFolder",
       I: CreateFolderRequest,
-      O: FolderResponse,
+      O: CreateFolderResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -181,7 +181,7 @@ export const FilesService = {
     updateFolder: {
       name: "UpdateFolder",
       I: UpdateFolderRequest,
-      O: FolderResponse,
+      O: UpdateFolderResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -227,7 +227,7 @@ export const FilesService = {
     ensureRecordingsFolder: {
       name: "EnsureRecordingsFolder",
       I: EnsureRecordingsFolderRequest,
-      O: FolderResponse,
+      O: EnsureRecordingsFolderResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -293,7 +293,7 @@ export const FilesService = {
     restoreFolder: {
       name: "RestoreFolder",
       I: RestoreFolderRequest,
-      O: FolderResponse,
+      O: RestoreFolderResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -315,7 +315,7 @@ export const FilesService = {
     restoreFileVersion: {
       name: "RestoreFileVersion",
       I: RestoreFileVersionRequest,
-      O: FileResponse,
+      O: RestoreFileVersionResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -436,7 +436,7 @@ export const FilesService = {
     createSavedFilter: {
       name: "CreateSavedFilter",
       I: CreateSavedFilterRequest,
-      O: SavedFilterResponse,
+      O: CreateSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -447,7 +447,7 @@ export const FilesService = {
     getSavedFilter: {
       name: "GetSavedFilter",
       I: GetSavedFilterRequest,
-      O: SavedFilterResponse,
+      O: GetSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -458,7 +458,7 @@ export const FilesService = {
     updateSavedFilter: {
       name: "UpdateSavedFilter",
       I: UpdateSavedFilterRequest,
-      O: SavedFilterResponse,
+      O: UpdateSavedFilterResponse,
       kind: MethodKind.Unary,
     },
     /**

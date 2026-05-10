@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // ProvidersService manages LLM provider credentials for an organization.
 service ProvidersService {
   // Add a new provider API key or setup token
-  rpc AddProviderKey(AddProviderKeyRequest) returns (ProviderKeyResponse) {}
+  rpc AddProviderKey(AddProviderKeyRequest) returns (AddProviderKeyResponse) {}
 
   // List all provider keys for the organization (credentials are masked)
   rpc ListProviderKeys(ListProviderKeysRequest) returns (ListProviderKeysResponse) {}
@@ -25,10 +25,10 @@ service ProvidersService {
   rpc ListAvailableModels(ListAvailableModelsRequest) returns (ListAvailableModelsResponse) {}
 
   // Enable or disable a provider key
-  rpc ToggleProviderKey(ToggleProviderKeyRequest) returns (ProviderKeyResponse) {}
+  rpc ToggleProviderKey(ToggleProviderKeyRequest) returns (ToggleProviderKeyResponse) {}
 
   // List models available through a specific provider key
-  rpc ListModelsForKey(ListModelsForKeyRequest) returns (ListAvailableModelsResponse) {}
+  rpc ListModelsForKey(ListModelsForKeyRequest) returns (ListModelsForKeyResponse) {}
 }
 
 // Type of credential stored for a provider
@@ -108,8 +108,14 @@ message AddProviderKeyRequest {
   optional common.v1.ContentRole baseline_role = 7;
 }
 
-// Response containing a single provider key
-message ProviderKeyResponse {
+// Response containing a single provider key (Add)
+message AddProviderKeyResponse {
+  // The provider key info (credential is never included)
+  ProviderKeyInfo key = 1;
+}
+
+// Response containing a single provider key (Toggle)
+message ToggleProviderKeyResponse {
   // The provider key info (credential is never included)
   ProviderKeyInfo key = 1;
 }
@@ -169,6 +175,12 @@ message ListAvailableModelsRequest {
 
 // Response with available models
 message ListAvailableModelsResponse {
+  // Available models
+  repeated ModelInfo models = 1;
+}
+
+// Response with models for a specific provider key
+message ListModelsForKeyResponse {
   // Available models
   repeated ModelInfo models = 1;
 }

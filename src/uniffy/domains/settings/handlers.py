@@ -8,18 +8,21 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.settings.v1.settings_pb2 import (
     CreateProfileRequest,
+    CreateProfileResponse,
     DeleteProfileRequest,
     DeleteProfileResponse,
-    EffectiveSettingsResponse,
     GetEffectiveSettingsRequest,
+    GetEffectiveSettingsResponse,
     GetProfileRequest,
+    GetProfileResponse,
     GetSettingsSchemaRequest,
+    GetSettingsSchemaResponse,
     ListProfilesRequest,
     ListProfilesResponse,
-    ProfileResponse,
     SetDefaultProfileRequest,
-    SettingsSchemaResponse,
+    SetDefaultProfileResponse,
     UpdateProfileRequest,
+    UpdateProfileResponse,
 )
 
 from uniffy.core.errors import NotFoundError, ValidationError
@@ -45,7 +48,7 @@ class SettingsHandlers:
         self,
         request: CreateProfileRequest,
         ctx: RequestContext,
-    ) -> ProfileResponse:
+    ) -> CreateProfileResponse:
         """
         Handle create_profile RPC call.
 
@@ -79,7 +82,7 @@ class SettingsHandlers:
                     is_default=request.is_default,
                 )
 
-                return ProfileResponse(profile=profile_to_proto(profile))
+                return CreateProfileResponse(profile=profile_to_proto(profile))
 
         except ValidationError as e:
             raise ConnectError(Code.ALREADY_EXISTS, str(e))
@@ -93,7 +96,7 @@ class SettingsHandlers:
         self,
         request: GetProfileRequest,
         ctx: RequestContext,
-    ) -> ProfileResponse:
+    ) -> GetProfileResponse:
         """
         Handle get_profile RPC call.
 
@@ -123,7 +126,7 @@ class SettingsHandlers:
             async with open_session() as session:
                 ops = SettingsOperations(session)
                 profile = await ops.get_profile(user_id, profile_id)
-                return ProfileResponse(profile=profile_to_proto(profile))
+                return GetProfileResponse(profile=profile_to_proto(profile))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Profile not found")
@@ -137,7 +140,7 @@ class SettingsHandlers:
         self,
         request: UpdateProfileRequest,
         ctx: RequestContext,
-    ) -> ProfileResponse:
+    ) -> UpdateProfileResponse:
         """
         Handle update_profile RPC call.
 
@@ -181,7 +184,7 @@ class SettingsHandlers:
                     is_default=is_default,
                 )
 
-                return ProfileResponse(profile=profile_to_proto(profile))
+                return UpdateProfileResponse(profile=profile_to_proto(profile))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Profile not found")
@@ -284,7 +287,7 @@ class SettingsHandlers:
         self,
         request: GetEffectiveSettingsRequest,
         ctx: RequestContext,
-    ) -> EffectiveSettingsResponse:
+    ) -> GetEffectiveSettingsResponse:
         """
         Handle get_effective_settings RPC call.
 
@@ -322,7 +325,7 @@ class SettingsHandlers:
                 # Compute effective settings
                 effective = ops.get_effective_settings(profile)
 
-                return EffectiveSettingsResponse(
+                return GetEffectiveSettingsResponse(
                     profile=profile_to_proto(profile),
                     effective_settings=effective_settings_to_proto(effective),
                 )
@@ -343,7 +346,7 @@ class SettingsHandlers:
         self,
         request: GetSettingsSchemaRequest,
         ctx: RequestContext,
-    ) -> SettingsSchemaResponse:
+    ) -> GetSettingsSchemaResponse:
         """
         Handle get_settings_schema RPC call.
 
@@ -370,7 +373,7 @@ class SettingsHandlers:
                 ops = SettingsOperations(session)
                 schema = ops.get_settings_schema()
 
-                return SettingsSchemaResponse(
+                return GetSettingsSchemaResponse(
                     appearance_defaults=appearance_dict_to_proto(schema["appearance_defaults"]),
                     keyboard_shortcuts_defaults=keyboard_shortcuts_dict_to_proto(
                         schema["keyboard_shortcuts_defaults"]
@@ -390,7 +393,7 @@ class SettingsHandlers:
         self,
         request: SetDefaultProfileRequest,
         ctx: RequestContext,
-    ) -> ProfileResponse:
+    ) -> SetDefaultProfileResponse:
         """
         Handle set_default_profile RPC call.
 
@@ -420,7 +423,7 @@ class SettingsHandlers:
             async with open_session() as session:
                 ops = SettingsOperations(session)
                 profile = await ops.set_default_profile(user_id, profile_id)
-                return ProfileResponse(profile=profile_to_proto(profile))
+                return SetDefaultProfileResponse(profile=profile_to_proto(profile))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Profile not found")

@@ -40,8 +40,8 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
     RegisterPushSubscriptionResponse,
     SearchNotificationsRequest,
     SearchNotificationsResponse,
-    StreamNotificationEvent,
     StreamNotificationsRequest,
+    StreamNotificationsResponse,
     TypeNotificationStat,
     UnregisterPushSubscriptionRequest,
     UnregisterPushSubscriptionResponse,
@@ -716,12 +716,12 @@ class NotificationsHandlers:
         self,
         request: StreamNotificationsRequest,
         ctx: RequestContext,
-    ) -> AsyncIterator[StreamNotificationEvent]:
+    ) -> AsyncIterator[StreamNotificationsResponse]:
         """
         Handle stream_notifications server streaming RPC.
 
         Subscribes to the user's Valkey Pub/Sub channel and yields
-        StreamNotificationEvent messages as they arrive. Sends periodic
+        StreamNotificationsResponse messages as they arrive. Sends periodic
         heartbeats to detect stale connections.
 
         The subscriber yields None on each poll timeout (1s), which we
@@ -738,7 +738,7 @@ class NotificationsHandlers:
 
         Yields
         ------
-        StreamNotificationEvent
+        StreamNotificationsResponse
             Notification events or heartbeats.
 
         """
@@ -786,8 +786,8 @@ class NotificationsHandlers:
                         if now - last_send >= heartbeat_interval:
                             ts = Timestamp()
                             ts.FromDatetime(datetime.now(UTC))
-                            yield StreamNotificationEvent(
-                                event_type=StreamNotificationEvent.EVENT_TYPE_HEARTBEAT,
+                            yield StreamNotificationsResponse(
+                                event_type=StreamNotificationsResponse.EVENT_TYPE_HEARTBEAT,
                                 timestamp=ts,
                             )
                             last_send = now
@@ -795,8 +795,8 @@ class NotificationsHandlers:
 
                     # File update event (from worker tasks)
                     if payload.get("_type") == "file_updated":
-                        yield StreamNotificationEvent(
-                            event_type=StreamNotificationEvent.EVENT_TYPE_FILE_UPDATED,
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EVENT_TYPE_FILE_UPDATED,
                             file_update=FileUpdatePayload(
                                 file_id=payload.get("file_id", ""),
                                 organization_id=payload.get("organization_id", ""),
@@ -822,8 +822,8 @@ class NotificationsHandlers:
                                 exp_ts = Timestamp()
                                 exp_ts.FromDatetime(datetime.fromisoformat(custom["expires_at"]))
                                 presence_payload.status_expires_at.CopyFrom(exp_ts)
-                        yield StreamNotificationEvent(
-                            event_type=StreamNotificationEvent.EVENT_TYPE_PRESENCE_CHANGED,
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EVENT_TYPE_PRESENCE_CHANGED,
                             presence_changed=presence_payload,
                         )
                         last_send = now
@@ -831,8 +831,8 @@ class NotificationsHandlers:
 
                     # Permissions changed (domain admin granted/revoked)
                     if payload.get("_type") == "permissions_changed":
-                        yield StreamNotificationEvent(
-                            event_type=StreamNotificationEvent.EVENT_TYPE_PERMISSIONS_CHANGED,
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EVENT_TYPE_PERMISSIONS_CHANGED,
                         )
                         last_send = now
                         continue
@@ -843,8 +843,8 @@ class NotificationsHandlers:
                             urn=payload.get("urn", ""),
                             changes=payload.get("changes", {}),
                         )
-                        yield StreamNotificationEvent(
-                            event_type=StreamNotificationEvent.EVENT_TYPE_MENTION_STATE_CHANGED,
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EVENT_TYPE_MENTION_STATE_CHANGED,
                             mention_state_changed=mention_payload,
                         )
                         last_send = now
@@ -859,8 +859,8 @@ class NotificationsHandlers:
                             urn = changes.pop("urn", "")
                             if not urn:
                                 continue
-                            yield StreamNotificationEvent(
-                                event_type=StreamNotificationEvent.EVENT_TYPE_MENTION_STATE_CHANGED,
+                            yield StreamNotificationsResponse(
+                                event_type=StreamNotificationsResponse.EVENT_TYPE_MENTION_STATE_CHANGED,
                                 mention_state_changed=MentionStateChangedPayload(
                                     urn=urn,
                                     changes=changes,
@@ -892,8 +892,8 @@ class NotificationsHandlers:
                         ts.FromDatetime(datetime.fromisoformat(payload["created_at"]))
                         proto_notification.created_at.CopyFrom(ts)
 
-                    yield StreamNotificationEvent(
-                        event_type=StreamNotificationEvent.EVENT_TYPE_NEW_NOTIFICATION,
+                    yield StreamNotificationsResponse(
+                        event_type=StreamNotificationsResponse.EVENT_TYPE_NEW_NOTIFICATION,
                         notification=proto_notification,
                     )
                     last_send = now

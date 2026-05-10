@@ -476,27 +476,27 @@ func (x *UpdateMemoryRequest) GetImportance() float32 {
 	return 0
 }
 
-type MemoryResponse struct {
+type CreateMemoryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Memory        *MemoryInfo            `protobuf:"bytes,1,opt,name=memory,proto3" json:"memory,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MemoryResponse) Reset() {
-	*x = MemoryResponse{}
+func (x *CreateMemoryResponse) Reset() {
+	*x = CreateMemoryResponse{}
 	mi := &file_agents_v1_memories_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MemoryResponse) String() string {
+func (x *CreateMemoryResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MemoryResponse) ProtoMessage() {}
+func (*CreateMemoryResponse) ProtoMessage() {}
 
-func (x *MemoryResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateMemoryResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_memories_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -508,12 +508,56 @@ func (x *MemoryResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MemoryResponse.ProtoReflect.Descriptor instead.
-func (*MemoryResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateMemoryResponse.ProtoReflect.Descriptor instead.
+func (*CreateMemoryResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_memories_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *MemoryResponse) GetMemory() *MemoryInfo {
+func (x *CreateMemoryResponse) GetMemory() *MemoryInfo {
+	if x != nil {
+		return x.Memory
+	}
+	return nil
+}
+
+type UpdateMemoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Memory        *MemoryInfo            `protobuf:"bytes,1,opt,name=memory,proto3" json:"memory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMemoryResponse) Reset() {
+	*x = UpdateMemoryResponse{}
+	mi := &file_agents_v1_memories_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemoryResponse) ProtoMessage() {}
+
+func (x *UpdateMemoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMemoryResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMemoryResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateMemoryResponse) GetMemory() *MemoryInfo {
 	if x != nil {
 		return x.Memory
 	}
@@ -530,7 +574,7 @@ type DeleteMemoryRequest struct {
 
 func (x *DeleteMemoryRequest) Reset() {
 	*x = DeleteMemoryRequest{}
-	mi := &file_agents_v1_memories_proto_msgTypes[6]
+	mi := &file_agents_v1_memories_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -542,7 +586,7 @@ func (x *DeleteMemoryRequest) String() string {
 func (*DeleteMemoryRequest) ProtoMessage() {}
 
 func (x *DeleteMemoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_memories_proto_msgTypes[6]
+	mi := &file_agents_v1_memories_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -555,7 +599,7 @@ func (x *DeleteMemoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMemoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMemoryRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_memories_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteMemoryRequest) GetOrganizationId() string {
@@ -581,7 +625,7 @@ type DeleteMemoryResponse struct {
 
 func (x *DeleteMemoryResponse) Reset() {
 	*x = DeleteMemoryResponse{}
-	mi := &file_agents_v1_memories_proto_msgTypes[7]
+	mi := &file_agents_v1_memories_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +637,7 @@ func (x *DeleteMemoryResponse) String() string {
 func (*DeleteMemoryResponse) ProtoMessage() {}
 
 func (x *DeleteMemoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_memories_proto_msgTypes[7]
+	mi := &file_agents_v1_memories_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +650,7 @@ func (x *DeleteMemoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMemoryResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMemoryResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_memories_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteMemoryResponse) GetSuccess() bool {
@@ -620,7 +664,7 @@ var File_agents_v1_memories_proto protoreflect.FileDescriptor
 
 const file_agents_v1_memories_proto_rawDesc = "" +
 	"\n" +
-	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xd3\x02\n" +
+	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd3\x02\n" +
 	"\n" +
 	"MemoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
@@ -673,8 +717,10 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\n" +
 	"\b_contentB\v\n" +
 	"\t_categoryB\r\n" +
-	"\v_importance\"?\n" +
-	"\x0eMemoryResponse\x12-\n" +
+	"\v_importance\"E\n" +
+	"\x14CreateMemoryResponse\x12-\n" +
+	"\x06memory\x18\x01 \x01(\v2\x15.agents.v1.MemoryInfoR\x06memory\"E\n" +
+	"\x14UpdateMemoryResponse\x12-\n" +
 	"\x06memory\x18\x01 \x01(\v2\x15.agents.v1.MemoryInfoR\x06memory\"[\n" +
 	"\x13DeleteMemoryRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
@@ -686,11 +732,11 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\x1bMEMORY_CATEGORY_PREFERENCES\x10\x01\x12\x19\n" +
 	"\x15MEMORY_CATEGORY_FACTS\x10\x02\x12\x1b\n" +
 	"\x17MEMORY_CATEGORY_CONTEXT\x10\x03\x12 \n" +
-	"\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x042\xd1\x02\n" +
+	"\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x042\xdd\x02\n" +
 	"\x0fMemoriesService\x12Q\n" +
-	"\fListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12K\n" +
-	"\fCreateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x19.agents.v1.MemoryResponse\"\x00\x12K\n" +
-	"\fUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x19.agents.v1.MemoryResponse\"\x00\x12Q\n" +
+	"\fListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12Q\n" +
+	"\fCreateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x1f.agents.v1.CreateMemoryResponse\"\x00\x12Q\n" +
+	"\fUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x1f.agents.v1.UpdateMemoryResponse\"\x00\x12Q\n" +
 	"\fDeleteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
@@ -706,7 +752,7 @@ func file_agents_v1_memories_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_memories_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_memories_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_agents_v1_memories_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_agents_v1_memories_proto_goTypes = []any{
 	(MemoryCategory)(0),           // 0: agents.v1.MemoryCategory
 	(*MemoryInfo)(nil),            // 1: agents.v1.MemoryInfo
@@ -714,37 +760,39 @@ var file_agents_v1_memories_proto_goTypes = []any{
 	(*ListMemoriesResponse)(nil),  // 3: agents.v1.ListMemoriesResponse
 	(*CreateMemoryRequest)(nil),   // 4: agents.v1.CreateMemoryRequest
 	(*UpdateMemoryRequest)(nil),   // 5: agents.v1.UpdateMemoryRequest
-	(*MemoryResponse)(nil),        // 6: agents.v1.MemoryResponse
-	(*DeleteMemoryRequest)(nil),   // 7: agents.v1.DeleteMemoryRequest
-	(*DeleteMemoryResponse)(nil),  // 8: agents.v1.DeleteMemoryResponse
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),  // 10: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil), // 11: common.v1.PaginationResponse
+	(*CreateMemoryResponse)(nil),  // 6: agents.v1.CreateMemoryResponse
+	(*UpdateMemoryResponse)(nil),  // 7: agents.v1.UpdateMemoryResponse
+	(*DeleteMemoryRequest)(nil),   // 8: agents.v1.DeleteMemoryRequest
+	(*DeleteMemoryResponse)(nil),  // 9: agents.v1.DeleteMemoryResponse
+	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),  // 11: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil), // 12: common.v1.PaginationResponse
 }
 var file_agents_v1_memories_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.MemoryInfo.category:type_name -> agents.v1.MemoryCategory
-	9,  // 1: agents.v1.MemoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 2: agents.v1.MemoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	10, // 1: agents.v1.MemoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	10, // 2: agents.v1.MemoryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: agents.v1.ListMemoriesRequest.category:type_name -> agents.v1.MemoryCategory
-	10, // 4: agents.v1.ListMemoriesRequest.pagination:type_name -> common.v1.PaginationRequest
+	11, // 4: agents.v1.ListMemoriesRequest.pagination:type_name -> common.v1.PaginationRequest
 	1,  // 5: agents.v1.ListMemoriesResponse.memories:type_name -> agents.v1.MemoryInfo
-	11, // 6: agents.v1.ListMemoriesResponse.pagination:type_name -> common.v1.PaginationResponse
+	12, // 6: agents.v1.ListMemoriesResponse.pagination:type_name -> common.v1.PaginationResponse
 	0,  // 7: agents.v1.CreateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
 	0,  // 8: agents.v1.UpdateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
-	1,  // 9: agents.v1.MemoryResponse.memory:type_name -> agents.v1.MemoryInfo
-	2,  // 10: agents.v1.MemoriesService.ListMemories:input_type -> agents.v1.ListMemoriesRequest
-	4,  // 11: agents.v1.MemoriesService.CreateMemory:input_type -> agents.v1.CreateMemoryRequest
-	5,  // 12: agents.v1.MemoriesService.UpdateMemory:input_type -> agents.v1.UpdateMemoryRequest
-	7,  // 13: agents.v1.MemoriesService.DeleteMemory:input_type -> agents.v1.DeleteMemoryRequest
-	3,  // 14: agents.v1.MemoriesService.ListMemories:output_type -> agents.v1.ListMemoriesResponse
-	6,  // 15: agents.v1.MemoriesService.CreateMemory:output_type -> agents.v1.MemoryResponse
-	6,  // 16: agents.v1.MemoriesService.UpdateMemory:output_type -> agents.v1.MemoryResponse
-	8,  // 17: agents.v1.MemoriesService.DeleteMemory:output_type -> agents.v1.DeleteMemoryResponse
-	14, // [14:18] is the sub-list for method output_type
-	10, // [10:14] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	1,  // 9: agents.v1.CreateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
+	1,  // 10: agents.v1.UpdateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
+	2,  // 11: agents.v1.MemoriesService.ListMemories:input_type -> agents.v1.ListMemoriesRequest
+	4,  // 12: agents.v1.MemoriesService.CreateMemory:input_type -> agents.v1.CreateMemoryRequest
+	5,  // 13: agents.v1.MemoriesService.UpdateMemory:input_type -> agents.v1.UpdateMemoryRequest
+	8,  // 14: agents.v1.MemoriesService.DeleteMemory:input_type -> agents.v1.DeleteMemoryRequest
+	3,  // 15: agents.v1.MemoriesService.ListMemories:output_type -> agents.v1.ListMemoriesResponse
+	6,  // 16: agents.v1.MemoriesService.CreateMemory:output_type -> agents.v1.CreateMemoryResponse
+	7,  // 17: agents.v1.MemoriesService.UpdateMemory:output_type -> agents.v1.UpdateMemoryResponse
+	9,  // 18: agents.v1.MemoriesService.DeleteMemory:output_type -> agents.v1.DeleteMemoryResponse
+	15, // [15:19] is the sub-list for method output_type
+	11, // [11:15] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_memories_proto_init() }
@@ -761,7 +809,7 @@ func file_agents_v1_memories_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_memories_proto_rawDesc), len(file_agents_v1_memories_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

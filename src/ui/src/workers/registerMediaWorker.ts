@@ -31,13 +31,10 @@ function initTokenChannel(): BroadcastChannel {
         // Listen for token requests from the worker
         tokenChannel.onmessage = (event) => {
             if (event.data?.type === 'TOKEN_REQUEST') {
-                console.log('[MediaStreamWorker] Worker requested token');
                 const token = getAccessToken();
                 if (token) {
                     tokenChannel?.postMessage({ type: 'TOKEN_RESPONSE', token });
-                    console.log('[MediaStreamWorker] Token sent to worker');
                 } else {
-                    console.log('[MediaStreamWorker] No token available to send');
                     // Send null response so worker doesn't wait forever
                     tokenChannel?.postMessage({ type: 'TOKEN_RESPONSE', token: null });
                 }
@@ -70,8 +67,6 @@ export async function registerMediaStreamWorker(): Promise<void> {
             scope: '/',
         });
 
-        console.log('[MediaStreamWorker] Registered with scope:', registration.scope);
-
         // Send token immediately if we have one and worker is ready
         if (navigator.serviceWorker.controller) {
             const token = getAccessToken();
@@ -84,7 +79,6 @@ export async function registerMediaStreamWorker(): Promise<void> {
         navigator.serviceWorker.ready.then(() => {
             const token = getAccessToken();
             if (token) {
-                console.log('[MediaStreamWorker] Worker ready, sending token');
                 updateWorkerAuthToken(token);
             }
         });
@@ -94,14 +88,10 @@ export async function registerMediaStreamWorker(): Promise<void> {
             const newWorker = registration?.installing;
             if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        console.log('[MediaStreamWorker] New version available');
-                    }
                     // Send token when new worker activates
                     if (newWorker.state === 'activated') {
                         const token = getAccessToken();
                         if (token) {
-                            console.log('[MediaStreamWorker] New worker activated, sending token');
                             updateWorkerAuthToken(token);
                         }
                     }
@@ -120,7 +110,6 @@ export async function unregisterMediaStreamWorker(): Promise<void> {
     if (registration) {
         await registration.unregister();
         registration = null;
-        console.log('[MediaStreamWorker] Unregistered');
     }
 }
 

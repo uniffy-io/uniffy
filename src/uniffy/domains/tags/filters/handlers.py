@@ -12,13 +12,14 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.tags.v1.tags_pb2 import (
-    CreateSavedTagFilterRequest,
-    DeleteSavedTagFilterRequest,
-    DeleteSavedTagFilterResponse,
-    ListSavedTagFiltersRequest,
-    ListSavedTagFiltersResponse,
-    SavedTagFilterResponse,
-    UpdateSavedTagFilterRequest,
+    CreateSavedFilterRequest,
+    CreateSavedFilterResponse,
+    DeleteSavedFilterRequest,
+    DeleteSavedFilterResponse,
+    ListSavedFiltersRequest,
+    ListSavedFiltersResponse,
+    UpdateSavedFilterRequest,
+    UpdateSavedFilterResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
@@ -56,9 +57,9 @@ class SavedTagFilterHandlersMixin:
 
     async def create_saved_filter(
         self,
-        request: CreateSavedTagFilterRequest,
+        request: CreateSavedFilterRequest,
         ctx: RequestContext,
-    ) -> SavedTagFilterResponse:
+    ) -> CreateSavedFilterResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
 
@@ -90,7 +91,7 @@ class SavedTagFilterHandlersMixin:
                     if request.HasField("sort_order")
                     else "desc",
                 )
-                return SavedTagFilterResponse(
+                return CreateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)
                 )
         except ConnectError:
@@ -101,9 +102,9 @@ class SavedTagFilterHandlersMixin:
 
     async def update_saved_filter(
         self,
-        request: UpdateSavedTagFilterRequest,
+        request: UpdateSavedFilterRequest,
         ctx: RequestContext,
-    ) -> SavedTagFilterResponse:
+    ) -> UpdateSavedFilterResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
         filter_id = _parse_uuid(request.filter_id, "filter_id")
@@ -136,7 +137,7 @@ class SavedTagFilterHandlersMixin:
                     if request.HasField("sort_order")
                     else None,
                 )
-                return SavedTagFilterResponse(
+                return UpdateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)
                 )
         except NotFoundError as exc:
@@ -151,9 +152,9 @@ class SavedTagFilterHandlersMixin:
 
     async def delete_saved_filter(
         self,
-        request: DeleteSavedTagFilterRequest,
+        request: DeleteSavedFilterRequest,
         ctx: RequestContext,
-    ) -> DeleteSavedTagFilterResponse:
+    ) -> DeleteSavedFilterResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
         filter_id = _parse_uuid(request.filter_id, "filter_id")
@@ -166,7 +167,7 @@ class SavedTagFilterHandlersMixin:
                     organization_id=organization_id,
                     filter_id=filter_id,
                 )
-            return DeleteSavedTagFilterResponse(success=True)
+            return DeleteSavedFilterResponse(success=True)
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc)) from exc
         except PermissionDeniedError as exc:
@@ -179,9 +180,9 @@ class SavedTagFilterHandlersMixin:
 
     async def list_saved_filters(
         self,
-        request: ListSavedTagFiltersRequest,
+        request: ListSavedFiltersRequest,
         ctx: RequestContext,
-    ) -> ListSavedTagFiltersResponse:
+    ) -> ListSavedFiltersResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _resolve_org(ctx, request.organization_id)
 
@@ -198,7 +199,7 @@ class SavedTagFilterHandlersMixin:
                 proto_filters = [
                     await saved_filter_to_proto(f, session=session) for f in filters
                 ]
-            return ListSavedTagFiltersResponse(filters=proto_filters)
+            return ListSavedFiltersResponse(filters=proto_filters)
         except ConnectError:
             raise
         except Exception as exc:

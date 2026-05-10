@@ -1082,9 +1082,9 @@ export class StreamUserChatEventsRequest extends Message<StreamUserChatEventsReq
 }
 
 /**
- * @generated from message chat.v1.UserChatEvent
+ * @generated from message chat.v1.StreamUserChatEventsResponse
  */
-export class UserChatEvent extends Message<UserChatEvent> {
+export class StreamUserChatEventsResponse extends Message<StreamUserChatEventsResponse> {
   /**
    * @generated from field: chat.v1.UserChatEventType event_type = 1;
    */
@@ -1096,7 +1096,7 @@ export class UserChatEvent extends Message<UserChatEvent> {
   timestamp?: Timestamp;
 
   /**
-   * @generated from oneof chat.v1.UserChatEvent.payload
+   * @generated from oneof chat.v1.StreamUserChatEventsResponse.payload
    */
   payload: {
     /**
@@ -1126,13 +1126,13 @@ export class UserChatEvent extends Message<UserChatEvent> {
     case: "channelEvent";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
-  constructor(data?: PartialMessage<UserChatEvent>) {
+  constructor(data?: PartialMessage<StreamUserChatEventsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "chat.v1.UserChatEvent";
+  static readonly typeName = "chat.v1.StreamUserChatEventsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event_type", kind: "enum", T: proto3.getEnumType(UserChatEventType) },
     { no: 2, name: "timestamp", kind: "message", T: Timestamp },
@@ -1142,20 +1142,20 @@ export class UserChatEvent extends Message<UserChatEvent> {
     { no: 13, name: "channel_event", kind: "message", T: ChatEvent, oneof: "payload" },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserChatEvent {
-    return new UserChatEvent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamUserChatEventsResponse {
+    return new StreamUserChatEventsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UserChatEvent {
-    return new UserChatEvent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamUserChatEventsResponse {
+    return new StreamUserChatEventsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UserChatEvent {
-    return new UserChatEvent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamUserChatEventsResponse {
+    return new StreamUserChatEventsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UserChatEvent | PlainMessage<UserChatEvent> | undefined, b: UserChatEvent | PlainMessage<UserChatEvent> | undefined): boolean {
-    return proto3.util.equals(UserChatEvent, a, b);
+  static equals(a: StreamUserChatEventsResponse | PlainMessage<StreamUserChatEventsResponse> | undefined, b: StreamUserChatEventsResponse | PlainMessage<StreamUserChatEventsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamUserChatEventsResponse, a, b);
   }
 }
 

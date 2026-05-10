@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddAttendeesRequest, CalendarResponse, CategoryResponse, CreateCalendarRequest, CreateCategoryRequest, CreateEventRequest, CreateEventTemplateRequest, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, EventResponse, EventTemplateResponse, GetCalendarRequest, GetCategoryRequest, GetEventRequest, GetEventsInRangeRequest, GetEventsInRangeResponse, GetEventTemplateRequest, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventsRequest, ListEventsResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, RemoveAttendeesRequest, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarRequest, UpdateCategoryRequest, UpdateEventRequest, UpdateEventTemplateRequest } from "./calendar_pb.js";
+import { AddAttendeesRequest, AddAttendeesResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetEventTemplateRequest, GetEventTemplateResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventsRequest, ListEventsResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse } from "./calendar_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -24,7 +24,7 @@ export const CalendarService = {
     createEvent: {
       name: "CreateEvent",
       I: CreateEventRequest,
-      O: EventResponse,
+      O: CreateEventResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -35,7 +35,7 @@ export const CalendarService = {
     getEvent: {
       name: "GetEvent",
       I: GetEventRequest,
-      O: EventResponse,
+      O: GetEventResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -46,7 +46,7 @@ export const CalendarService = {
     updateEvent: {
       name: "UpdateEvent",
       I: UpdateEventRequest,
-      O: EventResponse,
+      O: UpdateEventResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -90,7 +90,7 @@ export const CalendarService = {
     createCalendar: {
       name: "CreateCalendar",
       I: CreateCalendarRequest,
-      O: CalendarResponse,
+      O: CreateCalendarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -101,7 +101,7 @@ export const CalendarService = {
     getCalendar: {
       name: "GetCalendar",
       I: GetCalendarRequest,
-      O: CalendarResponse,
+      O: GetCalendarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -112,7 +112,7 @@ export const CalendarService = {
     updateCalendar: {
       name: "UpdateCalendar",
       I: UpdateCalendarRequest,
-      O: CalendarResponse,
+      O: UpdateCalendarResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -145,7 +145,7 @@ export const CalendarService = {
     createCategory: {
       name: "CreateCategory",
       I: CreateCategoryRequest,
-      O: CategoryResponse,
+      O: CreateCategoryResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -156,7 +156,7 @@ export const CalendarService = {
     getCategory: {
       name: "GetCategory",
       I: GetCategoryRequest,
-      O: CategoryResponse,
+      O: GetCategoryResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -167,7 +167,7 @@ export const CalendarService = {
     updateCategory: {
       name: "UpdateCategory",
       I: UpdateCategoryRequest,
-      O: CategoryResponse,
+      O: UpdateCategoryResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -211,7 +211,7 @@ export const CalendarService = {
     addAttendees: {
       name: "AddAttendees",
       I: AddAttendeesRequest,
-      O: EventResponse,
+      O: AddAttendeesResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -222,7 +222,7 @@ export const CalendarService = {
     removeAttendees: {
       name: "RemoveAttendees",
       I: RemoveAttendeesRequest,
-      O: EventResponse,
+      O: RemoveAttendeesResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -233,7 +233,7 @@ export const CalendarService = {
     createEventTemplate: {
       name: "CreateEventTemplate",
       I: CreateEventTemplateRequest,
-      O: EventTemplateResponse,
+      O: CreateEventTemplateResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -244,7 +244,7 @@ export const CalendarService = {
     getEventTemplate: {
       name: "GetEventTemplate",
       I: GetEventTemplateRequest,
-      O: EventTemplateResponse,
+      O: GetEventTemplateResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -255,7 +255,7 @@ export const CalendarService = {
     updateEventTemplate: {
       name: "UpdateEventTemplate",
       I: UpdateEventTemplateRequest,
-      O: EventTemplateResponse,
+      O: UpdateEventTemplateResponse,
       kind: MethodKind.Unary,
     },
     /**

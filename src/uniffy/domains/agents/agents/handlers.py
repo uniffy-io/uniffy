@@ -9,18 +9,22 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.agents_pb2 import (
-    AgentResponse,
     CreateAgentRequest,
+    CreateAgentResponse,
     DeleteAgentAvatarRequest,
+    DeleteAgentAvatarResponse,
     DeleteAgentRequest,
     DeleteAgentResponse,
     GetAgentRequest,
+    GetAgentResponse,
     ListAgentsRequest,
     ListAgentsResponse,
     PreviewSystemPromptRequest,
     PreviewSystemPromptResponse,
     UpdateAgentRequest,
+    UpdateAgentResponse,
     UploadAgentAvatarRequest,
+    UploadAgentAvatarResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -110,7 +114,7 @@ class AgentsHandlers:
         self,
         request: CreateAgentRequest,
         ctx: RequestContext,
-    ) -> AgentResponse:
+    ) -> CreateAgentResponse:
         """Create a new agent."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -176,7 +180,7 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
-                return AgentResponse(
+                return CreateAgentResponse(
                     agent=agent_to_proto(
                         agent, user_role=user_role, tags=tags_by_id.get(agent.id)
                     )
@@ -190,7 +194,7 @@ class AgentsHandlers:
         self,
         request: GetAgentRequest,
         ctx: RequestContext,
-    ) -> AgentResponse:
+    ) -> GetAgentResponse:
         """Get an agent by ID."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -202,7 +206,7 @@ class AgentsHandlers:
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
-                return AgentResponse(
+                return GetAgentResponse(
                     agent=agent_to_proto(
                         agent, user_role=user_role, tags=tags_by_id.get(agent.id)
                     )
@@ -274,7 +278,7 @@ class AgentsHandlers:
         self,
         request: UpdateAgentRequest,
         ctx: RequestContext,
-    ) -> AgentResponse:
+    ) -> UpdateAgentResponse:
         """Update an agent configuration."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -353,7 +357,7 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
-                return AgentResponse(
+                return UpdateAgentResponse(
                     agent=agent_to_proto(
                         agent, user_role=user_role, tags=tags_by_id.get(agent.id)
                     )
@@ -391,7 +395,7 @@ class AgentsHandlers:
         self,
         request: UploadAgentAvatarRequest,
         ctx: RequestContext,
-    ) -> AgentResponse:
+    ) -> UploadAgentAvatarResponse:
         """Upload and set an agent avatar."""
         user_id = get_user_id_from_context(ctx)
 
@@ -415,7 +419,7 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
-                return AgentResponse(
+                return UploadAgentAvatarResponse(
                     agent=agent_to_proto(
                         agent, user_role=user_role, tags=tags_by_id.get(agent.id)
                     )
@@ -431,7 +435,7 @@ class AgentsHandlers:
         self,
         request: DeleteAgentAvatarRequest,
         ctx: RequestContext,
-    ) -> AgentResponse:
+    ) -> DeleteAgentAvatarResponse:
         """Delete an agent avatar."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -447,7 +451,7 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
-                return AgentResponse(
+                return DeleteAgentAvatarResponse(
                     agent=agent_to_proto(
                         agent, user_role=user_role, tags=tags_by_id.get(agent.id)
                     )

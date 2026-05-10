@@ -8,7 +8,6 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v11 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	v1 "github.com/uniffy-io/uniffy-proto-go/groups/v1"
 	http "net/http"
 	strings "strings"
@@ -69,14 +68,14 @@ const (
 type GroupsServiceClient interface {
 	// Group CRUD operations
 	ListGroups(context.Context, *connect.Request[v1.ListGroupsRequest]) (*connect.Response[v1.ListGroupsResponse], error)
-	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v11.GroupInfo], error)
-	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v11.GroupInfo], error)
-	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v11.GroupInfo], error)
+	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error)
+	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error)
+	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error)
 	DeleteGroup(context.Context, *connect.Request[v1.DeleteGroupRequest]) (*connect.Response[v1.DeleteGroupResponse], error)
 	// Group membership operations
 	ListGroupMembers(context.Context, *connect.Request[v1.ListGroupMembersRequest]) (*connect.Response[v1.ListGroupMembersResponse], error)
-	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error)
-	UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error)
+	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error)
+	UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v1.UpdateGroupMemberResponse], error)
 	RemoveGroupMember(context.Context, *connect.Request[v1.RemoveGroupMemberRequest]) (*connect.Response[v1.RemoveGroupMemberResponse], error)
 	// Bulk operations
 	GetUserGroups(context.Context, *connect.Request[v1.GetUserGroupsRequest]) (*connect.Response[v1.GetUserGroupsResponse], error)
@@ -99,19 +98,19 @@ func NewGroupsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(groupsServiceMethods.ByName("ListGroups")),
 			connect.WithClientOptions(opts...),
 		),
-		getGroup: connect.NewClient[v1.GetGroupRequest, v11.GroupInfo](
+		getGroup: connect.NewClient[v1.GetGroupRequest, v1.GetGroupResponse](
 			httpClient,
 			baseURL+GroupsServiceGetGroupProcedure,
 			connect.WithSchema(groupsServiceMethods.ByName("GetGroup")),
 			connect.WithClientOptions(opts...),
 		),
-		createGroup: connect.NewClient[v1.CreateGroupRequest, v11.GroupInfo](
+		createGroup: connect.NewClient[v1.CreateGroupRequest, v1.CreateGroupResponse](
 			httpClient,
 			baseURL+GroupsServiceCreateGroupProcedure,
 			connect.WithSchema(groupsServiceMethods.ByName("CreateGroup")),
 			connect.WithClientOptions(opts...),
 		),
-		updateGroup: connect.NewClient[v1.UpdateGroupRequest, v11.GroupInfo](
+		updateGroup: connect.NewClient[v1.UpdateGroupRequest, v1.UpdateGroupResponse](
 			httpClient,
 			baseURL+GroupsServiceUpdateGroupProcedure,
 			connect.WithSchema(groupsServiceMethods.ByName("UpdateGroup")),
@@ -129,13 +128,13 @@ func NewGroupsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(groupsServiceMethods.ByName("ListGroupMembers")),
 			connect.WithClientOptions(opts...),
 		),
-		addGroupMember: connect.NewClient[v1.AddGroupMemberRequest, v11.GroupMemberInfo](
+		addGroupMember: connect.NewClient[v1.AddGroupMemberRequest, v1.AddGroupMemberResponse](
 			httpClient,
 			baseURL+GroupsServiceAddGroupMemberProcedure,
 			connect.WithSchema(groupsServiceMethods.ByName("AddGroupMember")),
 			connect.WithClientOptions(opts...),
 		),
-		updateGroupMember: connect.NewClient[v1.UpdateGroupMemberRequest, v11.GroupMemberInfo](
+		updateGroupMember: connect.NewClient[v1.UpdateGroupMemberRequest, v1.UpdateGroupMemberResponse](
 			httpClient,
 			baseURL+GroupsServiceUpdateGroupMemberProcedure,
 			connect.WithSchema(groupsServiceMethods.ByName("UpdateGroupMember")),
@@ -159,13 +158,13 @@ func NewGroupsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // groupsServiceClient implements GroupsServiceClient.
 type groupsServiceClient struct {
 	listGroups        *connect.Client[v1.ListGroupsRequest, v1.ListGroupsResponse]
-	getGroup          *connect.Client[v1.GetGroupRequest, v11.GroupInfo]
-	createGroup       *connect.Client[v1.CreateGroupRequest, v11.GroupInfo]
-	updateGroup       *connect.Client[v1.UpdateGroupRequest, v11.GroupInfo]
+	getGroup          *connect.Client[v1.GetGroupRequest, v1.GetGroupResponse]
+	createGroup       *connect.Client[v1.CreateGroupRequest, v1.CreateGroupResponse]
+	updateGroup       *connect.Client[v1.UpdateGroupRequest, v1.UpdateGroupResponse]
 	deleteGroup       *connect.Client[v1.DeleteGroupRequest, v1.DeleteGroupResponse]
 	listGroupMembers  *connect.Client[v1.ListGroupMembersRequest, v1.ListGroupMembersResponse]
-	addGroupMember    *connect.Client[v1.AddGroupMemberRequest, v11.GroupMemberInfo]
-	updateGroupMember *connect.Client[v1.UpdateGroupMemberRequest, v11.GroupMemberInfo]
+	addGroupMember    *connect.Client[v1.AddGroupMemberRequest, v1.AddGroupMemberResponse]
+	updateGroupMember *connect.Client[v1.UpdateGroupMemberRequest, v1.UpdateGroupMemberResponse]
 	removeGroupMember *connect.Client[v1.RemoveGroupMemberRequest, v1.RemoveGroupMemberResponse]
 	getUserGroups     *connect.Client[v1.GetUserGroupsRequest, v1.GetUserGroupsResponse]
 }
@@ -176,17 +175,17 @@ func (c *groupsServiceClient) ListGroups(ctx context.Context, req *connect.Reque
 }
 
 // GetGroup calls groups.v1.GroupsService.GetGroup.
-func (c *groupsServiceClient) GetGroup(ctx context.Context, req *connect.Request[v1.GetGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (c *groupsServiceClient) GetGroup(ctx context.Context, req *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error) {
 	return c.getGroup.CallUnary(ctx, req)
 }
 
 // CreateGroup calls groups.v1.GroupsService.CreateGroup.
-func (c *groupsServiceClient) CreateGroup(ctx context.Context, req *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (c *groupsServiceClient) CreateGroup(ctx context.Context, req *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error) {
 	return c.createGroup.CallUnary(ctx, req)
 }
 
 // UpdateGroup calls groups.v1.GroupsService.UpdateGroup.
-func (c *groupsServiceClient) UpdateGroup(ctx context.Context, req *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (c *groupsServiceClient) UpdateGroup(ctx context.Context, req *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error) {
 	return c.updateGroup.CallUnary(ctx, req)
 }
 
@@ -201,12 +200,12 @@ func (c *groupsServiceClient) ListGroupMembers(ctx context.Context, req *connect
 }
 
 // AddGroupMember calls groups.v1.GroupsService.AddGroupMember.
-func (c *groupsServiceClient) AddGroupMember(ctx context.Context, req *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error) {
+func (c *groupsServiceClient) AddGroupMember(ctx context.Context, req *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error) {
 	return c.addGroupMember.CallUnary(ctx, req)
 }
 
 // UpdateGroupMember calls groups.v1.GroupsService.UpdateGroupMember.
-func (c *groupsServiceClient) UpdateGroupMember(ctx context.Context, req *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error) {
+func (c *groupsServiceClient) UpdateGroupMember(ctx context.Context, req *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v1.UpdateGroupMemberResponse], error) {
 	return c.updateGroupMember.CallUnary(ctx, req)
 }
 
@@ -224,14 +223,14 @@ func (c *groupsServiceClient) GetUserGroups(ctx context.Context, req *connect.Re
 type GroupsServiceHandler interface {
 	// Group CRUD operations
 	ListGroups(context.Context, *connect.Request[v1.ListGroupsRequest]) (*connect.Response[v1.ListGroupsResponse], error)
-	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v11.GroupInfo], error)
-	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v11.GroupInfo], error)
-	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v11.GroupInfo], error)
+	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error)
+	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error)
+	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error)
 	DeleteGroup(context.Context, *connect.Request[v1.DeleteGroupRequest]) (*connect.Response[v1.DeleteGroupResponse], error)
 	// Group membership operations
 	ListGroupMembers(context.Context, *connect.Request[v1.ListGroupMembersRequest]) (*connect.Response[v1.ListGroupMembersResponse], error)
-	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error)
-	UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error)
+	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error)
+	UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v1.UpdateGroupMemberResponse], error)
 	RemoveGroupMember(context.Context, *connect.Request[v1.RemoveGroupMemberRequest]) (*connect.Response[v1.RemoveGroupMemberResponse], error)
 	// Bulk operations
 	GetUserGroups(context.Context, *connect.Request[v1.GetUserGroupsRequest]) (*connect.Response[v1.GetUserGroupsResponse], error)
@@ -339,15 +338,15 @@ func (UnimplementedGroupsServiceHandler) ListGroups(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.ListGroups is not implemented"))
 }
 
-func (UnimplementedGroupsServiceHandler) GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (UnimplementedGroupsServiceHandler) GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.GetGroup is not implemented"))
 }
 
-func (UnimplementedGroupsServiceHandler) CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (UnimplementedGroupsServiceHandler) CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.CreateGroup is not implemented"))
 }
 
-func (UnimplementedGroupsServiceHandler) UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v11.GroupInfo], error) {
+func (UnimplementedGroupsServiceHandler) UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.UpdateGroup is not implemented"))
 }
 
@@ -359,11 +358,11 @@ func (UnimplementedGroupsServiceHandler) ListGroupMembers(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.ListGroupMembers is not implemented"))
 }
 
-func (UnimplementedGroupsServiceHandler) AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error) {
+func (UnimplementedGroupsServiceHandler) AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.AddGroupMember is not implemented"))
 }
 
-func (UnimplementedGroupsServiceHandler) UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v11.GroupMemberInfo], error) {
+func (UnimplementedGroupsServiceHandler) UpdateGroupMember(context.Context, *connect.Request[v1.UpdateGroupMemberRequest]) (*connect.Response[v1.UpdateGroupMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("groups.v1.GroupsService.UpdateGroupMember is not implemented"))
 }
 

@@ -132,42 +132,42 @@ export class SessionInfo extends Message<SessionInfo> {
   displayName?: string;
 
   /**
-   * @generated from field: optional string model_override = 8;
+   * @generated from field: optional string model_override = 7;
    */
   modelOverride?: string;
 
   /**
-   * @generated from field: int64 total_input_tokens = 9;
+   * @generated from field: int64 total_input_tokens = 8;
    */
   totalInputTokens = protoInt64.zero;
 
   /**
-   * @generated from field: int64 total_output_tokens = 10;
+   * @generated from field: int64 total_output_tokens = 9;
    */
   totalOutputTokens = protoInt64.zero;
 
   /**
-   * @generated from field: int32 message_count = 11;
+   * @generated from field: int32 message_count = 10;
    */
   messageCount = 0;
 
   /**
-   * @generated from field: optional string last_model_used = 12;
+   * @generated from field: optional string last_model_used = 11;
    */
   lastModelUsed?: string;
 
   /**
-   * @generated from field: bool is_archived = 13;
+   * @generated from field: bool is_archived = 12;
    */
   isArchived = false;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created_at = 14;
+   * @generated from field: google.protobuf.Timestamp created_at = 13;
    */
   createdAt?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 15;
+   * @generated from field: google.protobuf.Timestamp updated_at = 14;
    */
   updatedAt?: Timestamp;
 
@@ -185,14 +185,14 @@ export class SessionInfo extends Message<SessionInfo> {
     { no: 4, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "kind", kind: "enum", T: proto3.getEnumType(SessionKind) },
     { no: 6, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 9, name: "total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 10, name: "total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 11, name: "message_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 12, name: "last_model_used", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 13, name: "is_archived", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 14, name: "created_at", kind: "message", T: Timestamp },
-    { no: 15, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 7, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 9, name: "total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 10, name: "message_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 11, name: "last_model_used", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "is_archived", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "created_at", kind: "message", T: Timestamp },
+    { no: 14, name: "updated_at", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SessionInfo {
@@ -362,7 +362,7 @@ export class CreateSessionRequest extends Message<CreateSessionRequest> {
   displayName?: string;
 
   /**
-   * @generated from field: optional string model_override = 6;
+   * @generated from field: optional string model_override = 5;
    */
   modelOverride?: string;
 
@@ -378,7 +378,7 @@ export class CreateSessionRequest extends Message<CreateSessionRequest> {
     { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "kind", kind: "enum", T: proto3.getEnumType(SessionKind) },
     { no: 4, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSessionRequest {
@@ -399,39 +399,113 @@ export class CreateSessionRequest extends Message<CreateSessionRequest> {
 }
 
 /**
- * @generated from message agents.v1.SessionResponse
+ * @generated from message agents.v1.CreateSessionResponse
  */
-export class SessionResponse extends Message<SessionResponse> {
+export class CreateSessionResponse extends Message<CreateSessionResponse> {
   /**
    * @generated from field: agents.v1.SessionInfo session = 1;
    */
   session?: SessionInfo;
 
-  constructor(data?: PartialMessage<SessionResponse>) {
+  constructor(data?: PartialMessage<CreateSessionResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.SessionResponse";
+  static readonly typeName = "agents.v1.CreateSessionResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "session", kind: "message", T: SessionInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SessionResponse {
-    return new SessionResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSessionResponse {
+    return new CreateSessionResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SessionResponse {
-    return new SessionResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSessionResponse {
+    return new CreateSessionResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SessionResponse {
-    return new SessionResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSessionResponse {
+    return new CreateSessionResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SessionResponse | PlainMessage<SessionResponse> | undefined, b: SessionResponse | PlainMessage<SessionResponse> | undefined): boolean {
-    return proto3.util.equals(SessionResponse, a, b);
+  static equals(a: CreateSessionResponse | PlainMessage<CreateSessionResponse> | undefined, b: CreateSessionResponse | PlainMessage<CreateSessionResponse> | undefined): boolean {
+    return proto3.util.equals(CreateSessionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetSessionResponse
+ */
+export class GetSessionResponse extends Message<GetSessionResponse> {
+  /**
+   * @generated from field: agents.v1.SessionInfo session = 1;
+   */
+  session?: SessionInfo;
+
+  constructor(data?: PartialMessage<GetSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "session", kind: "message", T: SessionInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSessionResponse {
+    return new GetSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSessionResponse {
+    return new GetSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSessionResponse {
+    return new GetSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSessionResponse | PlainMessage<GetSessionResponse> | undefined, b: GetSessionResponse | PlainMessage<GetSessionResponse> | undefined): boolean {
+    return proto3.util.equals(GetSessionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpdateSessionResponse
+ */
+export class UpdateSessionResponse extends Message<UpdateSessionResponse> {
+  /**
+   * @generated from field: agents.v1.SessionInfo session = 1;
+   */
+  session?: SessionInfo;
+
+  constructor(data?: PartialMessage<UpdateSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpdateSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "session", kind: "message", T: SessionInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSessionResponse {
+    return new UpdateSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSessionResponse {
+    return new UpdateSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSessionResponse {
+    return new UpdateSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSessionResponse | PlainMessage<UpdateSessionResponse> | undefined, b: UpdateSessionResponse | PlainMessage<UpdateSessionResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateSessionResponse, a, b);
   }
 }
 
@@ -602,7 +676,7 @@ export class UpdateSessionRequest extends Message<UpdateSessionRequest> {
   displayName?: string;
 
   /**
-   * @generated from field: optional string model_override = 5;
+   * @generated from field: optional string model_override = 4;
    */
   modelOverride?: string;
 
@@ -617,7 +691,7 @@ export class UpdateSessionRequest extends Message<UpdateSessionRequest> {
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "model_override", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSessionRequest {
@@ -821,39 +895,39 @@ export class AddMessageRequest extends Message<AddMessageRequest> {
 }
 
 /**
- * @generated from message agents.v1.MessageResponse
+ * @generated from message agents.v1.AddMessageResponse
  */
-export class MessageResponse extends Message<MessageResponse> {
+export class AddMessageResponse extends Message<AddMessageResponse> {
   /**
    * @generated from field: agents.v1.MessageInfo message = 1;
    */
   message?: MessageInfo;
 
-  constructor(data?: PartialMessage<MessageResponse>) {
+  constructor(data?: PartialMessage<AddMessageResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.MessageResponse";
+  static readonly typeName = "agents.v1.AddMessageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "message", kind: "message", T: MessageInfo },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MessageResponse {
-    return new MessageResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddMessageResponse {
+    return new AddMessageResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MessageResponse {
-    return new MessageResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddMessageResponse {
+    return new AddMessageResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MessageResponse {
-    return new MessageResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddMessageResponse {
+    return new AddMessageResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MessageResponse | PlainMessage<MessageResponse> | undefined, b: MessageResponse | PlainMessage<MessageResponse> | undefined): boolean {
-    return proto3.util.equals(MessageResponse, a, b);
+  static equals(a: AddMessageResponse | PlainMessage<AddMessageResponse> | undefined, b: AddMessageResponse | PlainMessage<AddMessageResponse> | undefined): boolean {
+    return proto3.util.equals(AddMessageResponse, a, b);
   }
 }
 

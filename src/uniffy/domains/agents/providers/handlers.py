@@ -8,15 +8,17 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.providers_pb2 import (
     AddProviderKeyRequest,
+    AddProviderKeyResponse,
     ListAvailableModelsRequest,
     ListAvailableModelsResponse,
     ListModelsForKeyRequest,
+    ListModelsForKeyResponse,
     ListProviderKeysRequest,
     ListProviderKeysResponse,
-    ProviderKeyResponse,
     RemoveProviderKeyRequest,
     RemoveProviderKeyResponse,
     ToggleProviderKeyRequest,
+    ToggleProviderKeyResponse,
     ValidateProviderKeyRequest,
     ValidateProviderKeyResponse,
 )
@@ -65,7 +67,7 @@ class ProvidersHandlers:
         self,
         request: AddProviderKeyRequest,
         ctx: RequestContext,
-    ) -> ProviderKeyResponse:
+    ) -> AddProviderKeyResponse:
         """Add a new provider key."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -89,7 +91,7 @@ class ProvidersHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return ProviderKeyResponse(key=provider_key_to_proto(key))
+                return AddProviderKeyResponse(key=provider_key_to_proto(key))
         except ConnectError:
             raise
         except Exception as exc:
@@ -205,7 +207,7 @@ class ProvidersHandlers:
         self,
         request: ToggleProviderKeyRequest,
         ctx: RequestContext,
-    ) -> ProviderKeyResponse:
+    ) -> ToggleProviderKeyResponse:
         """Enable or disable a provider key."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -220,7 +222,7 @@ class ProvidersHandlers:
                     key_id=key_id,
                     enabled=request.enabled,
                 )
-                return ProviderKeyResponse(key=provider_key_to_proto(key))
+                return ToggleProviderKeyResponse(key=provider_key_to_proto(key))
         except ConnectError:
             raise
         except Exception as exc:
@@ -230,7 +232,7 @@ class ProvidersHandlers:
         self,
         request: ListModelsForKeyRequest,
         ctx: RequestContext,
-    ) -> ListAvailableModelsResponse:
+    ) -> ListModelsForKeyResponse:
         """List models exposed by a specific provider key."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
@@ -245,7 +247,7 @@ class ProvidersHandlers:
                     key_id=key_id,
                     force_refresh=request.force_refresh,
                 )
-                return ListAvailableModelsResponse(
+                return ListModelsForKeyResponse(
                     models=[model_info_to_proto(m) for m in models],
                 )
         except ConnectError:

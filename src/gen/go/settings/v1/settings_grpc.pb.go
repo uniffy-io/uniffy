@@ -36,21 +36,21 @@ const (
 // SettingsService provides user settings management functionality
 type SettingsServiceClient interface {
 	// Create a new settings profile
-	CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error)
+	CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error)
 	// Get a settings profile by ID
-	GetProfile(ctx context.Context, in *GetProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error)
+	GetProfile(ctx context.Context, in *GetProfileRequest, opts ...grpc.CallOption) (*GetProfileResponse, error)
 	// Update an existing settings profile (sparse update - only changed values)
-	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error)
+	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
 	// Delete a settings profile
 	DeleteProfile(ctx context.Context, in *DeleteProfileRequest, opts ...grpc.CallOption) (*DeleteProfileResponse, error)
 	// List all profiles for the current user
 	ListProfiles(ctx context.Context, in *ListProfilesRequest, opts ...grpc.CallOption) (*ListProfilesResponse, error)
 	// Get the effective settings for a profile (defaults merged with overrides)
-	GetEffectiveSettings(ctx context.Context, in *GetEffectiveSettingsRequest, opts ...grpc.CallOption) (*EffectiveSettingsResponse, error)
+	GetEffectiveSettings(ctx context.Context, in *GetEffectiveSettingsRequest, opts ...grpc.CallOption) (*GetEffectiveSettingsResponse, error)
 	// Get the schema of available settings with their defaults
-	GetSettingsSchema(ctx context.Context, in *GetSettingsSchemaRequest, opts ...grpc.CallOption) (*SettingsSchemaResponse, error)
+	GetSettingsSchema(ctx context.Context, in *GetSettingsSchemaRequest, opts ...grpc.CallOption) (*GetSettingsSchemaResponse, error)
 	// Set a profile as the default for the user
-	SetDefaultProfile(ctx context.Context, in *SetDefaultProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error)
+	SetDefaultProfile(ctx context.Context, in *SetDefaultProfileRequest, opts ...grpc.CallOption) (*SetDefaultProfileResponse, error)
 }
 
 type settingsServiceClient struct {
@@ -61,9 +61,9 @@ func NewSettingsServiceClient(cc grpc.ClientConnInterface) SettingsServiceClient
 	return &settingsServiceClient{cc}
 }
 
-func (c *settingsServiceClient) CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error) {
+func (c *settingsServiceClient) CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProfileResponse)
+	out := new(CreateProfileResponse)
 	err := c.cc.Invoke(ctx, SettingsService_CreateProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -71,9 +71,9 @@ func (c *settingsServiceClient) CreateProfile(ctx context.Context, in *CreatePro
 	return out, nil
 }
 
-func (c *settingsServiceClient) GetProfile(ctx context.Context, in *GetProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error) {
+func (c *settingsServiceClient) GetProfile(ctx context.Context, in *GetProfileRequest, opts ...grpc.CallOption) (*GetProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProfileResponse)
+	out := new(GetProfileResponse)
 	err := c.cc.Invoke(ctx, SettingsService_GetProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -81,9 +81,9 @@ func (c *settingsServiceClient) GetProfile(ctx context.Context, in *GetProfileRe
 	return out, nil
 }
 
-func (c *settingsServiceClient) UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error) {
+func (c *settingsServiceClient) UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProfileResponse)
+	out := new(UpdateProfileResponse)
 	err := c.cc.Invoke(ctx, SettingsService_UpdateProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,9 +111,9 @@ func (c *settingsServiceClient) ListProfiles(ctx context.Context, in *ListProfil
 	return out, nil
 }
 
-func (c *settingsServiceClient) GetEffectiveSettings(ctx context.Context, in *GetEffectiveSettingsRequest, opts ...grpc.CallOption) (*EffectiveSettingsResponse, error) {
+func (c *settingsServiceClient) GetEffectiveSettings(ctx context.Context, in *GetEffectiveSettingsRequest, opts ...grpc.CallOption) (*GetEffectiveSettingsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EffectiveSettingsResponse)
+	out := new(GetEffectiveSettingsResponse)
 	err := c.cc.Invoke(ctx, SettingsService_GetEffectiveSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -121,9 +121,9 @@ func (c *settingsServiceClient) GetEffectiveSettings(ctx context.Context, in *Ge
 	return out, nil
 }
 
-func (c *settingsServiceClient) GetSettingsSchema(ctx context.Context, in *GetSettingsSchemaRequest, opts ...grpc.CallOption) (*SettingsSchemaResponse, error) {
+func (c *settingsServiceClient) GetSettingsSchema(ctx context.Context, in *GetSettingsSchemaRequest, opts ...grpc.CallOption) (*GetSettingsSchemaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SettingsSchemaResponse)
+	out := new(GetSettingsSchemaResponse)
 	err := c.cc.Invoke(ctx, SettingsService_GetSettingsSchema_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -131,9 +131,9 @@ func (c *settingsServiceClient) GetSettingsSchema(ctx context.Context, in *GetSe
 	return out, nil
 }
 
-func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, in *SetDefaultProfileRequest, opts ...grpc.CallOption) (*ProfileResponse, error) {
+func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, in *SetDefaultProfileRequest, opts ...grpc.CallOption) (*SetDefaultProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProfileResponse)
+	out := new(SetDefaultProfileResponse)
 	err := c.cc.Invoke(ctx, SettingsService_SetDefaultProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -148,21 +148,21 @@ func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, in *SetDe
 // SettingsService provides user settings management functionality
 type SettingsServiceServer interface {
 	// Create a new settings profile
-	CreateProfile(context.Context, *CreateProfileRequest) (*ProfileResponse, error)
+	CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error)
 	// Get a settings profile by ID
-	GetProfile(context.Context, *GetProfileRequest) (*ProfileResponse, error)
+	GetProfile(context.Context, *GetProfileRequest) (*GetProfileResponse, error)
 	// Update an existing settings profile (sparse update - only changed values)
-	UpdateProfile(context.Context, *UpdateProfileRequest) (*ProfileResponse, error)
+	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
 	// Delete a settings profile
 	DeleteProfile(context.Context, *DeleteProfileRequest) (*DeleteProfileResponse, error)
 	// List all profiles for the current user
 	ListProfiles(context.Context, *ListProfilesRequest) (*ListProfilesResponse, error)
 	// Get the effective settings for a profile (defaults merged with overrides)
-	GetEffectiveSettings(context.Context, *GetEffectiveSettingsRequest) (*EffectiveSettingsResponse, error)
+	GetEffectiveSettings(context.Context, *GetEffectiveSettingsRequest) (*GetEffectiveSettingsResponse, error)
 	// Get the schema of available settings with their defaults
-	GetSettingsSchema(context.Context, *GetSettingsSchemaRequest) (*SettingsSchemaResponse, error)
+	GetSettingsSchema(context.Context, *GetSettingsSchemaRequest) (*GetSettingsSchemaResponse, error)
 	// Set a profile as the default for the user
-	SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*ProfileResponse, error)
+	SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*SetDefaultProfileResponse, error)
 	mustEmbedUnimplementedSettingsServiceServer()
 }
 
@@ -173,13 +173,13 @@ type SettingsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSettingsServiceServer struct{}
 
-func (UnimplementedSettingsServiceServer) CreateProfile(context.Context, *CreateProfileRequest) (*ProfileResponse, error) {
+func (UnimplementedSettingsServiceServer) CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProfile not implemented")
 }
-func (UnimplementedSettingsServiceServer) GetProfile(context.Context, *GetProfileRequest) (*ProfileResponse, error) {
+func (UnimplementedSettingsServiceServer) GetProfile(context.Context, *GetProfileRequest) (*GetProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProfile not implemented")
 }
-func (UnimplementedSettingsServiceServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*ProfileResponse, error) {
+func (UnimplementedSettingsServiceServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateProfile not implemented")
 }
 func (UnimplementedSettingsServiceServer) DeleteProfile(context.Context, *DeleteProfileRequest) (*DeleteProfileResponse, error) {
@@ -188,13 +188,13 @@ func (UnimplementedSettingsServiceServer) DeleteProfile(context.Context, *Delete
 func (UnimplementedSettingsServiceServer) ListProfiles(context.Context, *ListProfilesRequest) (*ListProfilesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProfiles not implemented")
 }
-func (UnimplementedSettingsServiceServer) GetEffectiveSettings(context.Context, *GetEffectiveSettingsRequest) (*EffectiveSettingsResponse, error) {
+func (UnimplementedSettingsServiceServer) GetEffectiveSettings(context.Context, *GetEffectiveSettingsRequest) (*GetEffectiveSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEffectiveSettings not implemented")
 }
-func (UnimplementedSettingsServiceServer) GetSettingsSchema(context.Context, *GetSettingsSchemaRequest) (*SettingsSchemaResponse, error) {
+func (UnimplementedSettingsServiceServer) GetSettingsSchema(context.Context, *GetSettingsSchemaRequest) (*GetSettingsSchemaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSettingsSchema not implemented")
 }
-func (UnimplementedSettingsServiceServer) SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*ProfileResponse, error) {
+func (UnimplementedSettingsServiceServer) SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*SetDefaultProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetDefaultProfile not implemented")
 }
 func (UnimplementedSettingsServiceServer) mustEmbedUnimplementedSettingsServiceServer() {}

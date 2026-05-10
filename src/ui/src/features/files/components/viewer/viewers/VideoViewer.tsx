@@ -46,26 +46,9 @@ export function VideoViewer({ file }: VideoViewerProps) {
     // Check for unsupported formats
     const isUnsupportedFormat = UNSUPPORTED_FORMATS.includes(file.mimeType);
 
-    // Debug: Log service worker status
-    useEffect(() => {
-        const swController = navigator.serviceWorker?.controller;
-        console.log('[VideoViewer] Service Worker status:', {
-            supported: 'serviceWorker' in navigator,
-            controller: swController ? 'active' : 'none',
-            controllerState: swController?.state,
-        });
-        console.log('[VideoViewer] File info:', {
-            id: file.id,
-            filename: file.filename,
-            mimeType: file.mimeType,
-            streamUrl,
-        });
-    }, [file.id, file.filename, file.mimeType, streamUrl]);
-
     // Initialize Video.js player
     useEffect(() => {
         if (!videoContainerRef.current || !streamUrl) {
-            console.log('[VideoViewer] Skipping init:', { hasContainer: !!videoContainerRef.current, streamUrl });
             return;
         }
 
@@ -75,7 +58,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
             console.warn('[VideoViewer] No Service Worker controller - requests will NOT be intercepted!');
         }
 
-        console.log('[VideoViewer] Initializing player with URL:', streamUrl);
         dispatch(setViewerLoading(true));
 
         // Create video element

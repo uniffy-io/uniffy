@@ -19,10 +19,10 @@ class MemoriesService(Protocol):
     async def list_memories(self, request: agents_dot_v1_dot_memories__pb2.ListMemoriesRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.ListMemoriesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_memory(self, request: agents_dot_v1_dot_memories__pb2.CreateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    async def create_memory(self, request: agents_dot_v1_dot_memories__pb2.CreateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.CreateMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_memory(self, request: agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    async def update_memory(self, request: agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_memory(self, request: agents_dot_v1_dot_memories__pb2.DeleteMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.DeleteMemoryResponse:
@@ -49,7 +49,7 @@ class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
                         name="CreateMemory",
                         service_name="agents.v1.MemoriesService",
                         input=agents_dot_v1_dot_memories__pb2.CreateMemoryRequest,
-                        output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                        output=agents_dot_v1_dot_memories__pb2.CreateMemoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_memory,
@@ -59,7 +59,7 @@ class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
                         name="UpdateMemory",
                         service_name="agents.v1.MemoriesService",
                         input=agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest,
-                        output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                        output=agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_memory,
@@ -112,14 +112,14 @@ class MemoriesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    ) -> agents_dot_v1_dot_memories__pb2.CreateMemoryResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateMemory",
                 service_name="agents.v1.MemoriesService",
                 input=agents_dot_v1_dot_memories__pb2.CreateMemoryRequest,
-                output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                output=agents_dot_v1_dot_memories__pb2.CreateMemoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -132,14 +132,14 @@ class MemoriesServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    ) -> agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemory",
                 service_name="agents.v1.MemoriesService",
                 input=agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest,
-                output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                output=agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -170,9 +170,9 @@ class MemoriesServiceClient(ConnectClient):
 class MemoriesServiceSync(Protocol):
     def list_memories(self, request: agents_dot_v1_dot_memories__pb2.ListMemoriesRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.ListMemoriesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_memory(self, request: agents_dot_v1_dot_memories__pb2.CreateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    def create_memory(self, request: agents_dot_v1_dot_memories__pb2.CreateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.CreateMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_memory(self, request: agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    def update_memory(self, request: agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_memory(self, request: agents_dot_v1_dot_memories__pb2.DeleteMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.DeleteMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -197,7 +197,7 @@ class MemoriesServiceWSGIApplication(ConnectWSGIApplication):
                         name="CreateMemory",
                         service_name="agents.v1.MemoriesService",
                         input=agents_dot_v1_dot_memories__pb2.CreateMemoryRequest,
-                        output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                        output=agents_dot_v1_dot_memories__pb2.CreateMemoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_memory,
@@ -207,7 +207,7 @@ class MemoriesServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateMemory",
                         service_name="agents.v1.MemoriesService",
                         input=agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest,
-                        output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                        output=agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_memory,
@@ -260,14 +260,14 @@ class MemoriesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    ) -> agents_dot_v1_dot_memories__pb2.CreateMemoryResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateMemory",
                 service_name="agents.v1.MemoriesService",
                 input=agents_dot_v1_dot_memories__pb2.CreateMemoryRequest,
-                output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                output=agents_dot_v1_dot_memories__pb2.CreateMemoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -280,14 +280,14 @@ class MemoriesServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_memories__pb2.MemoryResponse:
+    ) -> agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateMemory",
                 service_name="agents.v1.MemoriesService",
                 input=agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest,
-                output=agents_dot_v1_dot_memories__pb2.MemoryResponse,
+                output=agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
