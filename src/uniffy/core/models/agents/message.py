@@ -98,7 +98,6 @@ class AgentMessage(SQLModel, table=True):
     )
     is_thinking: bool = Field(default=False, nullable=False)
     is_compacted: bool = Field(default=False, nullable=False)
-    token_estimate: int = Field(default=0, nullable=False)
     is_invalidated: bool = Field(default=False, nullable=False)
     invalidated_at: datetime | None = Field(
         default=None,
