@@ -8,6 +8,8 @@ interface DailyUsageEntry {
     inputTokens: number;
     outputTokens: number;
     cacheReadInputTokens: number;
+    costUsd: string;
+    imageCount: number;
 }
 
 interface ModelUsageEntry {
@@ -15,6 +17,8 @@ interface ModelUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    costUsd: string;
+    imageCount: number;
 }
 
 interface AgentUsageEntry {
@@ -57,6 +61,12 @@ export interface UsageStats {
     totalCacheReadInputTokens: number;
     totalSessions: number;
     avgDurationMs: number;
+    totalCostUsd: string;
+    totalThinkingTokens: number;
+    totalImageCount: number;
+    totalRetries: number;
+    totalCancelled: number;
+    totalDeadlineExceeded: number;
     dailyUsage: DailyUsageEntry[];
     modelUsage: ModelUsageEntry[];
     agentUsage: AgentUsageEntry[];
@@ -92,18 +102,28 @@ export const fetchUsageStats = createAsyncThunk<
             totalCacheReadInputTokens: Number(response.totalCacheReadInputTokens),
             totalSessions: Number(response.totalSessions),
             avgDurationMs: response.avgDurationMs,
+            totalCostUsd: response.totalCostUsd || '0',
+            totalThinkingTokens: Number(response.totalThinkingTokens),
+            totalImageCount: Number(response.totalImageCount),
+            totalRetries: Number(response.totalRetries),
+            totalCancelled: Number(response.totalCancelled),
+            totalDeadlineExceeded: Number(response.totalDeadlineExceeded),
             dailyUsage: response.dailyUsage.map((d) => ({
                 date: d.date,
                 runs: Number(d.runs),
                 inputTokens: Number(d.inputTokens),
                 outputTokens: Number(d.outputTokens),
                 cacheReadInputTokens: Number(d.cacheReadInputTokens),
+                costUsd: d.costUsd || '0',
+                imageCount: Number(d.imageCount),
             })),
             modelUsage: response.modelUsage.map((m) => ({
                 model: m.model,
                 runs: Number(m.runs),
                 inputTokens: Number(m.inputTokens),
                 outputTokens: Number(m.outputTokens),
+                costUsd: m.costUsd || '0',
+                imageCount: Number(m.imageCount),
             })),
             agentUsage: response.agentUsage.map((a) => ({
                 agentId: a.agentId,

@@ -15,6 +15,10 @@ import {
     Timer,
     CheckCircle,
     Database,
+    CurrencyDollar,
+    Image as ImageIcon,
+    ArrowsClockwise,
+    Stop as StopIcon,
 } from "@phosphor-icons/react";
 import {
     AreaChart,
@@ -92,6 +96,53 @@ function formatDuration(ms: number): string {
     if (ms >= 60_000) return `${(ms / 60_000).toFixed(1)}m`;
     if (ms >= 1_000) return `${(ms / 1_000).toFixed(1)}s`;
     return `${ms}ms`;
+}
+
+function formatCost(usd: string | number): string {
+    const n = typeof usd === 'string' ? parseFloat(usd) : usd;
+    if (!Number.isFinite(n) || n === 0) return '0.00';
+    if (n < 0.01) return n.toFixed(4);
+    if (n < 1) return n.toFixed(3);
+    return n.toFixed(2);
+}
+
+const SECONDARY_TONES = {
+    emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+    amber: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
+    red: 'text-red-600 dark:text-red-400 bg-red-500/10',
+} as const;
+
+function SecondaryStat({
+    label,
+    value,
+    subtitle,
+    icon: Icon,
+    tone,
+}: {
+    label: string;
+    value: string;
+    subtitle?: string;
+    icon: React.ComponentType<{ size: number; className?: string }>;
+    tone: keyof typeof SECONDARY_TONES;
+}) {
+    return (
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+            <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${SECONDARY_TONES[tone]}`}
+            >
+                <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {label}
+                </p>
+                <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
+                {subtitle && (
+                    <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                )}
+            </div>
+        </div>
+    );
 }
 
 // Custom Tooltip
@@ -861,6 +912,7 @@ export function UsageView() {
         inputTokens: m.inputTokens,
         outputTokens: m.outputTokens,
         totalTokens: m.inputTokens + m.outputTokens,
+        costUsd: parseFloat(m.costUsd) || 0,
     }));
 
     const agentRows: TableRow[] = stats.agentUsage.map((a) => ({
@@ -931,10 +983,14 @@ export function UsageView() {
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
-                        label="Total Runs"
-                        value={formatNumber(stats.totalRuns)}
-                        icon={Lightning}
-                        subtitle={`${formatNumber(avgTokensPerRun)} tokens/run avg`}
+                        label="Total Cost"
+                        value={`$${formatCost(stats.totalCostUsd)}`}
+                        icon={CurrencyDollar}
+                        subtitle={
+                            stats.totalImageCount > 0
+                                ? `${formatNumber(stats.totalImageCount)} images`
+                                : `${formatNumber(stats.totalRuns)} runs`
+                        }
                         accentColor={CHART_PALETTE[0]}
                     />
                     <StatCard
@@ -959,7 +1015,7 @@ export function UsageView() {
                         label="Avg Duration"
                         value={formatDuration(stats.avgDurationMs)}
                         icon={Clock}
-                        subtitle="per run"
+                        subtitle={`${formatNumber(avgTokensPerRun)} tokens/run avg`}
                         accentColor={CHART_PALETTE[2]}
                     />
                     <StatCard
@@ -970,6 +1026,42 @@ export function UsageView() {
                         accentColor={CHART_PALETTE[3]}
                     />
                 </div>
+
+                {/* Robustness signals: only render the row when something actually fired */}
+                {(stats.totalRetries > 0 ||
+                    stats.totalCancelled > 0 ||
+                    stats.totalDeadlineExceeded > 0 ||
+                    stats.totalImageCount > 0) && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <SecondaryStat
+                            label="Images generated"
+                            value={formatNumber(stats.totalImageCount)}
+                            icon={ImageIcon}
+                            tone="emerald"
+                        />
+                        <SecondaryStat
+                            label="Retries"
+                            value={formatNumber(stats.totalRetries)}
+                            icon={ArrowsClockwise}
+                            tone="amber"
+                            subtitle="provider failovers"
+                        />
+                        <SecondaryStat
+                            label="Cancelled"
+                            value={formatNumber(stats.totalCancelled)}
+                            icon={StopIcon}
+                            tone="red"
+                            subtitle="user-initiated stops"
+                        />
+                        <SecondaryStat
+                            label="Deadline hits"
+                            value={formatNumber(stats.totalDeadlineExceeded)}
+                            icon={Timer}
+                            tone="red"
+                            subtitle="runtime limit exceeded"
+                        />
+                    </div>
+                )}
 
                 {/* Token Usage Chart */}
                 <div className="bg-card border border-border rounded-xl p-5">
@@ -1184,6 +1276,13 @@ export function UsageView() {
                                 label: "Total",
                                 align: "right",
                                 format: fmtNum,
+                            },
+                            {
+                                key: "costUsd",
+                                label: "Cost",
+                                align: "right",
+                                format: (v: unknown) =>
+                                    typeof v === "number" ? `$${formatCost(v)}` : "—",
                             },
                         ]}
                         rows={modelRows}

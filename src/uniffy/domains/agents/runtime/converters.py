@@ -140,7 +140,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeFailoverEvent):
-        return StreamSendMessageEvent(
+        return StreamSendMessageResponse(
             failover=StreamFailoverEvent(
                 from_provider_key_id=event.from_provider_key_id,
                 to_provider_key_id=event.to_provider_key_id,
@@ -349,6 +349,12 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         total_cache_read_input_tokens=totals["total_cache_read_input_tokens"],
         total_sessions=totals["total_sessions"],
         avg_duration_ms=totals["avg_duration_ms"],
+        total_cost_usd=totals.get("total_cost_usd", "0"),
+        total_thinking_tokens=totals.get("total_thinking_tokens", 0),
+        total_image_count=totals.get("total_image_count", 0),
+        total_retries=totals.get("total_retries", 0),
+        total_cancelled=totals.get("total_cancelled", 0),
+        total_deadline_exceeded=totals.get("total_deadline_exceeded", 0),
         daily_usage=[
             DailyUsage(
                 date=d["date"],
@@ -356,6 +362,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 input_tokens=d["input_tokens"],
                 output_tokens=d["output_tokens"],
                 cache_read_input_tokens=d["cache_read_input_tokens"],
+                cost_usd=d.get("cost_usd", "0"),
+                image_count=d.get("image_count", 0),
             )
             for d in stats["daily_usage"]
         ],
@@ -365,6 +373,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 runs=m["runs"],
                 input_tokens=m["input_tokens"],
                 output_tokens=m["output_tokens"],
+                cost_usd=m.get("cost_usd", "0"),
+                image_count=m.get("image_count", 0),
             )
             for m in stats["model_usage"]
         ],
