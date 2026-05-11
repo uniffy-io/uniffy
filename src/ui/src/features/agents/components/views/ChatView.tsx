@@ -12,7 +12,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye } from "@phosphor-icons/react";
+import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -51,7 +51,16 @@ import {
 } from "@/features/agents/store/agentMessagesSlice";
 import { useAgentRunStream } from "@/features/agents/hooks/useAgentRunStream";
 import type { FileMetadata } from "@/features/agents/store/agentMessagesSlice";
-import { fetchMessages, streamSendMessage, respondToConfirmation, MessageRole } from "@/features/agents/store/agentMessagesThunks";
+import {
+    fetchMessages,
+    streamSendMessage,
+    respondToConfirmation,
+    cancelActiveRun,
+    editAgentMessage,
+    deleteAgentMessage,
+    retryAgentMessage,
+    MessageRole,
+} from "@/features/agents/store/agentMessagesThunks";
 import type { SerializedMessage } from "@/features/agents/store/agentMessagesThunks";
 import { selectAvailableModels } from "@/features/agents/store/agentProvidersSlice";
 import { fetchAvailableModels } from "@/features/agents/store/agentProvidersThunks";
@@ -202,27 +211,38 @@ function UserBubble({ message }: { message: SerializedMessage }) {
     const hasFileMentions = /\[\[\[[^|]+\|urn:uniffy:content:FILE:[^\]]+\]\]\]/.test(content);
     const hasInlineImages = /!\[.*?\]\(\/api\/files\//.test(content);
     const useRichEditor = hasFileMentions || hasInlineImages;
+    const isInvalidated = !!message.isInvalidated;
+    const wasEdited = !!message.editedAt;
 
     return (
-        <div className="flex flex-col items-end">
-            <div className="ml-auto max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2">
-                {useRichEditor ? (
-                    <CrepeEditor
-                        contentType={ContentType.NOTE}
-                        contentId={message.id}
-                        value={content}
-                        readonly
-                        enableUpload={false}
-                        compact
-                        autoEmbedMedia
-                        className="border-none bg-transparent chat-bubble-editor chat-bubble-user"
-                    />
-                ) : (
-                    <ChatMessageContent content={content} />
-                )}
+        <div className="group flex flex-col items-end">
+            <div className="flex items-end gap-1">
+                <MessageActions message={message} />
+                <div
+                    className={cn(
+                        "max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2",
+                        isInvalidated && "opacity-50 line-through",
+                    )}
+                >
+                    {useRichEditor ? (
+                        <CrepeEditor
+                            contentType={ContentType.NOTE}
+                            contentId={message.id}
+                            value={content}
+                            readonly
+                            enableUpload={false}
+                            compact
+                            autoEmbedMedia
+                            className="border-none bg-transparent chat-bubble-editor chat-bubble-user"
+                        />
+                    ) : (
+                        <ChatMessageContent content={content} />
+                    )}
+                </div>
             </div>
             <span className="text-xs text-muted-foreground text-right mt-1">
                 {formatTime(message.createdAt)}
+                {wasEdited && <span className="ml-1 italic">(edited)</span>}
             </span>
         </div>
     );
@@ -230,37 +250,172 @@ function UserBubble({ message }: { message: SerializedMessage }) {
 
 function AssistantBubble({ message }: { message: SerializedMessage }) {
     const isThinking = message.isThinking;
+    const isInvalidated = !!message.isInvalidated;
 
     return (
-        <div className="flex flex-col items-start">
-            <div
-                className={cn(
-                    "max-w-[70%] rounded-2xl rounded-bl-sm",
-                    isThinking
-                        ? "bg-muted/50 border border-dashed border-border px-4 py-2"
-                        : "bg-muted overflow-hidden"
-                )}
-            >
-                {isThinking ? (
-                    <p className="text-sm whitespace-pre-wrap italic text-muted-foreground">
-                        Thinking... {message.content ?? ""}
-                    </p>
-                ) : (
-                    <CrepeEditor
-                        contentType={ContentType.NOTE}
-                        contentId={message.id}
-                        value={message.content ?? ""}
-                        readonly
-                        enableUpload={false}
-                        compact
-                        autoEmbedMedia
-                        className="border-none bg-transparent chat-bubble-editor"
-                    />
-                )}
+        <div className="group flex flex-col items-start">
+            <div className="flex items-end gap-1">
+                <div
+                    className={cn(
+                        "max-w-[70%] rounded-2xl rounded-bl-sm",
+                        isThinking
+                            ? "bg-muted/50 border border-dashed border-border px-4 py-2"
+                            : "bg-muted overflow-hidden",
+                        isInvalidated && "opacity-50",
+                    )}
+                >
+                    {isThinking ? (
+                        <p className="text-sm whitespace-pre-wrap italic text-muted-foreground">
+                            Thinking... {message.content ?? ""}
+                        </p>
+                    ) : (
+                        <CrepeEditor
+                            contentType={ContentType.NOTE}
+                            contentId={message.id}
+                            value={message.content ?? ""}
+                            readonly
+                            enableUpload={false}
+                            compact
+                            autoEmbedMedia
+                            className="border-none bg-transparent chat-bubble-editor"
+                        />
+                    )}
+                </div>
+                <MessageActions message={message} />
             </div>
             <span className="text-xs text-muted-foreground mt-1">
                 {formatTime(message.createdAt)}
             </span>
+        </div>
+    );
+}
+
+function MessageActions({ message }: { message: SerializedMessage }) {
+    const dispatch = useAppDispatch();
+    const isStreaming = useAppSelector(selectIsStreaming);
+    const isUser = message.role === MessageRole.USER;
+    const isInvalidated = !!message.isInvalidated;
+    const [editing, setEditing] = useState(false);
+    const [editValue, setEditValue] = useState("");
+
+    if (isInvalidated) return null;
+
+    const handleEditOpen = () => {
+        setEditValue(message.content ?? "");
+        setEditing(true);
+    };
+    const handleEditSubmit = async () => {
+        if (!editValue.trim()) return;
+        await dispatch(
+            editAgentMessage({
+                sessionId: message.sessionId,
+                messageId: message.id,
+                newContent: editValue.trim(),
+            }),
+        );
+        setEditing(false);
+    };
+    const handleDelete = () => {
+        dispatch(deleteAgentMessage({ sessionId: message.sessionId, messageId: message.id }));
+    };
+    const handleRetry = async () => {
+        const result = await dispatch(
+            retryAgentMessage({ sessionId: message.sessionId, messageId: message.id }),
+        );
+        if (retryAgentMessage.fulfilled.match(result)) {
+            dispatch(setChatMessage(result.payload.content));
+        }
+    };
+
+    if (editing) {
+        return (
+            <EditPopover
+                value={editValue}
+                onChange={setEditValue}
+                onSubmit={handleEditSubmit}
+                onCancel={() => setEditing(false)}
+            />
+        );
+    }
+
+    return (
+        <div
+            className={cn(
+                "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity",
+                isUser ? "order-first" : "",
+            )}
+        >
+            {isUser && (
+                <button
+                    type="button"
+                    onClick={handleEditOpen}
+                    disabled={isStreaming}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
+                    title="Edit message"
+                >
+                    <PencilSimple size={14} />
+                </button>
+            )}
+            <button
+                type="button"
+                onClick={handleRetry}
+                disabled={isStreaming}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
+                title="Retry from here"
+            >
+                <ArrowsClockwise size={14} />
+            </button>
+            {isUser && (
+                <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isStreaming}
+                    className="p-1.5 rounded-md text-muted-foreground hover-destructive disabled:opacity-50"
+                    title="Delete message"
+                >
+                    <Trash size={14} />
+                </button>
+            )}
+        </div>
+    );
+}
+
+function EditPopover({
+    value,
+    onChange,
+    onSubmit,
+    onCancel,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    onSubmit: () => void;
+    onCancel: () => void;
+}) {
+    return (
+        <div className="bg-card border border-border rounded-2xl shadow-lg p-3 w-[420px] max-w-[80vw]">
+            <textarea
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                rows={3}
+                autoFocus
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        onSubmit();
+                    } else if (e.key === "Escape") {
+                        onCancel();
+                    }
+                }}
+            />
+            <div className="flex justify-end gap-2 mt-2">
+                <Button variant="ghost" size="sm" onClick={onCancel}>
+                    Cancel
+                </Button>
+                <Button size="sm" onClick={onSubmit} disabled={!value.trim()}>
+                    Save
+                </Button>
+            </div>
         </div>
     );
 }
@@ -925,7 +1080,19 @@ function ChatPanel() {
                 )}
                 <div className="flex-1" />
                 {isStreaming && (
-                    <CircleNotch size={16} className="animate-spin text-muted-foreground" />
+                    <>
+                        <CircleNotch size={16} className="animate-spin text-muted-foreground" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => dispatch(cancelActiveRun())}
+                            className="gap-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                            title="Stop streaming"
+                        >
+                            <Stop size={14} weight="fill" />
+                            <span className="text-xs">Stop</span>
+                        </Button>
+                    </>
                 )}
                 {contextStats && (() => {
                     const pct = contextStats.tokenBudget > 0

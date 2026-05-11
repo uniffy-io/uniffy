@@ -47,6 +47,9 @@ export const messageToPlain = (msg: MessageInfo) => ({
     isCompacted: msg.isCompacted,
     createdAt: timestampToPlain(msg.createdAt),
     fileIds: msg.fileIds?.length ? [...msg.fileIds] : undefined,
+    isInvalidated: msg.isInvalidated,
+    editedAt: timestampToPlain(msg.editedAt),
+    previousContent: msg.previousContent,
 });
 
 export type SerializedMessage = ReturnType<typeof messageToPlain>;
@@ -185,6 +188,99 @@ export const streamSendMessage = createAsyncThunk<
         const msg = error instanceof Error ? error.message : 'Streaming failed';
         dispatch(streamError(msg));
         return rejectWithValue(msg);
+    }
+});
+
+export const cancelActiveRun = createAsyncThunk<
+    void,
+    void,
+    { state: RootState; rejectValue: string }
+>('agentMessages/cancelActiveRun', async (_, { getState, rejectWithValue }) => {
+    try {
+        const state = getState();
+        const organizationId = getOrganizationId(state);
+        const runId = state.agentMessages.activeRunId;
+        if (!runId) return;
+        await runtimeApi.cancelStream({ organizationId, runId });
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to cancel run',
+        );
+    }
+});
+
+export const editAgentMessage = createAsyncThunk<
+    { sessionId: string; updated: SerializedMessage; anchorCreatedAt?: { seconds: number; nanos: number } },
+    { sessionId: string; messageId: string; newContent: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/editMessage', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const resp = await sessionsApi.editMessage({
+            organizationId,
+            messageId: params.messageId,
+            newContent: params.newContent,
+        });
+        if (!resp.message) throw new Error('Empty edit response');
+        const updated = messageToPlain(resp.message);
+        return {
+            sessionId: params.sessionId,
+            updated,
+            anchorCreatedAt: updated.createdAt,
+        };
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to edit message',
+        );
+    }
+});
+
+export const deleteAgentMessage = createAsyncThunk<
+    { sessionId: string; messageId: string; anchorCreatedAt?: { seconds: number; nanos: number } },
+    { sessionId: string; messageId: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/deleteMessage', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        await sessionsApi.deleteMessage({
+            organizationId,
+            messageId: params.messageId,
+        });
+        const list = getState().agentMessages.messagesBySession[params.sessionId];
+        const anchor = list?.find((m) => m.id === params.messageId);
+        return {
+            sessionId: params.sessionId,
+            messageId: params.messageId,
+            anchorCreatedAt: anchor?.createdAt,
+        };
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to delete message',
+        );
+    }
+});
+
+export const retryAgentMessage = createAsyncThunk<
+    { sessionId: string; content: string; fileIds: string[]; anchorMessageId: string },
+    { sessionId: string; messageId: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/retryMessage', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const resp = await sessionsApi.retryMessage({
+            organizationId,
+            messageId: params.messageId,
+        });
+        return {
+            sessionId: params.sessionId,
+            content: resp.content,
+            fileIds: [...resp.fileIds],
+            anchorMessageId: params.messageId,
+        };
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to retry message',
+        );
     }
 });
 

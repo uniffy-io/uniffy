@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConnectError, Code } from '@connectrpc/connect';
+import { toast } from 'sonner';
 import { useAppDispatch } from '@/app/hooks';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
 import {
@@ -95,6 +96,12 @@ export function useAgentRunStream(
                             sessionId,
                             assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
                         }));
+                    } else if (event.event.case === 'failover') {
+                        const f = event.event.value;
+                        toast.info(
+                            `Switched to ${f.toModel || 'a different provider'}`,
+                            { description: `Retry attempt ${f.attempt} (${f.reason})` },
+                        );
                     } else if (event.event.case === 'confirmationRequired') {
                         dispatch(setConfirmationRequired({
                             toolCallId: event.event.value.toolCallId,

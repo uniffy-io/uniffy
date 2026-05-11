@@ -1,16 +1,20 @@
 import { createClient } from '@connectrpc/connect';
-import { unaryTransport } from '@/config/api';
-import {
-    SessionsService,
-    CreateSessionRequestSchema,
-    GetSessionRequestSchema,
-    ListSessionsRequestSchema,
-    UpdateSessionRequestSchema,
-    ArchiveSessionRequestSchema,
-    AddMessageRequestSchema,
-    ListMessagesRequestSchema,
-    GetSessionContextStatsRequestSchema,
-    CompactSessionRequestSchema,
+import { transport } from '@/config/api';
+import { SessionsService } from '@uniffy/proto/agents/v1/sessions_connect';
+import type { PartialMessage } from '@bufbuild/protobuf';
+import type {
+    CreateSessionRequest,
+    GetSessionRequest,
+    ListSessionsRequest,
+    UpdateSessionRequest,
+    ArchiveSessionRequest,
+    AddMessageRequest,
+    ListMessagesRequest,
+    GetSessionContextStatsRequest,
+    CompactSessionRequest,
+    EditMessageRequest,
+    DeleteMessageRequest,
+    RetryMessageRequest,
 } from '@uniffy/proto/agents/v1/sessions_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -43,5 +47,14 @@ export const sessionsApi = {
     },
     compactSession: async (request: MessageInitShape<typeof CompactSessionRequestSchema>) => {
         return client.compactSession(request);
+    },
+    editMessage: async (request: PartialMessage<EditMessageRequest>) => {
+        return client.editMessage(request);
+    },
+    deleteMessage: async (request: PartialMessage<DeleteMessageRequest>) => {
+        return client.deleteMessage(request);
+    },
+    retryMessage: async (request: PartialMessage<RetryMessageRequest>) => {
+        return client.retryMessage(request);
     },
 };
