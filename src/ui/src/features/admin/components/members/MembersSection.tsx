@@ -13,6 +13,7 @@ import {
     Trash,
     Warning,
     HardDrives,
+    Wallet,
 } from '@phosphor-icons/react';
 import { createClient } from '@connectrpc/connect';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { MemberAgentQuotaDialog } from '@/features/admin/components/members/MemberAgentQuotaDialog';
 import {
     Table,
     TableHeader,
@@ -63,6 +65,7 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
     const [invalidatingCaches, setInvalidatingCaches] = useState(false);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showInvalidateCachesConfirm, setShowInvalidateCachesConfirm] = useState(false);
+    const [showQuotaDialog, setShowQuotaDialog] = useState(false);
 
     const isCurrentUser = member.userId === currentUserId;
     const isOwner = member.role === OrganizationRole.OWNER;
@@ -183,6 +186,15 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
                         <div className="flex items-center justify-end gap-1">
                             <button
                                 type="button"
+                                onClick={() => setShowQuotaDialog(true)}
+                                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                                    opacity-0 group-hover:opacity-100 transition-all"
+                                title="Set agent spend quota"
+                            >
+                                <Wallet size={16} />
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => setShowInvalidateCachesConfirm(true)}
                                 disabled={invalidatingCaches}
                                 className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
@@ -230,6 +242,14 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
                 confirmLabel="Invalidate"
                 variant="danger"
                 loading={invalidatingCaches}
+            />
+
+            {/* Agent spend quota dialog */}
+            <MemberAgentQuotaDialog
+                open={showQuotaDialog}
+                userId={showQuotaDialog ? member.userId : null}
+                displayName={member.displayName}
+                onClose={() => setShowQuotaDialog(false)}
             />
         </>
     );
