@@ -113,8 +113,17 @@ type GetUsageStatsResponse struct {
 	// the period. Counted toward total_input_tokens (the prompt was that
 	// big from the model's POV) but billed at ~10% of base input price.
 	TotalCacheReadInputTokens int64 `protobuf:"varint,17,opt,name=total_cache_read_input_tokens,json=totalCacheReadInputTokens,proto3" json:"total_cache_read_input_tokens,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// Cost + usage extensions sourced from the run-log columns. Decimal
+	// money values are encoded as strings so the wire never loses
+	// precision.
+	TotalCostUsd          string `protobuf:"bytes,18,opt,name=total_cost_usd,json=totalCostUsd,proto3" json:"total_cost_usd,omitempty"`
+	TotalThinkingTokens   int64  `protobuf:"varint,19,opt,name=total_thinking_tokens,json=totalThinkingTokens,proto3" json:"total_thinking_tokens,omitempty"`
+	TotalImageCount       int64  `protobuf:"varint,20,opt,name=total_image_count,json=totalImageCount,proto3" json:"total_image_count,omitempty"`
+	TotalRetries          int64  `protobuf:"varint,21,opt,name=total_retries,json=totalRetries,proto3" json:"total_retries,omitempty"`
+	TotalCancelled        int64  `protobuf:"varint,22,opt,name=total_cancelled,json=totalCancelled,proto3" json:"total_cancelled,omitempty"`
+	TotalDeadlineExceeded int64  `protobuf:"varint,23,opt,name=total_deadline_exceeded,json=totalDeadlineExceeded,proto3" json:"total_deadline_exceeded,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *GetUsageStatsResponse) Reset() {
@@ -266,6 +275,48 @@ func (x *GetUsageStatsResponse) GetTotalCacheReadInputTokens() int64 {
 	return 0
 }
 
+func (x *GetUsageStatsResponse) GetTotalCostUsd() string {
+	if x != nil {
+		return x.TotalCostUsd
+	}
+	return ""
+}
+
+func (x *GetUsageStatsResponse) GetTotalThinkingTokens() int64 {
+	if x != nil {
+		return x.TotalThinkingTokens
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetTotalImageCount() int64 {
+	if x != nil {
+		return x.TotalImageCount
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetTotalRetries() int64 {
+	if x != nil {
+		return x.TotalRetries
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetTotalCancelled() int64 {
+	if x != nil {
+		return x.TotalCancelled
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetTotalDeadlineExceeded() int64 {
+	if x != nil {
+		return x.TotalDeadlineExceeded
+	}
+	return 0
+}
+
 type DailyUsage struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
@@ -273,7 +324,9 @@ type DailyUsage struct {
 	InputTokens  int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
 	OutputTokens int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
 	// Cache reads in this bucket; subset of input_tokens.
-	CacheReadInputTokens int64 `protobuf:"varint,5,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheReadInputTokens int64  `protobuf:"varint,5,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CostUsd              string `protobuf:"bytes,6,opt,name=cost_usd,json=costUsd,proto3" json:"cost_usd,omitempty"`
+	ImageCount           int64  `protobuf:"varint,7,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -343,12 +396,28 @@ func (x *DailyUsage) GetCacheReadInputTokens() int64 {
 	return 0
 }
 
+func (x *DailyUsage) GetCostUsd() string {
+	if x != nil {
+		return x.CostUsd
+	}
+	return ""
+}
+
+func (x *DailyUsage) GetImageCount() int64 {
+	if x != nil {
+		return x.ImageCount
+	}
+	return 0
+}
+
 type ModelUsage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	Runs          int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
 	InputTokens   int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
 	OutputTokens  int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CostUsd       string                 `protobuf:"bytes,5,opt,name=cost_usd,json=costUsd,proto3" json:"cost_usd,omitempty"`
+	ImageCount    int64                  `protobuf:"varint,6,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,6 +476,20 @@ func (x *ModelUsage) GetInputTokens() int64 {
 func (x *ModelUsage) GetOutputTokens() int64 {
 	if x != nil {
 		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *ModelUsage) GetCostUsd() string {
+	if x != nil {
+		return x.CostUsd
+	}
+	return ""
+}
+
+func (x *ModelUsage) GetImageCount() int64 {
+	if x != nil {
+		return x.ImageCount
 	}
 	return 0
 }
@@ -2145,7 +2228,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14GetUsageStatsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04days\x18\x02 \x01(\x05R\x04days\x12\x1a\n" +
-	"\binterval\x18\x03 \x01(\tR\binterval\"\x84\a\n" +
+	"\binterval\x18\x03 \x01(\tR\binterval\"\x90\t\n" +
 	"\x15GetUsageStatsResponse\x12\x1d\n" +
 	"\n" +
 	"total_runs\x18\x01 \x01(\x03R\ttotalRuns\x12,\n" +
@@ -2170,20 +2253,32 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x13cron_total_failures\x18\x0e \x01(\x03R\x11cronTotalFailures\x125\n" +
 	"\x17cron_total_input_tokens\x18\x0f \x01(\x03R\x14cronTotalInputTokens\x127\n" +
 	"\x18cron_total_output_tokens\x18\x10 \x01(\x03R\x15cronTotalOutputTokens\x12@\n" +
-	"\x1dtotal_cache_read_input_tokens\x18\x11 \x01(\x03R\x19totalCacheReadInputTokens\"\xb3\x01\n" +
+	"\x1dtotal_cache_read_input_tokens\x18\x11 \x01(\x03R\x19totalCacheReadInputTokens\x12$\n" +
+	"\x0etotal_cost_usd\x18\x12 \x01(\tR\ftotalCostUsd\x122\n" +
+	"\x15total_thinking_tokens\x18\x13 \x01(\x03R\x13totalThinkingTokens\x12*\n" +
+	"\x11total_image_count\x18\x14 \x01(\x03R\x0ftotalImageCount\x12#\n" +
+	"\rtotal_retries\x18\x15 \x01(\x03R\ftotalRetries\x12'\n" +
+	"\x0ftotal_cancelled\x18\x16 \x01(\x03R\x0etotalCancelled\x126\n" +
+	"\x17total_deadline_exceeded\x18\x17 \x01(\x03R\x15totalDeadlineExceeded\"\xef\x01\n" +
 	"\n" +
 	"DailyUsage\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12\x12\n" +
 	"\x04runs\x18\x02 \x01(\x03R\x04runs\x12!\n" +
 	"\finput_tokens\x18\x03 \x01(\x03R\vinputTokens\x12#\n" +
 	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\x125\n" +
-	"\x17cache_read_input_tokens\x18\x05 \x01(\x03R\x14cacheReadInputTokens\"~\n" +
+	"\x17cache_read_input_tokens\x18\x05 \x01(\x03R\x14cacheReadInputTokens\x12\x19\n" +
+	"\bcost_usd\x18\x06 \x01(\tR\acostUsd\x12\x1f\n" +
+	"\vimage_count\x18\a \x01(\x03R\n" +
+	"imageCount\"\xba\x01\n" +
 	"\n" +
 	"ModelUsage\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x12\n" +
 	"\x04runs\x18\x02 \x01(\x03R\x04runs\x12!\n" +
 	"\finput_tokens\x18\x03 \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\"\xa6\x01\n" +
+	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\x12\x19\n" +
+	"\bcost_usd\x18\x05 \x01(\tR\acostUsd\x12\x1f\n" +
+	"\vimage_count\x18\x06 \x01(\x03R\n" +
+	"imageCount\"\xa6\x01\n" +
 	"\x0eAgentUsageInfo\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +

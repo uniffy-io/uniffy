@@ -155,12 +155,89 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
   totalCacheReadInputTokens: bigint;
 };
 
-/**
- * Describes the message agents.v1.GetUsageStatsResponse.
- * Use `create(GetUsageStatsResponseSchema)` to create a new message.
- */
-export const GetUsageStatsResponseSchema: GenMessage<GetUsageStatsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 1);
+  /**
+   * Cost + usage extensions sourced from the run-log columns. Decimal
+   * money values are encoded as strings so the wire never loses
+   * precision.
+   *
+   * @generated from field: string total_cost_usd = 18;
+   */
+  totalCostUsd = "";
+
+  /**
+   * @generated from field: int64 total_thinking_tokens = 19;
+   */
+  totalThinkingTokens = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 total_image_count = 20;
+   */
+  totalImageCount = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 total_retries = 21;
+   */
+  totalRetries = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 total_cancelled = 22;
+   */
+  totalCancelled = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 total_deadline_exceeded = 23;
+   */
+  totalDeadlineExceeded = protoInt64.zero;
+
+  constructor(data?: PartialMessage<GetUsageStatsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetUsageStatsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "total_runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 2, name: "total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "total_sessions", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "avg_duration_ms", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "daily_usage", kind: "message", T: DailyUsage, repeated: true },
+    { no: 7, name: "model_usage", kind: "message", T: ModelUsage, repeated: true },
+    { no: 8, name: "agent_usage", kind: "message", T: AgentUsageInfo, repeated: true },
+    { no: 9, name: "tool_usage", kind: "message", T: ToolUsage, repeated: true },
+    { no: 10, name: "provider_key_usage", kind: "message", T: ProviderKeyUsage, repeated: true },
+    { no: 11, name: "cron_usage", kind: "message", T: CronTaskUsage, repeated: true },
+    { no: 12, name: "cron_total_runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 13, name: "cron_total_successes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 14, name: "cron_total_failures", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 15, name: "cron_total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 16, name: "cron_total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 17, name: "total_cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 18, name: "total_cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 19, name: "total_thinking_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 20, name: "total_image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 21, name: "total_retries", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 22, name: "total_cancelled", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 23, name: "total_deadline_exceeded", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUsageStatsResponse {
+    return new GetUsageStatsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUsageStatsResponse {
+    return new GetUsageStatsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUsageStatsResponse {
+    return new GetUsageStatsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUsageStatsResponse | PlainMessage<GetUsageStatsResponse> | undefined, b: GetUsageStatsResponse | PlainMessage<GetUsageStatsResponse> | undefined): boolean {
+    return proto3.util.equals(GetUsageStatsResponse, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.DailyUsage
@@ -196,12 +273,49 @@ export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
   cacheReadInputTokens: bigint;
 };
 
-/**
- * Describes the message agents.v1.DailyUsage.
- * Use `create(DailyUsageSchema)` to create a new message.
- */
-export const DailyUsageSchema: GenMessage<DailyUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 2);
+  /**
+   * @generated from field: string cost_usd = 6;
+   */
+  costUsd = "";
+
+  /**
+   * @generated from field: int64 image_count = 7;
+   */
+  imageCount = protoInt64.zero;
+
+  constructor(data?: PartialMessage<DailyUsage>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DailyUsage";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "date", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 6, name: "cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DailyUsage {
+    return new DailyUsage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DailyUsage {
+    return new DailyUsage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DailyUsage {
+    return new DailyUsage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DailyUsage | PlainMessage<DailyUsage> | undefined, b: DailyUsage | PlainMessage<DailyUsage> | undefined): boolean {
+    return proto3.util.equals(DailyUsage, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.ModelUsage
@@ -228,12 +342,48 @@ export type ModelUsage = Message<"agents.v1.ModelUsage"> & {
   outputTokens: bigint;
 };
 
-/**
- * Describes the message agents.v1.ModelUsage.
- * Use `create(ModelUsageSchema)` to create a new message.
- */
-export const ModelUsageSchema: GenMessage<ModelUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 3);
+  /**
+   * @generated from field: string cost_usd = 5;
+   */
+  costUsd = "";
+
+  /**
+   * @generated from field: int64 image_count = 6;
+   */
+  imageCount = protoInt64.zero;
+
+  constructor(data?: PartialMessage<ModelUsage>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ModelUsage";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModelUsage {
+    return new ModelUsage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModelUsage {
+    return new ModelUsage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModelUsage {
+    return new ModelUsage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModelUsage | PlainMessage<ModelUsage> | undefined, b: ModelUsage | PlainMessage<ModelUsage> | undefined): boolean {
+    return proto3.util.equals(ModelUsage, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.AgentUsageInfo
