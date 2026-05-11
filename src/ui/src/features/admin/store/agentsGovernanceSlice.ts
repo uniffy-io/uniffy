@@ -6,7 +6,7 @@
  * Thunks live alongside in agentsGovernanceThunks.ts.
  */
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import {
     fetchOrgBudget,
     updateOrgBudget,
