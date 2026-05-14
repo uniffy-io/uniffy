@@ -1,0 +1,81 @@
+name: Security Issue
+description: Report a security weakness, hardening gap, or compliance concern (NOT for active exploits)
+title: "[SECURITY] "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do NOT file active exploit reports here.** Email security@uniffy.io for coordinated disclosure of exploitable vulnerabilities.
+        This template is for hardening work, audit findings, dependency CVEs, and policy gaps that are safe to discuss publicly.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the weakness.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - authentication / session
+        - authorization / permissions
+        - input validation / injection
+        - data exposure / PII
+        - cryptography / secrets management
+        - dependency / supply chain
+        - CSP / browser hardening
+        - audit logging
+        - compliance
+        - other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+        - informational
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What an attacker could do, which assets are exposed, who is affected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction / Evidence
+      description: Steps, code references (file:line), proof of weakness. Redact sensitive data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: Proposed fix, mitigating controls, or hardening direction.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: CVE IDs, OWASP categories, advisories, related issues.
+    validations:
+      required: false

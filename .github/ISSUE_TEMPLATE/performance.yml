@@ -1,0 +1,79 @@
+name: Performance Issue
+description: Report slowness, high resource usage, or scalability concerns
+title: "[PERFORMANCE] "
+labels: ["performance"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the performance problem.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - backend (API latency)
+        - backend (DB / query)
+        - backend (background jobs)
+        - frontend (render / FPS)
+        - frontend (bundle size / load)
+        - frontend (memory)
+        - mobile
+        - search / indexing
+        - infra / deployment
+    validations:
+      required: true
+
+  - type: textarea
+    id: measurement
+    attributes:
+      label: Current Measurement
+      description: Numbers. p50/p95/p99 latency, query duration, bundle KB, FPS, memory MB. Include how measured.
+      placeholder: |
+        Endpoint POST /api/notes/search p95 = 1850ms (measured via Grafana over 24h, 50k requests).
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Target
+      description: Acceptable threshold and why.
+      placeholder: p95 < 300ms to keep search-as-you-type usable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: How to reproduce the slow path locally or in staging. Include dataset size, concurrency, payload.
+    validations:
+      required: true
+
+  - type: textarea
+    id: profile
+    attributes:
+      label: Profiling / Evidence
+      description: Flame graphs, EXPLAIN plans, Chrome perf traces, screenshots. Link to dashboards.
+    validations:
+      required: false
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Suspected Cause
+      description: Hot path, N+1, missing index, layout thrash, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+    validations:
+      required: false
