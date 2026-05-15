@@ -1065,8 +1065,12 @@ type AppearanceSettings struct {
 	DefaultEditor *string `protobuf:"bytes,6,opt,name=default_editor,json=defaultEditor,proto3,oneof" json:"default_editor,omitempty"`
 	// Default mention chip display: "expanded" (rich card) or "compact" (inline chip)
 	MentionDisplay *string `protobuf:"bytes,7,opt,name=mention_display,json=mentionDisplay,proto3,oneof" json:"mention_display,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Whether the Markdown mode opens with the live preview pane visible
+	MarkdownShowPreview *bool `protobuf:"varint,8,opt,name=markdown_show_preview,json=markdownShowPreview,proto3,oneof" json:"markdown_show_preview,omitempty"`
+	// Whether the Markdown editor displays line numbers in the gutter
+	MarkdownShowLineNumbers *bool `protobuf:"varint,9,opt,name=markdown_show_line_numbers,json=markdownShowLineNumbers,proto3,oneof" json:"markdown_show_line_numbers,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *AppearanceSettings) Reset() {
@@ -1146,6 +1150,20 @@ func (x *AppearanceSettings) GetMentionDisplay() string {
 		return *x.MentionDisplay
 	}
 	return ""
+}
+
+func (x *AppearanceSettings) GetMarkdownShowPreview() bool {
+	if x != nil && x.MarkdownShowPreview != nil {
+		return *x.MarkdownShowPreview
+	}
+	return false
+}
+
+func (x *AppearanceSettings) GetMarkdownShowLineNumbers() bool {
+	if x != nil && x.MarkdownShowLineNumbers != nil {
+		return *x.MarkdownShowLineNumbers
+	}
+	return false
 }
 
 // Keyboard shortcuts settings
@@ -1463,7 +1481,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"appearance\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\n" +
 	"appearance\x12U\n" +
 	"\x12keyboard_shortcuts\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
-	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xaa\x03\n" +
+	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xde\x04\n" +
 	"\x12AppearanceSettings\x12\x19\n" +
 	"\x05theme\x18\x01 \x01(\tH\x00R\x05theme\x88\x01\x01\x12&\n" +
 	"\faccent_color\x18\x02 \x01(\tH\x01R\vaccentColor\x88\x01\x01\x12$\n" +
@@ -1472,14 +1490,18 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x11sidebar_collapsed\x18\x04 \x01(\bH\x03R\x10sidebarCollapsed\x88\x01\x01\x12&\n" +
 	"\fcompact_mode\x18\x05 \x01(\bH\x04R\vcompactMode\x88\x01\x01\x12*\n" +
 	"\x0edefault_editor\x18\x06 \x01(\tH\x05R\rdefaultEditor\x88\x01\x01\x12,\n" +
-	"\x0fmention_display\x18\a \x01(\tH\x06R\x0ementionDisplay\x88\x01\x01B\b\n" +
+	"\x0fmention_display\x18\a \x01(\tH\x06R\x0ementionDisplay\x88\x01\x01\x127\n" +
+	"\x15markdown_show_preview\x18\b \x01(\bH\aR\x13markdownShowPreview\x88\x01\x01\x12@\n" +
+	"\x1amarkdown_show_line_numbers\x18\t \x01(\bH\bR\x17markdownShowLineNumbers\x88\x01\x01B\b\n" +
 	"\x06_themeB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_familyB\x14\n" +
 	"\x12_sidebar_collapsedB\x0f\n" +
 	"\r_compact_modeB\x11\n" +
 	"\x0f_default_editorB\x12\n" +
-	"\x10_mention_display\"\xaa\x01\n" +
+	"\x10_mention_displayB\x18\n" +
+	"\x16_markdown_show_previewB\x1d\n" +
+	"\x1b_markdown_show_line_numbers\"\xaa\x01\n" +
 	"\x19KeyboardShortcutsSettings\x12P\n" +
 	"\bbindings\x18\x01 \x03(\v24.settings.v1.KeyboardShortcutsSettings.BindingsEntryR\bbindings\x1a;\n" +
 	"\rBindingsEntry\x12\x10\n" +

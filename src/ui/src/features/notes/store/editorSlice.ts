@@ -28,6 +28,7 @@ interface EditorState {
     settings: {
         editorMode: EditorMode;
         showMarkdownPreview: boolean; // For markdown mode: show split preview
+        showMarkdownLineNumbers: boolean; // For markdown mode: show line numbers in gutter
         fontSize: number;
         lineHeight: number;
         spellCheck: boolean;
@@ -53,6 +54,7 @@ const initialState: EditorState = {
     settings: {
         editorMode: 'crepe',
         showMarkdownPreview: true,
+        showMarkdownLineNumbers: true,
         fontSize: 16,
         lineHeight: 1.6,
         spellCheck: true,
@@ -124,6 +126,14 @@ export const editorSlice = createSlice({
             state.settings.showMarkdownPreview = action.payload;
         },
 
+        toggleMarkdownLineNumbers: (state) => {
+            state.settings.showMarkdownLineNumbers = !state.settings.showMarkdownLineNumbers;
+        },
+
+        setShowMarkdownLineNumbers: (state, action: PayloadAction<boolean>) => {
+            state.settings.showMarkdownLineNumbers = action.payload;
+        },
+
         setFontSize: (state, action: PayloadAction<number>) => {
             state.settings.fontSize = action.payload;
         },
@@ -176,6 +186,8 @@ export const {
     setEditorMode,
     toggleMarkdownPreview,
     setShowMarkdownPreview,
+    toggleMarkdownLineNumbers,
+    setShowMarkdownLineNumbers,
     setFontSize,
     setLineHeight,
     setSpellCheck,

@@ -104,6 +104,12 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
     if settings.get("mention_display") is not None:
         proto.mention_display = settings["mention_display"]
 
+    if settings.get("markdown_show_preview") is not None:
+        proto.markdown_show_preview = settings["markdown_show_preview"]
+
+    if settings.get("markdown_show_line_numbers") is not None:
+        proto.markdown_show_line_numbers = settings["markdown_show_line_numbers"]
+
     return proto
 
 
@@ -256,6 +262,12 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.HasField("mention_display"):
         result["mention_display"] = proto.mention_display
+
+    if proto.HasField("markdown_show_preview"):
+        result["markdown_show_preview"] = proto.markdown_show_preview
+
+    if proto.HasField("markdown_show_line_numbers"):
+        result["markdown_show_line_numbers"] = proto.markdown_show_line_numbers
 
     return result if result else None
 

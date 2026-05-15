@@ -24,6 +24,7 @@ import { useGlobalShortcuts } from '@/features/settings';
 import { createImageUploadHandler, uploadImage } from '@/components/editor/utils/imageUploader';
 import { createVideoUploadHandler, uploadVideo } from '@/components/editor/utils/videoUploader';
 import { createAudioUploadHandler, uploadAudio } from '@/components/editor/utils/audioUploader';
+import { findHeadingBySlug } from '@/components/editor/utils/headingScroll';
 import { audioPlugins, setAudioRecordingUploadHandler } from '@/components/editor/plugins/audio';
 import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
 import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
@@ -262,7 +263,7 @@ function createCrepeConfig(
     features: {
       [Crepe.Feature.CodeMirror]: true,
       [Crepe.Feature.ListItem]: true,
-      [Crepe.Feature.LinkTooltip]: true,
+      [Crepe.Feature.LinkTooltip]: false,
       [Crepe.Feature.ImageBlock]: true,
       // Disable editing features in readonly mode
       // In compact mode, BlockEdit is enabled for slash commands but drag handle is hidden via CSS
@@ -1113,6 +1114,62 @@ export function CrepeEditor({
     container.addEventListener('click', handleClick, { capture: true });
     return () => container.removeEventListener('click', handleClick, { capture: true });
   }, [readonly, dispatch]);
+
+  // Intercept in-document anchor links (href starting with `#`) so a Table of
+  // Contents scrolls to the heading instead of triggering a full React Router
+  // remount. External links and same-origin non-hash navigations pass through.
+  useEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      if (e.defaultPrevented) return;
+      // Let users open links in a new tab / window normally.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+      const target = e.target as HTMLElement | null;
+      const anchor = target?.closest('a');
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // In-doc hash link (`#slug`) - resolve locally.
+      let slug: string | null = null;
+      if (href.startsWith('#')) {
+        slug = href.slice(1);
+      } else {
+        // Same-origin same-path link with a hash also counts.
+        try {
+          const url = new URL(href, window.location.href);
+          if (
+            url.origin === window.location.origin &&
+            url.pathname === window.location.pathname &&
+            url.hash
+          ) {
+            slug = url.hash.slice(1);
+          }
+        } catch {
+          return;
+        }
+      }
+
+      if (!slug) return;
+
+      const heading = findHeadingBySlug(slug, container);
+      if (!heading) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Keep the URL shareable without polluting browser history.
+      const nextUrl = `${window.location.pathname}${window.location.search}#${slug}`;
+      window.history.replaceState(window.history.state, '', nextUrl);
+    };
+
+    container.addEventListener('click', handleAnchorClick, { capture: true });
+    return () => container.removeEventListener('click', handleAnchorClick, { capture: true });
+  }, []);
 
   // Handle highlight color selection from the picker
   const handleHighlightColor = useCallback((color: string | null) => {

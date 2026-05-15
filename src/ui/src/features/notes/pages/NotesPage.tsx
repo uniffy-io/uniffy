@@ -9,7 +9,7 @@ import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMe
 import { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 import { NotesEmptyState } from '@/features/notes/components/NotesEmptyState';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { toggleSidebar, setEditorMode, setSidebarOpen, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
+import { toggleSidebar, setEditorMode, setShowMarkdownPreview, setShowMarkdownLineNumbers, setSidebarOpen, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
 import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '@/features/notes/store/notesSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
@@ -26,7 +26,7 @@ export function NotesPage() {
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-  const { defaultEditor } = useAppearanceSettings();
+  const { defaultEditor, markdownShowPreview, markdownShowLineNumbers } = useAppearanceSettings();
 
   // Sync notes to IndexedDB cache for instant load on next visit
   useNotesCacheSync();
@@ -75,9 +75,11 @@ export function NotesPage() {
   useEffect(() => {
     if (!hasAppliedDefaultEditor.current && defaultEditor && ['crepe', 'markdown', 'readonly'].includes(defaultEditor)) {
       dispatch(setEditorMode(defaultEditor as EditorMode));
+      dispatch(setShowMarkdownPreview(markdownShowPreview));
+      dispatch(setShowMarkdownLineNumbers(markdownShowLineNumbers));
       hasAppliedDefaultEditor.current = true;
     }
-  }, [dispatch, defaultEditor]);
+  }, [dispatch, defaultEditor, markdownShowPreview, markdownShowLineNumbers]);
 
   // Check if notes are already loaded
   const notesLoading = notesState?.loading ?? false;
