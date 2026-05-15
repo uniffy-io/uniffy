@@ -30,6 +30,8 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
         compactMode: appearance.compactMode,
         defaultEditor: appearance.defaultEditor || undefined,
         mentionDisplay: appearance.mentionDisplay || undefined,
+        markdownShowPreview: appearance.markdownShowPreview,
+        markdownShowLineNumbers: appearance.markdownShowLineNumbers,
     };
 };
 
@@ -105,6 +107,8 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         compactMode: false,
         defaultEditor: 'crepe',
         mentionDisplay: 'expanded',
+        markdownShowPreview: true,
+        markdownShowLineNumbers: true,
     },
     keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
         bindings: {},

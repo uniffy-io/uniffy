@@ -96,6 +96,8 @@ class AppearanceDefaults:
     compact_mode: bool = False
     default_editor: str = "crepe"  # Default editor for notes: "crepe", "markdown", "readonly"
     mention_display: str = "expanded"  # Mention chip display: "expanded" or "compact"
+    markdown_show_preview: bool = True  # Live preview pane on by default in Markdown mode
+    markdown_show_line_numbers: bool = True  # Show line numbers in the Markdown editor gutter
 
 
 DEFAULT_REMINDER_INTERVALS: list[int] = [15]
@@ -153,6 +155,8 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "compact_mode": APPEARANCE_DEFAULTS.compact_mode,
         "default_editor": APPEARANCE_DEFAULTS.default_editor,
         "mention_display": APPEARANCE_DEFAULTS.mention_display,
+        "markdown_show_preview": APPEARANCE_DEFAULTS.markdown_show_preview,
+        "markdown_show_line_numbers": APPEARANCE_DEFAULTS.markdown_show_line_numbers,
     }
 
 

@@ -190,6 +190,8 @@ export function useAppearanceSettings() {
         compactMode: effectiveSettings?.appearance.compactMode ?? false,
         defaultEditor: effectiveSettings?.appearance.defaultEditor ?? 'crepe',
         mentionDisplay: effectiveSettings?.appearance.mentionDisplay ?? 'expanded',
+        markdownShowPreview: effectiveSettings?.appearance.markdownShowPreview ?? true,
+        markdownShowLineNumbers: effectiveSettings?.appearance.markdownShowLineNumbers ?? true,
     };
 }
 

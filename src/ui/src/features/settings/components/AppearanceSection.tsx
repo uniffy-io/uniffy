@@ -4,6 +4,7 @@
 
 import { Sun, Moon, Desktop, Check, CheckSquare, CalendarBlank, ArrowSquareOut } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/shared/utils/cn';
 import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
@@ -95,7 +96,7 @@ const FONT_FAMILIES = [
 // Editor mode options for notes
 const EDITOR_OPTIONS = [
     { id: 'crepe', name: 'Editor', description: 'Rich WYSIWYG editor with full formatting' },
-    { id: 'markdown', name: 'Markdown', description: 'Split view with markdown source and preview' },
+    { id: 'markdown', name: 'Markdown', description: 'Raw markdown source with optional live preview' },
     { id: 'readonly', name: 'Read Only', description: 'View-only mode for reading notes' },
 ];
 
@@ -117,6 +118,14 @@ export function AppearanceSection() {
 
     const handleDefaultEditorChange = (defaultEditor: string) => {
         updateSettings({ appearance: { defaultEditor } });
+    };
+
+    const handleMarkdownShowPreviewChange = (markdownShowPreview: boolean) => {
+        updateSettings({ appearance: { markdownShowPreview } });
+    };
+
+    const handleMarkdownShowLineNumbersChange = (markdownShowLineNumbers: boolean) => {
+        updateSettings({ appearance: { markdownShowLineNumbers } });
     };
 
     const handleMentionDisplayChange = (mentionDisplay: string) => {
@@ -322,27 +331,61 @@ export function AppearanceSection() {
                 </div>
 
                 <div className="space-y-2">
-                    {EDITOR_OPTIONS.map(({ id, name, description }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            disabled={saving}
-                            className={`flex items-center justify-between w-full p-4 rounded-lg border transition-colors ${
-                                appearance.defaultEditor === id
-                                    ? 'border-primary bg-primary/5'
-                                    : 'border-border hover:border-primary/50 bg-card'
-                            }`}
-                            onClick={() => handleDefaultEditorChange(id)}
-                        >
-                            <div className="text-left">
-                                <div className="font-medium text-foreground">{name}</div>
-                                <div className="text-sm text-muted-foreground">{description}</div>
+                    {EDITOR_OPTIONS.map(({ id, name, description }) => {
+                        const isSelected = appearance.defaultEditor === id;
+                        return (
+                            <div key={id} className="space-y-2">
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    className={`flex items-center justify-between w-full p-4 rounded-lg border transition-colors ${
+                                        isSelected
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-border hover:border-primary/50 bg-card'
+                                    }`}
+                                    onClick={() => handleDefaultEditorChange(id)}
+                                >
+                                    <div className="text-left">
+                                        <div className="font-medium text-foreground">{name}</div>
+                                        <div className="text-sm text-muted-foreground">{description}</div>
+                                    </div>
+                                    {isSelected && (
+                                        <Check size={20} weight="bold" className="text-primary" />
+                                    )}
+                                </button>
+                                {id === 'markdown' && isSelected && (
+                                    <div className="ml-4 pl-4 border-l border-border space-y-2">
+                                        <div className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/40">
+                                            <div>
+                                                <div className="text-sm font-medium text-foreground">Show preview by default</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Open Markdown notes with the live preview pane visible.
+                                                </div>
+                                            </div>
+                                            <ToggleSwitch
+                                                enabled={appearance.markdownShowPreview}
+                                                onChange={handleMarkdownShowPreviewChange}
+                                                disabled={saving}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/40">
+                                            <div>
+                                                <div className="text-sm font-medium text-foreground">Show line numbers</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Display line numbers in the Markdown editor gutter.
+                                                </div>
+                                            </div>
+                                            <ToggleSwitch
+                                                enabled={appearance.markdownShowLineNumbers}
+                                                onChange={handleMarkdownShowLineNumbersChange}
+                                                disabled={saving}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            {appearance.defaultEditor === id && (
-                                <Check size={20} weight="bold" className="text-primary" />
-                            )}
-                        </button>
-                    ))}
+                        );
+                    })}
                 </div>
             </section>
 

@@ -979,6 +979,20 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
    */
   mentionDisplay?: string;
 
+  /**
+   * Whether the Markdown mode opens with the live preview pane visible
+   *
+   * @generated from field: optional bool markdown_show_preview = 8;
+   */
+  markdownShowPreview?: boolean;
+
+  /**
+   * Whether the Markdown editor displays line numbers in the gutter
+   *
+   * @generated from field: optional bool markdown_show_line_numbers = 9;
+   */
+  markdownShowLineNumbers?: boolean;
+
   constructor(data?: PartialMessage<AppearanceSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -994,6 +1008,8 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
     { no: 5, name: "compact_mode", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 6, name: "default_editor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "mention_display", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "markdown_show_preview", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 9, name: "markdown_show_line_numbers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AppearanceSettings {

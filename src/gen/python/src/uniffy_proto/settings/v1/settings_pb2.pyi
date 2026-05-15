@@ -162,7 +162,7 @@ class EffectiveSettings(_message.Message):
     def __init__(self, appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ...) -> None: ...
 
 class AppearanceSettings(_message.Message):
-    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor", "mention_display")
+    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor", "mention_display", "markdown_show_preview", "markdown_show_line_numbers")
     THEME_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
@@ -170,6 +170,8 @@ class AppearanceSettings(_message.Message):
     COMPACT_MODE_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_EDITOR_FIELD_NUMBER: _ClassVar[int]
     MENTION_DISPLAY_FIELD_NUMBER: _ClassVar[int]
+    MARKDOWN_SHOW_PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    MARKDOWN_SHOW_LINE_NUMBERS_FIELD_NUMBER: _ClassVar[int]
     theme: str
     accent_color: str
     font_family: str
@@ -177,7 +179,9 @@ class AppearanceSettings(_message.Message):
     compact_mode: bool
     default_editor: str
     mention_display: str
-    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ..., mention_display: _Optional[str] = ...) -> None: ...
+    markdown_show_preview: bool
+    markdown_show_line_numbers: bool
+    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ..., mention_display: _Optional[str] = ..., markdown_show_preview: _Optional[bool] = ..., markdown_show_line_numbers: _Optional[bool] = ...) -> None: ...
 
 class KeyboardShortcutsSettings(_message.Message):
     __slots__ = ("bindings",)

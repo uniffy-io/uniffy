@@ -203,6 +203,10 @@ message AppearanceSettings {
   optional string default_editor = 6;
   // Default mention chip display: "expanded" (rich card) or "compact" (inline chip)
   optional string mention_display = 7;
+  // Whether the Markdown mode opens with the live preview pane visible
+  optional bool markdown_show_preview = 8;
+  // Whether the Markdown editor displays line numbers in the gutter
+  optional bool markdown_show_line_numbers = 9;
 }
 
 // Keyboard shortcuts settings

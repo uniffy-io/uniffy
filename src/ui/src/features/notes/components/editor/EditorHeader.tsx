@@ -4,7 +4,6 @@ import {
   ShareNetwork,
   PencilSimple,
   Eye,
-  EyeSlash,
   CodeSimple,
   BookmarkSimple,
   CaretRight,
@@ -17,7 +16,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { updateNoteIcon } from '@/features/notes/store/notesThunks';
-import { setEditorMode, toggleMetadataPanel, toggleMarkdownPreview } from '@/features/notes/store/editorSlice';
+import { setEditorMode, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
 import { updateNote } from '@/features/notes/store/notesSlice';
 import { useSaveStatus } from '@/features/notes/hooks/useNotesHooks';
 import { buildBreadcrumbPath, type BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
@@ -28,6 +27,7 @@ import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
 import { TagPicker } from '@/features/tags';
 import { IconPicker } from '@/features/notes/components/editor/IconPicker';
+import { MarkdownModeBar } from '@/features/notes/components/editor/MarkdownModeBar';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useAccessPolicyDialog } from '@/features/permissions';
 import { cn } from '@/shared/utils/cn';
@@ -213,7 +213,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
   const allNotes = useAppSelector((state) => state.notes.notes);
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || 'crepe';
-  const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
 
   // Bookmark state
@@ -336,26 +335,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
                 <span className="hidden md:inline">{label}</span>
               </button>
             ))}
-
-            {/* Preview Toggle (only in markdown mode) */}
-            {editorMode === 'markdown' && (
-              <button
-                onClick={() => dispatch(toggleMarkdownPreview())}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ml-1 ${
-                  showMarkdownPreview
-                    ? 'text-primary bg-primary/10'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-                title={showMarkdownPreview ? 'Hide Preview' : 'Show Preview'}
-              >
-                {showMarkdownPreview ? (
-                  <EyeSlash size={14} weight="duotone" />
-                ) : (
-                  <Eye size={14} weight="duotone" />
-                )}
-                <span className="hidden md:inline">Preview</span>
-              </button>
-            )}
           </div>}
 
           {/* Bookmark Button */}
@@ -406,7 +385,9 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
           </button>
         </div>
       </div>
-      
+
+      {!isCanvas && editorMode === 'markdown' && <MarkdownModeBar />}
+
       {/* Title Section - collapses on scroll down */}
       <div
         className="overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out"
