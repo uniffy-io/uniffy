@@ -144,6 +144,27 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
 }
 
 /**
+ * A shortcut "owns" the keypress (overrides editable surfaces like inputs,
+ * textareas, and contentEditable editors) when it carries a non-typing
+ * modifier — Ctrl, Cmd/Meta, or Alt. Bare keys and Shift-only chords are
+ * left to the focused editor so we don't hijack regular typing.
+ */
+function shortcutOwnsKeypress(shortcut: string): boolean {
+    const parsed = parseShortcut(shortcut);
+    return parsed.ctrl || parsed.meta || parsed.alt;
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    return (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.isContentEditable
+    );
+}
+
+/**
  * Hook for accessing keyboard shortcut bindings from settings.
  */
 export function useKeyboardBindings() {
@@ -201,13 +222,11 @@ export function useShortcutHandler(
         if (!enabled || !shortcut) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Don't trigger if user is typing in an input
-            const target = event.target as HTMLElement;
-            if (
-                target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.isContentEditable
-            ) {
+            // Bare-key / Shift-only shortcuts must defer to focused editors,
+            // otherwise we'd hijack normal typing. Modifier chords (Ctrl/Cmd/Alt)
+            // always run so global shortcuts like Ctrl+B, Ctrl+\, Ctrl+K keep
+            // working inside the markdown editor, Crepe, search inputs, etc.
+            if (isEditableTarget(event.target) && !shortcutOwnsKeypress(shortcut)) {
                 return;
             }
 
@@ -244,20 +263,17 @@ export function useShortcutHandlers(
         if (!enabled) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Don't trigger if user is typing in an input
-            const target = event.target as HTMLElement;
-            if (
-                target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.isContentEditable
-            ) {
-                return;
-            }
+            const editable = isEditableTarget(event.target);
 
             // Check each registered handler
             for (const [action, handler] of Object.entries(handlers)) {
                 const shortcut = bindings[action];
-                if (shortcut && matchesShortcut(event, shortcut)) {
+                if (!shortcut) continue;
+                // Skip bare-key / Shift-only shortcuts when typing in an
+                // editor; let modifier chords (Ctrl/Cmd/Alt) through so
+                // global shortcuts keep working inside contentEditable.
+                if (editable && !shortcutOwnsKeypress(shortcut)) continue;
+                if (matchesShortcut(event, shortcut)) {
                     if (preventDefault) {
                         event.preventDefault();
                     }
