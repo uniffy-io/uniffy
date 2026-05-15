@@ -13,35 +13,7 @@ import { useMyContentRole } from '@/features/permissions';
 import { roleCanEdit, roleCanManage } from '@/shared/utils/contentRoles';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
-
-/**
- * Convert heading text to a URL-safe slug.
- * Must match the algorithm in NotesMetadataPanel.parseHeadings.
- */
-function headingToSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-/**
- * Find a heading element in the editor DOM whose text matches the given hash slug.
- */
-function findHeadingBySlug(slug: string): Element | null {
-  const editor = document.querySelector('.crepe-editor .ProseMirror') ??
-    document.querySelector('.crepe-editor .milkdown');
-  if (!editor) return null;
-
-  const headings = editor.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  for (const heading of headings) {
-    const text = heading.textContent?.trim() ?? '';
-    if (headingToSlug(text) === slug) {
-      return heading;
-    }
-  }
-  return null;
-}
+import { findHeadingBySlug } from '@/components/editor/utils/headingScroll';
 
 export function NotesEditor() {
   const location = useLocation();
