@@ -4,3 +4,6 @@ packages:
   - src/landing
   - src/gen/typescript
   - src/e2e
+allowBuilds:
+  canvas: set this to true or false
+  esbuild: set this to true or false
