@@ -19,12 +19,16 @@ if [[ -f pnpm-lock.yaml ]]; then
 fi
 
 if [[ ! -f "$SYNC_MARKER" ]] || [[ "$(cat "$SYNC_MARKER" 2>/dev/null)" != "$LOCK_HASH" ]]; then
+    # `--config.strict-dep-builds=false` keeps ignored native build scripts
+    # (canvas, esbuild) as a warning instead of a hard CI failure - we don't
+    # need them in the dev container.
+    PNPM_ARGS=(--frozen-lockfile --prefer-offline --config.strict-dep-builds=false --config.confirm-modules-purge=false)
     if [[ -n "$FILTER" ]]; then
         echo "[entrypoint] pnpm install --filter ${FILTER}"
-        pnpm install --frozen-lockfile --prefer-offline --filter "$FILTER"
+        pnpm install "${PNPM_ARGS[@]}" --filter "$FILTER"
     else
         echo "[entrypoint] pnpm install (full workspace)"
-        pnpm install --frozen-lockfile --prefer-offline
+        pnpm install "${PNPM_ARGS[@]}"
     fi
     echo "$LOCK_HASH" > "$SYNC_MARKER"
 else
