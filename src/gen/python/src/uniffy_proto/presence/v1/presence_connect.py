@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -30,7 +32,7 @@ class PresenceService(Protocol):
 
 
 class PresenceServiceASGIApplication(ConnectASGIApplication[PresenceService]):
-    def __init__(self, service: PresenceService | AsyncGenerator[PresenceService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PresenceService | AsyncGenerator[PresenceService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -77,6 +79,8 @@ class PresenceServiceASGIApplication(ConnectASGIApplication[PresenceService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -167,6 +171,9 @@ class PresenceServiceClient(ConnectClient):
         )
 
 
+
+
+
 class PresenceServiceSync(Protocol):
     def set_presence(self, request: presence_dot_v1_dot_presence__pb2.SetPresenceRequest, ctx: RequestContext) -> presence_dot_v1_dot_presence__pb2.SetPresenceResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -179,7 +186,7 @@ class PresenceServiceSync(Protocol):
 
 
 class PresenceServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: PresenceServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PresenceServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/presence.v1.PresenceService/SetPresence": EndpointSync.unary(
@@ -225,6 +232,8 @@ class PresenceServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -313,3 +322,5 @@ class PresenceServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

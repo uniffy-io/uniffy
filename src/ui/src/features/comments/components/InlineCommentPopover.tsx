@@ -4,7 +4,6 @@ import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import { useCommentActions } from '@/features/comments/hooks/useComments';
-import { Struct } from '@bufbuild/protobuf';
 
 interface InlineCommentPopoverProps {
     selection: {
@@ -55,12 +54,11 @@ export function InlineCommentPopover({
 
         setIsSubmitting(true);
         try {
-            const anchorData = new Struct();
-            anchorData.fromJson({
+            const anchorData = {
                 from: selection.from,
                 to: selection.to,
                 text: selection.text,
-            });
+            };
 
             await create(
                 contentType,

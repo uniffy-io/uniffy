@@ -2,10 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/api/authApi";
 import { useAuth } from "@/context/auth-context";
 import { formatRelativeTimeFromIso } from "@/lib/noteSerializer";
-import type { PlainMessage } from "@bufbuild/protobuf";
 import type { SessionInfo } from "@uniffy/proto/auth/v1/auth_pb";
 
-export type SerializedSession = PlainMessage<SessionInfo>;
+export type SerializedSession = Omit<SessionInfo, "$typeName">;
 
 export function useSessions() {
   const queryClient = useQueryClient();

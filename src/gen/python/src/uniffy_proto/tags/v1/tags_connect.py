@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -63,7 +65,7 @@ class TagsService(Protocol):
 
 
 class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
-    def __init__(self, service: TagsService | AsyncGenerator[TagsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: TagsService | AsyncGenerator[TagsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -220,6 +222,8 @@ class TagsServiceASGIApplication(ConnectASGIApplication[TagsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -530,6 +534,9 @@ class TagsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class TagsServiceSync(Protocol):
     def create_tag(self, request: tags_dot_v1_dot_tags__pb2.CreateTagRequest, ctx: RequestContext) -> tags_dot_v1_dot_tags__pb2.CreateTagResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -564,7 +571,7 @@ class TagsServiceSync(Protocol):
 
 
 class TagsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: TagsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: TagsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/tags.v1.TagsService/CreateTag": EndpointSync.unary(
@@ -720,6 +727,8 @@ class TagsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -1028,3 +1037,5 @@ class TagsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

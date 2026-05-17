@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -33,7 +35,7 @@ class RuntimeService(Protocol):
 
 
 class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
-    def __init__(self, service: RuntimeService | AsyncGenerator[RuntimeService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: RuntimeService | AsyncGenerator[RuntimeService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -90,6 +92,8 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -200,6 +204,9 @@ class RuntimeServiceClient(ConnectClient):
         )
 
 
+
+
+
 class RuntimeServiceSync(Protocol):
     def send_message(self, request: agents_dot_v1_dot_runtime__pb2.SendMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.SendMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -214,7 +221,7 @@ class RuntimeServiceSync(Protocol):
 
 
 class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: RuntimeServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: RuntimeServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.RuntimeService/SendMessage": EndpointSync.unary(
@@ -270,6 +277,8 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -378,3 +387,5 @@ class RuntimeServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

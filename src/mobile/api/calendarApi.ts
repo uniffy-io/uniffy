@@ -1,59 +1,43 @@
 import { createClient } from "@connectrpc/connect";
-import type { PartialMessage } from "@bufbuild/protobuf";
-import { CalendarService } from "@uniffy/proto/cal/v1/calendar_connect";
-import type {
-  CreateEventRequest,
-  GetEventRequest,
-  UpdateEventRequest,
-  DeleteEventRequest,
-  ListEventsRequest,
-  GetEventsInRangeRequest,
-  ListCalendarsRequest,
-  ListCategoriesRequest,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-  DeleteCategoryRequest,
-  UpdateAttendeeStatusRequest,
-  AddAttendeesRequest,
-  RemoveAttendeesRequest,
-} from "@uniffy/proto/cal/v1/calendar_pb";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { CalendarService, AddAttendeesRequestSchema, CreateCategoryRequestSchema, CreateEventRequestSchema, DeleteCategoryRequestSchema, DeleteEventRequestSchema, GetEventRequestSchema, GetEventsInRangeRequestSchema, ListCalendarsRequestSchema, ListCategoriesRequestSchema, ListEventsRequestSchema, RemoveAttendeesRequestSchema, UpdateAttendeeStatusRequestSchema, UpdateCategoryRequestSchema, UpdateEventRequestSchema } from "@uniffy/proto/cal/v1/calendar_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(CalendarService, transport);
 
 export const calendarApi = {
-  createEvent: (request: PartialMessage<CreateEventRequest>) => client.createEvent(request),
+  createEvent: (request: MessageInitShape<typeof CreateEventRequestSchema>) => client.createEvent(request),
 
-  getEvent: (request: PartialMessage<GetEventRequest>) => client.getEvent(request),
+  getEvent: (request: MessageInitShape<typeof GetEventRequestSchema>) => client.getEvent(request),
 
-  updateEvent: (request: PartialMessage<UpdateEventRequest>) => client.updateEvent(request),
+  updateEvent: (request: MessageInitShape<typeof UpdateEventRequestSchema>) => client.updateEvent(request),
 
-  deleteEvent: (request: PartialMessage<DeleteEventRequest>) => client.deleteEvent(request),
+  deleteEvent: (request: MessageInitShape<typeof DeleteEventRequestSchema>) => client.deleteEvent(request),
 
-  listEvents: (request: PartialMessage<ListEventsRequest>) => client.listEvents(request),
+  listEvents: (request: MessageInitShape<typeof ListEventsRequestSchema>) => client.listEvents(request),
 
-  getEventsInRange: (request: PartialMessage<GetEventsInRangeRequest>) =>
+  getEventsInRange: (request: MessageInitShape<typeof GetEventsInRangeRequestSchema>) =>
     client.getEventsInRange(request),
 
-  listCalendars: (request: PartialMessage<ListCalendarsRequest>) => client.listCalendars(request),
+  listCalendars: (request: MessageInitShape<typeof ListCalendarsRequestSchema>) => client.listCalendars(request),
 
-  listCategories: (request: PartialMessage<ListCategoriesRequest>) =>
+  listCategories: (request: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(request),
 
-  createCategory: (request: PartialMessage<CreateCategoryRequest>) =>
+  createCategory: (request: MessageInitShape<typeof CreateCategoryRequestSchema>) =>
     client.createCategory(request),
 
-  updateCategory: (request: PartialMessage<UpdateCategoryRequest>) =>
+  updateCategory: (request: MessageInitShape<typeof UpdateCategoryRequestSchema>) =>
     client.updateCategory(request),
 
-  deleteCategory: (request: PartialMessage<DeleteCategoryRequest>) =>
+  deleteCategory: (request: MessageInitShape<typeof DeleteCategoryRequestSchema>) =>
     client.deleteCategory(request),
 
-  updateAttendeeStatus: (request: PartialMessage<UpdateAttendeeStatusRequest>) =>
+  updateAttendeeStatus: (request: MessageInitShape<typeof UpdateAttendeeStatusRequestSchema>) =>
     client.updateAttendeeStatus(request),
 
-  addAttendees: (request: PartialMessage<AddAttendeesRequest>) => client.addAttendees(request),
+  addAttendees: (request: MessageInitShape<typeof AddAttendeesRequestSchema>) => client.addAttendees(request),
 
-  removeAttendees: (request: PartialMessage<RemoveAttendeesRequest>) =>
+  removeAttendees: (request: MessageInitShape<typeof RemoveAttendeesRequestSchema>) =>
     client.removeAttendees(request),
 };

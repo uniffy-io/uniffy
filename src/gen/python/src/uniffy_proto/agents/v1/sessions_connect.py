@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -48,7 +50,7 @@ class SessionsService(Protocol):
 
 
 class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
-    def __init__(self, service: SessionsService | AsyncGenerator[SessionsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SessionsService | AsyncGenerator[SessionsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -155,6 +157,8 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -365,6 +369,9 @@ class SessionsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class SessionsServiceSync(Protocol):
     def create_session(self, request: agents_dot_v1_dot_sessions__pb2.CreateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CreateSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -389,7 +396,7 @@ class SessionsServiceSync(Protocol):
 
 
 class SessionsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: SessionsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SessionsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.SessionsService/CreateSession": EndpointSync.unary(
@@ -495,6 +502,8 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -703,3 +712,5 @@ class SessionsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

@@ -6,27 +6,14 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import { transport } from '@/config/api';
-import { RoomsService } from '@uniffy/proto/rooms/v1/rooms_connect';
-import type {
-  CreateRoomRequest,
-  GetRoomRequest,
-  UpdateRoomRequest,
-  DeleteRoomRequest,
-  ListRoomsRequest,
-  CreateBookingRequest,
-  GetBookingRequest,
-  CancelBookingRequest,
-  ListBookingsRequest,
-  CheckAvailabilityRequest,
-  FindAvailableRoomsRequest,
-} from '@uniffy/proto/rooms/v1/rooms_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
+import { RoomsService, CancelBookingRequestSchema, CheckAvailabilityRequestSchema, CreateBookingRequestSchema, CreateRoomRequestSchema, DeleteRoomRequestSchema, FindAvailableRoomsRequestSchema, GetBookingRequestSchema, GetRoomRequestSchema, ListBookingsRequestSchema, ListRoomsRequestSchema, UpdateRoomRequestSchema } from '@uniffy/proto/rooms/v1/rooms_pb';
 
 /**
  * Create a rooms service client with the shared transport.
  */
-const roomsClient = createClient(RoomsService, transport);
+const roomsClient = createClient(RoomsService, unaryTransport);
 
 /**
  * Rooms API service with typed methods.
@@ -37,35 +24,35 @@ export const roomsApi = {
   /**
    * Create a new room.
    */
-  createRoom: async (request: PartialMessage<CreateRoomRequest>) => {
+  createRoom: async (request: MessageInitShape<typeof CreateRoomRequestSchema>) => {
     return roomsClient.createRoom(request);
   },
 
   /**
    * Get a room by ID.
    */
-  getRoom: async (request: PartialMessage<GetRoomRequest>) => {
+  getRoom: async (request: MessageInitShape<typeof GetRoomRequestSchema>) => {
     return roomsClient.getRoom(request);
   },
 
   /**
    * Update an existing room.
    */
-  updateRoom: async (request: PartialMessage<UpdateRoomRequest>) => {
+  updateRoom: async (request: MessageInitShape<typeof UpdateRoomRequestSchema>) => {
     return roomsClient.updateRoom(request);
   },
 
   /**
    * Delete a room.
    */
-  deleteRoom: async (request: PartialMessage<DeleteRoomRequest>) => {
+  deleteRoom: async (request: MessageInitShape<typeof DeleteRoomRequestSchema>) => {
     return roomsClient.deleteRoom(request);
   },
 
   /**
    * List rooms with filters and pagination.
    */
-  listRooms: async (request: PartialMessage<ListRoomsRequest>) => {
+  listRooms: async (request: MessageInitShape<typeof ListRoomsRequestSchema>) => {
     return roomsClient.listRooms(request);
   },
 
@@ -74,28 +61,28 @@ export const roomsApi = {
   /**
    * Create a new booking.
    */
-  createBooking: async (request: PartialMessage<CreateBookingRequest>) => {
+  createBooking: async (request: MessageInitShape<typeof CreateBookingRequestSchema>) => {
     return roomsClient.createBooking(request);
   },
 
   /**
    * Get a booking by ID.
    */
-  getBooking: async (request: PartialMessage<GetBookingRequest>) => {
+  getBooking: async (request: MessageInitShape<typeof GetBookingRequestSchema>) => {
     return roomsClient.getBooking(request);
   },
 
   /**
    * Cancel a booking.
    */
-  cancelBooking: async (request: PartialMessage<CancelBookingRequest>) => {
+  cancelBooking: async (request: MessageInitShape<typeof CancelBookingRequestSchema>) => {
     return roomsClient.cancelBooking(request);
   },
 
   /**
    * List bookings with filters.
    */
-  listBookings: async (request: PartialMessage<ListBookingsRequest>) => {
+  listBookings: async (request: MessageInitShape<typeof ListBookingsRequestSchema>) => {
     return roomsClient.listBookings(request);
   },
 
@@ -104,14 +91,14 @@ export const roomsApi = {
   /**
    * Check availability for a specific room and time range.
    */
-  checkAvailability: async (request: PartialMessage<CheckAvailabilityRequest>) => {
+  checkAvailability: async (request: MessageInitShape<typeof CheckAvailabilityRequestSchema>) => {
     return roomsClient.checkAvailability(request);
   },
 
   /**
    * Find available rooms for a given time range and criteria.
    */
-  findAvailableRooms: async (request: PartialMessage<FindAvailableRoomsRequest>) => {
+  findAvailableRooms: async (request: MessageInitShape<typeof FindAvailableRoomsRequestSchema>) => {
     return roomsClient.findAvailableRooms(request);
   },
 };

@@ -1,10 +1,10 @@
 import { createConnectTransport } from '@connectrpc/connect-node';
 import { createClient, type Interceptor } from '@connectrpc/connect';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
-import { ChatService } from '@uniffy/proto/chat/v1/chat_connect';
-import { AgentsService } from '@uniffy/proto/agents/v1/agents_connect';
-import { SessionsService } from '@uniffy/proto/agents/v1/sessions_connect';
-import { RuntimeService } from '@uniffy/proto/agents/v1/runtime_connect';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
+import { ChatService } from '@uniffy/proto/chat/v1/chat_pb';
+import { AgentsService } from '@uniffy/proto/agents/v1/agents_pb';
+import { SessionsService } from '@uniffy/proto/agents/v1/sessions_pb';
+import { RuntimeService } from '@uniffy/proto/agents/v1/runtime_pb';
 
 const DEFAULT_API_URL = 'http://localhost:8000';
 

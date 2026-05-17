@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import type { Comment as ProtoComment, CommentReaction as ProtoReaction } from '@uniffy/proto/comments/v1/comments_pb';
 
 /**
@@ -73,13 +74,13 @@ export function serializeComment(comment: ProtoComment): SerializedComment {
         authorAvatarUrl: comment.authorAvatarUrl ?? '',
         body: comment.body,
         anchorType: comment.anchorType,
-        anchorData: comment.anchorData ? comment.anchorData.toJson() as Record<string, unknown> : null,
+        anchorData: comment.anchorData ? comment.anchorData as Record<string, unknown> : null,
         isResolved: comment.isResolved,
         resolvedById: comment.resolvedById ?? '',
         resolvedByName: comment.resolvedByName ?? '',
-        resolvedAt: comment.resolvedAt ? comment.resolvedAt.toDate().toISOString() : null,
-        createdAt: comment.createdAt ? comment.createdAt.toDate().toISOString() : new Date().toISOString(),
-        updatedAt: comment.updatedAt ? comment.updatedAt.toDate().toISOString() : null,
+        resolvedAt: comment.resolvedAt ? timestampDate(comment.resolvedAt).toISOString() : null,
+        createdAt: comment.createdAt ? timestampDate(comment.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: comment.updatedAt ? timestampDate(comment.updatedAt).toISOString() : null,
         replyCount: comment.replyCount,
         reactions: comment.reactions.map(serializeReaction),
         replies: comment.replies.map(serializeComment),

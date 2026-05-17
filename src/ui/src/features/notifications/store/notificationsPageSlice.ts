@@ -8,7 +8,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { Timestamp } from '@bufbuild/protobuf';
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
 import { markNotificationAsRead, deleteNotification } from '@/features/notifications/store/notificationsSlice';
 import type { Notification } from '@uniffy/proto/notifications/v1/notifications_pb';
@@ -115,9 +115,9 @@ const notificationToPlain = (n: Notification): SerializedPageNotification => ({
     actorName: n.actorName,
     actorAvatarUrl: n.actorAvatarUrl,
     isRead: n.isRead,
-    readAt: n.readAt?.toDate().toISOString() ?? null,
-    createdAt: n.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
-    expiresAt: n.expiresAt?.toDate().toISOString() ?? null,
+    readAt: n.readAt ? timestampDate(n.readAt).toISOString() : null,
+    createdAt: n.createdAt ? timestampDate(n.createdAt).toISOString() : new Date().toISOString(),
+    expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
 });
 
 export const searchPageNotifications = createAsyncThunk<
@@ -144,8 +144,8 @@ export const searchPageNotifications = createAsyncThunk<
             pageSize: pageState.pageSize,
             isRead: pageState.isReadFilter ?? undefined,
             notificationTypes: protoTypes,
-            dateFrom: pageState.dateFrom ? Timestamp.fromDate(new Date(pageState.dateFrom)) : undefined,
-            dateTo: pageState.dateTo ? Timestamp.fromDate(new Date(pageState.dateTo)) : undefined,
+            dateFrom: pageState.dateFrom ? timestampFromDate(new Date(pageState.dateFrom)) : undefined,
+            dateTo: pageState.dateTo ? timestampFromDate(new Date(pageState.dateTo)) : undefined,
             actorId: pageState.actorId ?? undefined,
         });
 

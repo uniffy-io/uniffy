@@ -437,16 +437,16 @@ wheels = [
 ]
 
 [[package]]
-name = "connect-python"
-version = "0.8.1"
+name = "connectrpc"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "protobuf" },
     { name = "pyqwest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/8d/e04954dacc3c32c2f858a115b2b989ed6cccefc3835fb440bb12dcb468c2/connect_python-0.8.1.tar.gz", hash = "sha256:0d36c9cfe050661f8f167afcfff8df622805a4f348961d0d8fab630c96f0bdab", size = 39292, upload-time = "2026-01-27T05:00:02.751Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/21/bb02a054348901d90d98a680864b2a97b6a89bd33285632821d3a1864e5a/connectrpc-0.10.0.tar.gz", hash = "sha256:44f89b70abae9f8192883e79e8a3317bdca555036ed3bd4a20f398c0bac7162f", size = 46893, upload-time = "2026-04-28T16:07:16.921Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/e4/e36a6d0450493e2b940086ebe94394381803b2b09c97e8f8e34230bcaa99/connect_python-0.8.1-py3-none-any.whl", hash = "sha256:bfe31fb3d90c2a6715fc2996fa4bd5c98dfdccd81e47ac232c9d03aadd666be1", size = 54902, upload-time = "2026-01-27T05:00:01.18Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/80/c701d8ea2013b32696d96ad76f841e7ce61bfb092a7d5dc823a15d87115c/connectrpc-0.10.0-py3-none-any.whl", hash = "sha256:fedaf5abb8c90ab69662958b88f23f4cc18b7a0b0359401d8e5776ccfceefc38", size = 64007, upload-time = "2026-04-28T16:07:15.59Z" },
 ]
 
 [[package]]
@@ -1288,16 +1288,16 @@ wheels = [
 ]
 
 [[package]]
-name = "protoc-gen-connect-python"
-version = "0.8.1"
+name = "protoc-gen-connectrpc"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/18/61737bae921b83c82a3191bad58d44f814e59e201973a71d866fd7b6e5ae/protoc_gen_connect_python-0.8.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:11d06710d256af4ce2c7d6bc5ff47e9605692ef74e90042900681fd98a24a0c5", size = 1827152, upload-time = "2026-01-27T05:00:11.177Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/17/16bd1b44aac28659a39f69cb3b58d2fa32bb9b05ac3eb8ffa90e71c2a3ff/protoc_gen_connect_python-0.8.1-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:60ea034d17c8cb3ec889c0f759f79757c8952186cdde97f0e186df4d3e5b442b", size = 1950959, upload-time = "2026-01-27T05:00:13.242Z" },
-    { url = "https://files.pythonhosted.org/packages/e4/15/08068c55366c25a5559ecf6ad643f7989d29f3acfd65a1a8e6f8f88b62b0/protoc_gen_connect_python-0.8.1-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:e6bf9d7e96d92b0c2af89ba62de9951db622c74614401a949facba5948309b69", size = 1761388, upload-time = "2026-01-27T05:00:15.06Z" },
-    { url = "https://files.pythonhosted.org/packages/7f/dd/357c6134ac438d6fb6b393e2a2ef1e1aa0ab61c726b5b39c55c33a9ff295/protoc_gen_connect_python-0.8.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:f206ec49aa82c0b5bf22b623b6df5a954f296e0f4f07812ecf9a3590ec5c9a52", size = 1928422, upload-time = "2026-01-27T05:00:16.904Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/26/d4423db8a59aedd750b876dd1201aae1a7fc7e488c4688089d546247ea93/protoc_gen_connect_python-0.8.1-py3-none-win_amd64.whl", hash = "sha256:4cf8ce5c98aaf3f33505e335b9451bae3583a30e8eba1d546ebf0514711f684b", size = 1988042, upload-time = "2026-01-27T05:00:18.421Z" },
-    { url = "https://files.pythonhosted.org/packages/30/39/d7816afa15ce638dce0f406402042a87d01bae10b66d0322f6ea0524de3d/protoc_gen_connect_python-0.8.1-py3-none-win_arm64.whl", hash = "sha256:1d280ef7ea991f9864d18f66e27b3a3a2e55d7b2bc1e56bc333394b2f29b1bb0", size = 1793387, upload-time = "2026-01-27T05:00:19.843Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/bc/78ad6d280ca2139aa08bd16a0997e495a2b721f8bc8f73676011195f3dd8/protoc_gen_connectrpc-0.10.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c51fcdd92a8a8d96b1b99e0c5bba52aebafc8fa1b4ca4f1e2e44d37c953438ba", size = 1911564, upload-time = "2026-04-28T16:07:26.956Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/58/1f9b1cd43d37a9de41798932f2d3160cd201df951be77ca2b090078d836a/protoc_gen_connectrpc-0.10.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:086b2c77bf6b391bcd2b3090b9ea737217abf21726153ae43310f8fcc3e59242", size = 2055543, upload-time = "2026-04-28T16:07:29.219Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/62/e4224b6e0d2042b748ba097822becbb59ed7678de1254bb4dd8b383b3bec/protoc_gen_connectrpc-0.10.0-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:19a49b08bbeff13da22c08d3ce969c7c1ed76ea308b4ec6f914955f68aef7215", size = 1852399, upload-time = "2026-04-28T16:07:30.806Z" },
+    { url = "https://files.pythonhosted.org/packages/87/f7/32a200c015d31b8cea2576ce664937946c1c57fc58d5989157eecfc56fe6/protoc_gen_connectrpc-0.10.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:0d82b585544d2acd65c039134e9c5c744ee39e754fe2e8e7122f50b2141f5057", size = 2042545, upload-time = "2026-04-28T16:07:32.721Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/29/ef8b5590ead84a4ad7a832b916b7e0ff011230d04d83d35da42488244697/protoc_gen_connectrpc-0.10.0-py3-none-win_amd64.whl", hash = "sha256:907d2a49cfa0ea1adb3d2ff4b1c9119ca76750179d6ffcac5fc5c1060287965a", size = 2092079, upload-time = "2026-04-28T16:07:34.711Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/27/8667f57e386e9a59b9b5c139dbc14d5c15fe5e54b5b6722eaa6f3376092e/protoc_gen_connectrpc-0.10.0-py3-none-win_arm64.whl", hash = "sha256:179e6607b0c41b78ee78b83b96540f113d927c5a7d0113e47c2cf6a56b7df47b", size = 1872479, upload-time = "2026-04-28T16:07:36.133Z" },
 ]
 
 [[package]]
@@ -1464,25 +1464,31 @@ wheels = [
 
 [[package]]
 name = "pyqwest"
-version = "0.4.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "opentelemetry-api" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/25/72d8d0e922022bf6f133511ff9aa7b2e516e2b5a515f2829928e6e35924a/pyqwest-0.4.0.tar.gz", hash = "sha256:ba3770790534b89ae97da7423fc4c6a814f0ccf1d1aa2eeafab6730acfb43449", size = 439348, upload-time = "2026-02-03T06:58:13.851Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/42/9328a1a057bc191e02514fbd8c9aa899e38ec29420491017f057ac6b5313/pyqwest-0.5.1.tar.gz", hash = "sha256:49535565a55a23830d376c6c0b8ca1276f19bb871e39330e1fbb3df69d9f02df", size = 448653, upload-time = "2026-04-17T03:56:00.279Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/31/44ca41c2ffffc7e60714aaadfe0b81c3f6e5adc86e26336b078a1b1abd08/pyqwest-0.4.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:f687900b48f6058edf38988191e411a1f8c8a420d9e1a9ecda4cafdbcf7d3b9f", size = 4980118, upload-time = "2026-02-03T06:57:43.732Z" },
-    { url = "https://files.pythonhosted.org/packages/c8/f8/544ed82c6edd3b85db49ce9e9992441cbfefa8b92a556058174aba0a3f9c/pyqwest-0.4.0-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fdee6edf8a7ebb108619ac99d5c9095d2b3898f21e14d8e02513dad867af7855", size = 5347929, upload-time = "2026-02-03T06:57:45.239Z" },
-    { url = "https://files.pythonhosted.org/packages/5b/4b/012e246dee57fab23edb48cdd32119ed39546d5f67cfe1d8ebc6f594e837/pyqwest-0.4.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ef9157abebd1b31ef72f410be4b7c6d6a9957c9e7b97fd83a8552d8b04c20724", size = 5390422, upload-time = "2026-02-03T06:57:47.018Z" },
-    { url = "https://files.pythonhosted.org/packages/79/61/3cb30777c350cf7bef657d1250f19cd7921c14e44719d3eccf2a192e2ffd/pyqwest-0.4.0-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:5f225d8a473fc96d65bc837c60f4436d06440d42d0479619659746722ac33d45", size = 5512737, upload-time = "2026-02-03T06:57:48.756Z" },
-    { url = "https://files.pythonhosted.org/packages/69/1c/9e2137e88b05728f7ce3e52993cd2d53688a8731bcfcded47ae939a6705a/pyqwest-0.4.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:ddbba6f5cf91f12bea6ae2dc0c1d9acac45c1ab6f3b28ab4670c2740f5c8d82f", size = 5699482, upload-time = "2026-02-03T06:57:50.808Z" },
-    { url = "https://files.pythonhosted.org/packages/ec/05/48c19c9726a4a95886d30ca5374773bd49bf02a39abdc46504d55716ae18/pyqwest-0.4.0-cp314-cp314-win_amd64.whl", hash = "sha256:dcbecc278646a88f1b51199050294c36ec7272696d2c317663d00a9e1f1a33fc", size = 4565677, upload-time = "2026-02-03T06:57:52.454Z" },
-    { url = "https://files.pythonhosted.org/packages/39/9a/39f66574406bd06e73f2fc69d8b1c3802218127b4ec80b3b2b2a2ea24f6b/pyqwest-0.4.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:8eab7213cc8f0fe0212bf0f77b73cec0b2cfad2a8c3d2c5c57d4166d4c429129", size = 4972879, upload-time = "2026-02-03T06:57:54.036Z" },
-    { url = "https://files.pythonhosted.org/packages/d8/76/32e81cbaede301fa7a446a7a98d53eef2488b4bdf65c2204b206ed2146f8/pyqwest-0.4.0-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fc4c27b8a84ceb0dbfd198f3878c5e36ab610749c478cf13e91a989913c5d873", size = 5349481, upload-time = "2026-02-03T06:57:55.562Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/3c/3a8e36e6ae92b4eaf664a5fa054164455f68180fe834bfceed2f8eef8d3b/pyqwest-0.4.0-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e32b9ee248e1f8b1a1dd2a8ae808a0dd870eba6422a483e154f8a326d69666b5", size = 5383775, upload-time = "2026-02-03T06:57:57.564Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/92/7d450c24b21b048f6291f6bb382817305e38f3612aa77d1f3a2f8f7675e7/pyqwest-0.4.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:bae8833afa0d2a6a0dade62b8ed0048336de36481f3d3aeba284fd88ac29a27c", size = 5511843, upload-time = "2026-02-03T06:57:59.05Z" },
-    { url = "https://files.pythonhosted.org/packages/33/a8/136642b402b74d3aa049d8e55e589481179940d95af7a2bb79dcf6fe393e/pyqwest-0.4.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:5e7066ec5e70648abf851980f6e4cb392ac828e22d3cf39625a13b533aff5142", size = 5693532, upload-time = "2026-02-03T06:58:00.978Z" },
-    { url = "https://files.pythonhosted.org/packages/de/fc/db26a325acbf7111f1429399ae021f1dd8927bcaacd6c835c94c82d3a22f/pyqwest-0.4.0-cp314-cp314t-win_amd64.whl", hash = "sha256:75caf851cbf063d867d207b356e67bdd4cf17ea59c06786359a3eaf9975340ec", size = 4566651, upload-time = "2026-02-03T06:58:02.504Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/48/a869484add1102bbedaf76b1e3840a3f34bb611bf9228ec89a03d51328b1/pyqwest-0.5.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:047078c4c3f7c93d8a1df07138c471cfdb234577f60563afe090b160ada1a132", size = 5058870, upload-time = "2026-04-17T03:54:36.807Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/b7/f06e56398ea41a183a0494b6557d1e28ed122ac8a20315a7f24ec316b7c1/pyqwest-0.5.1-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3f732aed3498abf5742f0c952f24fc21625d62fe0a701ec8e472257709540d61", size = 5438347, upload-time = "2026-04-17T03:54:39.108Z" },
+    { url = "https://files.pythonhosted.org/packages/39/df/6160cab1d48ad2d1a2038ac8a1ff94d72f267cb6a3e3a7181c1ae41d98c9/pyqwest-0.5.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:77565ad8e551a101eddbf08328b0e3d54a179efec97a3da195ce831f0474ef92", size = 5457281, upload-time = "2026-04-17T03:54:41.347Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/56/343516d26e153a60c19f2dbbe83460238feddd18a27c42ae11f843e79bf1/pyqwest-0.5.1-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:57ea14094f841d735fcf401a6428e94a39aabf22d15762a979cf8d6096fea90b", size = 5600773, upload-time = "2026-04-17T03:54:43.615Z" },
+    { url = "https://files.pythonhosted.org/packages/32/f3/56c2cca5b7fcf708d41628cd3bd8a8be48d364a33a469fc056a5e92d5de3/pyqwest-0.5.1-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:e6716309fc179b0714978d1f8c32a70724b3b9f43acc9aea3cf9507872e631d6", size = 5763641, upload-time = "2026-04-17T03:54:45.804Z" },
+    { url = "https://files.pythonhosted.org/packages/92/c1/ac5dceb438ec71f5a3aaf1d9481ddc3535cf875fa8c8ff3622758d49fe50/pyqwest-0.5.1-cp310-abi3-win_amd64.whl", hash = "sha256:736b560fd2256a41264f554243edf3ff872ead4da347392531576203cf97a4ce", size = 4638049, upload-time = "2026-04-17T03:54:48.108Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/17/f227c99b53890157b737aed6c0840ebedda8eaafb513d1db3092a85c12a3/pyqwest-0.5.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:7755dd658c612016c38f0e26938b80dafd37d80ee074c5cc4301f54f385b1e52", size = 5058021, upload-time = "2026-04-17T03:55:18.237Z" },
+    { url = "https://files.pythonhosted.org/packages/26/14/c3924ee479fce346124ef07550262e4f91b1d0d6d14f3024d2c2efe38055/pyqwest-0.5.1-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:29015b12242f2feeb24cbad7d1025a78b3239872efcbfa975ce23527e8c05ec7", size = 5420148, upload-time = "2026-04-17T03:55:20.446Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/7d/a8f45ea52cb97b410fad96597eccbf6be9417eb0a2bf7c0d6be9a936c897/pyqwest-0.5.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1271fb28a78484e93d09b7c78df5213900538af8cf5a53ce377ed2cbb82e72b2", size = 5443389, upload-time = "2026-04-17T03:55:22.914Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/47/9870f5e24f49f5c77fbc9d21f2a6ace3a065cc3c8411ae6d25001605ba5a/pyqwest-0.5.1-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:eaf970412356f9d6482045a8e7b7c9d36c07b6a7352c96c90a811e730eba906f", size = 5584772, upload-time = "2026-04-17T03:55:25.197Z" },
+    { url = "https://files.pythonhosted.org/packages/44/a5/d5b81d67902f0526fb69ff0b71aa5fcadc052133fa4692aa35c7dbfd6c8e/pyqwest-0.5.1-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:986b787138893459e02485e89a7d4a383ec2864194a5ab7e0650dce9635f5215", size = 5746464, upload-time = "2026-04-17T03:55:27.649Z" },
+    { url = "https://files.pythonhosted.org/packages/81/d7/49197597a26186c4a1e3cf0d915b04f0a15a52eaeb82ee8b1659ca131bab/pyqwest-0.5.1-cp314-cp314-win_amd64.whl", hash = "sha256:4d9fb2bcbea6adc365ea3c69727b34dd21dee29edb1551b64531b25babb68f91", size = 4647610, upload-time = "2026-04-17T03:55:29.75Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/a3/be43b05f7821e8fba21af2eaee3a8418979da40cf895042e1705aa63e394/pyqwest-0.5.1-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:dc7a7c65e839057bcc3a5d4f48c6c2202f89fc13ddb12bd8e2f20d95378a95d8", size = 5054843, upload-time = "2026-04-17T03:55:32.655Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/e1/0e76b0bb3c71c87e63eebfcc1d5dfbee6ca69332336fea975defc30d8747/pyqwest-0.5.1-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e30c2268e9f7ec5509874047ebf83ecde1cab29d0bd7dc352fa2a782da2b2abf", size = 5432984, upload-time = "2026-04-17T03:55:34.925Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/98/f32513e74f30009eef6979632590df32287a19f85215dd5654a9676da184/pyqwest-0.5.1-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0f632070abff4d0bfd0f6deada3beaaaa42a042809e50c7f2e2b25014687e070", size = 5452771, upload-time = "2026-04-17T03:55:37.44Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/40/334e2184dbc4641743f47cbaa0079c32239bdcb972aee659f37196b920fe/pyqwest-0.5.1-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:78f8b6b41c0206e9605d75b9fc3f20db97c266829f5a0bee8eff7d524de2bf20", size = 5598688, upload-time = "2026-04-17T03:55:39.808Z" },
+    { url = "https://files.pythonhosted.org/packages/16/cb/d1a80c6d3cc89207d02bf4abca856420efaecc4e9482fb1c3906f27228ba/pyqwest-0.5.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:a1d95a8a7e4246ba37dc3115b10b72c5dcdf4b226447d1a7a51973d686460fa4", size = 5759621, upload-time = "2026-04-17T03:55:41.956Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/57/eb4bc81fea27b0f0515e97168bb67145b9d7c81cd2f2f94f9deb0febd639/pyqwest-0.5.1-cp314-cp314t-win_amd64.whl", hash = "sha256:fbd3232cca327bc591d47b0368ba712d929f66658d4822ac5129f5ede1a581df", size = 4623418, upload-time = "2026-04-17T03:55:44.129Z" },
 ]
 
 [[package]]
@@ -1861,6 +1867,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "bcrypt" },
     { name = "colorama" },
+    { name = "connectrpc" },
     { name = "croniter" },
     { name = "fastapi" },
     { name = "ffmpeg-python" },
@@ -1874,7 +1881,6 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pillow" },
     { name = "prometheus-client" },
-    { name = "protoc-gen-connect-python" },
     { name = "psycopg2-binary" },
     { name = "pydantic", extra = ["email"] },
     { name = "pyjwt" },
@@ -1892,6 +1898,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pip-licenses" },
+    { name = "protoc-gen-connectrpc" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "ruff" },
@@ -1909,6 +1916,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = ">=4.2.1" },
     { name = "colorama", specifier = ">=0.4.6" },
+    { name = "connectrpc", specifier = ">=0.10.0" },
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "ffmpeg-python", specifier = ">=0.2.0" },
@@ -1922,7 +1930,6 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "prometheus-client", specifier = ">=0.21.0" },
-    { name = "protoc-gen-connect-python", specifier = ">=0.7.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.12.5" },
     { name = "pyjwt", specifier = ">=2.10.0" },
@@ -1940,6 +1947,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "pip-licenses", specifier = ">=5.5.0" },
+    { name = "protoc-gen-connectrpc", specifier = ">=0.10.0" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-benchmark", specifier = ">=5.0.0" },
     { name = "ruff", specifier = ">=0.14.13" },
@@ -1952,13 +1960,13 @@ name = "uniffy-proto"
 version = "0.0.0"
 source = { editable = "src/gen/python" }
 dependencies = [
-    { name = "connect-python" },
+    { name = "connectrpc" },
     { name = "protobuf" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "connect-python", specifier = ">=0.7.0" },
+    { name = "connectrpc", specifier = ">=0.10.0" },
     { name = "protobuf", specifier = ">=7.34.0" },
 ]
 

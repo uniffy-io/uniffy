@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Timestamp } from "@bufbuild/protobuf";
+import { create } from "@bufbuild/protobuf";
+import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@/context/auth-context";
 import { calendarApi } from "@/api/calendarApi";
 import { eventToPlain, calendarToPlain, categoryToPlain } from "@/lib/calendarSerializer";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);
-  return new Timestamp({
+  return create(TimestampSchema, {
     seconds: BigInt(Math.floor(date.getTime() / 1000)),
     nanos: 0,
   });

@@ -4,6 +4,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { settingsApi } from '@/features/settings/api/settingsApi';
 import type {
     SettingsProfile,
@@ -91,8 +92,8 @@ const profileToPlain = (profile: SettingsProfile) => ({
     appearance: appearanceToPlain(profile.appearance),
     keyboardShortcuts: keyboardShortcutsToPlain(profile.keyboardShortcuts),
     notifications: notificationsToPlain(profile.notifications),
-    createdAt: profile.createdAt?.toDate().toISOString(),
-    updatedAt: profile.updatedAt?.toDate().toISOString(),
+    createdAt: profile.createdAt ? timestampDate(profile.createdAt).toISOString() : undefined,
+    updatedAt: profile.updatedAt ? timestampDate(profile.updatedAt).toISOString() : undefined,
 });
 
 /**

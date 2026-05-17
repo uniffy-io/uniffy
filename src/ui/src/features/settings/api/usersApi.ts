@@ -5,11 +5,11 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { UsersService } from '@uniffy/proto/users/v1/users_connect';
+import { unaryTransport } from '@/config/api';
+import { UsersService } from '@uniffy/proto/users/v1/users_pb';
 import type { UserProfile } from '@uniffy/proto/users/v1/users_pb';
 
-const usersClient = createClient(UsersService, transport);
+const usersClient = createClient(UsersService, unaryTransport);
 
 export const usersApi = {
     /**

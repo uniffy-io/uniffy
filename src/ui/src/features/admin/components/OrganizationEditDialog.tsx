@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
-import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
+import type { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { transport } from "@/config";
+import { unaryTransport } from "@/config";
 import { X } from '@phosphor-icons/react';
 
 interface OrganizationEditDialogProps {
@@ -46,7 +46,7 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
     setLoading(true);
 
     try {
-      const client = createClient(OrganizationsService, transport);
+      const client = createClient(OrganizationsService, unaryTransport);
       if (org?.organization) {
         // Edit mode
         await client.updateOrganization(

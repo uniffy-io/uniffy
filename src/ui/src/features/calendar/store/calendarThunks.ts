@@ -25,7 +25,8 @@ import {
     ResourceType as ProtoResourceType,
 } from '@uniffy/proto/cal/v1/calendar_pb';
 import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
-import { Timestamp } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
+import { TimestampSchema, timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import type {
     CalendarEvent,
     Category,
@@ -72,7 +73,7 @@ const timestampToIso = (ts: Timestamp | undefined): string => {
  */
 const isoToTimestamp = (iso: string): Timestamp => {
     const date = new Date(iso);
-    return new Timestamp({
+    return create(TimestampSchema, {
         seconds: BigInt(Math.floor(date.getTime() / 1000)),
         nanos: 0,
     });
@@ -291,8 +292,8 @@ const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
     tags: proto.tags,
     visibility: proto.accessMode,
     createdBy: proto.createdBy,
-    createdAt: proto.createdAt?.toDate() || new Date(),
-    updatedAt: proto.updatedAt?.toDate() || new Date(),
+    createdAt: proto.createdAt ? timestampDate(proto.createdAt) : new Date(),
+    updatedAt: proto.updatedAt ? timestampDate(proto.updatedAt) : new Date(),
 });
 
 // Event Thunks

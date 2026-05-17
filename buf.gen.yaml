@@ -1,29 +1,28 @@
 version: v2
 plugins:
-  # Python
-  - remote: buf.build/protocolbuffers/python
-    out: src/gen/python/src/uniffy_proto
-  - remote: buf.build/protocolbuffers/pyi
-    out: src/gen/python/src/uniffy_proto
-  - local: .venv/bin/protoc-gen-connect-python
-    out: src/gen/python/src/uniffy_proto
-    strategy: all
+    # Python
+    - remote: buf.build/protocolbuffers/python
+      out: src/gen/python/src/uniffy_proto
+    - remote: buf.build/protocolbuffers/pyi
+      out: src/gen/python/src/uniffy_proto
+    - local: .venv/bin/protoc-gen-connectrpc
+      out: src/gen/python/src/uniffy_proto
+      strategy: all
 
-  # TypeScript
-  - local: protoc-gen-es
-    out: src/gen/typescript
-    opt: target=ts
-  - local: protoc-gen-connect-es
-    out: src/gen/typescript
-    opt: target=ts
+    # TypeScript (v2: protoc-gen-es emits services inline)
+    - local: protoc-gen-es
+      out: src/gen/typescript
+      opt:
+        - target=ts
+        - import_extension=js
 
-  # Go
-  - remote: buf.build/protocolbuffers/go
-    out: src/gen/go
-    opt: module=github.com/uniffy-io/uniffy-proto-go
-  - remote: buf.build/grpc/go
-    out: src/gen/go
-    opt: module=github.com/uniffy-io/uniffy-proto-go
-  - remote: buf.build/connectrpc/go
-    out: src/gen/go
-    opt: module=github.com/uniffy-io/uniffy-proto-go
+    # Go
+    - remote: buf.build/protocolbuffers/go
+      out: src/gen/go
+      opt: module=github.com/uniffy-io/uniffy-proto-go
+    - remote: buf.build/grpc/go
+      out: src/gen/go
+      opt: module=github.com/uniffy-io/uniffy-proto-go
+    - remote: buf.build/connectrpc/go
+      out: src/gen/go
+      opt: module=github.com/uniffy-io/uniffy-proto-go

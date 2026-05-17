@@ -1,39 +1,39 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { CronService } from '@uniffy/proto/agents/v1/cron_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CreateCronTaskRequest,
-    GetCronTaskRequest,
-    ListCronTasksRequest,
-    UpdateCronTaskRequest,
-    DeleteCronTaskRequest,
-    ListCronRunLogsRequest,
-    TriggerCronTaskRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    CronService,
+    CreateCronTaskRequestSchema,
+    GetCronTaskRequestSchema,
+    ListCronTasksRequestSchema,
+    UpdateCronTaskRequestSchema,
+    DeleteCronTaskRequestSchema,
+    ListCronRunLogsRequestSchema,
+    TriggerCronTaskRequestSchema,
 } from '@uniffy/proto/agents/v1/cron_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(CronService, transport);
+const client = createClient(CronService, unaryTransport);
 
 export const cronApi = {
-    createCronTask: async (request: PartialMessage<CreateCronTaskRequest>) => {
+    createCronTask: async (request: MessageInitShape<typeof CreateCronTaskRequestSchema>) => {
         return client.createCronTask(request);
     },
-    getCronTask: async (request: PartialMessage<GetCronTaskRequest>) => {
+    getCronTask: async (request: MessageInitShape<typeof GetCronTaskRequestSchema>) => {
         return client.getCronTask(request);
     },
-    listCronTasks: async (request: PartialMessage<ListCronTasksRequest>) => {
+    listCronTasks: async (request: MessageInitShape<typeof ListCronTasksRequestSchema>) => {
         return client.listCronTasks(request);
     },
-    updateCronTask: async (request: PartialMessage<UpdateCronTaskRequest>) => {
+    updateCronTask: async (request: MessageInitShape<typeof UpdateCronTaskRequestSchema>) => {
         return client.updateCronTask(request);
     },
-    deleteCronTask: async (request: PartialMessage<DeleteCronTaskRequest>) => {
+    deleteCronTask: async (request: MessageInitShape<typeof DeleteCronTaskRequestSchema>) => {
         return client.deleteCronTask(request);
     },
-    listCronRunLogs: async (request: PartialMessage<ListCronRunLogsRequest>) => {
+    listCronRunLogs: async (request: MessageInitShape<typeof ListCronRunLogsRequestSchema>) => {
         return client.listCronRunLogs(request);
     },
-    triggerCronTask: async (request: PartialMessage<TriggerCronTaskRequest>) => {
+    triggerCronTask: async (request: MessageInitShape<typeof TriggerCronTaskRequestSchema>) => {
         return client.triggerCronTask(request);
     },
 };

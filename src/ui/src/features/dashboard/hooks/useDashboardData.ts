@@ -63,7 +63,7 @@ const selectMyTasks = createSelector(
     const dueToday: Task[] = [];
     const inProgress: Task[] = [];
 
-    Object.values(tasks).forEach((task: Task) => {
+    Object.values(tasks as Record<string, Task>).forEach((task) => {
       if (task.deletedAt) return;
       if (!task.assigneeIds.includes(userId)) return;
       if (task.completedAt) return;

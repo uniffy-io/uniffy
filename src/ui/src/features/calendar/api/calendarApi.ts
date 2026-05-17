@@ -6,35 +6,14 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { CalendarService } from '@uniffy/proto/cal/v1/calendar_connect';
-import type {
-    CreateEventRequest,
-    GetEventRequest,
-    UpdateEventRequest,
-    DeleteEventRequest,
-    ListEventsRequest,
-    GetEventsInRangeRequest,
-    CreateCategoryRequest,
-    GetCategoryRequest,
-    UpdateCategoryRequest,
-    DeleteCategoryRequest,
-    ListCategoriesRequest,
-    UpdateAttendeeStatusRequest,
-    AddAttendeesRequest,
-    RemoveAttendeesRequest,
-    CreateEventTemplateRequest,
-    GetEventTemplateRequest,
-    UpdateEventTemplateRequest,
-    DeleteEventTemplateRequest,
-    ListEventTemplatesRequest,
-} from '@uniffy/proto/cal/v1/calendar_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
+import { CalendarService, AddAttendeesRequestSchema, CreateCategoryRequestSchema, CreateEventRequestSchema, CreateEventTemplateRequestSchema, DeleteCategoryRequestSchema, DeleteEventRequestSchema, DeleteEventTemplateRequestSchema, GetCategoryRequestSchema, GetEventRequestSchema, GetEventTemplateRequestSchema, GetEventsInRangeRequestSchema, ListCategoriesRequestSchema, ListEventTemplatesRequestSchema, ListEventsRequestSchema, RemoveAttendeesRequestSchema, UpdateAttendeeStatusRequestSchema, UpdateCategoryRequestSchema, UpdateEventRequestSchema, UpdateEventTemplateRequestSchema } from '@uniffy/proto/cal/v1/calendar_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 /**
  * Create a calendar service client with the shared transport.
  */
-const calendarClient = createClient(CalendarService, transport);
+const calendarClient = createClient(CalendarService, unaryTransport);
 
 /**
  * Calendar API service with typed methods.
@@ -45,42 +24,42 @@ export const calendarApi = {
     /**
      * Create a new calendar event.
      */
-    createEvent: async (request: PartialMessage<CreateEventRequest>) => {
+    createEvent: async (request: MessageInitShape<typeof CreateEventRequestSchema>) => {
         return calendarClient.createEvent(request);
     },
 
     /**
      * Get an event by ID.
      */
-    getEvent: async (request: PartialMessage<GetEventRequest>) => {
+    getEvent: async (request: MessageInitShape<typeof GetEventRequestSchema>) => {
         return calendarClient.getEvent(request);
     },
 
     /**
      * Update an existing event.
      */
-    updateEvent: async (request: PartialMessage<UpdateEventRequest>) => {
+    updateEvent: async (request: MessageInitShape<typeof UpdateEventRequestSchema>) => {
         return calendarClient.updateEvent(request);
     },
 
     /**
      * Delete an event (soft delete).
      */
-    deleteEvent: async (request: PartialMessage<DeleteEventRequest>) => {
+    deleteEvent: async (request: MessageInitShape<typeof DeleteEventRequestSchema>) => {
         return calendarClient.deleteEvent(request);
     },
 
     /**
      * List events with filters and pagination.
      */
-    listEvents: async (request: PartialMessage<ListEventsRequest>) => {
+    listEvents: async (request: MessageInitShape<typeof ListEventsRequestSchema>) => {
         return calendarClient.listEvents(request);
     },
 
     /**
      * Get events for a specific date range (optimized for calendar views).
      */
-    getEventsInRange: async (request: PartialMessage<GetEventsInRangeRequest>) => {
+    getEventsInRange: async (request: MessageInitShape<typeof GetEventsInRangeRequestSchema>) => {
         return calendarClient.getEventsInRange(request);
     },
 
@@ -89,35 +68,35 @@ export const calendarApi = {
     /**
      * Create a new category.
      */
-    createCategory: async (request: PartialMessage<CreateCategoryRequest>) => {
+    createCategory: async (request: MessageInitShape<typeof CreateCategoryRequestSchema>) => {
         return calendarClient.createCategory(request);
     },
 
     /**
      * Get a category by ID.
      */
-    getCategory: async (request: PartialMessage<GetCategoryRequest>) => {
+    getCategory: async (request: MessageInitShape<typeof GetCategoryRequestSchema>) => {
         return calendarClient.getCategory(request);
     },
 
     /**
      * Update a category.
      */
-    updateCategory: async (request: PartialMessage<UpdateCategoryRequest>) => {
+    updateCategory: async (request: MessageInitShape<typeof UpdateCategoryRequestSchema>) => {
         return calendarClient.updateCategory(request);
     },
 
     /**
      * Delete a category.
      */
-    deleteCategory: async (request: PartialMessage<DeleteCategoryRequest>) => {
+    deleteCategory: async (request: MessageInitShape<typeof DeleteCategoryRequestSchema>) => {
         return calendarClient.deleteCategory(request);
     },
 
     /**
      * List categories.
      */
-    listCategories: async (request: PartialMessage<ListCategoriesRequest>) => {
+    listCategories: async (request: MessageInitShape<typeof ListCategoriesRequestSchema>) => {
         return calendarClient.listCategories(request);
     },
 
@@ -126,43 +105,43 @@ export const calendarApi = {
     /**
      * Update attendee response status.
      */
-    updateAttendeeStatus: async (request: PartialMessage<UpdateAttendeeStatusRequest>) => {
+    updateAttendeeStatus: async (request: MessageInitShape<typeof UpdateAttendeeStatusRequestSchema>) => {
         return calendarClient.updateAttendeeStatus(request);
     },
 
     /**
      * Add attendees to an event.
      */
-    addAttendees: async (request: PartialMessage<AddAttendeesRequest>) => {
+    addAttendees: async (request: MessageInitShape<typeof AddAttendeesRequestSchema>) => {
         return calendarClient.addAttendees(request);
     },
 
     /**
      * Remove attendees from an event.
      */
-    removeAttendees: async (request: PartialMessage<RemoveAttendeesRequest>) => {
+    removeAttendees: async (request: MessageInitShape<typeof RemoveAttendeesRequestSchema>) => {
         return calendarClient.removeAttendees(request);
     },
 
     // Template Operations
 
-    createEventTemplate: async (request: PartialMessage<CreateEventTemplateRequest>) => {
+    createEventTemplate: async (request: MessageInitShape<typeof CreateEventTemplateRequestSchema>) => {
         return calendarClient.createEventTemplate(request);
     },
 
-    getEventTemplate: async (request: PartialMessage<GetEventTemplateRequest>) => {
+    getEventTemplate: async (request: MessageInitShape<typeof GetEventTemplateRequestSchema>) => {
         return calendarClient.getEventTemplate(request);
     },
 
-    updateEventTemplate: async (request: PartialMessage<UpdateEventTemplateRequest>) => {
+    updateEventTemplate: async (request: MessageInitShape<typeof UpdateEventTemplateRequestSchema>) => {
         return calendarClient.updateEventTemplate(request);
     },
 
-    deleteEventTemplate: async (request: PartialMessage<DeleteEventTemplateRequest>) => {
+    deleteEventTemplate: async (request: MessageInitShape<typeof DeleteEventTemplateRequestSchema>) => {
         return calendarClient.deleteEventTemplate(request);
     },
 
-    listEventTemplates: async (request: PartialMessage<ListEventTemplatesRequest>) => {
+    listEventTemplates: async (request: MessageInitShape<typeof ListEventTemplatesRequestSchema>) => {
         return calendarClient.listEventTemplates(request);
     },
 };

@@ -18,7 +18,8 @@ import {
     criteriaToProto,
     emptyCriteria,
 } from '@/features/tags/store/tagsThunks';
-import { TagFilterCriteria } from '@uniffy/proto/tags/v1/tags_pb';
+import { create } from '@bufbuild/protobuf';
+import { TagFilterCriteriaSchema } from '@uniffy/proto/tags/v1/tags_pb';
 
 describe('useTagFilterState helpers', () => {
     it('isCriteriaEmpty recognises a fresh emptyCriteria', () => {
@@ -59,7 +60,7 @@ describe('criteria proto round trip', () => {
             accessMode: AccessMode.OPEN_TO_ORG,
             untaggedOnly: false,
         };
-        const proto = new TagFilterCriteria(criteriaToProto(original));
+        const proto = create(TagFilterCriteriaSchema, criteriaToProto(original));
         const back = criteriaToPlain(proto);
         expect(back.tagIds).toEqual(original.tagIds);
         expect(back.contentTypes).toEqual(original.contentTypes);
@@ -73,7 +74,7 @@ describe('criteria proto round trip', () => {
 
     it('preserves untaggedOnly through the round trip', () => {
         const original = { ...emptyCriteria(), untaggedOnly: true };
-        const proto = new TagFilterCriteria(criteriaToProto(original));
+        const proto = create(TagFilterCriteriaSchema, criteriaToProto(original));
         const back = criteriaToPlain(proto);
         expect(back.untaggedOnly).toBe(true);
     });

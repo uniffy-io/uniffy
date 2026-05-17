@@ -1,5 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { attachmentsApi } from '@/features/attachments';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
@@ -1086,8 +1087,8 @@ export const fetchChannelResources = createAsyncThunk<
         channelId: r.channelId,
         urn: r.urn,
         contentType: r.contentType,
-        firstMentionedAt: r.firstMentionedAt?.toDate().toISOString() ?? '',
-        lastMentionedAt: r.lastMentionedAt?.toDate().toISOString() ?? '',
+        firstMentionedAt: r.firstMentionedAt ? timestampDate(r.firstMentionedAt).toISOString() : '',
+        lastMentionedAt: r.lastMentionedAt ? timestampDate(r.lastMentionedAt).toISOString() : '',
         mentionCount: r.mentionCount,
         firstMentionedBy: r.firstMentionedBy,
         title: r.title || undefined,

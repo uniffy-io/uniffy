@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -33,7 +35,7 @@ class PromptsService(Protocol):
 
 
 class PromptsServiceASGIApplication(ConnectASGIApplication[PromptsService]):
-    def __init__(self, service: PromptsService | AsyncGenerator[PromptsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PromptsService | AsyncGenerator[PromptsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -90,6 +92,8 @@ class PromptsServiceASGIApplication(ConnectASGIApplication[PromptsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -200,6 +204,9 @@ class PromptsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class PromptsServiceSync(Protocol):
     def create_prompt(self, request: agents_dot_v1_dot_prompts__pb2.CreatePromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_prompts__pb2.CreatePromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -214,7 +221,7 @@ class PromptsServiceSync(Protocol):
 
 
 class PromptsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: PromptsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PromptsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.PromptsService/CreatePrompt": EndpointSync.unary(
@@ -270,6 +277,8 @@ class PromptsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -378,3 +387,5 @@ class PromptsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

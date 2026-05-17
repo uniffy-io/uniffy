@@ -5,13 +5,12 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { SearchService } from '@uniffy/proto/search/v1/search_connect';
-import type { SearchRequest, ResolveUrnsRequest } from '@uniffy/proto/search/v1/search_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import { transport } from '@/config/api';
+import { SearchService, ResolveUrnsRequestSchema, SearchRequestSchema } from '@uniffy/proto/search/v1/search_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
 
 // Create search client using static import (no circular dependency)
-const searchClient = createClient(SearchService, transport);
+const searchClient = createClient(SearchService, unaryTransport);
 
 /**
  * Search API service with typed methods.
@@ -20,7 +19,7 @@ export const searchApi = {
     /**
      * Perform a global fuzzy search across all entities.
      */
-    search: async (request: PartialMessage<SearchRequest>) => {
+    search: async (request: MessageInitShape<typeof SearchRequestSchema>) => {
         return searchClient.search(request);
     },
 
@@ -28,7 +27,7 @@ export const searchApi = {
      * Resolve metadata for a batch of URNs.
      * Returns a map of URN -> metadata for accessible items.
      */
-    resolveUrns: async (request: PartialMessage<ResolveUrnsRequest>) => {
+    resolveUrns: async (request: MessageInitShape<typeof ResolveUrnsRequestSchema>) => {
         return searchClient.resolveUrns(request);
     },
 };

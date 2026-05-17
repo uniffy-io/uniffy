@@ -13,7 +13,7 @@ import {
     serializeComment,
 } from '@/features/comments/store/commentsSlice';
 import type { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
-import type { Struct } from '@bufbuild/protobuf';
+import type { JsonObject } from '@bufbuild/protobuf';
 
 export const fetchComments = (
     organizationId: string,
@@ -57,7 +57,7 @@ export const createComment = (
     contentId: string,
     body: string,
     anchorType?: CommentAnchorType,
-    anchorData?: Struct,
+    anchorData?: JsonObject,
     parentCommentId?: string,
 ) => async (dispatch: AppDispatch) => {
     try {

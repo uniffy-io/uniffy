@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -27,7 +29,7 @@ class BookmarksService(Protocol):
 
 
 class BookmarksServiceASGIApplication(ConnectASGIApplication[BookmarksService]):
-    def __init__(self, service: BookmarksService | AsyncGenerator[BookmarksService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: BookmarksService | AsyncGenerator[BookmarksService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -64,6 +66,8 @@ class BookmarksServiceASGIApplication(ConnectASGIApplication[BookmarksService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -134,6 +138,9 @@ class BookmarksServiceClient(ConnectClient):
         )
 
 
+
+
+
 class BookmarksServiceSync(Protocol):
     def toggle_bookmark(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -144,7 +151,7 @@ class BookmarksServiceSync(Protocol):
 
 
 class BookmarksServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: BookmarksServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: BookmarksServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/bookmarks.v1.BookmarksService/ToggleBookmark": EndpointSync.unary(
@@ -180,6 +187,8 @@ class BookmarksServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -248,3 +257,5 @@ class BookmarksServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

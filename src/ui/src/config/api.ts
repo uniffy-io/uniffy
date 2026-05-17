@@ -14,7 +14,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import type { Interceptor } from '@connectrpc/connect';
 import { ConnectError, Code, createClient } from '@connectrpc/connect';
 import { env } from '@/config/env';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
 import { getStoreRef } from '@/app/storeRef';
 import {
   createSetCredentialsAction,
@@ -211,6 +211,8 @@ async function refreshAccessToken(): Promise<string | null> {
       // Create a transport without auth interceptor to avoid infinite loop
       const refreshTransport = createConnectTransport({
         baseUrl: env.apiBaseUrl,
+        useBinaryFormat: true,
+        defaultTimeoutMs: 10_000,
       });
 
       const client = createClient(AuthService, refreshTransport);
@@ -426,7 +428,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
  * ```ts
  * import { createClient } from "@connectrpc/connect";
  * import { transport } from "@/config/api";
- * import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
+ * import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
  * 
  * const client = createClient(AuthService, transport);
  * ```
@@ -434,6 +436,21 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 export const transport = createConnectTransport({
   baseUrl: env.apiBaseUrl,
   interceptors: [authInterceptor],
+  useBinaryFormat: true,
+});
+
+/**
+ * Unary-only transport with a 10s default timeout.
+ *
+ * Connect's `defaultTimeoutMs` applies to the whole call lifetime, so it cannot
+ * be used with streaming RPCs (chat events, notifications, runtime stream,
+ * file download/range). Streaming services must use `transport` above.
+ */
+export const unaryTransport = createConnectTransport({
+  baseUrl: env.apiBaseUrl,
+  interceptors: [authInterceptor],
+  useBinaryFormat: true,
+  defaultTimeoutMs: 10_000,
 });
 
 /**

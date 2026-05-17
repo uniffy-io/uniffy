@@ -6,15 +6,17 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { ProjectsService } from '@uniffy/proto/projects/v1/projects_connect';
+import { unaryTransport } from '@/config/api';
+import { create } from '@bufbuild/protobuf';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { ProjectsService, TypeFieldSchemaSchema } from '@uniffy/proto/projects/v1/projects_pb';
 import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
   TagFilterMode as ProtoTagFilterMode,
-  TypeFieldSchema as ProtoTypeFieldSchema,
 } from '@uniffy/proto/projects/v1/projects_pb';
+import type { TypeFieldSchema as ProtoTypeFieldSchema } from '@uniffy/proto/projects/v1/projects_pb';
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
@@ -43,7 +45,7 @@ import type { TaskActivity, ActivityAction } from '../types/activity';
 /**
  * Create a projects service client with the shared transport.
  */
-const projectsClient = createClient(ProjectsService, transport);
+const projectsClient = createClient(ProjectsService, unaryTransport);
 
 /**
  * Convert frontend field type to proto enum
@@ -143,9 +145,9 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     fieldDefinitions: proto.fieldDefinitions.map(protoFieldDefinitionToFrontend),
     views: proto.views.map(protoViewConfigToFrontend),
     defaultViewId: proto.defaultViewId,
-    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
-    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
-    deletedAt: proto.deletedAt?.toDate().toISOString() || null,
+    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
+    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
+    deletedAt: (proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null),
     urn: proto.urn,
     slug: proto.slug,
     typeFieldSchemas: Object.fromEntries(
@@ -189,7 +191,7 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     assigneeIds: proto.assigneeIds,
     startDate: proto.startDate || null,
     dueDate: proto.dueDate || null,
-    completedAt: proto.completedAt?.toDate().toISOString() || null,
+    completedAt: proto.completedAt ? timestampDate(proto.completedAt).toISOString() : null,
     parentId: proto.parentId || null,
     blockedByTaskIds: proto.blockedByTaskIds,
     isMilestone: proto.isMilestone,
@@ -197,9 +199,9 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     sortOrder: proto.sortOrder,
     fieldValues,
     outgoingReferences: proto.outgoingReferences,
-    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
-    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
-    deletedAt: proto.deletedAt?.toDate().toISOString() || null,
+    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
+    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
+    deletedAt: (proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null),
     urn: proto.urn,
     userRole: proto.userRole,
     number: proto.number,
@@ -236,8 +238,8 @@ function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefin
     isSystem: proto.isSystem,
     sortOrder: proto.sortOrder,
     config,
-    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
-    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
+    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
   };
 }
 
@@ -262,8 +264,8 @@ function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
     type: protoViewTypeToFrontend(proto.type) as ViewConfig['type'],
     isDefault: proto.isDefault,
     config: config as unknown as ViewSpecificConfig,
-    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
-    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
+    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
   };
 }
 
@@ -302,7 +304,7 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
     taskId: proto.taskId,
     actorId: proto.actorId,
     action: protoActivityActionToFrontend(proto.action),
-    timestamp: proto.timestamp?.toDate().toISOString() || new Date().toISOString(),
+    timestamp: proto.timestamp ? timestampDate(proto.timestamp).toISOString() : new Date().toISOString(),
     fieldId: proto.fieldId,
     previousValue: proto.previousValue,
     newValue: proto.newValue,
@@ -325,8 +327,8 @@ function protoSprintToFrontend(proto: ProtoSprint): Sprint {
     sortOrder: proto.sortOrder,
     taskCount: proto.taskCount,
     completedTaskCount: proto.completedTaskCount,
-    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
-    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
+    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
   };
 }
 
@@ -418,7 +420,7 @@ export const projectsApi = {
     const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
     if (data.typeFieldSchemas) {
       for (const [typeName, schema] of Object.entries(data.typeFieldSchemas)) {
-        typeFieldSchemas[typeName] = new ProtoTypeFieldSchema({
+        typeFieldSchemas[typeName] = create(TypeFieldSchemaSchema, {
           shownFieldIds: schema.shownFieldIds,
           requiredFieldIds: schema.requiredFieldIds,
         });

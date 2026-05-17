@@ -10,6 +10,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { bookmarksApi } from '@/features/bookmarks/api/bookmarksApi';
 import type { Bookmark } from '@uniffy/proto/bookmarks/v1/bookmarks_pb';
 
@@ -56,7 +57,7 @@ const bookmarkToPlain = (bookmark: Bookmark): SerializedBookmark => ({
     userId: bookmark.userId,
     organizationId: bookmark.organizationId,
     urn: bookmark.urn,
-    createdAt: bookmark.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
+    createdAt: (bookmark.createdAt ? timestampDate(bookmark.createdAt) : new Date()).toISOString(),
 });
 
 /**

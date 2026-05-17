@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
-import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
+import type { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,7 @@ import {
     TableEmpty,
 } from "@/components/ui/table";
 import { OrganizationEditDialog } from "@/features/admin/components/OrganizationEditDialog";
-import { transport } from "@/config";
+import { unaryTransport } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Buildings, Plus, PencilSimple, Clipboard, Check } from '@phosphor-icons/react';
 
@@ -35,7 +35,7 @@ export function OrganizationsPage() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const client = createClient(OrganizationsService, transport);
+      const client = createClient(OrganizationsService, unaryTransport);
       const response = await client.listOrganizations(
         { pagination: { page: 1, pageSize: 100 } },
         { headers: { Authorization: `Bearer ${accessToken}` } }

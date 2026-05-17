@@ -1,47 +1,47 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { SessionsService } from '@uniffy/proto/agents/v1/sessions_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CreateSessionRequest,
-    GetSessionRequest,
-    ListSessionsRequest,
-    UpdateSessionRequest,
-    ArchiveSessionRequest,
-    AddMessageRequest,
-    ListMessagesRequest,
-    GetSessionContextStatsRequest,
-    CompactSessionRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    SessionsService,
+    CreateSessionRequestSchema,
+    GetSessionRequestSchema,
+    ListSessionsRequestSchema,
+    UpdateSessionRequestSchema,
+    ArchiveSessionRequestSchema,
+    AddMessageRequestSchema,
+    ListMessagesRequestSchema,
+    GetSessionContextStatsRequestSchema,
+    CompactSessionRequestSchema,
 } from '@uniffy/proto/agents/v1/sessions_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(SessionsService, transport);
+const client = createClient(SessionsService, unaryTransport);
 
 export const sessionsApi = {
-    createSession: async (request: PartialMessage<CreateSessionRequest>) => {
+    createSession: async (request: MessageInitShape<typeof CreateSessionRequestSchema>) => {
         return client.createSession(request);
     },
-    getSession: async (request: PartialMessage<GetSessionRequest>) => {
+    getSession: async (request: MessageInitShape<typeof GetSessionRequestSchema>) => {
         return client.getSession(request);
     },
-    listSessions: async (request: PartialMessage<ListSessionsRequest>) => {
+    listSessions: async (request: MessageInitShape<typeof ListSessionsRequestSchema>) => {
         return client.listSessions(request);
     },
-    updateSession: async (request: PartialMessage<UpdateSessionRequest>) => {
+    updateSession: async (request: MessageInitShape<typeof UpdateSessionRequestSchema>) => {
         return client.updateSession(request);
     },
-    archiveSession: async (request: PartialMessage<ArchiveSessionRequest>) => {
+    archiveSession: async (request: MessageInitShape<typeof ArchiveSessionRequestSchema>) => {
         return client.archiveSession(request);
     },
-    addMessage: async (request: PartialMessage<AddMessageRequest>) => {
+    addMessage: async (request: MessageInitShape<typeof AddMessageRequestSchema>) => {
         return client.addMessage(request);
     },
-    listMessages: async (request: PartialMessage<ListMessagesRequest>) => {
+    listMessages: async (request: MessageInitShape<typeof ListMessagesRequestSchema>) => {
         return client.listMessages(request);
     },
-    getSessionContextStats: async (request: PartialMessage<GetSessionContextStatsRequest>) => {
+    getSessionContextStats: async (request: MessageInitShape<typeof GetSessionContextStatsRequestSchema>) => {
         return client.getSessionContextStats(request);
     },
-    compactSession: async (request: PartialMessage<CompactSessionRequest>) => {
+    compactSession: async (request: MessageInitShape<typeof CompactSessionRequestSchema>) => {
         return client.compactSession(request);
     },
 };

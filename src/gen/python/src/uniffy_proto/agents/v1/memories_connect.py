@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -30,7 +32,7 @@ class MemoriesService(Protocol):
 
 
 class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
-    def __init__(self, service: MemoriesService | AsyncGenerator[MemoriesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: MemoriesService | AsyncGenerator[MemoriesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -77,6 +79,8 @@ class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -167,6 +171,9 @@ class MemoriesServiceClient(ConnectClient):
         )
 
 
+
+
+
 class MemoriesServiceSync(Protocol):
     def list_memories(self, request: agents_dot_v1_dot_memories__pb2.ListMemoriesRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.ListMemoriesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -179,7 +186,7 @@ class MemoriesServiceSync(Protocol):
 
 
 class MemoriesServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: MemoriesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: MemoriesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.MemoriesService/ListMemories": EndpointSync.unary(
@@ -225,6 +232,8 @@ class MemoriesServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -313,3 +322,5 @@ class MemoriesServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

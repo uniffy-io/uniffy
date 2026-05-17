@@ -1,31 +1,31 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { SkillsService } from '@uniffy/proto/agents/v1/skills_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CreateSkillRequest,
-    GetSkillRequest,
-    ListSkillsRequest,
-    UpdateSkillRequest,
-    DeleteSkillRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    SkillsService,
+    CreateSkillRequestSchema,
+    GetSkillRequestSchema,
+    ListSkillsRequestSchema,
+    UpdateSkillRequestSchema,
+    DeleteSkillRequestSchema,
 } from '@uniffy/proto/agents/v1/skills_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(SkillsService, transport);
+const client = createClient(SkillsService, unaryTransport);
 
 export const skillsApi = {
-    createSkill: async (request: PartialMessage<CreateSkillRequest>) => {
+    createSkill: async (request: MessageInitShape<typeof CreateSkillRequestSchema>) => {
         return client.createSkill(request);
     },
-    getSkill: async (request: PartialMessage<GetSkillRequest>) => {
+    getSkill: async (request: MessageInitShape<typeof GetSkillRequestSchema>) => {
         return client.getSkill(request);
     },
-    listSkills: async (request: PartialMessage<ListSkillsRequest>) => {
+    listSkills: async (request: MessageInitShape<typeof ListSkillsRequestSchema>) => {
         return client.listSkills(request);
     },
-    updateSkill: async (request: PartialMessage<UpdateSkillRequest>) => {
+    updateSkill: async (request: MessageInitShape<typeof UpdateSkillRequestSchema>) => {
         return client.updateSkill(request);
     },
-    deleteSkill: async (request: PartialMessage<DeleteSkillRequest>) => {
+    deleteSkill: async (request: MessageInitShape<typeof DeleteSkillRequestSchema>) => {
         return client.deleteSkill(request);
     },
 };

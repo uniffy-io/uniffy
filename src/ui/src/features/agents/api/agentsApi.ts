@@ -1,43 +1,43 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { AgentsService } from '@uniffy/proto/agents/v1/agents_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CreateAgentRequest,
-    GetAgentRequest,
-    ListAgentsRequest,
-    UpdateAgentRequest,
-    DeleteAgentRequest,
-    UploadAgentAvatarRequest,
-    DeleteAgentAvatarRequest,
-    PreviewSystemPromptRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    AgentsService,
+    CreateAgentRequestSchema,
+    GetAgentRequestSchema,
+    ListAgentsRequestSchema,
+    UpdateAgentRequestSchema,
+    DeleteAgentRequestSchema,
+    UploadAgentAvatarRequestSchema,
+    DeleteAgentAvatarRequestSchema,
+    PreviewSystemPromptRequestSchema,
 } from '@uniffy/proto/agents/v1/agents_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(AgentsService, transport);
+const client = createClient(AgentsService, unaryTransport);
 
 export const agentsApi = {
-    createAgent: async (request: PartialMessage<CreateAgentRequest>) => {
+    createAgent: async (request: MessageInitShape<typeof CreateAgentRequestSchema>) => {
         return client.createAgent(request);
     },
-    getAgent: async (request: PartialMessage<GetAgentRequest>) => {
+    getAgent: async (request: MessageInitShape<typeof GetAgentRequestSchema>) => {
         return client.getAgent(request);
     },
-    listAgents: async (request: PartialMessage<ListAgentsRequest>) => {
+    listAgents: async (request: MessageInitShape<typeof ListAgentsRequestSchema>) => {
         return client.listAgents(request);
     },
-    updateAgent: async (request: PartialMessage<UpdateAgentRequest>) => {
+    updateAgent: async (request: MessageInitShape<typeof UpdateAgentRequestSchema>) => {
         return client.updateAgent(request);
     },
-    deleteAgent: async (request: PartialMessage<DeleteAgentRequest>) => {
+    deleteAgent: async (request: MessageInitShape<typeof DeleteAgentRequestSchema>) => {
         return client.deleteAgent(request);
     },
-    uploadAgentAvatar: async (request: PartialMessage<UploadAgentAvatarRequest>) => {
+    uploadAgentAvatar: async (request: MessageInitShape<typeof UploadAgentAvatarRequestSchema>) => {
         return client.uploadAgentAvatar(request);
     },
-    deleteAgentAvatar: async (request: PartialMessage<DeleteAgentAvatarRequest>) => {
+    deleteAgentAvatar: async (request: MessageInitShape<typeof DeleteAgentAvatarRequestSchema>) => {
         return client.deleteAgentAvatar(request);
     },
-    previewSystemPrompt: async (request: PartialMessage<PreviewSystemPromptRequest>) => {
+    previewSystemPrompt: async (request: MessageInitShape<typeof PreviewSystemPromptRequestSchema>) => {
         return client.previewSystemPrompt(request);
     },
 };

@@ -7,32 +7,32 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { FilesService } from '@uniffy/proto/files/v1/files_connect';
-import type {
-    InitiateUploadRequest,
-    GetUploadStatusRequest,
-    AbortUploadRequest,
-    GetFileRequest,
-    UpdateFileRequest,
-    DeleteFileRequest,
-    RestoreFileRequest,
-    ListFilesRequest,
-    CreateFolderRequest,
-    UpdateFolderRequest,
-    DeleteFolderRequest,
-    GetFilesTreeRequest,
-    EmptyTrashRequest,
-    ListTrashRequest,
-    RestoreFolderRequest,
-    ListFileVersionsRequest,
-    UploadChunkRequest,
-    CompleteUploadRequest,
-    MoveItemsRequest,
-    CreateFolderTreeRequest,
-    CheckStorageQuotaRequest,
-    EnsureRecordingsFolderRequest,
+import {
+    FilesService,
+    InitiateUploadRequestSchema,
+    GetUploadStatusRequestSchema,
+    AbortUploadRequestSchema,
+    GetFileRequestSchema,
+    UpdateFileRequestSchema,
+    DeleteFileRequestSchema,
+    RestoreFileRequestSchema,
+    ListFilesRequestSchema,
+    CreateFolderRequestSchema,
+    UpdateFolderRequestSchema,
+    DeleteFolderRequestSchema,
+    GetFilesTreeRequestSchema,
+    EmptyTrashRequestSchema,
+    ListTrashRequestSchema,
+    RestoreFolderRequestSchema,
+    ListFileVersionsRequestSchema,
+    UploadChunkRequestSchema,
+    CompleteUploadRequestSchema,
+    MoveItemsRequestSchema,
+    CreateFolderTreeRequestSchema,
+    CheckStorageQuotaRequestSchema,
+    EnsureRecordingsFolderRequestSchema,
 } from '@uniffy/proto/files/v1/files_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 /**
  * Create a files service client with the shared transport.
@@ -51,7 +51,7 @@ export const filesApi = {
      * Initialize a new upload session.
      * Returns upload_id and chunk parameters for streaming.
      */
-    initiateUpload: async (request: PartialMessage<InitiateUploadRequest>) => {
+    initiateUpload: async (request: MessageInitShape<typeof InitiateUploadRequestSchema>) => {
         return filesClient.initiateUpload(request);
     },
 
@@ -59,7 +59,7 @@ export const filesApi = {
      * Upload a single chunk (browser-compatible unary RPC).
      * Call this for each chunk, then call completeUpload when done.
      */
-    uploadChunk: async (request: PartialMessage<UploadChunkRequest>) => {
+    uploadChunk: async (request: MessageInitShape<typeof UploadChunkRequestSchema>) => {
         return filesClient.uploadChunk(request);
     },
 
@@ -67,21 +67,21 @@ export const filesApi = {
      * Complete an upload after all chunks have been sent.
      * Returns the completed file.
      */
-    completeUpload: async (request: PartialMessage<CompleteUploadRequest>) => {
+    completeUpload: async (request: MessageInitShape<typeof CompleteUploadRequestSchema>) => {
         return filesClient.completeUpload(request);
     },
 
     /**
      * Get status of an in-progress upload (for resumable uploads).
      */
-    getUploadStatus: async (request: PartialMessage<GetUploadStatusRequest>) => {
+    getUploadStatus: async (request: MessageInitShape<typeof GetUploadStatusRequestSchema>) => {
         return filesClient.getUploadStatus(request);
     },
 
     /**
      * Abort an in-progress upload.
      */
-    abortUpload: async (request: PartialMessage<AbortUploadRequest>) => {
+    abortUpload: async (request: MessageInitShape<typeof AbortUploadRequestSchema>) => {
         return filesClient.abortUpload(request);
     },
 
@@ -104,35 +104,35 @@ export const filesApi = {
     /**
      * Get a file by ID.
      */
-    getFile: async (request: PartialMessage<GetFileRequest>) => {
+    getFile: async (request: MessageInitShape<typeof GetFileRequestSchema>) => {
         return filesClient.getFile(request);
     },
 
     /**
      * Update file metadata (rename, tags, description).
      */
-    updateFile: async (request: PartialMessage<UpdateFileRequest>) => {
+    updateFile: async (request: MessageInitShape<typeof UpdateFileRequestSchema>) => {
         return filesClient.updateFile(request);
     },
 
     /**
      * Delete a file (soft delete by default).
      */
-    deleteFile: async (request: PartialMessage<DeleteFileRequest>) => {
+    deleteFile: async (request: MessageInitShape<typeof DeleteFileRequestSchema>) => {
         return filesClient.deleteFile(request);
     },
 
     /**
      * Restore a soft-deleted file.
      */
-    restoreFile: async (request: PartialMessage<RestoreFileRequest>) => {
+    restoreFile: async (request: MessageInitShape<typeof RestoreFileRequestSchema>) => {
         return filesClient.restoreFile(request);
     },
 
     /**
      * List files with filters and pagination.
      */
-    listFiles: async (request: PartialMessage<ListFilesRequest>) => {
+    listFiles: async (request: MessageInitShape<typeof ListFilesRequestSchema>) => {
         return filesClient.listFiles(request);
     },
 
@@ -143,28 +143,28 @@ export const filesApi = {
     /**
      * Create a new folder.
      */
-    createFolder: async (request: PartialMessage<CreateFolderRequest>) => {
+    createFolder: async (request: MessageInitShape<typeof CreateFolderRequestSchema>) => {
         return filesClient.createFolder(request);
     },
 
     /**
      * Update a folder.
      */
-    updateFolder: async (request: PartialMessage<UpdateFolderRequest>) => {
+    updateFolder: async (request: MessageInitShape<typeof UpdateFolderRequestSchema>) => {
         return filesClient.updateFolder(request);
     },
 
     /**
      * Delete a folder.
      */
-    deleteFolder: async (request: PartialMessage<DeleteFolderRequest>) => {
+    deleteFolder: async (request: MessageInitShape<typeof DeleteFolderRequestSchema>) => {
         return filesClient.deleteFolder(request);
     },
 
     /**
      * Get the files tree structure.
      */
-    getFilesTree: async (request: PartialMessage<GetFilesTreeRequest>) => {
+    getFilesTree: async (request: MessageInitShape<typeof GetFilesTreeRequestSchema>) => {
         return filesClient.getFilesTree(request);
     },
 
@@ -175,42 +175,42 @@ export const filesApi = {
     /**
      * Empty trash (permanently delete all soft-deleted files).
      */
-    emptyTrash: async (request: PartialMessage<EmptyTrashRequest>) => {
+    emptyTrash: async (request: MessageInitShape<typeof EmptyTrashRequestSchema>) => {
         return filesClient.emptyTrash(request);
     },
 
     /**
      * List deleted files and folders in trash.
      */
-    listTrash: async (request: PartialMessage<ListTrashRequest>) => {
+    listTrash: async (request: MessageInitShape<typeof ListTrashRequestSchema>) => {
         return filesClient.listTrash(request);
     },
 
     /**
      * Restore a soft-deleted folder (and its soft-deleted contents).
      */
-    restoreFolder: async (request: PartialMessage<RestoreFolderRequest>) => {
+    restoreFolder: async (request: MessageInitShape<typeof RestoreFolderRequestSchema>) => {
         return filesClient.restoreFolder(request);
     },
 
     /**
      * List version history for a file.
      */
-    listFileVersions: async (request: PartialMessage<ListFileVersionsRequest>) => {
+    listFileVersions: async (request: MessageInitShape<typeof ListFileVersionsRequestSchema>) => {
         return filesClient.listFileVersions(request);
     },
 
     /**
      * Move files and folders to a different location and/or visibility scope.
      */
-    moveItems: async (request: PartialMessage<MoveItemsRequest>) => {
+    moveItems: async (request: MessageInitShape<typeof MoveItemsRequestSchema>) => {
         return filesClient.moveItems(request);
     },
 
     /**
      * Create a folder tree in a single transaction (for recursive folder upload).
      */
-    createFolderTree: async (request: PartialMessage<CreateFolderTreeRequest>) => {
+    createFolderTree: async (request: MessageInitShape<typeof CreateFolderTreeRequestSchema>) => {
         return filesClient.createFolderTree(request);
     },
 
@@ -218,14 +218,14 @@ export const filesApi = {
      * Lazily create or fetch the per-user "Recordings" system folder.
      * Idempotent under concurrent calls.
      */
-    ensureRecordingsFolder: async (request: PartialMessage<EnsureRecordingsFolderRequest>) => {
+    ensureRecordingsFolder: async (request: MessageInitShape<typeof EnsureRecordingsFolderRequestSchema>) => {
         return filesClient.ensureRecordingsFolder(request);
     },
 
     /**
      * Pre-check whether an upload of a given size is allowed under quota.
      */
-    checkStorageQuota: async (request: PartialMessage<CheckStorageQuotaRequest>) => {
+    checkStorageQuota: async (request: MessageInitShape<typeof CheckStorageQuotaRequestSchema>) => {
         return filesClient.checkStorageQuota(request);
     },
 };

@@ -9,11 +9,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search/api/searchApi';
 import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 
 export interface UrnResolutionResult {
   /** Map of URN -> resolved metadata */
-  resolved: Map<string, PlainMessage<UrnMetadata>>;
+  resolved: Map<string, Omit<UrnMetadata, '$typeName'>>;
   /** Whether the resolution is in progress */
   isLoading: boolean;
   /** Error message if resolution failed */
@@ -23,7 +22,7 @@ export interface UrnResolutionResult {
 }
 
 // Global cache for resolved URN metadata
-const urnMetadataCache = new Map<string, PlainMessage<UrnMetadata>>();
+const urnMetadataCache = new Map<string, Omit<UrnMetadata, '$typeName'>>();
 
 /**
  * Hook for batch resolving URN metadata with caching.
@@ -32,7 +31,7 @@ const urnMetadataCache = new Map<string, PlainMessage<UrnMetadata>>();
  * @returns Resolution result with metadata map, loading state, and error
  */
 export function useUrnResolution(urns: string[]): UrnResolutionResult {
-  const [resolved, setResolved] = useState<Map<string, PlainMessage<UrnMetadata>>>(new Map());
+  const [resolved, setResolved] = useState<Map<string, Omit<UrnMetadata, '$typeName'>>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -54,7 +53,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
     const currentFetchId = ++fetchIdRef.current;
 
     // Check cache first and filter out already-cached URNs
-    const cachedResults = new Map<string, PlainMessage<UrnMetadata>>();
+    const cachedResults = new Map<string, Omit<UrnMetadata, '$typeName'>>();
     const urnsToFetch: string[] = [];
 
     for (const urn of urns) {
@@ -99,7 +98,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       // Process response and update cache
       if (response.resolved) {
         for (const [urn, metadata] of Object.entries(response.resolved)) {
-          const plainMetadata = metadata as PlainMessage<UrnMetadata>;
+          const plainMetadata = metadata as Omit<UrnMetadata, '$typeName'>;
           urnMetadataCache.set(urn, plainMetadata);
           mergedResults.set(urn, plainMetadata);
         }
@@ -165,7 +164,7 @@ export function invalidateUrnMetadataCache(urns: string[]): void {
  * Useful for hydrating cache from other sources.
  */
 export function hydrateUrnMetadataCache(
-  entries: Array<{ urn: string; metadata: PlainMessage<UrnMetadata> }>
+  entries: Array<{ urn: string; metadata: Omit<UrnMetadata, '$typeName'> }>
 ): void {
   for (const { urn, metadata } of entries) {
     urnMetadataCache.set(urn, metadata);

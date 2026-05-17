@@ -23,7 +23,6 @@ dependencies = [
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
   "meilisearch-python-sdk>=5.5.0",
-  "protoc-gen-connect-python>=0.7.0",
   "psycopg2-binary>=2.9.10",
   "pydantic[email]>=2.12.5",
   "pyjwt>=2.10.0",
@@ -57,11 +56,13 @@ dependencies = [
   # Cron expression parsing
   "croniter>=6.0.0",
   "google-genai>=1.20.0",
+  "connectrpc>=0.10.0",
 ]
 
 [dependency-groups]
 dev = [
   "pip-licenses>=5.5.0",
+  "protoc-gen-connectrpc>=0.10.0",
   "pytest>=8.0.0",
   "pytest-benchmark>=5.0.0",
   "ruff>=0.14.13",
@@ -71,9 +72,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = [
-  "src/gen/python",
-]
+members = ["src/gen/python"]
 
 [tool.uv.sources]
 uniffy-proto = { workspace = true }

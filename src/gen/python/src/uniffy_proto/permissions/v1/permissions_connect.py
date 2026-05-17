@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -39,7 +41,7 @@ class MembersService(Protocol):
 
 
 class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
-    def __init__(self, service: MembersService | AsyncGenerator[MembersService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: MembersService | AsyncGenerator[MembersService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -116,6 +118,8 @@ class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -266,6 +270,9 @@ class MembersServiceClient(ConnectClient):
         )
 
 
+
+
+
 class MembersServiceSync(Protocol):
     def list_members(self, request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -284,7 +291,7 @@ class MembersServiceSync(Protocol):
 
 
 class MembersServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: MembersServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: MembersServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/permissions.v1.MembersService/ListMembers": EndpointSync.unary(
@@ -360,6 +367,8 @@ class MembersServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -508,3 +517,5 @@ class MembersServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

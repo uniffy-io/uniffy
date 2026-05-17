@@ -7,6 +7,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { notesApi } from '@/features/notes/api/notesApi';
 import type { RootState, AppDispatch } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
@@ -389,7 +390,7 @@ export const autosaveNote = createAsyncThunk<
             // Convert BigInt to Number for Redux serialization
             version: typeof response.version === 'bigint' ? Number(response.version) : response.version,
             // Convert Date to ISO string for Redux serialization
-            savedAt: (response.savedAt?.toDate() ?? new Date()).toISOString(),
+            savedAt: (response.savedAt ? timestampDate(response.savedAt) : new Date()).toISOString(),
         };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Autosave failed';

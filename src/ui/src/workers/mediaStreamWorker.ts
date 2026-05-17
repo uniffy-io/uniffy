@@ -19,7 +19,7 @@
 
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { createClient } from '@connectrpc/connect';
-import { FilesService } from '@uniffy/proto/files/v1/files_connect';
+import { FilesService } from '@uniffy/proto/files/v1/files_pb';
 
 // Service Worker type declarations
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;

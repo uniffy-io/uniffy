@@ -1,27 +1,27 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { MemoriesService } from '@uniffy/proto/agents/v1/memories_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    ListMemoriesRequest,
-    CreateMemoryRequest,
-    UpdateMemoryRequest,
-    DeleteMemoryRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    MemoriesService,
+    ListMemoriesRequestSchema,
+    CreateMemoryRequestSchema,
+    UpdateMemoryRequestSchema,
+    DeleteMemoryRequestSchema,
 } from '@uniffy/proto/agents/v1/memories_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(MemoriesService, transport);
+const client = createClient(MemoriesService, unaryTransport);
 
 export const memoriesApi = {
-    listMemories: async (request: PartialMessage<ListMemoriesRequest>) => {
+    listMemories: async (request: MessageInitShape<typeof ListMemoriesRequestSchema>) => {
         return client.listMemories(request);
     },
-    createMemory: async (request: PartialMessage<CreateMemoryRequest>) => {
+    createMemory: async (request: MessageInitShape<typeof CreateMemoryRequestSchema>) => {
         return client.createMemory(request);
     },
-    updateMemory: async (request: PartialMessage<UpdateMemoryRequest>) => {
+    updateMemory: async (request: MessageInitShape<typeof UpdateMemoryRequestSchema>) => {
         return client.updateMemory(request);
     },
-    deleteMemory: async (request: PartialMessage<DeleteMemoryRequest>) => {
+    deleteMemory: async (request: MessageInitShape<typeof DeleteMemoryRequestSchema>) => {
         return client.deleteMemory(request);
     },
 };

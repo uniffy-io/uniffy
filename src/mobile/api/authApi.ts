@@ -1,7 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { ENV } from "@/constants/env";
 import { getAccessToken } from "@/lib/auth";
 import { transport } from "@/lib/transport";

@@ -6,8 +6,9 @@ import type {
     ContentMember as ProtoContentMember,
     ContentMemberEvent as ProtoContentMemberEvent,
 } from '@uniffy/proto/permissions/v1/permissions_pb';
-import { Timestamp } from '@bufbuild/protobuf';
-import { PaginationRequest } from '@uniffy/proto/common/v1/common_pb';
+import { create } from '@bufbuild/protobuf';
+import { timestampFromDate, type Timestamp } from '@bufbuild/protobuf/wkt';
+import { PaginationRequestSchema } from '@uniffy/proto/common/v1/common_pb';
 import type {
     ContentAccessPolicy,
     SerializedContentMember,
@@ -112,7 +113,7 @@ export const addContentMember = createAsyncThunk<
             subjectId: args.subjectId,
             role: args.role,
             expiresAt: args.expiresAt
-                ? new Timestamp({ seconds: BigInt(Math.floor(args.expiresAt.getTime() / 1000)), nanos: 0 })
+                ? timestampFromDate(args.expiresAt)
                 : undefined,
             note: args.note ?? '',
         });
@@ -268,7 +269,7 @@ export const fetchContentAuditLog = createAsyncThunk<
             organizationId,
             contentType: args.contentType,
             contentId: args.contentId,
-            pagination: new PaginationRequest({ page, pageSize }),
+            pagination: create(PaginationRequestSchema, { page, pageSize }),
             actorUserId: args.actorUserId,
             action: args.action,
         });

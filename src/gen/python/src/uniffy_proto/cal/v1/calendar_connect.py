@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -90,7 +92,7 @@ class CalendarService(Protocol):
 
 
 class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
-    def __init__(self, service: CalendarService | AsyncGenerator[CalendarService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: CalendarService | AsyncGenerator[CalendarService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -337,6 +339,8 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -827,6 +831,9 @@ class CalendarServiceClient(ConnectClient):
         )
 
 
+
+
+
 class CalendarServiceSync(Protocol):
     def create_event(self, request: cal_dot_v1_dot_calendar__pb2.CreateEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateEventResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -879,7 +886,7 @@ class CalendarServiceSync(Protocol):
 
 
 class CalendarServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: CalendarServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: CalendarServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/cal.v1.CalendarService/CreateEvent": EndpointSync.unary(
@@ -1125,6 +1132,8 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -1613,3 +1622,5 @@ class CalendarServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

@@ -8,13 +8,15 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { Timestamp } from '@bufbuild/protobuf';
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import { timestampFromDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import {
     type ContentType,
     AccessMode as ProtoAccessMode,
 } from '@uniffy/proto/common/v1/common_pb';
 import {
     TagSort,
+    TagFilterCriteriaSchema,
     type IconValue as ProtoIconValue,
     type SavedTagFilter as ProtoSavedTagFilter,
     type Tag,
@@ -134,12 +136,12 @@ const isoToTimestamp = (value: string | null): Timestamp | undefined => {
     if (!value) return undefined;
     const ms = Date.parse(value);
     if (Number.isNaN(ms)) return undefined;
-    return Timestamp.fromDate(new Date(ms));
+    return timestampFromDate(new Date(ms));
 };
 
 export const criteriaToProto = (
     criteria: SerializedTagFilterCriteria
-): Partial<ProtoTagFilterCriteria> => ({
+): MessageInitShape<typeof TagFilterCriteriaSchema> => ({
     tagIds: criteria.tagIds,
     contentTypes: criteria.contentTypes,
     ownerIds: criteria.ownerIds,

@@ -7,52 +7,52 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import { transport } from '@/config/api';
-import { TagsService } from '@uniffy/proto/tags/v1/tags_connect';
-import type {
-    AssignTagsRequest,
-    CreateSavedFilterRequest,
-    CreateTagRequest,
-    DeleteSavedFilterRequest,
-    DeleteTagRequest,
-    GetTagRequest,
-    GetTagsForUrnsRequest,
-    ListContentByTagRequest,
-    ListSavedFiltersRequest,
-    ListTagsRequest,
-    MergeTagsRequest,
-    SuggestTagsRequest,
-    UnassignTagsRequest,
-    UpdateSavedFilterRequest,
-    UpdateTagRequest,
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
+import {
+    TagsService,
+    AssignTagsRequestSchema,
+    CreateSavedFilterRequestSchema,
+    CreateTagRequestSchema,
+    DeleteSavedFilterRequestSchema,
+    DeleteTagRequestSchema,
+    GetTagRequestSchema,
+    GetTagsForUrnsRequestSchema,
+    ListContentByTagRequestSchema,
+    ListSavedFiltersRequestSchema,
+    ListTagsRequestSchema,
+    MergeTagsRequestSchema,
+    SuggestTagsRequestSchema,
+    UnassignTagsRequestSchema,
+    UpdateSavedFilterRequestSchema,
+    UpdateTagRequestSchema,
 } from '@uniffy/proto/tags/v1/tags_pb';
 
-const tagsClient = createClient(TagsService, transport);
+const tagsClient = createClient(TagsService, unaryTransport);
 
 export const tagsApi = {
-    createTag: (request: PartialMessage<CreateTagRequest>) => tagsClient.createTag(request),
-    updateTag: (request: PartialMessage<UpdateTagRequest>) => tagsClient.updateTag(request),
-    deleteTag: (request: PartialMessage<DeleteTagRequest>) => tagsClient.deleteTag(request),
-    mergeTags: (request: PartialMessage<MergeTagsRequest>) => tagsClient.mergeTags(request),
-    getTag: (request: PartialMessage<GetTagRequest>) => tagsClient.getTag(request),
-    listTags: (request: PartialMessage<ListTagsRequest>) => tagsClient.listTags(request),
-    suggestTags: (request: PartialMessage<SuggestTagsRequest>) =>
+    createTag: (request: MessageInitShape<typeof CreateTagRequestSchema>) => tagsClient.createTag(request),
+    updateTag: (request: MessageInitShape<typeof UpdateTagRequestSchema>) => tagsClient.updateTag(request),
+    deleteTag: (request: MessageInitShape<typeof DeleteTagRequestSchema>) => tagsClient.deleteTag(request),
+    mergeTags: (request: MessageInitShape<typeof MergeTagsRequestSchema>) => tagsClient.mergeTags(request),
+    getTag: (request: MessageInitShape<typeof GetTagRequestSchema>) => tagsClient.getTag(request),
+    listTags: (request: MessageInitShape<typeof ListTagsRequestSchema>) => tagsClient.listTags(request),
+    suggestTags: (request: MessageInitShape<typeof SuggestTagsRequestSchema>) =>
         tagsClient.suggestTags(request),
-    assignTags: (request: PartialMessage<AssignTagsRequest>) => tagsClient.assignTags(request),
-    unassignTags: (request: PartialMessage<UnassignTagsRequest>) =>
+    assignTags: (request: MessageInitShape<typeof AssignTagsRequestSchema>) => tagsClient.assignTags(request),
+    unassignTags: (request: MessageInitShape<typeof UnassignTagsRequestSchema>) =>
         tagsClient.unassignTags(request),
-    getTagsForUrns: (request: PartialMessage<GetTagsForUrnsRequest>) =>
+    getTagsForUrns: (request: MessageInitShape<typeof GetTagsForUrnsRequestSchema>) =>
         tagsClient.getTagsForUrns(request),
-    listContentByTag: (request: PartialMessage<ListContentByTagRequest>) =>
+    listContentByTag: (request: MessageInitShape<typeof ListContentByTagRequestSchema>) =>
         tagsClient.listContentByTag(request),
 
-    createSavedFilter: (request: PartialMessage<CreateSavedFilterRequest>) =>
+    createSavedFilter: (request: MessageInitShape<typeof CreateSavedFilterRequestSchema>) =>
         tagsClient.createSavedFilter(request),
-    updateSavedFilter: (request: PartialMessage<UpdateSavedFilterRequest>) =>
+    updateSavedFilter: (request: MessageInitShape<typeof UpdateSavedFilterRequestSchema>) =>
         tagsClient.updateSavedFilter(request),
-    deleteSavedFilter: (request: PartialMessage<DeleteSavedFilterRequest>) =>
+    deleteSavedFilter: (request: MessageInitShape<typeof DeleteSavedFilterRequestSchema>) =>
         tagsClient.deleteSavedFilter(request),
-    listSavedFilters: (request: PartialMessage<ListSavedFiltersRequest>) =>
+    listSavedFilters: (request: MessageInitShape<typeof ListSavedFiltersRequestSchema>) =>
         tagsClient.listSavedFilters(request),
 };

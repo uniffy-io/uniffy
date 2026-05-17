@@ -1,31 +1,31 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { PromptsService } from '@uniffy/proto/agents/v1/prompts_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CreatePromptRequest,
-    GetPromptRequest,
-    ListPromptsRequest,
-    UpdatePromptRequest,
-    DeletePromptRequest,
+import { unaryTransport } from '@/config/api';
+import {
+    PromptsService,
+    CreatePromptRequestSchema,
+    GetPromptRequestSchema,
+    ListPromptsRequestSchema,
+    UpdatePromptRequestSchema,
+    DeletePromptRequestSchema,
 } from '@uniffy/proto/agents/v1/prompts_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(PromptsService, transport);
+const client = createClient(PromptsService, unaryTransport);
 
 export const promptsApi = {
-    createPrompt: async (request: PartialMessage<CreatePromptRequest>) => {
+    createPrompt: async (request: MessageInitShape<typeof CreatePromptRequestSchema>) => {
         return client.createPrompt(request);
     },
-    getPrompt: async (request: PartialMessage<GetPromptRequest>) => {
+    getPrompt: async (request: MessageInitShape<typeof GetPromptRequestSchema>) => {
         return client.getPrompt(request);
     },
-    listPrompts: async (request: PartialMessage<ListPromptsRequest>) => {
+    listPrompts: async (request: MessageInitShape<typeof ListPromptsRequestSchema>) => {
         return client.listPrompts(request);
     },
-    updatePrompt: async (request: PartialMessage<UpdatePromptRequest>) => {
+    updatePrompt: async (request: MessageInitShape<typeof UpdatePromptRequestSchema>) => {
         return client.updatePrompt(request);
     },
-    deletePrompt: async (request: PartialMessage<DeletePromptRequest>) => {
+    deletePrompt: async (request: MessageInitShape<typeof DeletePromptRequestSchema>) => {
         return client.deletePrompt(request);
     },
 };

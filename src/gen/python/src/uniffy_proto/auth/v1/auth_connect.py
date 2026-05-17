@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -48,7 +50,7 @@ class AuthService(Protocol):
 
 
 class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
-    def __init__(self, service: AuthService | AsyncGenerator[AuthService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: AuthService | AsyncGenerator[AuthService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -155,6 +157,8 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -365,6 +369,9 @@ class AuthServiceClient(ConnectClient):
         )
 
 
+
+
+
 class AuthServiceSync(Protocol):
     def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RegisterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -389,7 +396,7 @@ class AuthServiceSync(Protocol):
 
 
 class AuthServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: AuthServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: AuthServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/auth.v1.AuthService/Register": EndpointSync.unary(
@@ -495,6 +502,8 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -703,3 +712,5 @@ class AuthServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -21,7 +23,7 @@ class ChatStreamService(Protocol):
 
 
 class ChatStreamServiceASGIApplication(ConnectASGIApplication[ChatStreamService]):
-    def __init__(self, service: ChatStreamService | AsyncGenerator[ChatStreamService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: ChatStreamService | AsyncGenerator[ChatStreamService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -38,6 +40,8 @@ class ChatStreamServiceASGIApplication(ConnectASGIApplication[ChatStreamService]
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -68,13 +72,16 @@ class ChatStreamServiceClient(ConnectClient):
         )
 
 
+
+
+
 class ChatStreamServiceSync(Protocol):
     def stream_user_chat_events(self, request: chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsRequest, ctx: RequestContext) -> Iterator[chat_dot_v1_dot_chat__stream__pb2.StreamUserChatEventsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
 class ChatStreamServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: ChatStreamServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: ChatStreamServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/chat.v1.ChatStreamService/StreamUserChatEvents": EndpointSync.server_stream(
@@ -90,6 +97,8 @@ class ChatStreamServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -118,3 +127,5 @@ class ChatStreamServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

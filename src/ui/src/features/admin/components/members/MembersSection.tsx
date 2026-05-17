@@ -18,8 +18,8 @@ import { createClient } from '@connectrpc/connect';
 import { toast } from 'sonner';
 import { useOrgMembers } from '@/features/admin/hooks/useAdminHooks';
 import { OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
-import { transport } from '@/config/api';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
+import { unaryTransport } from '@/config/api';
 import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
@@ -275,7 +275,7 @@ export function MembersSection() {
     }, [search, roleFilter]);
 
     const handleInvalidateCaches = async (userId: string, displayName: string) => {
-        const client = createClient(AuthService, transport);
+        const client = createClient(AuthService, unaryTransport);
         await client.rotateCacheKeySeed({ targetUserId: userId });
         toast.success(`Local caches invalidated for ${displayName}.`);
     };

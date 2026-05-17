@@ -3,12 +3,11 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import type { SessionInfo } from '@uniffy/proto/auth/v1/auth_pb';
 import { sessionsApi } from '@/features/settings/api/sessionsApi';
 
 export interface SessionsState {
-    sessions: PlainMessage<SessionInfo>[];
+    sessions: Omit<SessionInfo, '$typeName'>[];
     loading: boolean;
     revoking: string | null; // session_id being revoked
     revokingAll: boolean;

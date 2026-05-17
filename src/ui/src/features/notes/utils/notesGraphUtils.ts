@@ -7,7 +7,6 @@
 
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
@@ -102,7 +101,7 @@ function getNodeColor(type: UrnType | 'note', isInternal: boolean): string {
  */
 export function buildGraphData(
   notes: SerializedNote[],
-  urnMetadata?: Map<string, PlainMessage<UrnMetadata>>
+  urnMetadata?: Map<string, Omit<UrnMetadata, '$typeName'>>
 ): GraphData {
   const nodes: GraphNode[] = [];
   const links: GraphLink[] = [];

@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -144,7 +146,7 @@ class FilesService(Protocol):
 
 
 class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
-    def __init__(self, service: FilesService | AsyncGenerator[FilesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: FilesService | AsyncGenerator[FilesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -571,6 +573,8 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -1421,6 +1425,9 @@ class FilesServiceClient(ConnectClient):
         )
 
 
+
+
+
 class FilesServiceSync(Protocol):
     def initiate_upload(self, request: files_dot_v1_dot_files__pb2.InitiateUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.InitiateUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1509,7 +1516,7 @@ class FilesServiceSync(Protocol):
 
 
 class FilesServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: FilesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: FilesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/files.v1.FilesService/InitiateUpload": EndpointSync.unary(
@@ -1935,6 +1942,8 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -2783,3 +2792,5 @@ class FilesServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

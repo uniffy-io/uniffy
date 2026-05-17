@@ -1,11 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import { transport, setMemoryAccessToken, friendlyErrorMessage, initStorageEncryptionFromApi } from "@/config";
+import { unaryTransport, setMemoryAccessToken, friendlyErrorMessage, initStorageEncryptionFromApi } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { defaultTheme } from "@/config/theme/types";
@@ -16,7 +16,7 @@ import {
   IdentificationCard,
 } from "@phosphor-icons/react";
 
-const authClient = createClient(AuthService, transport);
+const authClient = createClient(AuthService, unaryTransport);
 
 // Static brand colors — not from the theme engine so the auth page stays visually consistent
 const BRAND_ACCENT = '#09090b';
@@ -624,7 +624,7 @@ export function AuthForms() {
       setMemoryAccessToken(accessToken);
 
       // Create a temporary client with the auth token
-      const authenticatedClient = createClient(AuthService, transport);
+      const authenticatedClient = createClient(AuthService, unaryTransport);
 
       const userResponse = await authenticatedClient.getCurrentUser(
         {},

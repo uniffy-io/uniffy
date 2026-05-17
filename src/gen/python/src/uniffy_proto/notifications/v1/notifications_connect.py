@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -57,7 +59,7 @@ class NotificationsService(Protocol):
 
 
 class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsService]):
-    def __init__(self, service: NotificationsService | AsyncGenerator[NotificationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: NotificationsService | AsyncGenerator[NotificationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -194,6 +196,8 @@ class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsSe
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -464,6 +468,9 @@ class NotificationsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class NotificationsServiceSync(Protocol):
     def list_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.ListNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.ListNotificationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -494,7 +501,7 @@ class NotificationsServiceSync(Protocol):
 
 
 class NotificationsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: NotificationsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: NotificationsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/notifications.v1.NotificationsService/ListNotifications": EndpointSync.unary(
@@ -630,6 +637,8 @@ class NotificationsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -898,3 +907,5 @@ class NotificationsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

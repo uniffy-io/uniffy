@@ -19,7 +19,8 @@ import {
   BookingStatus as ProtoBookingStatus,
 } from '@uniffy/proto/rooms/v1/rooms_pb';
 import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
-import { Timestamp } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
+import { TimestampSchema, type Timestamp } from '@bufbuild/protobuf/wkt';
 import type {
   Room,
   RoomType,
@@ -45,7 +46,7 @@ const timestampToIso = (ts: Timestamp | undefined): string => {
  */
 const isoToTimestamp = (iso: string): Timestamp => {
   const date = new Date(iso);
-  return new Timestamp({
+  return create(TimestampSchema, {
     seconds: BigInt(Math.floor(date.getTime() / 1000)),
     nanos: 0,
   });

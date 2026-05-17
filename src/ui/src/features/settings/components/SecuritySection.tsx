@@ -5,8 +5,8 @@
 import { useState } from 'react';
 import { HardDrives, Warning } from '@phosphor-icons/react';
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
+import { unaryTransport } from '@/config/api';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
 import { useAppSelector } from '@/app/hooks';
 import {
   clearLocalEncryptedStorage,
@@ -39,7 +39,7 @@ export function SecuritySection() {
   const handleClearAllDevices = async () => {
     setClearingAll(true);
     try {
-      const client = createClient(AuthService, transport);
+      const client = createClient(AuthService, unaryTransport);
       const response = await client.rotateCacheKeySeed({});
       if (response.newCacheKeySeed.length > 0 && user) {
         await rotateAndClearAll(new Uint8Array(response.newCacheKeySeed), user.id);

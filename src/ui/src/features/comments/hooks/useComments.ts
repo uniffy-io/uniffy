@@ -16,7 +16,7 @@ import {
     fetchCommentCounts,
 } from '@/features/comments/store/commentsThunks';
 import type { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
-import type { Struct } from '@bufbuild/protobuf';
+import type { JsonObject } from '@bufbuild/protobuf';
 
 /**
  * Hook for fetching and accessing comments for a content item.
@@ -70,7 +70,7 @@ export function useCommentActions() {
         contentId: string,
         body: string,
         anchorType?: CommentAnchorType,
-        anchorData?: Struct,
+        anchorData?: JsonObject,
         parentCommentId?: string,
     ) => {
         if (!organizationId) return;

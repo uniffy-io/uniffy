@@ -1,4 +1,4 @@
-import type { Timestamp } from '@bufbuild/protobuf';
+import type { Timestamp } from '@bufbuild/protobuf/wkt';
 import {
   ChannelType as ProtoChannelType,
   ChannelRole as ProtoChannelRole,

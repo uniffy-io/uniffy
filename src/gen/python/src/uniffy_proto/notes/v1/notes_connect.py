@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -69,7 +71,7 @@ class NotesService(Protocol):
 
 
 class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
-    def __init__(self, service: NotesService | AsyncGenerator[NotesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: NotesService | AsyncGenerator[NotesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -246,6 +248,8 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -596,6 +600,9 @@ class NotesServiceClient(ConnectClient):
         )
 
 
+
+
+
 class NotesServiceSync(Protocol):
     def create_note(self, request: notes_dot_v1_dot_notes__pb2.CreateNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CreateNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -634,7 +641,7 @@ class NotesServiceSync(Protocol):
 
 
 class NotesServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: NotesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: NotesServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/notes.v1.NotesService/CreateNote": EndpointSync.unary(
@@ -810,6 +817,8 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -1158,3 +1167,5 @@ class NotesServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

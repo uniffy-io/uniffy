@@ -1,186 +1,186 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { ChatService } from '@uniffy/proto/chat/v1/chat_connect';
-import { ChatStreamService } from '@uniffy/proto/chat/v1/chat_stream_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-  CreateChannelRequest,
-  GetChannelRequest,
-  UpdateChannelRequest,
-  ArchiveChannelRequest,
-  DeleteChannelRequest,
-  ListChannelsRequest,
-  CreateAgentChatRequest,
-  RenameAgentChatRequest,
-  ListAgentChatsRequest,
-  JoinChannelRequest,
-  LeaveChannelRequest,
-  AddMembersRequest,
-  RemoveMembersRequest,
-  GetMembersRequest,
-  SendMessageRequest,
-  GetMessagesRequest,
-  GetMessageRequest,
-  UpdateMessageRequest,
-  DeleteMessageRequest,
-  PinMessageRequest,
-  UnpinMessageRequest,
-  GetPinnedMessagesRequest,
-  GetThreadRequest,
-  GetThreadMessagesRequest,
-  GetThreadsInboxRequest,
-  FollowThreadRequest,
-  UnfollowThreadRequest,
-  AddReactionRequest,
-  RemoveReactionRequest,
-  SetTypingRequest,
-  MarkChannelReadRequest,
-  MarkThreadReadRequest,
-  GetUnreadCountsRequest,
-  GetChannelResourcesRequest,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-  DeleteCategoryRequest,
-  ListCategoriesRequest,
-  ReorderCategoriesRequest,
-  MoveChannelToCategoryRequest,
-  UpdateChannelMemberRequest,
-  RespondToAgentConfirmationRequest,
-  GetChannelPendingApprovalsRequest,
-  GetChannelAgentContextStatsRequest,
-  GetChannelAgentContextStatsBatchRequest,
-  CompactChannelAgentContextRequest,
-  ResetChannelAgentContextRequest,
+import { transport, unaryTransport } from '@/config/api';
+import {
+  ChatService,
+  CreateChannelRequestSchema,
+  GetChannelRequestSchema,
+  UpdateChannelRequestSchema,
+  ArchiveChannelRequestSchema,
+  DeleteChannelRequestSchema,
+  ListChannelsRequestSchema,
+  CreateAgentChatRequestSchema,
+  RenameAgentChatRequestSchema,
+  ListAgentChatsRequestSchema,
+  JoinChannelRequestSchema,
+  LeaveChannelRequestSchema,
+  AddMembersRequestSchema,
+  RemoveMembersRequestSchema,
+  GetMembersRequestSchema,
+  SendMessageRequestSchema,
+  GetMessagesRequestSchema,
+  GetMessageRequestSchema,
+  UpdateMessageRequestSchema,
+  DeleteMessageRequestSchema,
+  PinMessageRequestSchema,
+  UnpinMessageRequestSchema,
+  GetPinnedMessagesRequestSchema,
+  GetThreadRequestSchema,
+  GetThreadMessagesRequestSchema,
+  GetThreadsInboxRequestSchema,
+  FollowThreadRequestSchema,
+  UnfollowThreadRequestSchema,
+  AddReactionRequestSchema,
+  RemoveReactionRequestSchema,
+  SetTypingRequestSchema,
+  MarkChannelReadRequestSchema,
+  MarkThreadReadRequestSchema,
+  GetUnreadCountsRequestSchema,
+  GetChannelResourcesRequestSchema,
+  CreateCategoryRequestSchema,
+  UpdateCategoryRequestSchema,
+  DeleteCategoryRequestSchema,
+  ListCategoriesRequestSchema,
+  ReorderCategoriesRequestSchema,
+  MoveChannelToCategoryRequestSchema,
+  UpdateChannelMemberRequestSchema,
+  RespondToAgentConfirmationRequestSchema,
+  GetChannelPendingApprovalsRequestSchema,
+  GetChannelAgentContextStatsRequestSchema,
+  GetChannelAgentContextStatsBatchRequestSchema,
+  CompactChannelAgentContextRequestSchema,
+  ResetChannelAgentContextRequestSchema,
 } from '@uniffy/proto/chat/v1/chat_pb';
-import type {
-  StreamUserChatEventsRequest,
+import {
+  ChatStreamService,
+  StreamUserChatEventsRequestSchema,
 } from '@uniffy/proto/chat/v1/chat_stream_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const chatClient = createClient(ChatService, transport);
+const chatClient = createClient(ChatService, unaryTransport);
 const chatStreamClient = createClient(ChatStreamService, transport);
 
 export const chatApi = {
   // Channels
-  createChannel: (req: PartialMessage<CreateChannelRequest>) =>
+  createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     chatClient.createChannel(req),
-  getChannel: (req: PartialMessage<GetChannelRequest>) =>
+  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) =>
     chatClient.getChannel(req),
-  updateChannel: (req: PartialMessage<UpdateChannelRequest>) =>
+  updateChannel: (req: MessageInitShape<typeof UpdateChannelRequestSchema>) =>
     chatClient.updateChannel(req),
-  archiveChannel: (req: PartialMessage<ArchiveChannelRequest>) =>
+  archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
     chatClient.archiveChannel(req),
-  deleteChannel: (req: PartialMessage<DeleteChannelRequest>) =>
+  deleteChannel: (req: MessageInitShape<typeof DeleteChannelRequestSchema>) =>
     chatClient.deleteChannel(req),
-  listChannels: (req: PartialMessage<ListChannelsRequest>) =>
+  listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
     chatClient.listChannels(req),
 
   // Named agent chats
-  createAgentChat: (req: PartialMessage<CreateAgentChatRequest>) =>
+  createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     chatClient.createAgentChat(req),
-  renameAgentChat: (req: PartialMessage<RenameAgentChatRequest>) =>
+  renameAgentChat: (req: MessageInitShape<typeof RenameAgentChatRequestSchema>) =>
     chatClient.renameAgentChat(req),
-  listAgentChats: (req: PartialMessage<ListAgentChatsRequest>) =>
+  listAgentChats: (req: MessageInitShape<typeof ListAgentChatsRequestSchema>) =>
     chatClient.listAgentChats(req),
 
   // Membership
-  joinChannel: (req: PartialMessage<JoinChannelRequest>) =>
+  joinChannel: (req: MessageInitShape<typeof JoinChannelRequestSchema>) =>
     chatClient.joinChannel(req),
-  leaveChannel: (req: PartialMessage<LeaveChannelRequest>) =>
+  leaveChannel: (req: MessageInitShape<typeof LeaveChannelRequestSchema>) =>
     chatClient.leaveChannel(req),
-  addMembers: (req: PartialMessage<AddMembersRequest>) =>
+  addMembers: (req: MessageInitShape<typeof AddMembersRequestSchema>) =>
     chatClient.addMembers(req),
-  removeMembers: (req: PartialMessage<RemoveMembersRequest>) =>
+  removeMembers: (req: MessageInitShape<typeof RemoveMembersRequestSchema>) =>
     chatClient.removeMembers(req),
-  getMembers: (req: PartialMessage<GetMembersRequest>) =>
+  getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>) =>
     chatClient.getMembers(req),
-  updateChannelMember: (req: PartialMessage<UpdateChannelMemberRequest>) =>
+  updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
     chatClient.updateChannelMember(req),
 
   // Messages
-  sendMessage: (req: PartialMessage<SendMessageRequest>) =>
+  sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) =>
     chatClient.sendMessage(req),
-  getMessages: (req: PartialMessage<GetMessagesRequest>) =>
+  getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) =>
     chatClient.getMessages(req),
-  getMessage: (req: PartialMessage<GetMessageRequest>) =>
+  getMessage: (req: MessageInitShape<typeof GetMessageRequestSchema>) =>
     chatClient.getMessage(req),
-  updateMessage: (req: PartialMessage<UpdateMessageRequest>) =>
+  updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     chatClient.updateMessage(req),
-  deleteMessage: (req: PartialMessage<DeleteMessageRequest>) =>
+  deleteMessage: (req: MessageInitShape<typeof DeleteMessageRequestSchema>) =>
     chatClient.deleteMessage(req),
 
   // Pins
-  pinMessage: (req: PartialMessage<PinMessageRequest>) =>
+  pinMessage: (req: MessageInitShape<typeof PinMessageRequestSchema>) =>
     chatClient.pinMessage(req),
-  unpinMessage: (req: PartialMessage<UnpinMessageRequest>) =>
+  unpinMessage: (req: MessageInitShape<typeof UnpinMessageRequestSchema>) =>
     chatClient.unpinMessage(req),
-  getPinnedMessages: (req: PartialMessage<GetPinnedMessagesRequest>) =>
+  getPinnedMessages: (req: MessageInitShape<typeof GetPinnedMessagesRequestSchema>) =>
     chatClient.getPinnedMessages(req),
 
   // Threads
-  getThread: (req: PartialMessage<GetThreadRequest>) =>
+  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) =>
     chatClient.getThread(req),
-  getThreadMessages: (req: PartialMessage<GetThreadMessagesRequest>) =>
+  getThreadMessages: (req: MessageInitShape<typeof GetThreadMessagesRequestSchema>) =>
     chatClient.getThreadMessages(req),
-  getThreadsInbox: (req: PartialMessage<GetThreadsInboxRequest>) =>
+  getThreadsInbox: (req: MessageInitShape<typeof GetThreadsInboxRequestSchema>) =>
     chatClient.getThreadsInbox(req),
-  followThread: (req: PartialMessage<FollowThreadRequest>) =>
+  followThread: (req: MessageInitShape<typeof FollowThreadRequestSchema>) =>
     chatClient.followThread(req),
-  unfollowThread: (req: PartialMessage<UnfollowThreadRequest>) =>
+  unfollowThread: (req: MessageInitShape<typeof UnfollowThreadRequestSchema>) =>
     chatClient.unfollowThread(req),
 
   // Reactions
-  addReaction: (req: PartialMessage<AddReactionRequest>) =>
+  addReaction: (req: MessageInitShape<typeof AddReactionRequestSchema>) =>
     chatClient.addReaction(req),
-  removeReaction: (req: PartialMessage<RemoveReactionRequest>) =>
+  removeReaction: (req: MessageInitShape<typeof RemoveReactionRequestSchema>) =>
     chatClient.removeReaction(req),
 
   // Typing and read state
-  setTyping: (req: PartialMessage<SetTypingRequest>) =>
+  setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) =>
     chatClient.setTyping(req),
-  markChannelRead: (req: PartialMessage<MarkChannelReadRequest>) =>
+  markChannelRead: (req: MessageInitShape<typeof MarkChannelReadRequestSchema>) =>
     chatClient.markChannelRead(req),
-  markThreadRead: (req: PartialMessage<MarkThreadReadRequest>) =>
+  markThreadRead: (req: MessageInitShape<typeof MarkThreadReadRequestSchema>) =>
     chatClient.markThreadRead(req),
-  getUnreadCounts: (req: PartialMessage<GetUnreadCountsRequest>) =>
+  getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     chatClient.getUnreadCounts(req),
 
   // Resources
-  getChannelResources: (req: PartialMessage<GetChannelResourcesRequest>) =>
+  getChannelResources: (req: MessageInitShape<typeof GetChannelResourcesRequestSchema>) =>
     chatClient.getChannelResources(req),
 
   // Categories
-  createCategory: (req: PartialMessage<CreateCategoryRequest>) =>
+  createCategory: (req: MessageInitShape<typeof CreateCategoryRequestSchema>) =>
     chatClient.createCategory(req),
-  updateCategory: (req: PartialMessage<UpdateCategoryRequest>) =>
+  updateCategory: (req: MessageInitShape<typeof UpdateCategoryRequestSchema>) =>
     chatClient.updateCategory(req),
-  deleteCategory: (req: PartialMessage<DeleteCategoryRequest>) =>
+  deleteCategory: (req: MessageInitShape<typeof DeleteCategoryRequestSchema>) =>
     chatClient.deleteCategory(req),
-  listCategories: (req: PartialMessage<ListCategoriesRequest>) =>
+  listCategories: (req: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     chatClient.listCategories(req),
-  reorderCategories: (req: PartialMessage<ReorderCategoriesRequest>) =>
+  reorderCategories: (req: MessageInitShape<typeof ReorderCategoriesRequestSchema>) =>
     chatClient.reorderCategories(req),
-  moveChannelToCategory: (req: PartialMessage<MoveChannelToCategoryRequest>) =>
+  moveChannelToCategory: (req: MessageInitShape<typeof MoveChannelToCategoryRequestSchema>) =>
     chatClient.moveChannelToCategory(req),
 
   // Agent confirmations
-  respondToAgentConfirmation: (req: PartialMessage<RespondToAgentConfirmationRequest>) =>
+  respondToAgentConfirmation: (req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>) =>
     chatClient.respondToAgentConfirmation(req),
-  getChannelPendingApprovals: (req: PartialMessage<GetChannelPendingApprovalsRequest>) =>
+  getChannelPendingApprovals: (req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>) =>
     chatClient.getChannelPendingApprovals(req),
 
   // Per-(channel, agent) context management
-  getChannelAgentContextStats: (req: PartialMessage<GetChannelAgentContextStatsRequest>) =>
+  getChannelAgentContextStats: (req: MessageInitShape<typeof GetChannelAgentContextStatsRequestSchema>) =>
     chatClient.getChannelAgentContextStats(req),
   getChannelAgentContextStatsBatch: (
-    req: PartialMessage<GetChannelAgentContextStatsBatchRequest>,
+    req: MessageInitShape<typeof GetChannelAgentContextStatsBatchRequestSchema>,
   ) => chatClient.getChannelAgentContextStatsBatch(req),
-  compactChannelAgentContext: (req: PartialMessage<CompactChannelAgentContextRequest>) =>
+  compactChannelAgentContext: (req: MessageInitShape<typeof CompactChannelAgentContextRequestSchema>) =>
     chatClient.compactChannelAgentContext(req),
-  resetChannelAgentContext: (req: PartialMessage<ResetChannelAgentContextRequest>) =>
+  resetChannelAgentContext: (req: MessageInitShape<typeof ResetChannelAgentContextRequestSchema>) =>
     chatClient.resetChannelAgentContext(req),
 };
 
 export const chatStreamApi = {
-  streamUserChatEvents: (req: PartialMessage<StreamUserChatEventsRequest>, signal?: AbortSignal) =>
+  streamUserChatEvents: (req: MessageInitShape<typeof StreamUserChatEventsRequestSchema>, signal?: AbortSignal) =>
     chatStreamClient.streamUserChatEvents(req, { signal }),
 };

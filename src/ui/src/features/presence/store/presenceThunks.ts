@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { Timestamp } from '@bufbuild/protobuf';
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { presenceApi } from '@/features/presence/api/presenceApi';
 import {
     updateBulkPresence,
@@ -37,7 +37,7 @@ export const fetchBulkPresence = createAsyncThunk(
                               emoji: presence.statusEmoji,
                               text: presence.statusText,
                               expiresAt: presence.statusExpiresAt
-                                  ? presence.statusExpiresAt.toDate().toISOString()
+                                  ? timestampDate(presence.statusExpiresAt).toISOString()
                                   : null,
                           }
                         : undefined;
@@ -81,7 +81,7 @@ export const setCustomStatus = createAsyncThunk(
             await presenceApi.setCustomStatus({
                 emoji,
                 text,
-                expiresAt: expiresAt ? Timestamp.fromDate(expiresAt) : undefined,
+                expiresAt: expiresAt ? timestampFromDate(expiresAt) : undefined,
             });
 
             return customStatus;

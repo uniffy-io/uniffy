@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -39,7 +41,7 @@ class CronService(Protocol):
 
 
 class CronServiceASGIApplication(ConnectASGIApplication[CronService]):
-    def __init__(self, service: CronService | AsyncGenerator[CronService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: CronService | AsyncGenerator[CronService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -116,6 +118,8 @@ class CronServiceASGIApplication(ConnectASGIApplication[CronService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -266,6 +270,9 @@ class CronServiceClient(ConnectClient):
         )
 
 
+
+
+
 class CronServiceSync(Protocol):
     def create_cron_task(self, request: agents_dot_v1_dot_cron__pb2.CreateCronTaskRequest, ctx: RequestContext) -> agents_dot_v1_dot_cron__pb2.CreateCronTaskResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -284,7 +291,7 @@ class CronServiceSync(Protocol):
 
 
 class CronServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: CronServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: CronServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.CronService/CreateCronTask": EndpointSync.unary(
@@ -360,6 +367,8 @@ class CronServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -508,3 +517,5 @@ class CronServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

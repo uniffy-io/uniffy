@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { UsersService } from "@uniffy/proto/users/v1/users_connect";
-import { UserProfile } from "@uniffy/proto/users/v1/users_pb";
+import { UsersService } from "@uniffy/proto/users/v1/users_pb";
+import type { UserProfile } from "@uniffy/proto/users/v1/users_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { UserEditDialog } from "@/features/admin/components/UserEditDialog";
 import { UserCreateDialog } from "@/features/admin/components/UserCreateDialog";
-import { transport } from "@/config";
+import { unaryTransport } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UsersThree, Plus, PencilSimple, ShieldCheck } from '@phosphor-icons/react';
 import { cn } from "@/shared/utils/cn";
@@ -35,7 +35,7 @@ export function UsersPage() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const client = createClient(UsersService, transport);
+      const client = createClient(UsersService, unaryTransport);
       const response = await client.listUsers(
         { pagination: { page: 1, pageSize: 100 }, includeInactive: true },
         { headers: { Authorization: `Bearer ${accessToken}` } }

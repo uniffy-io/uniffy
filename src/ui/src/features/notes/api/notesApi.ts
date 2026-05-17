@@ -6,28 +6,14 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { NotesService } from '@uniffy/proto/notes/v1/notes_connect';
-import type {
-    CreateNoteRequest,
-    GetNoteRequest,
-    UpdateNoteRequest,
-    DeleteNoteRequest,
-    ListNotesRequest,
-    SearchNotesRequest,
-    GetBacklinksRequest,
-    RestoreNoteRequest,
-    AutosaveNoteRequest,
-    MoveNoteRequest,
-    CopyNoteRequest,
-    EmptyTrashRequest,
-} from '@uniffy/proto/notes/v1/notes_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
+import { NotesService, AutosaveNoteRequestSchema, CopyNoteRequestSchema, CreateNoteRequestSchema, DeleteNoteRequestSchema, EmptyTrashRequestSchema, GetBacklinksRequestSchema, GetNoteRequestSchema, ListNotesRequestSchema, MoveNoteRequestSchema, RestoreNoteRequestSchema, SearchNotesRequestSchema, UpdateNoteRequestSchema } from '@uniffy/proto/notes/v1/notes_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 /**
  * Create a notes service client with the shared transport.
  */
-const notesClient = createClient(NotesService, transport);
+const notesClient = createClient(NotesService, unaryTransport);
 
 /**
  * Notes API service with typed methods.
@@ -36,84 +22,84 @@ export const notesApi = {
     /**
      * Create a new note.
      */
-    createNote: async (request: PartialMessage<CreateNoteRequest>) => {
+    createNote: async (request: MessageInitShape<typeof CreateNoteRequestSchema>) => {
         return notesClient.createNote(request);
     },
 
     /**
      * Get a note by ID.
      */
-    getNote: async (request: PartialMessage<GetNoteRequest>) => {
+    getNote: async (request: MessageInitShape<typeof GetNoteRequestSchema>) => {
         return notesClient.getNote(request);
     },
 
     /**
      * Update an existing note.
      */
-    updateNote: async (request: PartialMessage<UpdateNoteRequest>) => {
+    updateNote: async (request: MessageInitShape<typeof UpdateNoteRequestSchema>) => {
         return notesClient.updateNote(request);
     },
 
     /**
      * Delete a note (soft delete by default).
      */
-    deleteNote: async (request: PartialMessage<DeleteNoteRequest>) => {
+    deleteNote: async (request: MessageInitShape<typeof DeleteNoteRequestSchema>) => {
         return notesClient.deleteNote(request);
     },
 
     /**
      * List notes with filters and pagination.
      */
-    listNotes: async (request: PartialMessage<ListNotesRequest>) => {
+    listNotes: async (request: MessageInitShape<typeof ListNotesRequestSchema>) => {
         return notesClient.listNotes(request);
     },
 
     /**
      * Search notes using full-text search.
      */
-    searchNotes: async (request: PartialMessage<SearchNotesRequest>) => {
+    searchNotes: async (request: MessageInitShape<typeof SearchNotesRequestSchema>) => {
         return notesClient.searchNotes(request);
     },
 
     /**
      * Get backlinks for a note.
      */
-    getBacklinks: async (request: PartialMessage<GetBacklinksRequest>) => {
+    getBacklinks: async (request: MessageInitShape<typeof GetBacklinksRequestSchema>) => {
         return notesClient.getBacklinks(request);
     },
 
     /**
      * Restore a deleted note.
      */
-    restoreNote: async (request: PartialMessage<RestoreNoteRequest>) => {
+    restoreNote: async (request: MessageInitShape<typeof RestoreNoteRequestSchema>) => {
         return notesClient.restoreNote(request);
     },
 
     /**
      * Autosave note content (optimized for frequent updates).
      */
-    autosaveNote: async (request: PartialMessage<AutosaveNoteRequest>) => {
+    autosaveNote: async (request: MessageInitShape<typeof AutosaveNoteRequestSchema>) => {
         return notesClient.autosaveNote(request);
     },
 
     /**
      * Move note between spaces.
      */
-    moveNote: async (request: PartialMessage<MoveNoteRequest>) => {
+    moveNote: async (request: MessageInitShape<typeof MoveNoteRequestSchema>) => {
         return notesClient.moveNote(request);
     },
 
     /**
      * Copy note to another space.
      */
-    copyNote: async (request: PartialMessage<CopyNoteRequest>) => {
+    copyNote: async (request: MessageInitShape<typeof CopyNoteRequestSchema>) => {
         return notesClient.copyNote(request);
     },
 
     /**
      * Empty trash (permanently delete all soft-deleted notes).
      */
-    emptyTrash: async (request: PartialMessage<EmptyTrashRequest>) => {
+    emptyTrash: async (request: MessageInitShape<typeof EmptyTrashRequestSchema>) => {
         return notesClient.emptyTrash(request);
     },
 };

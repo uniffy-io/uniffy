@@ -1,38 +1,41 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { MembersService } from '@uniffy/proto/permissions/v1/permissions_connect';
+import { unaryTransport } from '@/config/api';
+import {
+    MembersService,
+    ListMembersRequestSchema,
+    AddMemberRequestSchema,
+    UpdateMemberRoleRequestSchema,
+    RemoveMemberRequestSchema,
+    SetAccessModeRequestSchema,
+    TransferOwnershipRequestSchema,
+    ListMemberEventsRequestSchema,
+} from '@uniffy/proto/permissions/v1/permissions_pb';
 import type {
-    ListMembersRequest,
     ListMembersResponse,
-    AddMemberRequest,
     AddMemberResponse,
-    UpdateMemberRoleRequest,
     UpdateMemberRoleResponse,
-    RemoveMemberRequest,
     RemoveMemberResponse,
-    SetAccessModeRequest,
     SetAccessModeResponse,
-    TransferOwnershipRequest,
     TransferOwnershipResponse,
-    ListMemberEventsRequest,
     ListMemberEventsResponse,
 } from '@uniffy/proto/permissions/v1/permissions_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const client = createClient(MembersService, transport);
+const client = createClient(MembersService, unaryTransport);
 
 export const membersApi = {
-    listMembers: (req: Partial<ListMembersRequest>): Promise<ListMembersResponse> =>
+    listMembers: (req: MessageInitShape<typeof ListMembersRequestSchema>): Promise<ListMembersResponse> =>
         client.listMembers(req),
-    addMember: (req: Partial<AddMemberRequest>): Promise<AddMemberResponse> =>
+    addMember: (req: MessageInitShape<typeof AddMemberRequestSchema>): Promise<AddMemberResponse> =>
         client.addMember(req),
-    updateMemberRole: (req: Partial<UpdateMemberRoleRequest>): Promise<UpdateMemberRoleResponse> =>
+    updateMemberRole: (req: MessageInitShape<typeof UpdateMemberRoleRequestSchema>): Promise<UpdateMemberRoleResponse> =>
         client.updateMemberRole(req),
-    removeMember: (req: Partial<RemoveMemberRequest>): Promise<RemoveMemberResponse> =>
+    removeMember: (req: MessageInitShape<typeof RemoveMemberRequestSchema>): Promise<RemoveMemberResponse> =>
         client.removeMember(req),
-    setAccessMode: (req: Partial<SetAccessModeRequest>): Promise<SetAccessModeResponse> =>
+    setAccessMode: (req: MessageInitShape<typeof SetAccessModeRequestSchema>): Promise<SetAccessModeResponse> =>
         client.setAccessMode(req),
-    transferOwnership: (req: Partial<TransferOwnershipRequest>): Promise<TransferOwnershipResponse> =>
+    transferOwnership: (req: MessageInitShape<typeof TransferOwnershipRequestSchema>): Promise<TransferOwnershipResponse> =>
         client.transferOwnership(req),
-    listMemberEvents: (req: Partial<ListMemberEventsRequest>): Promise<ListMemberEventsResponse> =>
+    listMemberEvents: (req: MessageInitShape<typeof ListMemberEventsRequestSchema>): Promise<ListMemberEventsResponse> =>
         client.listMemberEvents(req),
 };

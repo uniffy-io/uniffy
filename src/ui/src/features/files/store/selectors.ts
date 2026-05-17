@@ -103,7 +103,7 @@ const selectUploadActive = (state: RootState) => state.upload.activeUploads;
  */
 export const selectAllFiles = createSelector(
     [selectFilesMap],
-    (filesMap) => Object.values(filesMap)
+    (filesMap): SerializedFile[] => Object.values(filesMap)
 );
 
 /**

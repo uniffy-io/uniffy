@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -105,7 +107,7 @@ class ProjectsService(Protocol):
 
 
 class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
-    def __init__(self, service: ProjectsService | AsyncGenerator[ProjectsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: ProjectsService | AsyncGenerator[ProjectsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -402,6 +404,8 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -992,6 +996,9 @@ class ProjectsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateProjectResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1054,7 +1061,7 @@ class ProjectsServiceSync(Protocol):
 
 
 class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: ProjectsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: ProjectsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/projects.v1.ProjectsService/CreateProject": EndpointSync.unary(
@@ -1350,6 +1357,8 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -1938,3 +1947,5 @@ class ProjectsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

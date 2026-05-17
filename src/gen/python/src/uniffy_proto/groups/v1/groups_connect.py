@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -48,7 +50,7 @@ class GroupsService(Protocol):
 
 
 class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
-    def __init__(self, service: GroupsService | AsyncGenerator[GroupsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: GroupsService | AsyncGenerator[GroupsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -155,6 +157,8 @@ class GroupsServiceASGIApplication(ConnectASGIApplication[GroupsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -365,6 +369,9 @@ class GroupsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class GroupsServiceSync(Protocol):
     def list_groups(self, request: groups_dot_v1_dot_groups__pb2.ListGroupsRequest, ctx: RequestContext) -> groups_dot_v1_dot_groups__pb2.ListGroupsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -389,7 +396,7 @@ class GroupsServiceSync(Protocol):
 
 
 class GroupsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: GroupsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: GroupsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/groups.v1.GroupsService/ListGroups": EndpointSync.unary(
@@ -495,6 +502,8 @@ class GroupsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -703,3 +712,5 @@ class GroupsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

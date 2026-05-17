@@ -8,7 +8,6 @@
  * using the slice name and action names.
  */
 
-import type { PlainMessage } from '@bufbuild/protobuf';
 import type { GetCurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
 
 // Action type constants
@@ -25,7 +24,7 @@ export const AUTH_ACTION_TYPES = {
 
 // Action creator types
 export interface SetCredentialsPayload {
-  user: PlainMessage<GetCurrentUserResponse>;
+  user: Omit<GetCurrentUserResponse, '$typeName'>;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
@@ -35,7 +34,7 @@ export interface SetCredentialsPayload {
 }
 
 export interface RehydrateCompletePayload {
-  user: PlainMessage<GetCurrentUserResponse>;
+  user: Omit<GetCurrentUserResponse, '$typeName'>;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;

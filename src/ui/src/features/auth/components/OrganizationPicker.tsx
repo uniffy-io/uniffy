@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } f
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
-import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
+import { unaryTransport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
   Buildings,
@@ -104,7 +104,7 @@ export function OrganizationPicker() {
 
     const fetchOrgs = async () => {
       try {
-        const client = createClient(OrganizationsService, transport);
+        const client = createClient(OrganizationsService, unaryTransport);
         const response = await client.listMyOrganizations(
           {},
           { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -148,7 +148,7 @@ export function OrganizationPicker() {
     }
     setSelectingSlug(orgSlug);
     try {
-      const client = createClient(AuthService, transport);
+      const client = createClient(AuthService, unaryTransport);
       // Refresh token with the selected organization slug to get an org-scoped token
       const response = await client.refreshToken({
         refreshToken,

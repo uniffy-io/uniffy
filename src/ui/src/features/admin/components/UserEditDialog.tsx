@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { UsersService } from "@uniffy/proto/users/v1/users_connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
-import { UserProfile, UserOrganizationMembership } from "@uniffy/proto/users/v1/users_pb";
-import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { UsersService } from "@uniffy/proto/users/v1/users_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
+import type { UserProfile, UserOrganizationMembership } from "@uniffy/proto/users/v1/users_pb";
+import type { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { transport } from "@/config";
+import { unaryTransport } from "@/config";
 import { X, UserCircle, Buildings, Plus, Trash, ShieldCheck } from '@phosphor-icons/react';
 
 // Role options for organization membership
@@ -58,7 +58,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
 
   const fetchUserOrgs = useCallback(async () => {
     try {
-      const client = createClient(UsersService, transport);
+      const client = createClient(UsersService, unaryTransport);
       const response = await client.listUserOrganizations(
         { userId: user.id },
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -71,7 +71,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
 
   const fetchAllOrgs = useCallback(async () => {
     try {
-      const client = createClient(OrganizationsService, transport);
+      const client = createClient(OrganizationsService, unaryTransport);
       const response = await client.listOrganizations(
         { pagination: { page: 1, pageSize: 100 } },
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -95,7 +95,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     setLoading(true);
 
     try {
-      const client = createClient(UsersService, transport);
+      const client = createClient(UsersService, unaryTransport);
       await client.updateUser(
         {
           userId: user.id,
@@ -119,7 +119,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
   const handleAddOrg = async () => {
     if (!newOrgId || !accessToken) return;
     try {
-      const client = createClient(UsersService, transport);
+      const client = createClient(UsersService, unaryTransport);
       await client.addUserToOrganization(
         {
           userId: user.id,
@@ -143,7 +143,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     if (!removingOrgId || !accessToken) return;
     setRemoveOrgLoading(true);
     try {
-      const client = createClient(UsersService, transport);
+      const client = createClient(UsersService, unaryTransport);
       await client.removeUserFromOrganization(
         {
           userId: user.id,

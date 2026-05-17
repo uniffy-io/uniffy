@@ -1,47 +1,33 @@
 import { createClient } from "@connectrpc/connect";
-import type { PartialMessage } from "@bufbuild/protobuf";
-import { ProjectsService } from "@uniffy/proto/projects/v1/projects_connect";
-import type {
-  CreateProjectRequest,
-  GetProjectRequest,
-  UpdateProjectRequest,
-  DeleteProjectRequest,
-  ListProjectsRequest,
-  CreateTaskRequest,
-  GetTaskRequest,
-  UpdateTaskRequest,
-  DeleteTaskRequest,
-  ListTasksRequest,
-  MoveTaskRequest,
-  ListActivitiesRequest,
-} from "@uniffy/proto/projects/v1/projects_pb";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { ProjectsService, CreateProjectRequestSchema, CreateTaskRequestSchema, DeleteProjectRequestSchema, DeleteTaskRequestSchema, GetProjectRequestSchema, GetTaskRequestSchema, ListActivitiesRequestSchema, ListProjectsRequestSchema, ListTasksRequestSchema, MoveTaskRequestSchema, UpdateProjectRequestSchema, UpdateTaskRequestSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(ProjectsService, transport);
 
 export const projectsApi = {
-  listProjects: (request: PartialMessage<ListProjectsRequest>) => client.listProjects(request),
+  listProjects: (request: MessageInitShape<typeof ListProjectsRequestSchema>) => client.listProjects(request),
 
-  getProject: (request: PartialMessage<GetProjectRequest>) => client.getProject(request),
+  getProject: (request: MessageInitShape<typeof GetProjectRequestSchema>) => client.getProject(request),
 
-  createProject: (request: PartialMessage<CreateProjectRequest>) => client.createProject(request),
+  createProject: (request: MessageInitShape<typeof CreateProjectRequestSchema>) => client.createProject(request),
 
-  updateProject: (request: PartialMessage<UpdateProjectRequest>) => client.updateProject(request),
+  updateProject: (request: MessageInitShape<typeof UpdateProjectRequestSchema>) => client.updateProject(request),
 
-  deleteProject: (request: PartialMessage<DeleteProjectRequest>) => client.deleteProject(request),
+  deleteProject: (request: MessageInitShape<typeof DeleteProjectRequestSchema>) => client.deleteProject(request),
 
-  listTasks: (request: PartialMessage<ListTasksRequest>) => client.listTasks(request),
+  listTasks: (request: MessageInitShape<typeof ListTasksRequestSchema>) => client.listTasks(request),
 
-  getTask: (request: PartialMessage<GetTaskRequest>) => client.getTask(request),
+  getTask: (request: MessageInitShape<typeof GetTaskRequestSchema>) => client.getTask(request),
 
-  createTask: (request: PartialMessage<CreateTaskRequest>) => client.createTask(request),
+  createTask: (request: MessageInitShape<typeof CreateTaskRequestSchema>) => client.createTask(request),
 
-  updateTask: (request: PartialMessage<UpdateTaskRequest>) => client.updateTask(request),
+  updateTask: (request: MessageInitShape<typeof UpdateTaskRequestSchema>) => client.updateTask(request),
 
-  deleteTask: (request: PartialMessage<DeleteTaskRequest>) => client.deleteTask(request),
+  deleteTask: (request: MessageInitShape<typeof DeleteTaskRequestSchema>) => client.deleteTask(request),
 
-  moveTask: (request: PartialMessage<MoveTaskRequest>) => client.moveTask(request),
+  moveTask: (request: MessageInitShape<typeof MoveTaskRequestSchema>) => client.moveTask(request),
 
-  listActivities: (request: PartialMessage<ListActivitiesRequest>) =>
+  listActivities: (request: MessageInitShape<typeof ListActivitiesRequestSchema>) =>
     client.listActivities(request),
 };

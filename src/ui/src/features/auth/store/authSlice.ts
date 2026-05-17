@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { GetCurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 
 /**
  * Auth state shape.
@@ -11,7 +10,7 @@ import type { PlainMessage } from '@bufbuild/protobuf';
  * a new accessToken via the rehydrateAuth() function.
  */
 export interface AuthState {
-  user: PlainMessage<GetCurrentUserResponse> | null;
+  user: Omit<GetCurrentUserResponse, '$typeName'> | null;
   accessToken: string | null; // Memory only - never persisted
   refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
@@ -41,7 +40,7 @@ export const authSlice = createSlice({
     setCredentials: (
       state,
       action: PayloadAction<{
-        user: PlainMessage<GetCurrentUserResponse>;
+        user: Omit<GetCurrentUserResponse, '$typeName'>;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
@@ -72,7 +71,7 @@ export const authSlice = createSlice({
     rehydrateComplete: (
       state,
       action: PayloadAction<{
-        user: PlainMessage<GetCurrentUserResponse>;
+        user: Omit<GetCurrentUserResponse, '$typeName'>;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
@@ -110,7 +109,7 @@ export const authSlice = createSlice({
      */
     updateUser: (
       state,
-      action: PayloadAction<Partial<PlainMessage<GetCurrentUserResponse>>>
+      action: PayloadAction<Partial<Omit<GetCurrentUserResponse, '$typeName'>>>
     ) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };

@@ -30,8 +30,8 @@ import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
+import { unaryTransport } from '@/config/api';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
@@ -103,7 +103,7 @@ export function UserMenu() {
         void dispatch(cancelRecording());
         // Notify backend to revoke the session (fire-and-forget)
         if (refreshToken) {
-            const client = createClient(AuthService, transport);
+            const client = createClient(AuthService, unaryTransport);
             client.logout({ refreshToken }).catch(() => { });
         }
         // Clear memory access token (security: remove from memory)

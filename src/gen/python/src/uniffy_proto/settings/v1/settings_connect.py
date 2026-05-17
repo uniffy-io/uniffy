@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -42,7 +44,7 @@ class SettingsService(Protocol):
 
 
 class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
-    def __init__(self, service: SettingsService | AsyncGenerator[SettingsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SettingsService | AsyncGenerator[SettingsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -129,6 +131,8 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -299,6 +303,9 @@ class SettingsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class SettingsServiceSync(Protocol):
     def create_profile(self, request: settings_dot_v1_dot_settings__pb2.CreateProfileRequest, ctx: RequestContext) -> settings_dot_v1_dot_settings__pb2.CreateProfileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -319,7 +326,7 @@ class SettingsServiceSync(Protocol):
 
 
 class SettingsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: SettingsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SettingsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/settings.v1.SettingsService/CreateProfile": EndpointSync.unary(
@@ -405,6 +412,8 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -573,3 +582,5 @@ class SettingsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

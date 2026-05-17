@@ -1,8 +1,8 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { OrganizationsService } from '@uniffy/proto/organizations/v1/organizations_connect';
+import { unaryTransport } from '@/config/api';
+import { OrganizationsService } from '@uniffy/proto/organizations/v1/organizations_pb';
 
-const client = createClient(OrganizationsService, transport);
+const client = createClient(OrganizationsService, unaryTransport);
 
 export const organizationApi = {
   listMembers: async (request: {

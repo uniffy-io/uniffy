@@ -13,7 +13,6 @@ import { Buildings, SignOut } from "phosphor-react-native";
 import { useAuth } from "@/context/auth-context";
 import { authApi } from "@/api/authApi";
 import { useTheme } from "@/hooks/useTheme";
-import type { PlainMessage } from "@bufbuild/protobuf";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 
@@ -41,7 +40,7 @@ export default function SelectOrgScreen() {
   const insets = useSafeAreaInsets();
   const { user, selectOrganization, logout } = useAuth();
 
-  const [orgs, setOrgs] = useState<PlainMessage<MyOrganization>[]>([]);
+  const [orgs, setOrgs] = useState<Omit<MyOrganization, "$typeName">[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export default function SelectOrgScreen() {
       .listMyOrganizations()
       .then((res) => {
         if (!cancelled) {
-          setOrgs(res.organizations as unknown as PlainMessage<MyOrganization>[]);
+          setOrgs(res.organizations as unknown as Omit<MyOrganization, "$typeName">[]);
           setLoading(false);
         }
       })

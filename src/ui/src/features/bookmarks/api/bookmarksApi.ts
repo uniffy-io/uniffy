@@ -1,17 +1,12 @@
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
-import { BookmarksService } from '@uniffy/proto/bookmarks/v1/bookmarks_connect';
-import type {
-    ToggleBookmarkRequest,
-    ListBookmarksRequest,
-    BulkCheckBookmarksRequest,
-} from '@uniffy/proto/bookmarks/v1/bookmarks_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
+import { unaryTransport } from '@/config/api';
+import { BookmarksService, BulkCheckBookmarksRequestSchema, ListBookmarksRequestSchema, ToggleBookmarkRequestSchema } from '@uniffy/proto/bookmarks/v1/bookmarks_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 /**
  * Create a bookmarks service client with the shared transport.
  */
-const bookmarksClient = createClient(BookmarksService, transport);
+const bookmarksClient = createClient(BookmarksService, unaryTransport);
 
 /**
  * Bookmarks API service with typed methods.
@@ -20,21 +15,21 @@ export const bookmarksApi = {
     /**
      * Toggle bookmark on a URN (add if not bookmarked, remove if bookmarked).
      */
-    toggleBookmark: async (request: PartialMessage<ToggleBookmarkRequest>) => {
+    toggleBookmark: async (request: MessageInitShape<typeof ToggleBookmarkRequestSchema>) => {
         return bookmarksClient.toggleBookmark(request);
     },
 
     /**
      * List all bookmarks for the current user in an organization.
      */
-    listBookmarks: async (request: PartialMessage<ListBookmarksRequest>) => {
+    listBookmarks: async (request: MessageInitShape<typeof ListBookmarksRequestSchema>) => {
         return bookmarksClient.listBookmarks(request);
     },
 
     /**
      * Check multiple URNs for bookmark status.
      */
-    bulkCheckBookmarks: async (request: PartialMessage<BulkCheckBookmarksRequest>) => {
+    bulkCheckBookmarks: async (request: MessageInitShape<typeof BulkCheckBookmarksRequestSchema>) => {
         return bookmarksClient.bulkCheckBookmarks(request);
     },
 };

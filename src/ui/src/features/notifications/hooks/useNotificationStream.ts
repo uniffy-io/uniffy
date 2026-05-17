@@ -10,6 +10,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { createElement } from 'react';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchFile } from '@/features/files/store/filesSlice';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
@@ -88,9 +89,9 @@ export function useNotificationStream() {
                                 actorName: n.actorName,
                                 actorAvatarUrl: n.actorAvatarUrl,
                                 isRead: n.isRead,
-                                readAt: n.readAt?.toDate().toISOString() ?? null,
-                                createdAt: n.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
-                                expiresAt: n.expiresAt?.toDate().toISOString() ?? null,
+                                readAt: n.readAt ? timestampDate(n.readAt).toISOString() : null,
+                                createdAt: n.createdAt ? timestampDate(n.createdAt).toISOString() : new Date().toISOString(),
+                                expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
                             };
                             dispatch(addRealtimeNotification(serialized));
 
@@ -148,10 +149,9 @@ export function useNotificationStream() {
                                         ? {
                                               emoji: pc.statusEmoji,
                                               text: pc.statusText,
-                                              expiresAt:
-                                                  pc.statusExpiresAt
-                                                      ?.toDate()
-                                                      .toISOString() ?? null,
+                                              expiresAt: pc.statusExpiresAt
+                                                  ? timestampDate(pc.statusExpiresAt).toISOString()
+                                                  : null,
                                           }
                                         : undefined,
                                 }),

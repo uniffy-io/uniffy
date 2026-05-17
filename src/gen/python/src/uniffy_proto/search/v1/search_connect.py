@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -33,7 +35,7 @@ class SearchService(Protocol):
 
 
 class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
-    def __init__(self, service: SearchService | AsyncGenerator[SearchService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SearchService | AsyncGenerator[SearchService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -90,6 +92,8 @@ class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -200,6 +204,9 @@ class SearchServiceClient(ConnectClient):
         )
 
 
+
+
+
 class SearchServiceSync(Protocol):
     def search(self, request: search_dot_v1_dot_search__pb2.SearchRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.SearchResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -214,7 +221,7 @@ class SearchServiceSync(Protocol):
 
 
 class SearchServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: SearchServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: SearchServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/search.v1.SearchService/Search": EndpointSync.unary(
@@ -270,6 +277,8 @@ class SearchServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -378,3 +387,5 @@ class SearchServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

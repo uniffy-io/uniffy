@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { UsersService } from "@uniffy/proto/users/v1/users_connect";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
-import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { UsersService } from "@uniffy/proto/users/v1/users_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
+import type { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { transport } from "@/config";
+import { unaryTransport } from "@/config";
 import { X } from '@phosphor-icons/react';
 
 // Role options for organization membership
@@ -39,7 +39,7 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
 
   const fetchOrganizations = useCallback(async () => {
     try {
-      const client = createClient(OrganizationsService, transport);
+      const client = createClient(OrganizationsService, unaryTransport);
       const response = await client.listOrganizations(
         { pagination: { page: 1, pageSize: 100 } },
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -73,7 +73,7 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
     setLoading(true);
 
     try {
-      const usersClient = createClient(UsersService, transport);
+      const usersClient = createClient(UsersService, unaryTransport);
 
       // Create the user
       const newUser = await usersClient.createUser(
