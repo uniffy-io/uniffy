@@ -2,10 +2,11 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { notesApi } from '@/features/notes/api/notesApi';
 import { organizeNotesBySection, noteToTreeNode, sortTreeNodes } from '@/features/notes/utils/notesTreeUtils';
-import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode, ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { RootState } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
 import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
+import { setContentAccessMode } from '@/features/permissions/store/permissionsThunks';
 import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 import { bulkUpsertTags } from '@/features/tags/store/tagsSlice';
 import { tagToPlain } from '@/features/tags/store/tagsThunks';
@@ -590,6 +591,39 @@ export const notesTreeSlice = createSlice({
 
                 // Add to the appropriate section based on new access mode
                 const targetSection = note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
+                state.tree[targetSection].push(movedNode);
+                sortTreeNodes(state.tree[targetSection]);
+            })
+            // Sync tree when a note's access mode is changed via the Share dialog
+            // (MembersService.SetAccessMode, distinct from the legacy moveNote RPC).
+            .addCase(setContentAccessMode.fulfilled, (state, action) => {
+                if (action.meta.arg.contentType !== ContentType.NOTE) return;
+                const noteId = action.meta.arg.contentId;
+                const newAccessMode = action.payload.policy.accessMode;
+
+                const findAndRemoveNode = (nodes: TreeNode[], id: string): TreeNode | null => {
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (nodes[i].id === id) {
+                            const [removed] = nodes.splice(i, 1);
+                            return removed;
+                        }
+                        if (nodes[i].children) {
+                            const found = findAndRemoveNode(nodes[i].children!, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+
+                let movedNode: TreeNode | null = null;
+                for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
+                    movedNode = findAndRemoveNode(state.tree[section], noteId);
+                    if (movedNode) break;
+                }
+                if (!movedNode) return;
+
+                movedNode.accessMode = newAccessMode;
+                const targetSection = newAccessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
                 state.tree[targetSection].push(movedNode);
                 sortTreeNodes(state.tree[targetSection]);
             })

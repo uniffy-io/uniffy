@@ -50,6 +50,14 @@ const SHORTCUT_CATEGORIES = [
         ],
     },
     {
+        id: 'editor',
+        label: 'Notes Editor',
+        shortcuts: [
+            { action: 'editor.undo', label: 'Undo' },
+            { action: 'editor.redo', label: 'Redo' },
+        ],
+    },
+    {
         id: 'viewer',
         label: 'File Viewer',
         shortcuts: [

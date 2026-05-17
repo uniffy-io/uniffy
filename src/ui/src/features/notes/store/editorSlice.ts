@@ -8,7 +8,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 export type EditorMode = 'crepe' | 'markdown' | 'readonly';
 
 // Metadata panel tabs
-export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'ai' | 'history' | 'comments';
+export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'history' | 'comments';
 
 interface EditorState {
     // Editor content (draft state, not saved yet)
@@ -32,6 +32,8 @@ interface EditorState {
         fontSize: number;
         lineHeight: number;
         spellCheck: boolean;
+        toolbarPinned: boolean; // Persistent formatting toolbar visibility in crepe mode
+        titleAlignment: 'left' | 'center'; // Horizontal alignment of the in-doc title block
     };
 
     // Left sidebar state
@@ -58,6 +60,8 @@ const initialState: EditorState = {
         fontSize: 16,
         lineHeight: 1.6,
         spellCheck: true,
+        toolbarPinned: true,
+        titleAlignment: 'left',
     },
     isSidebarOpen: true,
     isMetadataPanelOpen: false,
@@ -146,6 +150,18 @@ export const editorSlice = createSlice({
             state.settings.spellCheck = action.payload;
         },
 
+        toggleToolbarPin: (state) => {
+            state.settings.toolbarPinned = !state.settings.toolbarPinned;
+        },
+
+        setToolbarPinned: (state, action: PayloadAction<boolean>) => {
+            state.settings.toolbarPinned = action.payload;
+        },
+
+        setTitleAlignment: (state, action: PayloadAction<'left' | 'center'>) => {
+            state.settings.titleAlignment = action.payload;
+        },
+
         // Sidebar
         toggleSidebar: (state) => {
             state.isSidebarOpen = !state.isSidebarOpen;
@@ -191,6 +207,9 @@ export const {
     setFontSize,
     setLineHeight,
     setSpellCheck,
+    toggleToolbarPin,
+    setToolbarPinned,
+    setTitleAlignment,
     toggleSidebar,
     setSidebarOpen,
     toggleMetadataPanel,

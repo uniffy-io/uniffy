@@ -72,6 +72,9 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "canvas.redo": "Ctrl+Shift+Z",
     # Recording actions
     "recording.toggleQuickClip": "Ctrl+Alt+S",
+    # Notes editor history (tooltip display; Milkdown handles the keymap internally)
+    "editor.undo": "Ctrl+Z",
+    "editor.redo": "Ctrl+Shift+Z",
     # Chat actions
     "chat.newMessage": "N",
     "chat.search": "Ctrl+F",

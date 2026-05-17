@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { EditorView, keymap } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
@@ -19,13 +19,15 @@ import { createMarkdownEditorTheme } from '@/features/notes/components/editor/ma
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
+  /** Optional title/metadata block rendered above the editor surface in the preview pane. */
+  titleSlot?: ReactNode;
 }
 
 const MIN_PANE_WIDTH = 200; // Minimum width in pixels
 
 const defaultSettings = { editorMode: 'markdown' as const, showMarkdownPreview: true, showMarkdownLineNumbers: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
-export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
+export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
   const settings = editorState?.settings ?? defaultSettings;
   const showMarkdownPreview = settings.showMarkdownPreview ?? true;
@@ -282,6 +284,7 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
               value={content}
               readonly
               enableUpload={false}
+              headerSlot={titleSlot}
             />
           </div>
         )}

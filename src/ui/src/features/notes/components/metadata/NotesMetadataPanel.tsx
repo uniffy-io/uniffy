@@ -8,7 +8,6 @@ import type { Icon as IconType } from '@phosphor-icons/react';
 import {
   Link,
   Gear,
-  Sparkle,
   Clock,
   ListBullets,
   Hash,
@@ -27,6 +26,11 @@ import { getInitials } from '@/components/subject/utils';
 import { MentionChipCompact } from '@/components/mention';
 import { TagChip } from '@/features/tags';
 import { useTagsByIds } from '@/features/tags/store/selectors';
+import {
+  headingToSlug,
+  indexedSlug,
+  findHeadingBySlug,
+} from '@/components/editor/utils/headingScroll';
 
 function NoteMetadataTagsList({ tagIds }: { tagIds: ReadonlyArray<string> }) {
   const tags = useTagsByIds(tagIds);
@@ -126,22 +130,25 @@ export function NotesMetadataPanel() {
     { id: 'links', label: 'Links', icon: Link },
     { id: 'properties', label: 'Properties', icon: Gear },
     { id: 'comments', label: 'Comments', icon: ChatCircle, badge: commentOpenCount },
-    { id: 'ai', label: 'AI', icon: Sparkle },
     { id: 'history', label: 'History', icon: Clock },
   ];
 
-  // Parse headings from markdown content
+  // Parse headings from markdown content. Slug derivation + occurrence
+  // suffix mirrors the ToC plugin so anchor links match across surfaces.
   const parseHeadings = (content: string) => {
     const headingRegex = /^(#{1,6})\s+(.+)$/gm;
     const headings: Array<{ level: number; text: string; id: string }> = [];
+    const slugCounts = new Map<string, number>();
     let match;
 
     while ((match = headingRegex.exec(content)) !== null) {
       const level = match[1].length;
       const text = match[2].trim();
-      // Create an id from the heading text
-      const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      headings.push({ level, text, id });
+      const base = headingToSlug(text);
+      if (!base) continue;
+      const n = slugCounts.get(base) ?? 0;
+      slugCounts.set(base, n + 1);
+      headings.push({ level, text, id: indexedSlug(base, n) });
     }
 
     return headings;
@@ -178,31 +185,14 @@ export function NotesMetadataPanel() {
     }
   };
 
-  const handleHeadingClick = (e: React.MouseEvent, headingText: string, headingId: string) => {
+  const handleHeadingClick = (e: React.MouseEvent, _headingText: string, headingId: string) => {
     e.preventDefault();
-    
-    // Update the URL hash without triggering a page reload
-    window.history.pushState(null, '', `#${headingId}`);
-    
-    // Find the heading in the editor and scroll to it
-    const editorElement = document.querySelector('.crepe-editor .milkdown, .crepe-editor .ProseMirror');
-    if (!editorElement) return;
-    
-    // Find all heading elements
-    const allHeadings = editorElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    for (const heading of allHeadings) {
-      if (heading.textContent?.trim() === headingText) {
-        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // Try to focus the editor and position cursor at the heading
-        // This works with ProseMirror-based editors
-        const proseMirror = editorElement.closest('.ProseMirror') || editorElement.querySelector('.ProseMirror');
-        if (proseMirror && (proseMirror as HTMLElement).focus) {
-          (proseMirror as HTMLElement).focus();
-        }
-        break;
-      }
-    }
+
+    window.history.replaceState(window.history.state, '', `#${headingId}`);
+
+    const heading = findHeadingBySlug(headingId);
+    if (!heading) return;
+    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const renderOutlineTab = () => (
@@ -380,34 +370,6 @@ export function NotesMetadataPanel() {
     </div>
   );
 
-  const renderAITab = () => (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkle size={20} weight="duotone" className="text-purple-500" />
-          <h4 className="font-semibold">Ask AI about this note</h4>
-        </div>
-        <p className="text-sm text-muted-foreground mb-3">
-          Summarize, find related, extract tasks...
-        </p>
-        <div className="space-y-2">
-          <button className="w-full text-left px-3 py-2 text-sm rounded-md bg-background/50 hover:bg-background transition-colors">
-            📝 Summarize this note
-          </button>
-          <button className="w-full text-left px-3 py-2 text-sm rounded-md bg-background/50 hover:bg-background transition-colors">
-            ✅ Extract action items
-          </button>
-          <button className="w-full text-left px-3 py-2 text-sm rounded-md bg-background/50 hover:bg-background transition-colors">
-            🔗 Find related notes
-          </button>
-          <button className="w-full text-left px-3 py-2 text-sm rounded-md bg-background/50 hover:bg-background transition-colors">
-            💡 Suggest improvements
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderHistoryTab = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Version history for this note</p>
@@ -444,8 +406,6 @@ export function NotesMetadataPanel() {
         return renderLinksTab();
       case 'properties':
         return renderPropertiesTab();
-      case 'ai':
-        return renderAITab();
       case 'history':
         return renderHistoryTab();
       case 'comments':

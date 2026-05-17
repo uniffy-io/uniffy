@@ -14,6 +14,10 @@ import { roleCanEdit, roleCanManage } from '@/shared/utils/contentRoles';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import { findHeadingBySlug } from '@/components/editor/utils/headingScroll';
+import { EditorHandleContext } from '@/components/editor/EditorHandle';
+import type { EditorHandle } from '@/components/editor/EditorHandle';
+import { NoteTitleBlock } from '@/features/notes/components/editor/NoteTitleBlock';
+import { FloatingFormattingToolbar } from '@/features/notes/components/editor/FloatingFormattingToolbar';
 
 export function NotesEditor() {
   const location = useLocation();
@@ -31,8 +35,14 @@ export function NotesEditor() {
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
 
-  // Check user's role on the current note
-  const role = useMyContentRole(ContentType.NOTE, currentNoteId ?? '');
+  // Check user's role on the current note. Pass the note row's userRole so
+  // the hook doesn't have to wait for a separate permissions fetch; the hook
+  // treats UNSPECIFIED (0) as not-set and falls through to its own resolver.
+  const role = useMyContentRole(
+    ContentType.NOTE,
+    currentNoteId ?? '',
+    currentNote?.userRole,
+  );
 
   // Force readonly mode if user doesn't have edit permission
   const canEdit = role === null ? true : roleCanEdit(role); // Default to true while loading
@@ -88,70 +98,17 @@ export function NotesEditor() {
     };
   }, [location.hash, currentNoteId, currentNote?.content]);
 
-  // Hide title section on scroll down, show on scroll up or at top.
-  // Uses capture-phase scroll listener on the container so it catches
-  // scroll events from any nested scrollable element (CrepeEditor wrapper,
-  // CodeMirror scroller, etc.) without needing to query for them.
-  // A cooldown timer prevents rapid toggling during fast/momentum scrolling
-  // by locking the state for the duration of the CSS transition.
-  const [titleVisible, setTitleVisible] = useState(true);
-  const lastScrollTopRef = useRef(0);
-  const titleVisibleRef = useRef(true);
-  const cooldownRef = useRef(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = editorContainerRef.current;
-    if (!container) return;
-
-    let cooldownTimer: ReturnType<typeof setTimeout>;
-
-    const onScroll = (e: Event) => {
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-
-      const scrollTop = target.scrollTop;
-      const prev = lastScrollTopRef.current;
-      lastScrollTopRef.current = scrollTop;
-
-      // Ignore tiny deltas (sub-pixel / momentum noise)
-      if (Math.abs(scrollTop - prev) < 2) return;
-
-      const shouldShow = scrollTop <= 10 || scrollTop < prev;
-
-      // Only update if the value actually changed AND we're not in cooldown
-      if (shouldShow !== titleVisibleRef.current && !cooldownRef.current) {
-        titleVisibleRef.current = shouldShow;
-        setTitleVisible(shouldShow);
-
-        // Lock state for 250ms (matches CSS transition) to prevent flicker
-        cooldownRef.current = true;
-        clearTimeout(cooldownTimer);
-        cooldownTimer = setTimeout(() => {
-          cooldownRef.current = false;
-        }, 250);
-      }
-    };
-
-    // Capture phase catches scroll events from any descendant
-    container.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    return () => {
-      container.removeEventListener('scroll', onScroll, { capture: true });
-      clearTimeout(cooldownTimer);
-    };
-  }, [currentNoteId, editorMode]);
-
-  // Reset title visibility when switching notes
-  useEffect(() => {
-    setTitleVisible(true);
-    titleVisibleRef.current = true;
-    lastScrollTopRef.current = 0;
-    cooldownRef.current = false;
-  }, [currentNoteId]);
 
   const handleContentChange = useCallback((markdown: string) => {
     scheduleAutosave(markdown);
   }, [scheduleAutosave]);
+
+  // Editor handle - published by CrepeEditor on mount, consumed by formatting toolbar
+  const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
+  const handleEditorReady = useCallback((handle: EditorHandle | null) => {
+    setEditorHandle(handle);
+  }, []);
 
   const handleCanvasChange = useCallback(
     (state: CanvasState) => {
@@ -197,11 +154,16 @@ export function NotesEditor() {
     );
   }
 
-  // Canvas notes use a dedicated editor
+  const titleBlock = <NoteTitleBlock note={currentNote} canEdit={canEdit} />;
+  const toolbarPinned = settings?.toolbarPinned ?? true;
+
+  // Canvas notes use a dedicated editor; the title sits above the canvas
+  // since the canvas does not have a scrolling document surface.
   if (isCanvas && canvasState) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
         {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} isCanvas />}
+        {!isZenMode && titleBlock}
         <div className="flex-1 overflow-hidden">
           <CanvasEditor
             key={currentNote.id}
@@ -225,12 +187,15 @@ export function NotesEditor() {
             value={noteContent}
             onChange={handleContentChange}
             enableComments={true}
+            onEditorReady={handleEditorReady}
+            headerSlot={titleBlock}
+            floatingToolbar={false}
           />
         );
       case 'markdown':
-        return <MarkdownSplitEditor note={currentNote} />;
+        return <MarkdownSplitEditor note={currentNote} titleSlot={titleBlock} />;
       case 'readonly':
-        return <ReadOnlyViewer note={currentNote} content={noteContent} />;
+        return <ReadOnlyViewer note={currentNote} content={noteContent} titleSlot={titleBlock} />;
       default:
         return (
           <CrepeEditor
@@ -239,17 +204,28 @@ export function NotesEditor() {
             value={noteContent}
             onChange={handleContentChange}
             enableComments={true}
+            onEditorReady={handleEditorReady}
+            headerSlot={titleBlock}
+            floatingToolbar={false}
           />
         );
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-card">
-      {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} titleVisible={titleVisible} />}
-      <div ref={editorContainerRef} className="flex-1 overflow-hidden">
-        {renderEditor()}
+    <EditorHandleContext.Provider value={editorHandle}>
+      <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
+        {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />}
+        <div ref={editorContainerRef} className="flex-1 overflow-hidden">
+          {renderEditor()}
+        </div>
+        {/* Floating selection toolbar: only mounts when the persistent bar is
+            unpinned and the user is editing in crepe mode. Same wiring as
+            the persistent bar, compact horizontal layout. */}
+        {canEdit && editorMode === 'crepe' && !toolbarPinned && (
+          <FloatingFormattingToolbar />
+        )}
       </div>
-    </div>
+    </EditorHandleContext.Provider>
   );
 }

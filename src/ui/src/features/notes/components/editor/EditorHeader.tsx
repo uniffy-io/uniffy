@@ -1,37 +1,45 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
-  DotsThree,
   ShareNetwork,
   PencilSimple,
   Eye,
   CodeSimple,
-  BookmarkSimple,
   CaretRight,
   SidebarSimple,
   ArrowsClockwise,
   CheckCircle,
   WarningCircle,
   DotsThreeOutline,
+  PushPin,
+  PushPinSlash,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
-import { updateNoteIcon } from '@/features/notes/store/notesThunks';
-import { setEditorMode, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
-import { updateNote } from '@/features/notes/store/notesSlice';
+import { setEditorMode, toggleMetadataPanel, toggleToolbarPin } from '@/features/notes/store/editorSlice';
 import { useSaveStatus } from '@/features/notes/hooks/useNotesHooks';
 import { buildBreadcrumbPath, type BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
 import { expandNode, setSelectedNode } from '@/features/notes/store/notesTreeSlice';
 import { setSidebarOpen } from '@/features/notes/store/editorSlice';
-import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
-import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
-import { TagPicker } from '@/features/tags';
-import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { MarkdownModeBar } from '@/features/notes/components/editor/MarkdownModeBar';
-import { useBookmarkToggle } from '@/features/bookmarks';
+import { EditorFormattingToolbar } from '@/features/notes/components/editor/EditorFormattingToolbar';
+
+function CollapsibleToolbarSlot({ children }: { children: React.ReactNode }) {
+  const pinned = useAppSelector((s) => s.editor.settings.toolbarPinned ?? true);
+  return (
+    <div
+      className="overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out"
+      style={{
+        maxHeight: pinned ? '120px' : '0px',
+        opacity: pinned ? 1 : 0,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 import { useAccessPolicyDialog } from '@/features/permissions';
 import { cn } from '@/shared/utils/cn';
-import { formatProtoDate } from '@/shared/utils/dateFormatting';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
@@ -40,7 +48,6 @@ interface EditorHeaderProps {
   canEdit?: boolean;
   canShare?: boolean;
   isCanvas?: boolean;
-  titleVisible?: boolean;
 }
 
 /**
@@ -207,28 +214,16 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
   );
 }
 
-export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false, titleVisible = true }: EditorHeaderProps) {
+export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || 'crepe';
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
+  const toolbarPinned = editorState?.settings?.toolbarPinned ?? true;
 
-  // Bookmark state
-  const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
-  const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
-
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const { openFor: openAccessDialog } = useAccessPolicyDialog();
-
-  // Track local edits separately from note title
-  const [localTitle, setLocalTitle] = useState<string | null>(null);
-  // Use localTitle if editing, otherwise use note.title directly
-  const title = localTitle ?? note.title;
-
-  // Icon picker state
-  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
   // Save status
   const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
@@ -238,28 +233,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
     const notesArray = Object.values(allNotes);
     return buildBreadcrumbPath(notesArray, note.id);
   }, [allNotes, note.id]);
-
-  
-  const handleTitleChange = (value: string) => {
-    setLocalTitle(value);
-    // Title change will be saved via autosave
-  };
-
-  const handleTitleBlur = () => {
-    // Save title on blur if changed
-    if (localTitle !== null && localTitle !== note.title && localTitle.trim()) {
-      dispatch(updateNote({ noteId: note.id, title: localTitle.trim() }));
-    }
-    // Reset local state after save
-    setLocalTitle(null);
-  };
-
-  const handleIconChange = (icon: NoteIcon | null) => {
-    // Close picker first to prevent unmounted component updates
-    setIsIconPickerOpen(false);
-    // Then dispatch the update
-    dispatch(updateNoteIcon({ noteId: note.id, icon }));
-  };
 
   const handleShare = () => {
     openAccessDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
@@ -337,38 +310,36 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
             ))}
           </div>}
 
-          {/* Bookmark Button */}
-          <button
-            onClick={toggleBookmark}
-            disabled={bookmarkToggling}
-            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
-            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-          >
-            {isBookmarked ? (
-              <BookmarkSimple size={20} weight="fill" className="text-primary" />
-            ) : (
-              <BookmarkSimple size={20} weight="duotone" className="text-primary" />
-            )}
-          </button>
-
           {/* Share Button - only show if user has share permission (admin/owner) */}
           {canShare && (
             <button
               onClick={handleShare}
-              className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+              className="px-2 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Share"
             >
-              <ShareNetwork size={20} weight="duotone" className="text-primary" />
+              <ShareNetwork size={16} weight="bold" />
             </button>
           )}
 
-          {/* More Options */}
-          <button
-            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title="More Options"
-          >
-            <DotsThree size={20} weight="bold" className="text-primary" />
-          </button>
+          {/* Toolbar pin toggle - only in crepe edit mode */}
+          {!isCanvas && editorMode === 'crepe' && canEdit && (
+            <button
+              onClick={() => dispatch(toggleToolbarPin())}
+              className={cn(
+                'px-2 py-1 rounded-md transition-colors',
+                toolbarPinned
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+              title={toolbarPinned ? 'Unpin formatting toolbar' : 'Pin formatting toolbar'}
+            >
+              {toolbarPinned ? (
+                <PushPin size={16} weight="fill" />
+              ) : (
+                <PushPinSlash size={16} weight="bold" />
+              )}
+            </button>
+          )}
 
           {/* Right panel toggle */}
           <button
@@ -387,95 +358,11 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
       </div>
 
       {!isCanvas && editorMode === 'markdown' && <MarkdownModeBar />}
-
-      {/* Title Section - collapses on scroll down */}
-      <div
-        className="overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out"
-        style={{
-          maxHeight: titleVisible ? '200px' : '0px',
-          opacity: titleVisible ? 1 : 0,
-        }}
-      >
-        <div className="px-4 pt-3 pb-2">
-          <div className="flex items-start gap-3">
-            {/* Note Icon/Emoji */}
-            <div className="relative mt-0.5 shrink-0">
-              <button
-                onClick={() => canEdit && setIsIconPickerOpen(!isIconPickerOpen)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  canEdit ? 'hover:bg-muted cursor-pointer' : 'cursor-not-allowed opacity-60'
-                }`}
-                title={canEdit ? 'Change icon' : 'Read only'}
-                disabled={!canEdit}
-              >
-                {renderNoteIcon(note.icon, "h-6 w-6 text-muted-foreground")}
-              </button>
-              {isIconPickerOpen && canEdit && (
-                <IconPicker
-                  currentIcon={note.icon}
-                  onSelect={handleIconChange}
-                  onClose={() => setIsIconPickerOpen(false)}
-                />
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              {/* Title Input */}
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => canEdit && handleTitleChange(e.target.value)}
-                onBlur={handleTitleBlur}
-                placeholder="Untitled"
-                readOnly={!canEdit}
-                className={`w-full text-xl font-semibold bg-transparent border-none outline-none focus:ring-0 text-foreground ${
-                  !canEdit ? 'cursor-not-allowed opacity-80' : ''
-                }`}
-              />
-
-              {/* Meta Info */}
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span>Created {formatProtoDate(note.createdAt)}</span>
-                {note.updatedAt && (
-                  <>
-                    <span>·</span>
-                    <span>Updated {formatProtoDate(note.updatedAt)}</span>
-                  </>
-                )}
-                {/* Sharing info: show owner for shared notes (but not org-wide notes) */}
-                {note.accessMode !== AccessMode.OPEN_TO_ORG && note.ownerId && note.ownerId !== currentUserId && (
-                  <>
-                    <span>·</span>
-                    <span className="text-blue-500">
-                      Shared with you
-                    </span>
-                  </>
-                )}
-                {/* Sharing info: show share count for notes owned by user */}
-                {note.accessMode === AccessMode.EXPLICIT_MEMBERS && note.ownerId === currentUserId && (
-                  <>
-                    <span>·</span>
-                    <span className="text-blue-500">
-                      Shared
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {/* Tags Row */}
-              <div className="mt-2">
-                <TagPicker
-                  selectedTagIds={note.tagIds ?? []}
-                  onChange={(tagIds) => {
-                    dispatch(updateNote({ noteId: note.id, tagIds }));
-                  }}
-                  disabled={!canEdit}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {!isCanvas && editorMode === 'crepe' && canEdit && (
+        <CollapsibleToolbarSlot>
+          <EditorFormattingToolbar noteId={note.id} />
+        </CollapsibleToolbarSlot>
+      )}
     </div>
   );
 }

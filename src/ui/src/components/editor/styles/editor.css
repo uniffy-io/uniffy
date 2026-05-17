@@ -309,34 +309,139 @@
   color: hsl(var(--foreground));
 }
 
-/* Slash command menu */
+/*
+ * Slash command palette
+ *
+ * Crepe ships a Vue-rendered slash menu under `.milkdown-slash-menu`. We keep
+ * the DOM but reshape it into a 2-column grouped grid that matches the rest
+ * of the app: themed surface, uppercase section labels, compact rows. The
+ * Vue component's keyboard navigation (arrow keys, Enter, Escape) still
+ * works because we are not touching JS.
+ */
+.milkdown .milkdown-slash-menu,
 .crepe-editor .milkdown-slash-menu,
-.crepe-editor [data-slash-menu],
-.crepe-editor .crepe-slash-menu {
-  background: hsl(var(--card)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  color: hsl(var(--foreground)) !important;
-}
-
-.crepe-editor .milkdown-slash-menu-item:hover,
-.crepe-editor [data-slash-menu] [data-item]:hover {
-  background: hsl(var(--accent));
-}
-
-/* Slash menu items text */
-.crepe-editor [data-slash-menu] [data-item],
-.crepe-editor .crepe-slash-menu-item {
-  color: hsl(var(--foreground)) !important;
-}
-
-/* Crepe specific slash menu */
-.crepe [data-crepe-slash-menu],
+[data-slash-menu],
 [data-crepe-slash-menu] {
   background: hsl(var(--card)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.625rem !important;
+  box-shadow: 0 16px 32px -8px rgb(0 0 0 / 0.35), 0 4px 12px -4px rgb(0 0 0 / 0.25) !important;
+  color: hsl(var(--card-foreground)) !important;
+  width: 520px !important;
+  max-width: calc(100vw - 32px) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Hide the top tab strip - section headers already group items */
+.milkdown .milkdown-slash-menu .tab-group,
+.crepe-editor .milkdown-slash-menu .tab-group {
+  display: none !important;
+}
+
+/* Scrollable body */
+.milkdown .milkdown-slash-menu .menu-groups,
+.crepe-editor .milkdown-slash-menu .menu-groups {
+  padding: 0.5rem 0.625rem 0.625rem !important;
+  max-height: 380px !important;
+  overflow-y: auto !important;
+}
+
+/* Section labels - small, uppercase, muted */
+.milkdown .milkdown-slash-menu .menu-group h6,
+.crepe-editor .milkdown-slash-menu .menu-group h6 {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: hsl(var(--muted-foreground)) !important;
+  padding: 0.75rem 0.5rem 0.375rem !important;
+  margin: 0 !important;
+}
+
+/* Item grid - 2 columns on desktop, 1 on narrow viewports */
+.milkdown .milkdown-slash-menu .menu-group ul,
+.crepe-editor .milkdown-slash-menu .menu-group ul {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style: none !important;
+}
+
+@media (max-width: 540px) {
+  .milkdown .milkdown-slash-menu .menu-group ul,
+  .crepe-editor .milkdown-slash-menu .menu-group ul {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Items - icon left, label right, compact row */
+.milkdown .milkdown-slash-menu .menu-group li,
+.crepe-editor .milkdown-slash-menu .menu-group li {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.625rem !important;
+  min-width: 0 !important;
+  padding: 0.5rem 0.625rem !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  color: hsl(var(--card-foreground)) !important;
+  cursor: pointer !important;
+  transition: background-color 80ms ease !important;
+}
+
+.milkdown .milkdown-slash-menu .menu-group li:hover,
+.milkdown .milkdown-slash-menu .menu-group li.hover,
+.crepe-editor .milkdown-slash-menu .menu-group li:hover,
+.crepe-editor .milkdown-slash-menu .menu-group li.hover {
+  background: hsl(var(--muted)) !important;
+}
+
+.milkdown .milkdown-slash-menu .menu-group li.active,
+.crepe-editor .milkdown-slash-menu .menu-group li.active {
+  background: color-mix(in srgb, hsl(var(--primary)) 18%, transparent) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+/* Icon container - square chip behind the icon for visual rhythm */
+.milkdown .milkdown-slash-menu .menu-group li svg,
+.crepe-editor .milkdown-slash-menu .menu-group li svg {
+  flex: 0 0 auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  fill: currentColor !important;
+}
+
+.milkdown .milkdown-slash-menu .menu-group li.hover svg,
+.crepe-editor .milkdown-slash-menu .menu-group li.hover svg {
   color: hsl(var(--foreground)) !important;
+}
+
+.milkdown .milkdown-slash-menu .menu-group li > span,
+.crepe-editor .milkdown-slash-menu .menu-group li > span {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+/* Subtle divider between groups */
+.milkdown .milkdown-slash-menu .menu-group + .menu-group::before,
+.crepe-editor .milkdown-slash-menu .menu-group + .menu-group::before {
+  content: '' !important;
+  display: block !important;
+  height: 1px !important;
+  margin: 0.375rem 0.5rem 0 !important;
+  background: hsl(var(--border)) !important;
 }
 
 /* Code block styling */
@@ -1258,6 +1363,62 @@
 }
 
 /*
+ * Floating Selection Toolbar (Crepe default)
+ *
+ * Crepe attaches a `<div class="milkdown-toolbar">` next to the ProseMirror
+ * surface and positions it via Floating UI (absolute, not in flow). Notes
+ * disables this surface entirely (FloatingFormattingToolbar replaces it);
+ * other CrepeEditor consumers (calendar, projects, agents) keep Crepe's
+ * default with these themed overrides.
+ */
+.crepe-editor .milkdown-toolbar,
+.milkdown .milkdown-toolbar {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.35), 0 2px 8px -2px rgb(0 0 0 / 0.2) !important;
+  color: hsl(var(--card-foreground)) !important;
+  overflow: hidden !important;
+}
+
+.crepe-editor .milkdown-toolbar .toolbar-item,
+.milkdown .milkdown-toolbar .toolbar-item {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.crepe-editor .milkdown-toolbar .toolbar-item:hover,
+.milkdown .milkdown-toolbar .toolbar-item:hover {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor .milkdown-toolbar .toolbar-item svg,
+.milkdown .milkdown-toolbar .toolbar-item svg {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
+.crepe-editor .milkdown-toolbar .toolbar-item.active svg,
+.milkdown .milkdown-toolbar .toolbar-item.active svg {
+  color: hsl(var(--primary)) !important;
+  fill: hsl(var(--primary)) !important;
+}
+
+.crepe-editor .milkdown-toolbar .divider,
+.milkdown .milkdown-toolbar .divider {
+  background: hsl(var(--border)) !important;
+}
+
+/*
+ * Underline Mark
+ */
+.crepe-editor .ProseMirror u.text-underline,
+.crepe-editor .milkdown u.text-underline {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/*
  * Compact Editor Mode
  * When CrepeEditor is used in modals/panels (calendar events, task descriptions),
  * Milkdown's default flex layout constrains the editor width.
@@ -1301,6 +1462,202 @@
 .chat-bubble-editor .crepe-editor-compact .ProseMirror li {
   font-size: 0.875rem !important;
   line-height: 1.5 !important;
+}
+
+/*
+ * Table of Contents Block
+ * Inline outline rendered as a block atom. Stripped of Crepe's default
+ * link/paragraph chrome so the entries read as a quiet navigation aid.
+ */
+.crepe-editor .toc-block,
+.crepe-editor-wrapper .toc-block {
+  position: relative;
+  width: 100%;
+  margin: 1.75rem 0 1rem;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  border-left: 2px solid hsl(var(--border));
+  background: transparent;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.crepe-editor .toc-block__pill,
+.crepe-editor-wrapper .toc-block__pill {
+  position: absolute;
+  top: -1.5rem;
+  left: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.375rem 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dark .crepe-editor .toc-block__pill,
+.dark .crepe-editor-wrapper .toc-block__pill {
+  background: hsl(var(--primary) / 0.18);
+}
+
+.crepe-editor .toc-block__pill-label,
+.crepe-editor-wrapper .toc-block__pill-label {
+  padding: 0 0.125rem;
+}
+
+.crepe-editor .toc-block__pill-count,
+.crepe-editor-wrapper .toc-block__pill-count {
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: hsl(var(--primary) / 0.18);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.crepe-editor .toc-block__pill-gear,
+.crepe-editor-wrapper .toc-block__pill-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: hsl(var(--primary));
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.crepe-editor .toc-block__pill-gear:hover,
+.crepe-editor-wrapper .toc-block__pill-gear:hover {
+  background: hsl(var(--primary) / 0.22);
+}
+
+.crepe-editor .toc-block-wrapper.ProseMirror-selectednode .toc-block,
+.crepe-editor-wrapper .toc-block-wrapper.ProseMirror-selectednode .toc-block {
+  border-left-color: hsl(var(--primary));
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.crepe-editor .toc-block__title,
+.crepe-editor-wrapper .toc-block__title {
+  margin: 0 0 0.5rem 0 !important;
+  padding: 0 0.125rem 0.375rem !important;
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: 1.375rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  color: hsl(var(--foreground)) !important;
+  letter-spacing: -0.01em;
+}
+
+.crepe-editor .toc-block__list,
+.crepe-editor-wrapper .toc-block__list {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.crepe-editor .toc-block__list ol,
+.crepe-editor .toc-block__list ul,
+.crepe-editor-wrapper .toc-block__list ol,
+.crepe-editor-wrapper .toc-block__list ul {
+  margin: 0 !important;
+  padding-left: 0.75rem !important;
+}
+
+.crepe-editor .toc-block__list.is-bullets-none,
+.crepe-editor .toc-block__list.is-bullets-none ul,
+.crepe-editor-wrapper .toc-block__list.is-bullets-none,
+.crepe-editor-wrapper .toc-block__list.is-bullets-none ul {
+  list-style: none !important;
+}
+
+.crepe-editor .toc-block__list.is-bullets-disc,
+.crepe-editor .toc-block__list.is-bullets-disc ul,
+.crepe-editor-wrapper .toc-block__list.is-bullets-disc,
+.crepe-editor-wrapper .toc-block__list.is-bullets-disc ul {
+  list-style: disc !important;
+}
+
+.crepe-editor .toc-block__list.is-bullets-dash,
+.crepe-editor .toc-block__list.is-bullets-dash ul,
+.crepe-editor-wrapper .toc-block__list.is-bullets-dash,
+.crepe-editor-wrapper .toc-block__list.is-bullets-dash ul {
+  list-style: "— " !important;
+}
+
+.crepe-editor .toc-block__list.is-bullets-number,
+.crepe-editor .toc-block__list.is-bullets-number ol,
+.crepe-editor-wrapper .toc-block__list.is-bullets-number,
+.crepe-editor-wrapper .toc-block__list.is-bullets-number ol {
+  list-style: decimal !important;
+}
+
+.crepe-editor .toc-block__list:not(.is-bullets-none) li,
+.crepe-editor-wrapper .toc-block__list:not(.is-bullets-none) li {
+  margin-left: 1.25rem;
+}
+
+.crepe-editor .toc-block__list li::marker,
+.crepe-editor-wrapper .toc-block__list li::marker {
+  color: hsl(var(--muted-foreground) / 0.6);
+  font-size: 0.8125rem;
+}
+
+.crepe-editor .toc-block__entry,
+.crepe-editor-wrapper .toc-block__entry {
+  display: block;
+  padding: 0.1875rem 0.5rem;
+  margin: 0;
+  border-radius: 0.25rem;
+  color: hsl(var(--muted-foreground)) !important;
+  text-decoration: none !important;
+  background-image: none !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.crepe-editor .toc-block__entry:hover,
+.crepe-editor-wrapper .toc-block__entry:hover {
+  background: hsl(var(--muted) / 0.7);
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor .toc-block__entry.level-1,
+.crepe-editor-wrapper .toc-block__entry.level-1 {
+  color: hsl(var(--foreground)) !important;
+  font-weight: 600;
+}
+
+.crepe-editor .toc-block__entry.level-2,
+.crepe-editor-wrapper .toc-block__entry.level-2 {
+  color: hsl(var(--foreground)) !important;
+  font-weight: 500;
+}
+
+.crepe-editor .toc-block__empty,
+.crepe-editor-wrapper .toc-block__empty {
+  margin: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+.crepe-editor .toc-block__summary,
+.crepe-editor-wrapper .toc-block__summary {
+  cursor: pointer;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
 }
 
 /*

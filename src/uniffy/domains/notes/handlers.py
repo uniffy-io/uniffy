@@ -7,6 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.notes.v1.notes_pb2 import (
     AutosaveNoteRequest,
     AutosaveNoteResponse,
@@ -30,6 +31,7 @@ from uniffy_proto.notes.v1.notes_pb2 import (
     UpdateNoteResponse,
 )
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
@@ -41,7 +43,8 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
-from uniffy.core.types import NodeType
+from uniffy.core.models.notes.note import Note
+from uniffy.core.types import ContentRole, ContentType, NodeType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notes.converters import (
@@ -51,6 +54,30 @@ from uniffy.domains.notes.converters import (
 )
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.tags import TagOperations
+
+
+async def _resolve_user_role(
+    session: AsyncSession,
+    user_id: UUID,
+    organization_id: UUID,
+    note: Note,
+    checker: PermissionChecker | None = None,
+) -> ContentRole | None:
+    """Resolve the caller's effective role on ``note`` for outbound proto.
+
+    Passing a shared ``checker`` lets list endpoints avoid re-loading the
+    org role / domain admin status for every row.
+    """
+    permission_checker = checker or PermissionChecker(session)
+    return await permission_checker.effective_role(
+        user_id=user_id,
+        organization_id=organization_id,
+        content_type=ContentType.NOTE,
+        content_id=note.id,
+        owner_id=note.owner_id,
+        access_mode=note.access_mode,
+        baseline_role=note.baseline_role,
+    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -159,10 +186,12 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
+                user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 return CreateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -189,12 +218,14 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
+                user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 return GetNoteResponse(
                     note=note_to_proto(
                         note,
                         owner_info=sharing.owner_info if sharing else None,
                         shared_with=sharing.shared_with if sharing else None,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -252,10 +283,12 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
+                user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 return UpdateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -307,10 +340,12 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
+                user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 return RestoreNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -370,9 +405,15 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[urn_for(n) for n in notes],
                 )
+                # Share one PermissionChecker so org-role / domain-admin lookups
+                # hit the cache once for the whole page instead of per-note.
+                checker = PermissionChecker(session)
                 proto_notes = []
                 for n in notes:
                     info = sharing.get(n.id)
+                    user_role = await _resolve_user_role(
+                        session, user_id, organization_id, n, checker=checker
+                    )
                     proto_notes.append(
                         note_to_proto(
                             n,
@@ -380,6 +421,7 @@ class NotesHandlers:
                             owner_info=info.owner_info if info else None,
                             shared_with=info.shared_with if info else None,
                             tags=tags_by_urn.get(urn_for(n), []),
+                            user_role=user_role,
                         )
                     )
 
@@ -516,10 +558,12 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
+                user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 return MoveNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
+                        user_role=user_role,
                     )
                 )
         except ConnectError:

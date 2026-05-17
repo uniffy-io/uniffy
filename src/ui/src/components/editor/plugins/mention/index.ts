@@ -42,6 +42,20 @@ export function triggerMentionSearch(event: MentionTriggerEvent | null) {
   mentionEventCallbacks.forEach((callback) => callback(event));
 }
 
+/**
+ * Open the mention search popup at the current cursor position by inserting an
+ * `@` character and dispatching a synthetic trigger event. Used by toolbar
+ * buttons and other UI surfaces outside of the typed-input-rule path.
+ */
+export function triggerMentionAtCursor(view: EditorView) {
+  const { state } = view;
+  const start = state.selection.from;
+  const tr = state.tr.insertText('@', start);
+  view.dispatch(tr);
+  view.focus();
+  triggerMentionSearch({ query: '', from: start, to: start + 1, view });
+}
+
 // 1. Define the mention node schema (inline element)
 export const mentionNode = $node('mention', () => ({
   group: 'inline',
@@ -149,6 +163,8 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
           if (match[1] === 'video') continue;
           // Skip audio patterns — handled by audio remark plugin
           if (match[1] === 'audio') continue;
+          // Skip toc patterns — handled by toc remark plugin
+          if (match[1] === 'toc') continue;
 
           // Add text before the match
           if (match.index > lastIndex) {

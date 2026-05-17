@@ -133,7 +133,7 @@ export function NotesLayout({
               defaultSize={300}
               minSize={200}
               maxSize={400}
-              className="bg-card overflow-hidden"
+              className="bg-background overflow-hidden"
             >
               {metadataPanel}
             </Panel>
@@ -147,7 +147,7 @@ export function NotesLayout({
           open={showSidebar}
           onClose={onCloseSidebar ?? (() => {})}
           side="left"
-          className="w-72"
+          className="w-72 bg-background"
           ariaLabel="Notes sidebar"
         >
           {sidebar}
@@ -160,7 +160,7 @@ export function NotesLayout({
           open={showMetadataPanel && !!metadataPanel}
           onClose={onCloseMetadataPanel ?? (() => {})}
           side="right"
-          className="w-80"
+          className="w-80 bg-background"
           showClose={false}
           ariaLabel="Note details"
         >

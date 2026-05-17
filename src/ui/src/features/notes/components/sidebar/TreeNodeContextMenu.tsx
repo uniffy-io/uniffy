@@ -11,8 +11,11 @@ import {
     Trash,
     CopySimple,
     ArrowRight,
+    BookmarkSimple,
 } from '@phosphor-icons/react';
 import type { ActiveMenuState } from '@/features/notes/components/sidebar/types';
+import { useBookmarkToggle } from '@/features/bookmarks';
+import { buildUrn, UrnType } from '@/shared/utils/urn';
 
 interface TreeNodeContextMenuProps {
     menu: ActiveMenuState;
@@ -31,6 +34,9 @@ export function TreeNodeContextMenu({
     onCopy,
     onMove,
 }: TreeNodeContextMenuProps) {
+    const isBookmarkable = menu.nodeType === 'note' || menu.nodeType === 'canvas';
+    const nodeUrn = isBookmarkable ? buildUrn(UrnType.NOTE, menu.nodeId) : '';
+    const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(nodeUrn);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Close on outside click
@@ -93,6 +99,21 @@ export function TreeNodeContextMenu({
                     <ArrowRight size={16} className="text-primary" />
                     Move to...
                 </button>
+
+                {isBookmarkable && (
+                    <button
+                        onClick={(e) => handleAction(toggleBookmark, e)}
+                        disabled={bookmarkToggling}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                        <BookmarkSimple
+                            size={16}
+                            weight={isBookmarked ? 'fill' : 'bold'}
+                            className="text-primary"
+                        />
+                        {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+                    </button>
+                )}
 
                 <div className="my-1 h-px bg-border" />
 

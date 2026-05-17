@@ -19,7 +19,14 @@ export function useMyContentRole(
         (s) => s.permissions.byContent[`${contentType}:${contentId}`]?.policy,
     );
 
-    if (explicitRole !== undefined && explicitRole !== null) {
+    // Treat UNSPECIFIED (0) as "not set" so a stale or in-flight proto value
+    // falls through to the policy-based resolution below instead of forcing
+    // a no-access verdict on the caller.
+    if (
+        explicitRole !== undefined
+        && explicitRole !== null
+        && explicitRole !== ContentRole.UNSPECIFIED
+    ) {
         return explicitRole as ContentRole;
     }
 

@@ -16,6 +16,8 @@ import {
     initializeNotesData,
     type SerializedNote,
 } from '@/features/notes/store/notesThunks';
+import { setContentAccessMode } from '@/features/permissions/store/permissionsThunks';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 // LocalStorage key for last opened note
 const LAST_NOTE_STORAGE_KEY = 'uniffy-last-note';
@@ -406,6 +408,18 @@ export const notesSlice = createSlice({
         builder
             .addCase(moveNote.fulfilled, (state, action) => {
                 state.notes[action.payload.id] = normalizeNote(action.payload);
+            });
+
+        // setContentAccessMode (Share dialog): keep in-memory note row in
+        // sync with the new policy so accessMode-driven UI (e.g. sidebar
+        // section grouping) reflects the change without a refetch.
+        builder
+            .addCase(setContentAccessMode.fulfilled, (state, action) => {
+                if (action.meta.arg.contentType !== ContentType.NOTE) return;
+                const note = state.notes[action.meta.arg.contentId];
+                if (!note) return;
+                note.accessMode = action.payload.policy.accessMode;
+                note.baselineRole = action.payload.policy.baselineRole;
             });
 
         // copyNote

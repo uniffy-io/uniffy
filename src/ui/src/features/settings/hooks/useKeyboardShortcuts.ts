@@ -57,6 +57,9 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
 
     // Recording actions
     'recording.toggleQuickClip': 'Ctrl+Alt+S',
+    // Notes editor history (tooltip display; Milkdown handles the keymap internally)
+    'editor.undo': 'Ctrl+Z',
+    'editor.redo': 'Ctrl+Shift+Z',
 
     // Chat actions
     'chat.editLast': 'ArrowUp',
