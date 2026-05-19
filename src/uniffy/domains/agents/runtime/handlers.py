@@ -27,6 +27,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     CancelStreamResponse,
     GetUsageStatsRequest,
     GetUsageStatsResponse,
+    RerunFromMessageRequest,
     RespondToConfirmationRequest,
     RespondToConfirmationResponse,
     SendMessageRequest,
@@ -154,6 +155,7 @@ async def _enqueue_run(
     content: str,
     files_payload: list[dict[str, Any]] | None,
     user_timezone: str | None,
+    rerun_message_id: UUID | None = None,
 ) -> None:
     """Enqueue ``run_agent_session`` on the egress fleet."""
     queue = get_queue("egress")
@@ -166,6 +168,7 @@ async def _enqueue_run(
         content,
         files_payload,
         user_timezone,
+        str(rerun_message_id) if rerun_message_id else None,
     )
 
 
@@ -428,6 +431,110 @@ class RuntimeHandlers:
         except Exception as exc:
             logger.error(
                 f"Error in stream_send_message subscribe loop (run={run_id}): {exc}",
+                exc_info=True,
+            )
+            yield _build_synthetic_error_event(run_id, "Internal server error")
+
+    async def rerun_from_message(
+        self,
+        request: RerunFromMessageRequest,
+        ctx: RequestContext,
+    ) -> AsyncIterator[StreamSendMessageResponse]:
+        """Stream a fresh assistant response anchored on an edited message.
+
+        Validates the anchor (user role, not invalidated, owned by caller),
+        enqueues a run job, then relays per-run events. Mirrors the shape
+        of ``stream_send_message`` so the frontend can reuse its handler.
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                org_ops = OrganizationOperations(session)
+                await org_ops.require_org_member(user_id, org_id)
+                session_ops = SessionOperations(session)
+                msg, agent_session = await session_ops.load_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                )
+                if msg.role != "user":
+                    raise ConnectError(
+                        Code.INVALID_ARGUMENT,
+                        "rerun is only supported on user messages",
+                    )
+                if msg.is_invalidated:
+                    raise ConnectError(
+                        Code.INVALID_ARGUMENT,
+                        "cannot rerun an invalidated message",
+                    )
+                await check_agent_message_limits(
+                    session,
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_session.agent_id,
+                )
+                await BudgetsOperations(session).check_preflight(
+                    user_id=user_id,
+                    organization_id=org_id,
+                )
+                session_id = agent_session.id
+
+            run_id = generate_id()
+            await set_run_state(
+                run_id=run_id,
+                user_id=user_id,
+                organization_id=org_id,
+                session_id=session_id,
+                status="queued",
+                last_seq=0,
+            )
+
+            await _enqueue_run(
+                run_id=run_id,
+                user_id=user_id,
+                organization_id=org_id,
+                session_id=session_id,
+                content="",
+                files_payload=None,
+                user_timezone=request.user_timezone or None,
+                rerun_message_id=message_id,
+            )
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except ConnectError:
+            raise
+        except Exception as exc:
+            logger.error(f"rerun_from_message preflight failed: {exc}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+        yield _build_run_id_event(run_id)
+
+        try:
+            async for event in _subscribe_runtime_events(run_id):
+                yield _stamp_run_id(runtime_stream_event_to_proto(event), run_id)
+        except (asyncio.CancelledError, GeneratorExit):
+            logger.info(f"rerun_from_message cancelled by client (run={run_id})")
+            raise
+        except ConnectError:
+            raise
+        except Exception as exc:
+            logger.error(
+                f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}",
                 exc_info=True,
             )
             yield _build_synthetic_error_event(run_id, "Internal server error")

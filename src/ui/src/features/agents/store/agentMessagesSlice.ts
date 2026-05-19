@@ -141,7 +141,28 @@ export const agentMessagesSlice = createSlice({
                     nanos: 0,
                 },
                 fileIds: fileIds?.length ? fileIds : undefined,
+                isInvalidated: false,
+                editedAt: undefined,
+                previousContent: undefined,
+                wasCancelled: false,
             });
+        },
+        reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {
+            const { sessionId, message } = action.payload;
+            const list = state.messagesBySession[sessionId];
+            if (!list) {
+                state.messagesBySession[sessionId] = [message];
+                return;
+            }
+            if (list.some((m) => m.id === message.id)) return;
+            const idx = list.findIndex(
+                (m) => m.role === message.role && typeof m.id === 'string' && m.id.startsWith('optimistic-'),
+            );
+            if (idx >= 0) {
+                list[idx] = message;
+            } else {
+                list.push(message);
+            }
         },
         cacheFileMetadata: (state, action: PayloadAction<Record<string, FileMetadata>>) => {
             Object.assign(state.fileMetadataCache, action.payload);
@@ -188,6 +209,15 @@ export const agentMessagesSlice = createSlice({
         streamError: (state, action: PayloadAction<string>) => {
             state.isStreaming = false;
             state.error = action.payload;
+            state.streamingContent = '';
+            state.streamingToolCalls = [];
+            state.pendingConfirmation = null;
+            state.activeRunId = null;
+            writePersistedRunId(null);
+        },
+        streamCancelled: (state) => {
+            state.isStreaming = false;
+            state.error = null;
             state.streamingContent = '';
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
@@ -261,6 +291,7 @@ export const {
     runIdReceived,
     clearActiveRunId,
     addOptimisticUserMessage,
+    reconcileStoredMessage,
     cacheFileMetadata,
     appendStreamingToken,
     addStreamingToolCall,
@@ -269,6 +300,7 @@ export const {
     clearConfirmation,
     streamCompleted,
     streamError,
+    streamCancelled,
     clearAgentMessages,
 } = agentMessagesSlice.actions;
 

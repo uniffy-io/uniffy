@@ -39,6 +39,7 @@ from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,
     RuntimeErrorEvent,
+    RuntimeMessageStoredEvent,
 )
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.observability.metrics import (
@@ -117,6 +118,7 @@ async def run_agent_session(
     content: str,
     files: list[dict[str, Any]] | None,
     user_timezone: str | None,
+    rerun_message_id: str | None = None,
 ) -> dict[str, Any]:
     """Drive a single agent session run, fanning events to a per-run stream.
 
@@ -214,14 +216,23 @@ async def run_agent_session(
             destination = SessionDestination(session_id=sid)
             done_seen = False
             cancelled = False
-            async for event in runtime_ops.stream_send_message(
-                destination=destination,
-                user_id=uid,
-                organization_id=oid,
-                content=content,
-                files=file_contexts,
-                user_timezone=user_timezone,
-            ):
+            if rerun_message_id:
+                event_stream = runtime_ops.stream_rerun_from_message(
+                    user_id=uid,
+                    organization_id=oid,
+                    message_id=UUID(rerun_message_id),
+                    user_timezone=user_timezone,
+                )
+            else:
+                event_stream = runtime_ops.stream_send_message(
+                    destination=destination,
+                    user_id=uid,
+                    organization_id=oid,
+                    content=content,
+                    files=file_contexts,
+                    user_timezone=user_timezone,
+                )
+            async for event in event_stream:
                 await publisher.publish(event)
                 if isinstance(event, RuntimeDoneEvent):
                     done_seen = True
@@ -233,6 +244,12 @@ async def run_agent_session(
                 # we run it on every event.
                 if await is_cancel_requested(rid):
                     cancelled = True
+                    cancelled_msg = await session_ops.add_cancelled_placeholder(
+                        session_id=sid,
+                    )
+                    await publisher.publish(
+                        RuntimeMessageStoredEvent(message=cancelled_msg)
+                    )
                     await publisher.publish(
                         RuntimeErrorEvent(error="cancelled")
                     )

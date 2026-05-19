@@ -5,6 +5,7 @@ import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CancelStreamRequest,
     GetUsageStatsRequest,
+    RerunFromMessageRequest,
     RespondToConfirmationRequest,
     SendMessageRequest,
     SubscribeToRunRequest,
@@ -19,7 +20,10 @@ export const runtimeApi = {
     streamSendMessage: (request: MessageInitShape<typeof StreamSendMessageRequestSchema>) => {
         return client.streamSendMessage(request);
     },
-    subscribeToRun: (request: MessageInitShape<typeof SubscribeToRunRequestSchema>, options?: { signal?: AbortSignal }) => {
+    rerunFromMessage: (request: PartialMessage<RerunFromMessageRequest>) => {
+        return client.rerunFromMessage(request);
+    },
+    subscribeToRun: (request: PartialMessage<SubscribeToRunRequest>, options?: { signal?: AbortSignal }) => {
         return client.subscribeToRun(request, options);
     },
     cancelStream: async (request: PartialMessage<CancelStreamRequest>) => {

@@ -99,6 +99,7 @@ class AgentMessage(SQLModel, table=True):
     is_thinking: bool = Field(default=False, nullable=False)
     is_compacted: bool = Field(default=False, nullable=False)
     is_invalidated: bool = Field(default=False, nullable=False)
+    was_cancelled: bool = Field(default=False, nullable=False)
     invalidated_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),

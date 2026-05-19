@@ -59,6 +59,7 @@ import {
     editAgentMessage,
     deleteAgentMessage,
     retryAgentMessage,
+    rerunFromMessage,
     MessageRole,
 } from "@/features/agents/store/agentMessagesThunks";
 import type { SerializedMessage } from "@/features/agents/store/agentMessagesThunks";
@@ -214,16 +215,15 @@ function UserBubble({ message }: { message: SerializedMessage }) {
     const isInvalidated = !!message.isInvalidated;
     const wasEdited = !!message.editedAt;
 
+    if (isInvalidated) {
+        return <RemovedBubble align="end" label="This user message was removed" timestamp={message.createdAt} />;
+    }
+
     return (
         <div className="group flex flex-col items-end">
             <div className="flex items-end gap-1">
                 <MessageActions message={message} />
-                <div
-                    className={cn(
-                        "max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2",
-                        isInvalidated && "opacity-50 line-through",
-                    )}
-                >
+                <div className="max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2">
                     {useRichEditor ? (
                         <CrepeEditor
                             contentType={ContentType.NOTE}
@@ -248,9 +248,43 @@ function UserBubble({ message }: { message: SerializedMessage }) {
     );
 }
 
+function RemovedBubble({
+    align,
+    label,
+    timestamp,
+}: {
+    align: "start" | "end";
+    label: string;
+    timestamp?: { seconds: number; nanos: number };
+}) {
+    return (
+        <div className={cn("group flex flex-col", align === "end" ? "items-end" : "items-start")}>
+            <div
+                className={cn(
+                    "max-w-[70%] rounded-2xl px-4 py-2 border border-dashed border-border bg-transparent text-xs italic text-muted-foreground",
+                    align === "end" ? "rounded-br-sm" : "rounded-bl-sm",
+                )}
+            >
+                {label}
+            </div>
+            <span className={cn("text-xs text-muted-foreground mt-1", align === "end" ? "text-right" : "text-left")}>
+                {formatTime(timestamp)}
+            </span>
+        </div>
+    );
+}
+
 function AssistantBubble({ message }: { message: SerializedMessage }) {
     const isThinking = message.isThinking;
     const isInvalidated = !!message.isInvalidated;
+    const wasCancelled = !!message.wasCancelled;
+
+    if (isInvalidated) {
+        return <RemovedBubble align="start" label="This agent message was removed" timestamp={message.createdAt} />;
+    }
+    if (wasCancelled) {
+        return <RemovedBubble align="start" label="Agent response cancelled" timestamp={message.createdAt} />;
+    }
 
     return (
         <div className="group flex flex-col items-start">
@@ -261,7 +295,6 @@ function AssistantBubble({ message }: { message: SerializedMessage }) {
                         isThinking
                             ? "bg-muted/50 border border-dashed border-border px-4 py-2"
                             : "bg-muted overflow-hidden",
-                        isInvalidated && "opacity-50",
                     )}
                 >
                     {isThinking ? (
@@ -295,6 +328,7 @@ function MessageActions({ message }: { message: SerializedMessage }) {
     const isStreaming = useAppSelector(selectIsStreaming);
     const isUser = message.role === MessageRole.USER;
     const isInvalidated = !!message.isInvalidated;
+    const isOptimistic = typeof message.id === 'string' && message.id.startsWith('optimistic-');
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState("");
 
@@ -306,7 +340,7 @@ function MessageActions({ message }: { message: SerializedMessage }) {
     };
     const handleEditSubmit = async () => {
         if (!editValue.trim()) return;
-        await dispatch(
+        const editResult = await dispatch(
             editAgentMessage({
                 sessionId: message.sessionId,
                 messageId: message.id,
@@ -314,6 +348,12 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             }),
         );
         setEditing(false);
+        if (editAgentMessage.fulfilled.match(editResult)) {
+            dispatch(rerunFromMessage({
+                sessionId: message.sessionId,
+                messageId: message.id,
+            }));
+        }
     };
     const handleDelete = () => {
         dispatch(deleteAgentMessage({ sessionId: message.sessionId, messageId: message.id }));
@@ -349,7 +389,7 @@ function MessageActions({ message }: { message: SerializedMessage }) {
                 <button
                     type="button"
                     onClick={handleEditOpen}
-                    disabled={isStreaming}
+                    disabled={isStreaming || isOptimistic}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
                     title="Edit message"
                 >
@@ -359,7 +399,7 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             <button
                 type="button"
                 onClick={handleRetry}
-                disabled={isStreaming}
+                disabled={isStreaming || isOptimistic}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
                 title="Retry from here"
             >
@@ -369,7 +409,7 @@ function MessageActions({ message }: { message: SerializedMessage }) {
                 <button
                     type="button"
                     onClick={handleDelete}
-                    disabled={isStreaming}
+                    disabled={isStreaming || isOptimistic}
                     className="p-1.5 rounded-md text-muted-foreground hover-destructive disabled:opacity-50"
                     title="Delete message"
                 >
@@ -932,14 +972,22 @@ function ChatPanel() {
         }
     }, [activeSessionId, dispatch]);
 
-    // Refresh context stats after streaming completes
+    // Refresh context stats and refocus the composer after streaming completes
     const prevStreamingRef = useRef(false);
     useEffect(() => {
         if (prevStreamingRef.current && !isStreaming && activeSessionId) {
             dispatch(fetchSessionContextStats(activeSessionId));
+            textareaRef.current?.focus();
         }
         prevStreamingRef.current = isStreaming;
     }, [isStreaming, activeSessionId, dispatch]);
+
+    // Focus the composer when entering a chat session (new or switched)
+    useEffect(() => {
+        if (activeSessionId && !isStreaming) {
+            textareaRef.current?.focus();
+        }
+    }, [activeSessionId, isStreaming]);
 
     // Auto-scroll on new messages or streaming updates
     useEffect(() => {

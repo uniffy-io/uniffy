@@ -886,9 +886,10 @@ class RuntimeOperations:
     def _build_llm_messages(
         self,
         context_messages: list[AgentMessage],
-        new_content: str,
+        new_content: str = "",
         *,
         files: list[FileContext] | None = None,
+        append_new: bool = True,
     ) -> list[dict]:
         """Build the LLM messages array from session context.
 
@@ -1008,6 +1009,9 @@ class RuntimeOperations:
                 # Skip system, tool messages not paired with assistant, etc.
                 i += 1
 
+        if not append_new:
+            return messages
+
         # Append the new user message (with optional file attachments)
         if files:
             content_blocks: list[dict] = []
@@ -1028,6 +1032,43 @@ class RuntimeOperations:
 
         return messages
 
+    async def stream_rerun_from_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+        user_timezone: str | None = None,
+    ) -> AsyncIterator[RuntimeStreamEvent]:
+        """Re-run the agent from an existing edited user message.
+
+        The anchor must be a non-invalidated user-role row whose
+        downstream has already been invalidated (typically by EditMessage).
+        Streams events in the same shape as ``stream_send_message`` but
+        does not create a new user message - the anchor already lives in
+        DB and is loaded into context via the normal window-function query.
+        """
+        msg, agent_session = await self._session_ops.load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if msg.role != "user":
+            raise ValidationError("role", "rerun is only supported on user messages")
+        if msg.is_invalidated:
+            raise ValidationError("message", "cannot rerun an invalidated message")
+
+        async for event in self.stream_send_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            destination=SessionDestination(session_id=agent_session.id),
+            content="",
+            files=None,
+            user_timezone=user_timezone,
+            rerun_anchor=msg,
+        ):
+            yield event
+
     async def stream_send_message(
         self,
         *,
@@ -1037,6 +1078,7 @@ class RuntimeOperations:
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
+        rerun_anchor: AgentMessage | None = None,
     ) -> AsyncIterator[RuntimeStreamEvent]:
         """Execute the send-message flow with streaming token output.
 
@@ -1206,29 +1248,40 @@ class RuntimeOperations:
         context_messages = apply_emergency_truncation(context_messages, token_budget)
 
         # 10b. Content policy check (warn-only, never blocks)
-        injection_flags = check_user_message(content)
-        if injection_flags:
-            logger.warning(
-                "Prompt injection flags in stream_send_message",
-                flags=injection_flags,
-                user_id=str(user_id),
-                session_id=str(session_id),
-            )
+        if rerun_anchor is None:
+            injection_flags = check_user_message(content)
+            if injection_flags:
+                logger.warning(
+                    "Prompt injection flags in stream_send_message",
+                    flags=injection_flags,
+                    user_id=str(user_id),
+                    session_id=str(session_id),
+                )
 
-        llm_messages = self._build_llm_messages(context_messages, content, files=files)
+        llm_messages = self._build_llm_messages(
+            context_messages,
+            content,
+            files=files,
+            append_new=rerun_anchor is None,
+        )
 
         # Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
 
-        # 11. Store user message with enriched content (file text baked in
-        # so the LLM retains file context on subsequent turns).
-        stored_content = _build_stored_content(content, files)
-        user_message = await writer.add_message(
-            role="user",
-            content=stored_content,
-            file_ids=[f.file_id for f in files] if files else None,
-        )
-        yield RuntimeMessageStoredEvent(message=user_message)
+        if rerun_anchor is None:
+            # 11. Store user message with enriched content (file text baked in
+            # so the LLM retains file context on subsequent turns).
+            stored_content = _build_stored_content(content, files)
+            user_message = await writer.add_message(
+                role="user",
+                content=stored_content,
+                file_ids=[f.file_id for f in files] if files else None,
+            )
+            yield RuntimeMessageStoredEvent(message=user_message)
+        else:
+            # Re-run path: the anchor already lives in DB; emit it so the
+            # client can reconcile the optimistic edit state.
+            yield RuntimeMessageStoredEvent(message=rerun_anchor)
 
         # 12. Call LLM with streaming and track timing
         start_time = time.monotonic()

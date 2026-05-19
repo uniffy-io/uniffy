@@ -12,6 +12,11 @@ service RuntimeService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   // Send a user message and stream tokens, tool events, and the final response
   rpc StreamSendMessage(StreamSendMessageRequest) returns (stream StreamSendMessageResponse) {}
+  // Re-run the agent against an existing edited user message. The anchor
+  // message must be a non-invalidated user-role row whose downstream has
+  // already been invalidated (via EditMessage). Streams events in the
+  // same shape as StreamSendMessage; no new user message is created.
+  rpc RerunFromMessage(RerunFromMessageRequest) returns (stream StreamSendMessageResponse) {}
   // Resume an in-flight run by run_id. Replays the full event stream from
   // the start, then tails live until Done/Error or the 120s wall budget.
   // Used by the frontend after a tab reload to reconnect without
@@ -161,6 +166,16 @@ message SendMessageRequest {
   optional ChatChannelContext chat_context = 6;
 }
 
+message RerunFromMessageRequest {
+  string organization_id = 1;
+  // The user-role message to re-run from. Must already have its downstream
+  // invalidated (typically via EditMessage). The runtime treats it as the
+  // last message in context and streams a fresh assistant response.
+  string message_id = 2;
+  // IANA timezone of the user's browser (e.g. "America/New_York")
+  string user_timezone = 3;
+}
+
 message StreamSendMessageRequest {
   string organization_id = 1;
   // Legacy: addresses an isolated AgentSession. Used by the builder Test
@@ -238,6 +253,7 @@ message StreamSendMessageResponse {
     StreamDoneEvent done = 5;
     StreamErrorEvent error = 6;
     StreamConfirmationRequiredEvent confirmation_required = 7;
+    StreamFailoverEvent failover = 9;
   }
   // The egress run id this event belongs to. Populated on every event
   // so a tab reload mid-stream can call SubscribeToRun(run_id) to

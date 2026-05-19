@@ -585,6 +585,40 @@ class SessionOperations:
         await self._session.refresh(message)
         return message
 
+    async def add_cancelled_placeholder(
+        self,
+        *,
+        session_id: UUID,
+    ) -> AgentMessage:
+        """Insert an empty assistant message marked ``was_cancelled``.
+
+        Called from the worker after the user cancels a run mid-stream so
+        the UI can show an "Agent response cancelled" placeholder that
+        survives page refreshes. Bumps ``message_count`` so future loads
+        order it correctly.
+        """
+        result = await self._session.execute(
+            select(AgentSession).where(AgentSession.id == session_id)
+        )
+        agent_session = result.scalar_one_or_none()
+        if agent_session is None:
+            raise NotFoundError("AgentSession", str(session_id))
+
+        message = AgentMessage(
+            session_id=session_id,
+            role="assistant",
+            content="",
+            input_tokens=0,
+            output_tokens=0,
+            was_cancelled=True,
+        )
+        self._session.add(message)
+        agent_session.message_count += 1
+        agent_session.updated_at = datetime.now(UTC)
+        await self._session.commit()
+        await self._session.refresh(message)
+        return message
+
     async def list_messages(
         self,
         *,
@@ -1011,11 +1045,11 @@ class SessionOperations:
         organization_id: UUID,
         message_id: UUID,
     ) -> int:
-        """Soft-delete a user message and every later message in the session.
+        """Soft-delete a single message (any role).
 
-        Returns the number of rows marked invalidated (the anchor row
-        plus everything after it). Refused if a run is currently in
-        flight.
+        Returns ``1`` when the row was newly invalidated, ``0`` when it
+        was already invalidated. The session's ``updated_at`` is bumped.
+        Refused if a run is currently in flight.
         """
         await self._org_ops.require_org_member(user_id, organization_id)
 
@@ -1026,22 +1060,18 @@ class SessionOperations:
         )
         if agent_session.user_id != user_id:
             raise PermissionDeniedError("delete", "AgentMessage")
-        if msg.role != "user":
-            raise ValidationError("role", "delete is only supported on user messages")
         if msg.is_invalidated:
             return 0
 
         await self._ensure_no_inflight_run(agent_session.id)
 
-        count = await self._invalidate_downstream(
-            session_id=agent_session.id,
-            anchor_created_at=msg.created_at,
-            user_id=user_id,
-            include_anchor=True,
-        )
-        agent_session.updated_at = datetime.now(UTC)
+        now = datetime.now(UTC)
+        msg.is_invalidated = True
+        msg.invalidated_at = now
+        msg.invalidated_by = user_id
+        agent_session.updated_at = now
         await self._session.commit()
-        return count
+        return 1
 
     async def retry_message(
         self,
@@ -1113,7 +1143,7 @@ class SessionOperations:
 
         return anchor.content or "", list(anchor.file_ids or [])
 
-    async def _load_message(
+    async def load_message(
         self,
         *,
         user_id: UUID,
@@ -1121,6 +1151,20 @@ class SessionOperations:
         message_id: UUID,
     ) -> tuple[AgentMessage, AgentSession]:
         """Fetch a message + its session, gated on org and session ownership."""
+        return await self._load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+
+    async def _load_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+    ) -> tuple[AgentMessage, AgentSession]:
+        """Internal: fetch a message + its session, gated on access."""
         result = await self._session.execute(
             select(AgentMessage, AgentSession)
             .join(AgentSession, AgentMessage.session_id == AgentSession.id)

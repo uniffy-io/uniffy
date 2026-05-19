@@ -120,6 +120,9 @@ message MessageInfo {
   optional google.protobuf.Timestamp edited_at = 17;
   // Pre-edit content. Populated only for messages with edited_at set.
   optional string previous_content = 18;
+  // True if this assistant turn was cancelled by the user before
+  // completion. The UI renders it as a "cancelled" placeholder.
+  bool was_cancelled = 19;
 }
 
 // --- Requests and Responses ---

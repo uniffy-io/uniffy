@@ -1,4 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import { toast } from 'sonner';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
 import type { RootState } from '@/app/store';
@@ -8,6 +9,7 @@ import {
     streamStarted,
     runIdReceived,
     addOptimisticUserMessage,
+    reconcileStoredMessage,
     appendStreamingToken,
     addStreamingToolCall,
     addStreamingToolResult,
@@ -15,6 +17,7 @@ import {
     clearConfirmation,
     streamCompleted,
     streamError,
+    streamCancelled,
 } from '@/features/agents/store/agentMessagesSlice';
 
 const getOrganizationId = (state: RootState): string => {
@@ -50,6 +53,7 @@ export const messageToPlain = (msg: MessageInfo) => ({
     isInvalidated: msg.isInvalidated,
     editedAt: timestampToPlain(msg.editedAt),
     previousContent: msg.previousContent,
+    wasCancelled: msg.wasCancelled,
 });
 
 export type SerializedMessage = ReturnType<typeof messageToPlain>;
@@ -159,8 +163,13 @@ export const streamSendMessage = createAsyncThunk<
                     result: event.event.value.result,
                 }));
             } else if (event.event.case === 'messageStored') {
-                // A message was stored server-side; we can use this to
-                // reconcile or just ignore since we get final from 'done'.
+                const stored = event.event.value.message;
+                if (stored) {
+                    dispatch(reconcileStoredMessage({
+                        sessionId: params.sessionId,
+                        message: messageToPlain(stored),
+                    }));
+                }
             } else if (event.event.case === 'done') {
                 // Flush any remaining buffered tokens before completing
                 if (rafId !== null) cancelAnimationFrame(rafId);
@@ -170,6 +179,12 @@ export const streamSendMessage = createAsyncThunk<
                     sessionId: params.sessionId,
                     assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
                 }));
+            } else if (event.event.case === 'failover') {
+                const f = event.event.value;
+                toast.info(
+                    `Switched to ${f.toModel || 'a different provider'}`,
+                    { description: `Retry attempt ${f.attempt} (${f.reason})` },
+                );
             } else if (event.event.case === 'confirmationRequired') {
                 dispatch(setConfirmationRequired({
                     toolCallId: event.event.value.toolCallId,
@@ -180,12 +195,113 @@ export const streamSendMessage = createAsyncThunk<
             } else if (event.event.case === 'error') {
                 if (rafId !== null) cancelAnimationFrame(rafId);
                 flushTokens();
+                if (event.event.value.message === 'cancelled') {
+                    dispatch(streamCancelled());
+                    return;
+                }
                 dispatch(streamError(event.event.value.message));
                 return rejectWithValue(event.event.value.message);
             }
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Streaming failed';
+        dispatch(streamError(msg));
+        return rejectWithValue(msg);
+    }
+});
+
+export const rerunFromMessage = createAsyncThunk<
+    void,
+    { sessionId: string; messageId: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/rerunFromMessage', async (params, { getState, dispatch, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        dispatch(streamStarted());
+
+        const stream = runtimeApi.rerunFromMessage({
+            organizationId,
+            messageId: params.messageId,
+            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+
+        let tokenBuffer = '';
+        let rafId: number | null = null;
+        const flushTokens = () => {
+            if (tokenBuffer) {
+                dispatch(appendStreamingToken(tokenBuffer));
+                tokenBuffer = '';
+            }
+            rafId = null;
+        };
+        const bufferToken = (text: string) => {
+            tokenBuffer += text;
+            if (rafId === null) {
+                rafId = requestAnimationFrame(flushTokens);
+            }
+        };
+
+        for await (const event of stream) {
+            if (event.runId) {
+                dispatch(runIdReceived(event.runId));
+            }
+            if (event.event.case === 'token') {
+                bufferToken(event.event.value.text);
+            } else if (event.event.case === 'toolCall') {
+                dispatch(addStreamingToolCall({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    toolArgsJson: event.event.value.toolArgsJson,
+                }));
+            } else if (event.event.case === 'toolResult') {
+                dispatch(addStreamingToolResult({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    success: event.event.value.success,
+                    result: event.event.value.result,
+                }));
+            } else if (event.event.case === 'messageStored') {
+                const stored = event.event.value.message;
+                if (stored) {
+                    dispatch(reconcileStoredMessage({
+                        sessionId: params.sessionId,
+                        message: messageToPlain(stored),
+                    }));
+                }
+            } else if (event.event.case === 'done') {
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                flushTokens();
+                const assistantMsg = event.event.value.assistantMessage;
+                dispatch(streamCompleted({
+                    sessionId: params.sessionId,
+                    assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
+                }));
+            } else if (event.event.case === 'failover') {
+                const f = event.event.value;
+                toast.info(
+                    `Switched to ${f.toModel || 'a different provider'}`,
+                    { description: `Retry attempt ${f.attempt} (${f.reason})` },
+                );
+            } else if (event.event.case === 'confirmationRequired') {
+                dispatch(setConfirmationRequired({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    toolArgsJson: event.event.value.toolArgsJson,
+                    description: event.event.value.description,
+                }));
+            } else if (event.event.case === 'error') {
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                flushTokens();
+                if (event.event.value.message === 'cancelled') {
+                    dispatch(streamCancelled());
+                    return;
+                }
+                dispatch(streamError(event.event.value.message));
+                return rejectWithValue(event.event.value.message);
+            }
+        }
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Rerun failed';
         dispatch(streamError(msg));
         return rejectWithValue(msg);
     }

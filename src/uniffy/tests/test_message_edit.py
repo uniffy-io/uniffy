@@ -214,7 +214,7 @@ class TestEditMessage:
 
 
 class TestDeleteMessage:
-    def test_invalidates_self_and_downstream(
+    def test_invalidates_only_the_target_row(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         user = uuid4()
@@ -240,9 +240,9 @@ class TestDeleteMessage:
             )
         )
 
-        assert count == 2
+        assert count == 1
         assert msg.is_invalidated is True
-        assert downstream_b.is_invalidated is True
+        assert downstream_b.is_invalidated is False
 
 
 class TestRetryMessage:
