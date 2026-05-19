@@ -27,10 +27,12 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.agents.budget import AgentBudget
+from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.user_quota import AgentUserQuota
 from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.budgets.period import day_window, month_window
+from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -41,9 +43,10 @@ class SpendSummary:
     organization_id: UUID
     period_start: datetime
     period_end: datetime
-    spend_usd: Decimal
+    spend: Decimal
     image_count: int
     pct_of_limit: int | None
+    currency: str
     user_id: UUID | None = None
 
 
@@ -98,16 +101,17 @@ class BudgetsOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        monthly_limit_usd: str | None,
+        monthly_limit: str | None,
         image_monthly_limit: int | None,
         hard_limit: bool,
         alert_thresholds: list[int],
         reset_day: int,
+        currency: str | None = None,
     ) -> AgentBudget:
         """Create or update the org budget row."""
         await self._org_ops.require_org_admin(user_id, organization_id)
 
-        dollar_cap = _parse_decimal(monthly_limit_usd, "monthly_limit_usd")
+        dollar_cap = _parse_decimal(monthly_limit, "monthly_limit")
         if image_monthly_limit is not None and image_monthly_limit < 0:
             raise ValidationError(
                 "image_monthly_limit",
@@ -116,6 +120,11 @@ class BudgetsOperations:
         resolved_day = _validate_reset_day(reset_day or 1)
         resolved_thresholds = _validate_thresholds(
             alert_thresholds if alert_thresholds else [50, 75, 90]
+        )
+        resolved_currency = (
+            currency.upper().strip()
+            if currency
+            else await get_display_currency(self._session, organization_id)
         )
 
         result = await self._session.execute(
@@ -127,20 +136,22 @@ class BudgetsOperations:
         if row is None:
             row = AgentBudget(
                 organization_id=organization_id,
-                monthly_limit_usd=dollar_cap,
+                monthly_limit=dollar_cap,
                 image_monthly_limit=image_monthly_limit,
                 hard_limit=hard_limit,
                 alert_thresholds=resolved_thresholds,
                 reset_day=resolved_day,
+                currency=resolved_currency,
             )
             self._session.add(row)
             action = "budget.create"
         else:
-            row.monthly_limit_usd = dollar_cap
+            row.monthly_limit = dollar_cap
             row.image_monthly_limit = image_monthly_limit
             row.hard_limit = hard_limit
             row.alert_thresholds = resolved_thresholds
             row.reset_day = resolved_day
+            row.currency = resolved_currency
             row.updated_at = now
             action = "budget.update"
 
@@ -155,7 +166,7 @@ class BudgetsOperations:
             resource_type="budget",
             resource_id=row.id,
             details={
-                "monthly_limit_usd": (
+                "monthly_limit": (
                     str(dollar_cap) if dollar_cap is not None else None
                 ),
                 "image_monthly_limit": image_monthly_limit,
@@ -249,23 +260,29 @@ class BudgetsOperations:
         actor_user_id: UUID,
         organization_id: UUID,
         target_user_id: UUID,
-        daily_limit_usd: str | None,
-        monthly_limit_usd: str | None,
+        daily_limit: str | None,
+        monthly_limit: str | None,
         daily_image_limit: int | None,
         monthly_image_limit: int | None,
         hard_limit: bool,
+        currency: str | None = None,
     ) -> AgentUserQuota:
         """Create or update a per-user quota row. Org admin only."""
         await self._org_ops.require_org_admin(actor_user_id, organization_id)
 
-        daily_dollar = _parse_decimal(daily_limit_usd, "daily_limit_usd")
-        monthly_dollar = _parse_decimal(monthly_limit_usd, "monthly_limit_usd")
+        daily_dollar = _parse_decimal(daily_limit, "daily_limit")
+        monthly_dollar = _parse_decimal(monthly_limit, "monthly_limit")
         for label, value in (
             ("daily_image_limit", daily_image_limit),
             ("monthly_image_limit", monthly_image_limit),
         ):
             if value is not None and value < 0:
                 raise ValidationError(label, f"{label} must be non-negative")
+        resolved_currency = (
+            currency.upper().strip()
+            if currency
+            else await get_display_currency(self._session, organization_id)
+        )
 
         result = await self._session.execute(
             select(AgentUserQuota).where(
@@ -280,20 +297,22 @@ class BudgetsOperations:
             row = AgentUserQuota(
                 organization_id=organization_id,
                 user_id=target_user_id,
-                daily_limit_usd=daily_dollar,
-                monthly_limit_usd=monthly_dollar,
+                daily_limit=daily_dollar,
+                monthly_limit=monthly_dollar,
                 daily_image_limit=daily_image_limit,
                 monthly_image_limit=monthly_image_limit,
                 hard_limit=hard_limit,
+                currency=resolved_currency,
             )
             self._session.add(row)
             action = "user_quota.create"
         else:
-            row.daily_limit_usd = daily_dollar
-            row.monthly_limit_usd = monthly_dollar
+            row.daily_limit = daily_dollar
+            row.monthly_limit = monthly_dollar
             row.daily_image_limit = daily_image_limit
             row.monthly_image_limit = monthly_image_limit
             row.hard_limit = hard_limit
+            row.currency = resolved_currency
             row.updated_at = now
             action = "user_quota.update"
 
@@ -309,10 +328,10 @@ class BudgetsOperations:
             resource_id=row.id,
             details={
                 "target_user_id": str(target_user_id),
-                "daily_limit_usd": (
+                "daily_limit": (
                     str(daily_dollar) if daily_dollar is not None else None
                 ),
-                "monthly_limit_usd": (
+                "monthly_limit": (
                     str(monthly_dollar) if monthly_dollar is not None else None
                 ),
                 "hard_limit": hard_limit,
@@ -389,7 +408,7 @@ class BudgetsOperations:
 
         result = await self._session.execute(
             select(
-                func.coalesce(func.sum(AgentRunLog.cost_usd), 0).label("spend"),
+                func.coalesce(func.sum(AgentRunLog.cost), 0).label("spend"),
                 func.coalesce(func.sum(AgentRunLog.image_count), 0).label("images"),
             ).where(*filters)
         )
@@ -398,19 +417,24 @@ class BudgetsOperations:
         image_count = int(row.images or 0)
 
         pct: int | None = None
-        if budget is not None and budget.monthly_limit_usd is not None:
-            if budget.monthly_limit_usd > 0:
-                pct = int(spend / budget.monthly_limit_usd * Decimal(100))
+        if budget is not None and budget.monthly_limit is not None:
+            if budget.monthly_limit > 0:
+                pct = int(spend / budget.monthly_limit * Decimal(100))
             else:
                 pct = 100 if spend > 0 else 0
+
+        currency = budget.currency if budget else await get_display_currency(
+            self._session, organization_id
+        )
 
         return SpendSummary(
             organization_id=organization_id,
             period_start=period_start,
             period_end=period_end,
-            spend_usd=spend,
+            spend=spend,
             image_count=image_count,
             pct_of_limit=pct,
+            currency=currency,
             user_id=target_user_id,
         )
 
@@ -441,7 +465,7 @@ class BudgetsOperations:
         quota = quota_result.scalar_one_or_none()
 
         # --- User daily
-        if quota is not None and quota.daily_limit_usd is not None:
+        if quota is not None and quota.daily_limit is not None:
             day_start, day_end = day_window(now)
             spent_today = await self._sum_cost(
                 organization_id=organization_id,
@@ -449,69 +473,69 @@ class BudgetsOperations:
                 period_start=day_start,
                 period_end=day_end,
             )
-            if spent_today >= quota.daily_limit_usd:
+            if spent_today >= quota.daily_limit:
                 if quota.hard_limit:
                     raise BudgetExceededError(
                         scope="user",
                         limit_kind="spend",
                         current=str(spent_today),
-                        limit=str(quota.daily_limit_usd),
+                        limit=str(quota.daily_limit),
                     )
                 logger.warning(
                     "Soft budget overage (user/daily)",
                     user_id=str(user_id),
                     organization_id=str(organization_id),
                     spent=str(spent_today),
-                    limit=str(quota.daily_limit_usd),
+                    limit=str(quota.daily_limit),
                 )
 
         # --- User monthly (if column set)
         reset_day = budget.reset_day if budget else 1
         period_start, period_end = month_window(reset_day, now)
-        if quota is not None and quota.monthly_limit_usd is not None:
+        if quota is not None and quota.monthly_limit is not None:
             spent_this_period = await self._sum_cost(
                 organization_id=organization_id,
                 user_id=user_id,
                 period_start=period_start,
                 period_end=period_end,
             )
-            if spent_this_period >= quota.monthly_limit_usd:
+            if spent_this_period >= quota.monthly_limit:
                 if quota.hard_limit:
                     raise BudgetExceededError(
                         scope="user",
                         limit_kind="spend",
                         current=str(spent_this_period),
-                        limit=str(quota.monthly_limit_usd),
+                        limit=str(quota.monthly_limit),
                     )
                 logger.warning(
                     "Soft budget overage (user/monthly)",
                     user_id=str(user_id),
                     organization_id=str(organization_id),
                     spent=str(spent_this_period),
-                    limit=str(quota.monthly_limit_usd),
+                    limit=str(quota.monthly_limit),
                 )
 
         # --- Org monthly
-        if budget is not None and budget.monthly_limit_usd is not None:
+        if budget is not None and budget.monthly_limit is not None:
             spent_org = await self._sum_cost(
                 organization_id=organization_id,
                 user_id=None,
                 period_start=period_start,
                 period_end=period_end,
             )
-            if spent_org >= budget.monthly_limit_usd:
+            if spent_org >= budget.monthly_limit:
                 if budget.hard_limit:
                     raise BudgetExceededError(
                         scope="org",
                         limit_kind="spend",
                         current=str(spent_org),
-                        limit=str(budget.monthly_limit_usd),
+                        limit=str(budget.monthly_limit),
                     )
                 logger.warning(
                     "Soft budget overage (org/monthly)",
                     organization_id=str(organization_id),
                     spent=str(spent_org),
-                    limit=str(budget.monthly_limit_usd),
+                    limit=str(budget.monthly_limit),
                 )
 
     async def _get_budget_row(
@@ -540,7 +564,7 @@ class BudgetsOperations:
         if user_id is not None:
             filters.append(AgentRunLog.user_id == user_id)
         result = await self._session.execute(
-            select(func.coalesce(func.sum(AgentRunLog.cost_usd), 0)).where(*filters)
+            select(func.coalesce(func.sum(AgentRunLog.cost), 0)).where(*filters)
         )
         return Decimal(result.scalar() or 0)
 
@@ -554,5 +578,174 @@ class BudgetsOperations:
         if membership is None:
             return False
         return membership.role in (OrganizationRole.ADMIN, OrganizationRole.OWNER)
+
+    async def list_currency_rates(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> list[AgentCurrencyRate]:
+        """Return all manual exchange rates for an organization."""
+        if not await self._is_org_admin(user_id, organization_id):
+            raise PermissionDeniedError("read_currency_rates", "requires org admin")
+        result = await self._session.execute(
+            select(AgentCurrencyRate)
+            .where(AgentCurrencyRate.organization_id == organization_id)
+            .order_by(AgentCurrencyRate.from_currency, AgentCurrencyRate.to_currency)
+        )
+        return list(result.scalars())
+
+    async def upsert_currency_rate(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        from_currency: str,
+        to_currency: str,
+        rate: str,
+    ) -> AgentCurrencyRate:
+        """Insert or update a single ``(from, to)`` rate row."""
+        if not await self._is_org_admin(user_id, organization_id):
+            raise PermissionDeniedError("write_currency_rates", "requires org admin")
+        from_cur = from_currency.upper().strip()
+        to_cur = to_currency.upper().strip()
+        if not from_cur or not to_cur:
+            raise ValidationError("currency", "from/to currency must be non-empty")
+        if from_cur == to_cur:
+            raise ValidationError("currency", "from and to currencies must differ")
+        try:
+            rate_value = Decimal(rate)
+        except (InvalidOperation, TypeError) as exc:
+            raise ValidationError("rate", f"Invalid rate value: {rate}") from exc
+        if rate_value <= 0:
+            raise ValidationError("rate", "rate must be positive")
+
+        existing = (
+            await self._session.execute(
+                select(AgentCurrencyRate).where(
+                    AgentCurrencyRate.organization_id == organization_id,
+                    AgentCurrencyRate.from_currency == from_cur,
+                    AgentCurrencyRate.to_currency == to_cur,
+                )
+            )
+        ).scalar_one_or_none()
+
+        if existing is None:
+            row = AgentCurrencyRate(
+                organization_id=organization_id,
+                from_currency=from_cur,
+                to_currency=to_cur,
+                rate=rate_value,
+            )
+            self._session.add(row)
+        else:
+            existing.rate = rate_value
+            existing.updated_at = datetime.now(UTC)
+            row = existing
+        await self._session.commit()
+        await self._session.refresh(row)
+
+        await create_audit_log(
+            self._session,
+            organization_id=organization_id,
+            user_id=user_id,
+            action="currency_rate.upsert",
+            resource_type="currency_rate",
+            resource_id=row.id,
+            details={"from": from_cur, "to": to_cur, "rate": str(rate_value)},
+        )
+        await self._session.commit()
+        return row
+
+    async def delete_currency_rate(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        from_currency: str,
+        to_currency: str,
+    ) -> None:
+        """Delete a single ``(from, to)`` rate row."""
+        if not await self._is_org_admin(user_id, organization_id):
+            raise PermissionDeniedError("write_currency_rates", "requires org admin")
+        row = (
+            await self._session.execute(
+                select(AgentCurrencyRate).where(
+                    AgentCurrencyRate.organization_id == organization_id,
+                    AgentCurrencyRate.from_currency == from_currency.upper(),
+                    AgentCurrencyRate.to_currency == to_currency.upper(),
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise NotFoundError("AgentCurrencyRate", f"{from_currency}->{to_currency}")
+        row_id = row.id
+        await self._session.delete(row)
+        await self._session.commit()
+
+        await create_audit_log(
+            self._session,
+            organization_id=organization_id,
+            user_id=user_id,
+            action="currency_rate.delete",
+            resource_type="currency_rate",
+            resource_id=row_id,
+            details={"from": from_currency, "to": to_currency},
+        )
+        await self._session.commit()
+
+    async def get_display_currency(
+        self,
+        *,
+        organization_id: UUID,
+    ) -> str:
+        """Return the org's display currency (defaults to ``"EUR"``)."""
+        return await get_display_currency(self._session, organization_id)
+
+    async def set_display_currency(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        currency: str,
+    ) -> str:
+        """Set the org's display currency on the runtime settings row."""
+        if not await self._is_org_admin(user_id, organization_id):
+            raise PermissionDeniedError("write_display_currency", "requires org admin")
+        cur = currency.upper().strip()
+        if not cur or len(cur) != 3:
+            raise ValidationError("display_currency", "expected ISO 4217 3-letter code")
+
+        from uniffy.core.models.agents.runtime_settings import AgentRuntimeSettings
+
+        existing = (
+            await self._session.execute(
+                select(AgentRuntimeSettings).where(
+                    AgentRuntimeSettings.organization_id == organization_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            row = AgentRuntimeSettings(
+                organization_id=organization_id,
+                display_currency=cur,
+            )
+            self._session.add(row)
+        else:
+            existing.display_currency = cur
+            existing.updated_at = datetime.now(UTC)
+        await self._session.commit()
+
+        await create_audit_log(
+            self._session,
+            organization_id=organization_id,
+            user_id=user_id,
+            action="display_currency.set",
+            resource_type="runtime_settings",
+            resource_id=organization_id,
+            details={"display_currency": cur},
+        )
+        await self._session.commit()
+        return cur
 
 

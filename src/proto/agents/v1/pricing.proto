@@ -32,10 +32,10 @@ message ModelPricing {
   string provider = 2;
   string model = 3;
   string kind = 4; // "text" or "image"
-  optional string input_per_1m_usd = 5;
-  optional string output_per_1m_usd = 6;
-  optional string cached_input_per_1m_usd = 7;
-  optional string thinking_per_1m_usd = 8;
+  optional string input_per_1m = 5;
+  optional string output_per_1m = 6;
+  optional string cached_input_per_1m = 7;
+  optional string thinking_per_1m = 8;
   // Flattened image prices: one entry per (size, quality). Empty for
   // text rows. This is clearer on the wire than a nested map and
   // maps cleanly to the JSONB column on the server.
@@ -44,12 +44,16 @@ message ModelPricing {
   optional google.protobuf.Timestamp effective_to = 11;
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
+  // ISO 4217 currency for the per-1M-token rates and image_prices on
+  // this row. Defaults to ``"USD"``.
+  string currency = 14;
 }
 
 message ImagePrice {
   string size = 1;
   string quality = 2;
-  string price_usd = 3;
+  // Price per generation in the parent ModelPricing.currency.
+  string price = 3;
 }
 
 message ListModelPricingRequest {
@@ -66,13 +70,15 @@ message UpsertModelPricingRequest {
   string provider = 1;
   string model = 2;
   string kind = 3;
-  optional string input_per_1m_usd = 4;
-  optional string output_per_1m_usd = 5;
-  optional string cached_input_per_1m_usd = 6;
-  optional string thinking_per_1m_usd = 7;
+  optional string input_per_1m = 4;
+  optional string output_per_1m = 5;
+  optional string cached_input_per_1m = 6;
+  optional string thinking_per_1m = 7;
   repeated ImagePrice image_prices = 8;
   google.protobuf.Timestamp effective_from = 9;
   optional google.protobuf.Timestamp effective_to = 10;
+  // ISO 4217. Defaults to "USD" when empty.
+  string currency = 11;
 }
 
 message ModelPricingResponse {

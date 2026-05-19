@@ -37,24 +37,24 @@ export class ModelPricing extends Message<ModelPricing> {
   kind = "";
 
   /**
-   * @generated from field: optional string input_per_1m_usd = 5;
+   * @generated from field: optional string input_per_1m = 5;
    */
-  inputPer1mUsd?: string;
+  inputPer1m?: string;
 
   /**
-   * @generated from field: optional string output_per_1m_usd = 6;
+   * @generated from field: optional string output_per_1m = 6;
    */
-  outputPer1mUsd?: string;
+  outputPer1m?: string;
 
   /**
-   * @generated from field: optional string cached_input_per_1m_usd = 7;
+   * @generated from field: optional string cached_input_per_1m = 7;
    */
-  cachedInputPer1mUsd?: string;
+  cachedInputPer1m?: string;
 
   /**
-   * @generated from field: optional string thinking_per_1m_usd = 8;
+   * @generated from field: optional string thinking_per_1m = 8;
    */
-  thinkingPer1mUsd?: string;
+  thinkingPer1m?: string;
 
   /**
    * Flattened image prices: one entry per (size, quality). Empty for
@@ -85,6 +85,14 @@ export class ModelPricing extends Message<ModelPricing> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * ISO 4217 currency for the per-1M-token rates and image_prices on
+   * this row. Defaults to ``"USD"``.
+   *
+   * @generated from field: string currency = 14;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<ModelPricing>) {
     super();
     proto3.util.initPartial(data, this);
@@ -97,15 +105,16 @@ export class ModelPricing extends Message<ModelPricing> {
     { no: 2, name: "provider", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "input_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "output_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "cached_input_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "thinking_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "input_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "output_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "cached_input_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "thinking_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "image_prices", kind: "message", T: ImagePrice, repeated: true },
     { no: 10, name: "effective_from", kind: "message", T: Timestamp },
     { no: 11, name: "effective_to", kind: "message", T: Timestamp, opt: true },
     { no: 12, name: "created_at", kind: "message", T: Timestamp },
     { no: 13, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 14, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModelPricing {
@@ -140,9 +149,11 @@ export class ImagePrice extends Message<ImagePrice> {
   quality = "";
 
   /**
-   * @generated from field: string price_usd = 3;
+   * Price per generation in the parent ModelPricing.currency.
+   *
+   * @generated from field: string price = 3;
    */
-  priceUsd = "";
+  price = "";
 
   constructor(data?: PartialMessage<ImagePrice>) {
     super();
@@ -154,7 +165,7 @@ export class ImagePrice extends Message<ImagePrice> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "size", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "quality", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "price_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "price", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImagePrice {
@@ -280,24 +291,24 @@ export class UpsertModelPricingRequest extends Message<UpsertModelPricingRequest
   kind = "";
 
   /**
-   * @generated from field: optional string input_per_1m_usd = 4;
+   * @generated from field: optional string input_per_1m = 4;
    */
-  inputPer1mUsd?: string;
+  inputPer1m?: string;
 
   /**
-   * @generated from field: optional string output_per_1m_usd = 5;
+   * @generated from field: optional string output_per_1m = 5;
    */
-  outputPer1mUsd?: string;
+  outputPer1m?: string;
 
   /**
-   * @generated from field: optional string cached_input_per_1m_usd = 6;
+   * @generated from field: optional string cached_input_per_1m = 6;
    */
-  cachedInputPer1mUsd?: string;
+  cachedInputPer1m?: string;
 
   /**
-   * @generated from field: optional string thinking_per_1m_usd = 7;
+   * @generated from field: optional string thinking_per_1m = 7;
    */
-  thinkingPer1mUsd?: string;
+  thinkingPer1m?: string;
 
   /**
    * @generated from field: repeated agents.v1.ImagePrice image_prices = 8;
@@ -314,6 +325,13 @@ export class UpsertModelPricingRequest extends Message<UpsertModelPricingRequest
    */
   effectiveTo?: Timestamp;
 
+  /**
+   * ISO 4217. Defaults to "USD" when empty.
+   *
+   * @generated from field: string currency = 11;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<UpsertModelPricingRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -325,13 +343,14 @@ export class UpsertModelPricingRequest extends Message<UpsertModelPricingRequest
     { no: 1, name: "provider", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "input_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "output_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "cached_input_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "thinking_per_1m_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "input_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "output_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "cached_input_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "thinking_per_1m", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "image_prices", kind: "message", T: ImagePrice, repeated: true },
     { no: 9, name: "effective_from", kind: "message", T: Timestamp },
     { no: 10, name: "effective_to", kind: "message", T: Timestamp, opt: true },
+    { no: 11, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpsertModelPricingRequest {

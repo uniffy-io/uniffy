@@ -81,7 +81,7 @@ class PricingHandlers:
         )
 
         image_prices = [
-            (p.size, p.quality, p.price_usd) for p in request.image_prices
+            (p.size, p.quality, p.price) for p in request.image_prices
         ]
 
         try:
@@ -92,24 +92,24 @@ class PricingHandlers:
                     provider=request.provider,
                     model=request.model,
                     kind=request.kind,
-                    input_per_1m_usd=(
-                        request.input_per_1m_usd
-                        if request.HasField("input_per_1m_usd")
+                    input_per_1m=(
+                        request.input_per_1m
+                        if request.HasField("input_per_1m")
                         else None
                     ),
-                    output_per_1m_usd=(
-                        request.output_per_1m_usd
-                        if request.HasField("output_per_1m_usd")
+                    output_per_1m=(
+                        request.output_per_1m
+                        if request.HasField("output_per_1m")
                         else None
                     ),
-                    cached_input_per_1m_usd=(
-                        request.cached_input_per_1m_usd
-                        if request.HasField("cached_input_per_1m_usd")
+                    cached_input_per_1m=(
+                        request.cached_input_per_1m
+                        if request.HasField("cached_input_per_1m")
                         else None
                     ),
-                    thinking_per_1m_usd=(
-                        request.thinking_per_1m_usd
-                        if request.HasField("thinking_per_1m_usd")
+                    thinking_per_1m=(
+                        request.thinking_per_1m
+                        if request.HasField("thinking_per_1m")
                         else None
                     ),
                     image_prices=image_prices or None,

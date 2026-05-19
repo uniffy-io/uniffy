@@ -57,6 +57,21 @@ const (
 	// BudgetsServiceGetCurrentSpendProcedure is the fully-qualified name of the BudgetsService's
 	// GetCurrentSpend RPC.
 	BudgetsServiceGetCurrentSpendProcedure = "/agents.v1.BudgetsService/GetCurrentSpend"
+	// BudgetsServiceListCurrencyRatesProcedure is the fully-qualified name of the BudgetsService's
+	// ListCurrencyRates RPC.
+	BudgetsServiceListCurrencyRatesProcedure = "/agents.v1.BudgetsService/ListCurrencyRates"
+	// BudgetsServiceUpsertCurrencyRateProcedure is the fully-qualified name of the BudgetsService's
+	// UpsertCurrencyRate RPC.
+	BudgetsServiceUpsertCurrencyRateProcedure = "/agents.v1.BudgetsService/UpsertCurrencyRate"
+	// BudgetsServiceDeleteCurrencyRateProcedure is the fully-qualified name of the BudgetsService's
+	// DeleteCurrencyRate RPC.
+	BudgetsServiceDeleteCurrencyRateProcedure = "/agents.v1.BudgetsService/DeleteCurrencyRate"
+	// BudgetsServiceSetDisplayCurrencyProcedure is the fully-qualified name of the BudgetsService's
+	// SetDisplayCurrency RPC.
+	BudgetsServiceSetDisplayCurrencyProcedure = "/agents.v1.BudgetsService/SetDisplayCurrency"
+	// BudgetsServiceGetDisplayCurrencyProcedure is the fully-qualified name of the BudgetsService's
+	// GetDisplayCurrency RPC.
+	BudgetsServiceGetDisplayCurrencyProcedure = "/agents.v1.BudgetsService/GetDisplayCurrency"
 )
 
 // BudgetsServiceClient is a client for the agents.v1.BudgetsService service.
@@ -80,6 +95,18 @@ type BudgetsServiceClient interface {
 	// Get the current-period spend summary for the org, optionally
 	// scoped to a single user. Non-admin callers see only their own.
 	GetCurrentSpend(context.Context, *connect.Request[v1.GetCurrentSpendRequest]) (*connect.Response[v1.GetCurrentSpendResponse], error)
+	// List the org's manual exchange rates. Org admin only.
+	ListCurrencyRates(context.Context, *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error)
+	// Create or update a single (from -> to) rate. Org admin only.
+	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error)
+	// Delete a single (from -> to) rate. Org admin only.
+	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
+	// Set the org's display currency (writes to AgentRuntimeSettings).
+	// Org admin only.
+	SetDisplayCurrency(context.Context, *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error)
+	// Get the org's display currency. Falls back to the module default
+	// ("EUR") when no row exists. Any org member can call.
+	GetDisplayCurrency(context.Context, *connect.Request[v1.GetDisplayCurrencyRequest]) (*connect.Response[v1.GetDisplayCurrencyResponse], error)
 }
 
 // NewBudgetsServiceClient constructs a client for the agents.v1.BudgetsService service. By default,
@@ -141,19 +168,54 @@ func NewBudgetsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(budgetsServiceMethods.ByName("GetCurrentSpend")),
 			connect.WithClientOptions(opts...),
 		),
+		listCurrencyRates: connect.NewClient[v1.ListCurrencyRatesRequest, v1.ListCurrencyRatesResponse](
+			httpClient,
+			baseURL+BudgetsServiceListCurrencyRatesProcedure,
+			connect.WithSchema(budgetsServiceMethods.ByName("ListCurrencyRates")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertCurrencyRate: connect.NewClient[v1.UpsertCurrencyRateRequest, v1.CurrencyRateResponse](
+			httpClient,
+			baseURL+BudgetsServiceUpsertCurrencyRateProcedure,
+			connect.WithSchema(budgetsServiceMethods.ByName("UpsertCurrencyRate")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteCurrencyRate: connect.NewClient[v1.DeleteCurrencyRateRequest, v1.DeleteCurrencyRateResponse](
+			httpClient,
+			baseURL+BudgetsServiceDeleteCurrencyRateProcedure,
+			connect.WithSchema(budgetsServiceMethods.ByName("DeleteCurrencyRate")),
+			connect.WithClientOptions(opts...),
+		),
+		setDisplayCurrency: connect.NewClient[v1.SetDisplayCurrencyRequest, v1.SetDisplayCurrencyResponse](
+			httpClient,
+			baseURL+BudgetsServiceSetDisplayCurrencyProcedure,
+			connect.WithSchema(budgetsServiceMethods.ByName("SetDisplayCurrency")),
+			connect.WithClientOptions(opts...),
+		),
+		getDisplayCurrency: connect.NewClient[v1.GetDisplayCurrencyRequest, v1.GetDisplayCurrencyResponse](
+			httpClient,
+			baseURL+BudgetsServiceGetDisplayCurrencyProcedure,
+			connect.WithSchema(budgetsServiceMethods.ByName("GetDisplayCurrency")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // budgetsServiceClient implements BudgetsServiceClient.
 type budgetsServiceClient struct {
-	getOrgBudget    *connect.Client[v1.GetOrgBudgetRequest, v1.GetOrgBudgetResponse]
-	updateOrgBudget *connect.Client[v1.UpdateOrgBudgetRequest, v1.OrgBudgetResponse]
-	deleteOrgBudget *connect.Client[v1.DeleteOrgBudgetRequest, v1.DeleteOrgBudgetResponse]
-	getUserQuota    *connect.Client[v1.GetUserQuotaRequest, v1.GetUserQuotaResponse]
-	updateUserQuota *connect.Client[v1.UpdateUserQuotaRequest, v1.UserQuotaResponse]
-	deleteUserQuota *connect.Client[v1.DeleteUserQuotaRequest, v1.DeleteUserQuotaResponse]
-	listUserQuotas  *connect.Client[v1.ListUserQuotasRequest, v1.ListUserQuotasResponse]
-	getCurrentSpend *connect.Client[v1.GetCurrentSpendRequest, v1.GetCurrentSpendResponse]
+	getOrgBudget       *connect.Client[v1.GetOrgBudgetRequest, v1.GetOrgBudgetResponse]
+	updateOrgBudget    *connect.Client[v1.UpdateOrgBudgetRequest, v1.OrgBudgetResponse]
+	deleteOrgBudget    *connect.Client[v1.DeleteOrgBudgetRequest, v1.DeleteOrgBudgetResponse]
+	getUserQuota       *connect.Client[v1.GetUserQuotaRequest, v1.GetUserQuotaResponse]
+	updateUserQuota    *connect.Client[v1.UpdateUserQuotaRequest, v1.UserQuotaResponse]
+	deleteUserQuota    *connect.Client[v1.DeleteUserQuotaRequest, v1.DeleteUserQuotaResponse]
+	listUserQuotas     *connect.Client[v1.ListUserQuotasRequest, v1.ListUserQuotasResponse]
+	getCurrentSpend    *connect.Client[v1.GetCurrentSpendRequest, v1.GetCurrentSpendResponse]
+	listCurrencyRates  *connect.Client[v1.ListCurrencyRatesRequest, v1.ListCurrencyRatesResponse]
+	upsertCurrencyRate *connect.Client[v1.UpsertCurrencyRateRequest, v1.CurrencyRateResponse]
+	deleteCurrencyRate *connect.Client[v1.DeleteCurrencyRateRequest, v1.DeleteCurrencyRateResponse]
+	setDisplayCurrency *connect.Client[v1.SetDisplayCurrencyRequest, v1.SetDisplayCurrencyResponse]
+	getDisplayCurrency *connect.Client[v1.GetDisplayCurrencyRequest, v1.GetDisplayCurrencyResponse]
 }
 
 // GetOrgBudget calls agents.v1.BudgetsService.GetOrgBudget.
@@ -196,6 +258,31 @@ func (c *budgetsServiceClient) GetCurrentSpend(ctx context.Context, req *connect
 	return c.getCurrentSpend.CallUnary(ctx, req)
 }
 
+// ListCurrencyRates calls agents.v1.BudgetsService.ListCurrencyRates.
+func (c *budgetsServiceClient) ListCurrencyRates(ctx context.Context, req *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error) {
+	return c.listCurrencyRates.CallUnary(ctx, req)
+}
+
+// UpsertCurrencyRate calls agents.v1.BudgetsService.UpsertCurrencyRate.
+func (c *budgetsServiceClient) UpsertCurrencyRate(ctx context.Context, req *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error) {
+	return c.upsertCurrencyRate.CallUnary(ctx, req)
+}
+
+// DeleteCurrencyRate calls agents.v1.BudgetsService.DeleteCurrencyRate.
+func (c *budgetsServiceClient) DeleteCurrencyRate(ctx context.Context, req *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error) {
+	return c.deleteCurrencyRate.CallUnary(ctx, req)
+}
+
+// SetDisplayCurrency calls agents.v1.BudgetsService.SetDisplayCurrency.
+func (c *budgetsServiceClient) SetDisplayCurrency(ctx context.Context, req *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error) {
+	return c.setDisplayCurrency.CallUnary(ctx, req)
+}
+
+// GetDisplayCurrency calls agents.v1.BudgetsService.GetDisplayCurrency.
+func (c *budgetsServiceClient) GetDisplayCurrency(ctx context.Context, req *connect.Request[v1.GetDisplayCurrencyRequest]) (*connect.Response[v1.GetDisplayCurrencyResponse], error) {
+	return c.getDisplayCurrency.CallUnary(ctx, req)
+}
+
 // BudgetsServiceHandler is an implementation of the agents.v1.BudgetsService service.
 type BudgetsServiceHandler interface {
 	// Get the organization's budget, if any. Returns an empty message
@@ -217,6 +304,18 @@ type BudgetsServiceHandler interface {
 	// Get the current-period spend summary for the org, optionally
 	// scoped to a single user. Non-admin callers see only their own.
 	GetCurrentSpend(context.Context, *connect.Request[v1.GetCurrentSpendRequest]) (*connect.Response[v1.GetCurrentSpendResponse], error)
+	// List the org's manual exchange rates. Org admin only.
+	ListCurrencyRates(context.Context, *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error)
+	// Create or update a single (from -> to) rate. Org admin only.
+	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error)
+	// Delete a single (from -> to) rate. Org admin only.
+	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
+	// Set the org's display currency (writes to AgentRuntimeSettings).
+	// Org admin only.
+	SetDisplayCurrency(context.Context, *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error)
+	// Get the org's display currency. Falls back to the module default
+	// ("EUR") when no row exists. Any org member can call.
+	GetDisplayCurrency(context.Context, *connect.Request[v1.GetDisplayCurrencyRequest]) (*connect.Response[v1.GetDisplayCurrencyResponse], error)
 }
 
 // NewBudgetsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -274,6 +373,36 @@ func NewBudgetsServiceHandler(svc BudgetsServiceHandler, opts ...connect.Handler
 		connect.WithSchema(budgetsServiceMethods.ByName("GetCurrentSpend")),
 		connect.WithHandlerOptions(opts...),
 	)
+	budgetsServiceListCurrencyRatesHandler := connect.NewUnaryHandler(
+		BudgetsServiceListCurrencyRatesProcedure,
+		svc.ListCurrencyRates,
+		connect.WithSchema(budgetsServiceMethods.ByName("ListCurrencyRates")),
+		connect.WithHandlerOptions(opts...),
+	)
+	budgetsServiceUpsertCurrencyRateHandler := connect.NewUnaryHandler(
+		BudgetsServiceUpsertCurrencyRateProcedure,
+		svc.UpsertCurrencyRate,
+		connect.WithSchema(budgetsServiceMethods.ByName("UpsertCurrencyRate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	budgetsServiceDeleteCurrencyRateHandler := connect.NewUnaryHandler(
+		BudgetsServiceDeleteCurrencyRateProcedure,
+		svc.DeleteCurrencyRate,
+		connect.WithSchema(budgetsServiceMethods.ByName("DeleteCurrencyRate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	budgetsServiceSetDisplayCurrencyHandler := connect.NewUnaryHandler(
+		BudgetsServiceSetDisplayCurrencyProcedure,
+		svc.SetDisplayCurrency,
+		connect.WithSchema(budgetsServiceMethods.ByName("SetDisplayCurrency")),
+		connect.WithHandlerOptions(opts...),
+	)
+	budgetsServiceGetDisplayCurrencyHandler := connect.NewUnaryHandler(
+		BudgetsServiceGetDisplayCurrencyProcedure,
+		svc.GetDisplayCurrency,
+		connect.WithSchema(budgetsServiceMethods.ByName("GetDisplayCurrency")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.BudgetsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BudgetsServiceGetOrgBudgetProcedure:
@@ -292,6 +421,16 @@ func NewBudgetsServiceHandler(svc BudgetsServiceHandler, opts ...connect.Handler
 			budgetsServiceListUserQuotasHandler.ServeHTTP(w, r)
 		case BudgetsServiceGetCurrentSpendProcedure:
 			budgetsServiceGetCurrentSpendHandler.ServeHTTP(w, r)
+		case BudgetsServiceListCurrencyRatesProcedure:
+			budgetsServiceListCurrencyRatesHandler.ServeHTTP(w, r)
+		case BudgetsServiceUpsertCurrencyRateProcedure:
+			budgetsServiceUpsertCurrencyRateHandler.ServeHTTP(w, r)
+		case BudgetsServiceDeleteCurrencyRateProcedure:
+			budgetsServiceDeleteCurrencyRateHandler.ServeHTTP(w, r)
+		case BudgetsServiceSetDisplayCurrencyProcedure:
+			budgetsServiceSetDisplayCurrencyHandler.ServeHTTP(w, r)
+		case BudgetsServiceGetDisplayCurrencyProcedure:
+			budgetsServiceGetDisplayCurrencyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -331,4 +470,24 @@ func (UnimplementedBudgetsServiceHandler) ListUserQuotas(context.Context, *conne
 
 func (UnimplementedBudgetsServiceHandler) GetCurrentSpend(context.Context, *connect.Request[v1.GetCurrentSpendRequest]) (*connect.Response[v1.GetCurrentSpendResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.GetCurrentSpend is not implemented"))
+}
+
+func (UnimplementedBudgetsServiceHandler) ListCurrencyRates(context.Context, *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.ListCurrencyRates is not implemented"))
+}
+
+func (UnimplementedBudgetsServiceHandler) UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.UpsertCurrencyRate is not implemented"))
+}
+
+func (UnimplementedBudgetsServiceHandler) DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.DeleteCurrencyRate is not implemented"))
+}
+
+func (UnimplementedBudgetsServiceHandler) SetDisplayCurrency(context.Context, *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.SetDisplayCurrency is not implemented"))
+}
+
+func (UnimplementedBudgetsServiceHandler) GetDisplayCurrency(context.Context, *connect.Request[v1.GetDisplayCurrencyRequest]) (*connect.Response[v1.GetDisplayCurrencyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.GetDisplayCurrency is not implemented"))
 }

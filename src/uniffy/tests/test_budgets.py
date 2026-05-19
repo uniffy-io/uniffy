@@ -65,7 +65,7 @@ class TestCheckPreflightHardUserDaily:
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
-            daily_limit_usd=Decimal("5.00"),
+            daily_limit=Decimal("5.00"),
             hard_limit=True,
         )
         ops = _make_ops(quota=quota)
@@ -88,7 +88,7 @@ class TestCheckPreflightHardUserDaily:
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
-            daily_limit_usd=Decimal("5.00"),
+            daily_limit=Decimal("5.00"),
             hard_limit=True,
         )
         ops = _make_ops(quota=quota)
@@ -108,7 +108,7 @@ class TestCheckPreflightHardUserDaily:
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
-            daily_limit_usd=Decimal("5.00"),
+            daily_limit=Decimal("5.00"),
             hard_limit=False,
         )
         ops = _make_ops(quota=quota)
@@ -130,7 +130,7 @@ class TestCheckPreflightHardOrgMonthly:
         org_id = uuid4()
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=Decimal("100.00"),
+            monthly_limit=Decimal("100.00"),
             hard_limit=True,
             reset_day=1,
         )
@@ -155,12 +155,12 @@ class TestCheckPreflightHardOrgMonthly:
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
-            daily_limit_usd=Decimal("5.00"),
+            daily_limit=Decimal("5.00"),
             hard_limit=True,
         )
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=Decimal("100.00"),
+            monthly_limit=Decimal("100.00"),
             hard_limit=True,
             reset_day=1,
         )
@@ -190,7 +190,7 @@ class TestUpsertValidation:
                 await ops.upsert_org_budget(
                     user_id=uuid4(),
                     organization_id=uuid4(),
-                    monthly_limit_usd="10.00",
+                    monthly_limit="10.00",
                     image_monthly_limit=None,
                     hard_limit=False,
                     alert_thresholds=[50, 75, 90],
@@ -207,7 +207,7 @@ class TestUpsertValidation:
                 await ops.upsert_org_budget(
                     user_id=uuid4(),
                     organization_id=uuid4(),
-                    monthly_limit_usd="10.00",
+                    monthly_limit="10.00",
                     image_monthly_limit=None,
                     hard_limit=False,
                     alert_thresholds=[150],
@@ -224,7 +224,7 @@ class TestUpsertValidation:
                 await ops.upsert_org_budget(
                     user_id=uuid4(),
                     organization_id=uuid4(),
-                    monthly_limit_usd=None,
+                    monthly_limit=None,
                     image_monthly_limit=-1,
                     hard_limit=False,
                     alert_thresholds=[50, 75, 90],
@@ -241,7 +241,7 @@ class TestUpsertValidation:
                 await ops.upsert_org_budget(
                     user_id=uuid4(),
                     organization_id=uuid4(),
-                    monthly_limit_usd="not-a-number",
+                    monthly_limit="not-a-number",
                     image_monthly_limit=None,
                     hard_limit=False,
                     alert_thresholds=[50, 75, 90],
@@ -259,7 +259,7 @@ class TestSpendSummary:
         actor_id = uuid4()
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=Decimal("100.00"),
+            monthly_limit=Decimal("100.00"),
             hard_limit=False,
             reset_day=1,
         )
@@ -285,7 +285,7 @@ class TestSpendSummary:
                 target_user_id=None,
                 now=datetime(2026, 4, 15, tzinfo=UTC),
             )
-            assert summary.spend_usd == Decimal("50.00")
+            assert summary.spend == Decimal("50.00")
             assert summary.pct_of_limit == 50
 
         asyncio.run(run())

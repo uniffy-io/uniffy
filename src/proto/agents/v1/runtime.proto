@@ -76,13 +76,17 @@ message GetUsageStatsResponse {
 
   // Cost + usage extensions sourced from the run-log columns. Decimal
   // money values are encoded as strings so the wire never loses
-  // precision.
-  string total_cost_usd = 18;
+  // precision; the org's display currency is carried separately.
+  string total_cost = 18;
   int64 total_thinking_tokens = 19;
   int64 total_image_count = 20;
   int64 total_retries = 21;
   int64 total_cancelled = 22;
   int64 total_deadline_exceeded = 23;
+  // ISO 4217 currency for ``total_cost`` and per-bucket ``cost``
+  // values in DailyUsage / ModelUsage. Defaults to "EUR" when no
+  // org row exists.
+  string display_currency = 24;
 }
 
 message DailyUsage {
@@ -92,7 +96,7 @@ message DailyUsage {
   int64 output_tokens = 4;
   // Cache reads in this bucket; subset of input_tokens.
   int64 cache_read_input_tokens = 5;
-  string cost_usd = 6;
+  string cost = 6;
   int64 image_count = 7;
 }
 
@@ -101,7 +105,7 @@ message ModelUsage {
   int64 runs = 2;
   int64 input_tokens = 3;
   int64 output_tokens = 4;
-  string cost_usd = 5;
+  string cost = 5;
   int64 image_count = 6;
 }
 

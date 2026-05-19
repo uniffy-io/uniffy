@@ -8,7 +8,7 @@ interface DailyUsageEntry {
     inputTokens: number;
     outputTokens: number;
     cacheReadInputTokens: number;
-    costUsd: string;
+    cost: string;
     imageCount: number;
 }
 
@@ -17,7 +17,7 @@ interface ModelUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
-    costUsd: string;
+    cost: string;
     imageCount: number;
 }
 
@@ -61,7 +61,8 @@ export interface UsageStats {
     totalCacheReadInputTokens: number;
     totalSessions: number;
     avgDurationMs: number;
-    totalCostUsd: string;
+    totalCost: string;
+    displayCurrency: string;
     totalThinkingTokens: number;
     totalImageCount: number;
     totalRetries: number;
@@ -102,7 +103,8 @@ export const fetchUsageStats = createAsyncThunk<
             totalCacheReadInputTokens: Number(response.totalCacheReadInputTokens),
             totalSessions: Number(response.totalSessions),
             avgDurationMs: response.avgDurationMs,
-            totalCostUsd: response.totalCostUsd || '0',
+            totalCost: response.totalCost || '0',
+            displayCurrency: response.displayCurrency || 'EUR',
             totalThinkingTokens: Number(response.totalThinkingTokens),
             totalImageCount: Number(response.totalImageCount),
             totalRetries: Number(response.totalRetries),
@@ -114,7 +116,7 @@ export const fetchUsageStats = createAsyncThunk<
                 inputTokens: Number(d.inputTokens),
                 outputTokens: Number(d.outputTokens),
                 cacheReadInputTokens: Number(d.cacheReadInputTokens),
-                costUsd: d.costUsd || '0',
+                cost: d.cost || '0',
                 imageCount: Number(d.imageCount),
             })),
             modelUsage: response.modelUsage.map((m) => ({
@@ -122,7 +124,7 @@ export const fetchUsageStats = createAsyncThunk<
                 runs: Number(m.runs),
                 inputTokens: Number(m.inputTokens),
                 outputTokens: Number(m.outputTokens),
-                costUsd: m.costUsd || '0',
+                cost: m.cost || '0',
                 imageCount: Number(m.imageCount),
             })),
             agentUsage: response.agentUsage.map((a) => ({

@@ -22,11 +22,11 @@ export class OrgBudget extends Message<OrgBudget> {
   organizationId = "";
 
   /**
-   * Dollar cap per billing period. Absent means no cap.
+   * Spend cap per billing period in ``currency``. Absent means no cap.
    *
-   * @generated from field: optional string monthly_limit_usd = 3;
+   * @generated from field: optional string monthly_limit = 3;
    */
-  monthlyLimitUsd?: string;
+  monthlyLimit?: string;
 
   /**
    * Count cap on image generations per billing period. Absent means
@@ -65,6 +65,13 @@ export class OrgBudget extends Message<OrgBudget> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * ISO 4217 currency for ``monthly_limit``.
+   *
+   * @generated from field: string currency = 10;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<OrgBudget>) {
     super();
     proto3.util.initPartial(data, this);
@@ -75,13 +82,14 @@ export class OrgBudget extends Message<OrgBudget> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "monthly_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "monthly_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "image_monthly_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 5, name: "hard_limit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "alert_thresholds", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 7, name: "reset_day", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "created_at", kind: "message", T: Timestamp },
     { no: 9, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 10, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgBudget {
@@ -121,14 +129,14 @@ export class UserQuota extends Message<UserQuota> {
   userId = "";
 
   /**
-   * @generated from field: optional string daily_limit_usd = 4;
+   * @generated from field: optional string daily_limit = 4;
    */
-  dailyLimitUsd?: string;
+  dailyLimit?: string;
 
   /**
-   * @generated from field: optional string monthly_limit_usd = 5;
+   * @generated from field: optional string monthly_limit = 5;
    */
-  monthlyLimitUsd?: string;
+  monthlyLimit?: string;
 
   /**
    * @generated from field: optional int32 daily_image_limit = 6;
@@ -155,6 +163,13 @@ export class UserQuota extends Message<UserQuota> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * ISO 4217 currency for ``daily_limit`` and ``monthly_limit``.
+   *
+   * @generated from field: string currency = 11;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<UserQuota>) {
     super();
     proto3.util.initPartial(data, this);
@@ -166,13 +181,14 @@ export class UserQuota extends Message<UserQuota> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "daily_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "monthly_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "daily_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "monthly_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "daily_image_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 7, name: "monthly_image_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 8, name: "hard_limit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 9, name: "created_at", kind: "message", T: Timestamp },
     { no: 10, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 11, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserQuota {
@@ -219,11 +235,12 @@ export class SpendSummary extends Message<SpendSummary> {
   periodEnd?: Timestamp;
 
   /**
-   * Total dollar spend in the period (string-encoded Decimal).
+   * Total spend in the period (string-encoded Decimal) in the org's
+   * display currency.
    *
-   * @generated from field: string spend_usd = 4;
+   * @generated from field: string spend = 4;
    */
-  spendUsd = "";
+  spend = "";
 
   /**
    * Image-generation count in the period.
@@ -233,8 +250,8 @@ export class SpendSummary extends Message<SpendSummary> {
   imageCount = 0;
 
   /**
-   * Percent of the configured ``monthly_limit_usd`` used so far.
-   * Null when no limit is configured.
+   * Percent of the configured ``monthly_limit`` used so far. Null when
+   * no limit is configured.
    *
    * @generated from field: optional int32 pct_of_limit = 6;
    */
@@ -247,6 +264,13 @@ export class SpendSummary extends Message<SpendSummary> {
    */
   userId?: string;
 
+  /**
+   * ISO 4217 currency for ``spend``.
+   *
+   * @generated from field: string currency = 8;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<SpendSummary>) {
     super();
     proto3.util.initPartial(data, this);
@@ -258,10 +282,11 @@ export class SpendSummary extends Message<SpendSummary> {
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "period_start", kind: "message", T: Timestamp },
     { no: 3, name: "period_end", kind: "message", T: Timestamp },
-    { no: 4, name: "spend_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "spend", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "image_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 6, name: "pct_of_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 7, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpendSummary {
@@ -278,6 +303,75 @@ export class SpendSummary extends Message<SpendSummary> {
 
   static equals(a: SpendSummary | PlainMessage<SpendSummary> | undefined, b: SpendSummary | PlainMessage<SpendSummary> | undefined): boolean {
     return proto3.util.equals(SpendSummary, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.CurrencyRate
+ */
+export class CurrencyRate extends Message<CurrencyRate> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string from_currency = 3;
+   */
+  fromCurrency = "";
+
+  /**
+   * @generated from field: string to_currency = 4;
+   */
+  toCurrency = "";
+
+  /**
+   * Decimal as string (10dp precision).
+   *
+   * @generated from field: string rate = 5;
+   */
+  rate = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 6;
+   */
+  updatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<CurrencyRate>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.CurrencyRate";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "from_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "to_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "rate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "updated_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CurrencyRate {
+    return new CurrencyRate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CurrencyRate {
+    return new CurrencyRate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CurrencyRate {
+    return new CurrencyRate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CurrencyRate | PlainMessage<CurrencyRate> | undefined, b: CurrencyRate | PlainMessage<CurrencyRate> | undefined): boolean {
+    return proto3.util.equals(CurrencyRate, a, b);
   }
 }
 
@@ -367,9 +461,9 @@ export class UpdateOrgBudgetRequest extends Message<UpdateOrgBudgetRequest> {
   organizationId = "";
 
   /**
-   * @generated from field: optional string monthly_limit_usd = 2;
+   * @generated from field: optional string monthly_limit = 2;
    */
-  monthlyLimitUsd?: string;
+  monthlyLimit?: string;
 
   /**
    * @generated from field: optional int32 image_monthly_limit = 3;
@@ -391,6 +485,13 @@ export class UpdateOrgBudgetRequest extends Message<UpdateOrgBudgetRequest> {
    */
   resetDay = 0;
 
+  /**
+   * ISO 4217. Defaults to the org's display currency when empty.
+   *
+   * @generated from field: string currency = 7;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<UpdateOrgBudgetRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -400,11 +501,12 @@ export class UpdateOrgBudgetRequest extends Message<UpdateOrgBudgetRequest> {
   static readonly typeName = "agents.v1.UpdateOrgBudgetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "monthly_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "monthly_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "image_monthly_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 4, name: "hard_limit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "alert_thresholds", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 6, name: "reset_day", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrgBudgetRequest {
@@ -630,14 +732,14 @@ export class UpdateUserQuotaRequest extends Message<UpdateUserQuotaRequest> {
   userId = "";
 
   /**
-   * @generated from field: optional string daily_limit_usd = 3;
+   * @generated from field: optional string daily_limit = 3;
    */
-  dailyLimitUsd?: string;
+  dailyLimit?: string;
 
   /**
-   * @generated from field: optional string monthly_limit_usd = 4;
+   * @generated from field: optional string monthly_limit = 4;
    */
-  monthlyLimitUsd?: string;
+  monthlyLimit?: string;
 
   /**
    * @generated from field: optional int32 daily_image_limit = 5;
@@ -654,6 +756,13 @@ export class UpdateUserQuotaRequest extends Message<UpdateUserQuotaRequest> {
    */
   hardLimit = false;
 
+  /**
+   * ISO 4217. Defaults to the org's display currency when empty.
+   *
+   * @generated from field: string currency = 8;
+   */
+  currency = "";
+
   constructor(data?: PartialMessage<UpdateUserQuotaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -664,11 +773,12 @@ export class UpdateUserQuotaRequest extends Message<UpdateUserQuotaRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "daily_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "monthly_limit_usd", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "daily_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "monthly_limit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "daily_image_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 6, name: "monthly_image_limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 7, name: "hard_limit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserQuotaRequest {
@@ -971,6 +1081,416 @@ export class GetCurrentSpendResponse extends Message<GetCurrentSpendResponse> {
 
   static equals(a: GetCurrentSpendResponse | PlainMessage<GetCurrentSpendResponse> | undefined, b: GetCurrentSpendResponse | PlainMessage<GetCurrentSpendResponse> | undefined): boolean {
     return proto3.util.equals(GetCurrentSpendResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.ListCurrencyRatesRequest
+ */
+export class ListCurrencyRatesRequest extends Message<ListCurrencyRatesRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<ListCurrencyRatesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ListCurrencyRatesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCurrencyRatesRequest {
+    return new ListCurrencyRatesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCurrencyRatesRequest {
+    return new ListCurrencyRatesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCurrencyRatesRequest {
+    return new ListCurrencyRatesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListCurrencyRatesRequest | PlainMessage<ListCurrencyRatesRequest> | undefined, b: ListCurrencyRatesRequest | PlainMessage<ListCurrencyRatesRequest> | undefined): boolean {
+    return proto3.util.equals(ListCurrencyRatesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.ListCurrencyRatesResponse
+ */
+export class ListCurrencyRatesResponse extends Message<ListCurrencyRatesResponse> {
+  /**
+   * @generated from field: repeated agents.v1.CurrencyRate rates = 1;
+   */
+  rates: CurrencyRate[] = [];
+
+  constructor(data?: PartialMessage<ListCurrencyRatesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ListCurrencyRatesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "rates", kind: "message", T: CurrencyRate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCurrencyRatesResponse {
+    return new ListCurrencyRatesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCurrencyRatesResponse {
+    return new ListCurrencyRatesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCurrencyRatesResponse {
+    return new ListCurrencyRatesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListCurrencyRatesResponse | PlainMessage<ListCurrencyRatesResponse> | undefined, b: ListCurrencyRatesResponse | PlainMessage<ListCurrencyRatesResponse> | undefined): boolean {
+    return proto3.util.equals(ListCurrencyRatesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.UpsertCurrencyRateRequest
+ */
+export class UpsertCurrencyRateRequest extends Message<UpsertCurrencyRateRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string from_currency = 2;
+   */
+  fromCurrency = "";
+
+  /**
+   * @generated from field: string to_currency = 3;
+   */
+  toCurrency = "";
+
+  /**
+   * Decimal as string.
+   *
+   * @generated from field: string rate = 4;
+   */
+  rate = "";
+
+  constructor(data?: PartialMessage<UpsertCurrencyRateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.UpsertCurrencyRateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "from_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "to_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "rate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpsertCurrencyRateRequest {
+    return new UpsertCurrencyRateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpsertCurrencyRateRequest {
+    return new UpsertCurrencyRateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpsertCurrencyRateRequest {
+    return new UpsertCurrencyRateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpsertCurrencyRateRequest | PlainMessage<UpsertCurrencyRateRequest> | undefined, b: UpsertCurrencyRateRequest | PlainMessage<UpsertCurrencyRateRequest> | undefined): boolean {
+    return proto3.util.equals(UpsertCurrencyRateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.CurrencyRateResponse
+ */
+export class CurrencyRateResponse extends Message<CurrencyRateResponse> {
+  /**
+   * @generated from field: agents.v1.CurrencyRate rate = 1;
+   */
+  rate?: CurrencyRate;
+
+  constructor(data?: PartialMessage<CurrencyRateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.CurrencyRateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "rate", kind: "message", T: CurrencyRate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CurrencyRateResponse {
+    return new CurrencyRateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CurrencyRateResponse {
+    return new CurrencyRateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CurrencyRateResponse {
+    return new CurrencyRateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CurrencyRateResponse | PlainMessage<CurrencyRateResponse> | undefined, b: CurrencyRateResponse | PlainMessage<CurrencyRateResponse> | undefined): boolean {
+    return proto3.util.equals(CurrencyRateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.DeleteCurrencyRateRequest
+ */
+export class DeleteCurrencyRateRequest extends Message<DeleteCurrencyRateRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string from_currency = 2;
+   */
+  fromCurrency = "";
+
+  /**
+   * @generated from field: string to_currency = 3;
+   */
+  toCurrency = "";
+
+  constructor(data?: PartialMessage<DeleteCurrencyRateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DeleteCurrencyRateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "from_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "to_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCurrencyRateRequest {
+    return new DeleteCurrencyRateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCurrencyRateRequest {
+    return new DeleteCurrencyRateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCurrencyRateRequest {
+    return new DeleteCurrencyRateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCurrencyRateRequest | PlainMessage<DeleteCurrencyRateRequest> | undefined, b: DeleteCurrencyRateRequest | PlainMessage<DeleteCurrencyRateRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteCurrencyRateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.DeleteCurrencyRateResponse
+ */
+export class DeleteCurrencyRateResponse extends Message<DeleteCurrencyRateResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<DeleteCurrencyRateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.DeleteCurrencyRateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCurrencyRateResponse {
+    return new DeleteCurrencyRateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCurrencyRateResponse {
+    return new DeleteCurrencyRateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCurrencyRateResponse {
+    return new DeleteCurrencyRateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCurrencyRateResponse | PlainMessage<DeleteCurrencyRateResponse> | undefined, b: DeleteCurrencyRateResponse | PlainMessage<DeleteCurrencyRateResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteCurrencyRateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.SetDisplayCurrencyRequest
+ */
+export class SetDisplayCurrencyRequest extends Message<SetDisplayCurrencyRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * ISO 4217.
+   *
+   * @generated from field: string display_currency = 2;
+   */
+  displayCurrency = "";
+
+  constructor(data?: PartialMessage<SetDisplayCurrencyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.SetDisplayCurrencyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "display_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetDisplayCurrencyRequest {
+    return new SetDisplayCurrencyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetDisplayCurrencyRequest {
+    return new SetDisplayCurrencyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetDisplayCurrencyRequest {
+    return new SetDisplayCurrencyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetDisplayCurrencyRequest | PlainMessage<SetDisplayCurrencyRequest> | undefined, b: SetDisplayCurrencyRequest | PlainMessage<SetDisplayCurrencyRequest> | undefined): boolean {
+    return proto3.util.equals(SetDisplayCurrencyRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.SetDisplayCurrencyResponse
+ */
+export class SetDisplayCurrencyResponse extends Message<SetDisplayCurrencyResponse> {
+  /**
+   * @generated from field: string display_currency = 1;
+   */
+  displayCurrency = "";
+
+  constructor(data?: PartialMessage<SetDisplayCurrencyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.SetDisplayCurrencyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "display_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetDisplayCurrencyResponse {
+    return new SetDisplayCurrencyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetDisplayCurrencyResponse {
+    return new SetDisplayCurrencyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetDisplayCurrencyResponse {
+    return new SetDisplayCurrencyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetDisplayCurrencyResponse | PlainMessage<SetDisplayCurrencyResponse> | undefined, b: SetDisplayCurrencyResponse | PlainMessage<SetDisplayCurrencyResponse> | undefined): boolean {
+    return proto3.util.equals(SetDisplayCurrencyResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetDisplayCurrencyRequest
+ */
+export class GetDisplayCurrencyRequest extends Message<GetDisplayCurrencyRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<GetDisplayCurrencyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetDisplayCurrencyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDisplayCurrencyRequest {
+    return new GetDisplayCurrencyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDisplayCurrencyRequest {
+    return new GetDisplayCurrencyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDisplayCurrencyRequest {
+    return new GetDisplayCurrencyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetDisplayCurrencyRequest | PlainMessage<GetDisplayCurrencyRequest> | undefined, b: GetDisplayCurrencyRequest | PlainMessage<GetDisplayCurrencyRequest> | undefined): boolean {
+    return proto3.util.equals(GetDisplayCurrencyRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message agents.v1.GetDisplayCurrencyResponse
+ */
+export class GetDisplayCurrencyResponse extends Message<GetDisplayCurrencyResponse> {
+  /**
+   * @generated from field: string display_currency = 1;
+   */
+  displayCurrency = "";
+
+  constructor(data?: PartialMessage<GetDisplayCurrencyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.GetDisplayCurrencyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "display_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDisplayCurrencyResponse {
+    return new GetDisplayCurrencyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDisplayCurrencyResponse {
+    return new GetDisplayCurrencyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDisplayCurrencyResponse {
+    return new GetDisplayCurrencyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetDisplayCurrencyResponse | PlainMessage<GetDisplayCurrencyResponse> | undefined, b: GetDisplayCurrencyResponse | PlainMessage<GetDisplayCurrencyResponse> | undefined): boolean {
+    return proto3.util.equals(GetDisplayCurrencyResponse, a, b);
   }
 }
 

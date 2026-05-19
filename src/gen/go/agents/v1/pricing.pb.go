@@ -26,15 +26,15 @@ const (
 // Clients should use a Decimal type (Python decimal.Decimal, JS BigNumber)
 // and format to the wire as the plain string representation, e.g. "3.00".
 type ModelPricing struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Provider             string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
-	Model                string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
-	Kind                 string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"` // "text" or "image"
-	InputPer_1MUsd       *string                `protobuf:"bytes,5,opt,name=input_per_1m_usd,json=inputPer1mUsd,proto3,oneof" json:"input_per_1m_usd,omitempty"`
-	OutputPer_1MUsd      *string                `protobuf:"bytes,6,opt,name=output_per_1m_usd,json=outputPer1mUsd,proto3,oneof" json:"output_per_1m_usd,omitempty"`
-	CachedInputPer_1MUsd *string                `protobuf:"bytes,7,opt,name=cached_input_per_1m_usd,json=cachedInputPer1mUsd,proto3,oneof" json:"cached_input_per_1m_usd,omitempty"`
-	ThinkingPer_1MUsd    *string                `protobuf:"bytes,8,opt,name=thinking_per_1m_usd,json=thinkingPer1mUsd,proto3,oneof" json:"thinking_per_1m_usd,omitempty"`
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Provider          string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
+	Model             string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	Kind              string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"` // "text" or "image"
+	InputPer_1M       *string                `protobuf:"bytes,5,opt,name=input_per_1m,json=inputPer1m,proto3,oneof" json:"input_per_1m,omitempty"`
+	OutputPer_1M      *string                `protobuf:"bytes,6,opt,name=output_per_1m,json=outputPer1m,proto3,oneof" json:"output_per_1m,omitempty"`
+	CachedInputPer_1M *string                `protobuf:"bytes,7,opt,name=cached_input_per_1m,json=cachedInputPer1m,proto3,oneof" json:"cached_input_per_1m,omitempty"`
+	ThinkingPer_1M    *string                `protobuf:"bytes,8,opt,name=thinking_per_1m,json=thinkingPer1m,proto3,oneof" json:"thinking_per_1m,omitempty"`
 	// Flattened image prices: one entry per (size, quality). Empty for
 	// text rows. This is clearer on the wire than a nested map and
 	// maps cleanly to the JSONB column on the server.
@@ -43,6 +43,9 @@ type ModelPricing struct {
 	EffectiveTo   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=effective_to,json=effectiveTo,proto3,oneof" json:"effective_to,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// ISO 4217 currency for the per-1M-token rates and image_prices on
+	// this row. Defaults to “"USD"“.
+	Currency      string `protobuf:"bytes,14,opt,name=currency,proto3" json:"currency,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -105,30 +108,30 @@ func (x *ModelPricing) GetKind() string {
 	return ""
 }
 
-func (x *ModelPricing) GetInputPer_1MUsd() string {
-	if x != nil && x.InputPer_1MUsd != nil {
-		return *x.InputPer_1MUsd
+func (x *ModelPricing) GetInputPer_1M() string {
+	if x != nil && x.InputPer_1M != nil {
+		return *x.InputPer_1M
 	}
 	return ""
 }
 
-func (x *ModelPricing) GetOutputPer_1MUsd() string {
-	if x != nil && x.OutputPer_1MUsd != nil {
-		return *x.OutputPer_1MUsd
+func (x *ModelPricing) GetOutputPer_1M() string {
+	if x != nil && x.OutputPer_1M != nil {
+		return *x.OutputPer_1M
 	}
 	return ""
 }
 
-func (x *ModelPricing) GetCachedInputPer_1MUsd() string {
-	if x != nil && x.CachedInputPer_1MUsd != nil {
-		return *x.CachedInputPer_1MUsd
+func (x *ModelPricing) GetCachedInputPer_1M() string {
+	if x != nil && x.CachedInputPer_1M != nil {
+		return *x.CachedInputPer_1M
 	}
 	return ""
 }
 
-func (x *ModelPricing) GetThinkingPer_1MUsd() string {
-	if x != nil && x.ThinkingPer_1MUsd != nil {
-		return *x.ThinkingPer_1MUsd
+func (x *ModelPricing) GetThinkingPer_1M() string {
+	if x != nil && x.ThinkingPer_1M != nil {
+		return *x.ThinkingPer_1M
 	}
 	return ""
 }
@@ -168,11 +171,19 @@ func (x *ModelPricing) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ModelPricing) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
 type ImagePrice struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Size          string                 `protobuf:"bytes,1,opt,name=size,proto3" json:"size,omitempty"`
-	Quality       string                 `protobuf:"bytes,2,opt,name=quality,proto3" json:"quality,omitempty"`
-	PriceUsd      string                 `protobuf:"bytes,3,opt,name=price_usd,json=priceUsd,proto3" json:"price_usd,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Size    string                 `protobuf:"bytes,1,opt,name=size,proto3" json:"size,omitempty"`
+	Quality string                 `protobuf:"bytes,2,opt,name=quality,proto3" json:"quality,omitempty"`
+	// Price per generation in the parent ModelPricing.currency.
+	Price         string `protobuf:"bytes,3,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -221,9 +232,9 @@ func (x *ImagePrice) GetQuality() string {
 	return ""
 }
 
-func (x *ImagePrice) GetPriceUsd() string {
+func (x *ImagePrice) GetPrice() string {
 	if x != nil {
-		return x.PriceUsd
+		return x.Price
 	}
 	return ""
 }
@@ -333,19 +344,21 @@ func (x *ListModelPricingResponse) GetRows() []*ModelPricing {
 }
 
 type UpsertModelPricingRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Provider             string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Model                string                 `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
-	Kind                 string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	InputPer_1MUsd       *string                `protobuf:"bytes,4,opt,name=input_per_1m_usd,json=inputPer1mUsd,proto3,oneof" json:"input_per_1m_usd,omitempty"`
-	OutputPer_1MUsd      *string                `protobuf:"bytes,5,opt,name=output_per_1m_usd,json=outputPer1mUsd,proto3,oneof" json:"output_per_1m_usd,omitempty"`
-	CachedInputPer_1MUsd *string                `protobuf:"bytes,6,opt,name=cached_input_per_1m_usd,json=cachedInputPer1mUsd,proto3,oneof" json:"cached_input_per_1m_usd,omitempty"`
-	ThinkingPer_1MUsd    *string                `protobuf:"bytes,7,opt,name=thinking_per_1m_usd,json=thinkingPer1mUsd,proto3,oneof" json:"thinking_per_1m_usd,omitempty"`
-	ImagePrices          []*ImagePrice          `protobuf:"bytes,8,rep,name=image_prices,json=imagePrices,proto3" json:"image_prices,omitempty"`
-	EffectiveFrom        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=effective_from,json=effectiveFrom,proto3" json:"effective_from,omitempty"`
-	EffectiveTo          *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=effective_to,json=effectiveTo,proto3,oneof" json:"effective_to,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Provider          string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	Model             string                 `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
+	Kind              string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	InputPer_1M       *string                `protobuf:"bytes,4,opt,name=input_per_1m,json=inputPer1m,proto3,oneof" json:"input_per_1m,omitempty"`
+	OutputPer_1M      *string                `protobuf:"bytes,5,opt,name=output_per_1m,json=outputPer1m,proto3,oneof" json:"output_per_1m,omitempty"`
+	CachedInputPer_1M *string                `protobuf:"bytes,6,opt,name=cached_input_per_1m,json=cachedInputPer1m,proto3,oneof" json:"cached_input_per_1m,omitempty"`
+	ThinkingPer_1M    *string                `protobuf:"bytes,7,opt,name=thinking_per_1m,json=thinkingPer1m,proto3,oneof" json:"thinking_per_1m,omitempty"`
+	ImagePrices       []*ImagePrice          `protobuf:"bytes,8,rep,name=image_prices,json=imagePrices,proto3" json:"image_prices,omitempty"`
+	EffectiveFrom     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=effective_from,json=effectiveFrom,proto3" json:"effective_from,omitempty"`
+	EffectiveTo       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=effective_to,json=effectiveTo,proto3,oneof" json:"effective_to,omitempty"`
+	// ISO 4217. Defaults to "USD" when empty.
+	Currency      string `protobuf:"bytes,11,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpsertModelPricingRequest) Reset() {
@@ -399,30 +412,30 @@ func (x *UpsertModelPricingRequest) GetKind() string {
 	return ""
 }
 
-func (x *UpsertModelPricingRequest) GetInputPer_1MUsd() string {
-	if x != nil && x.InputPer_1MUsd != nil {
-		return *x.InputPer_1MUsd
+func (x *UpsertModelPricingRequest) GetInputPer_1M() string {
+	if x != nil && x.InputPer_1M != nil {
+		return *x.InputPer_1M
 	}
 	return ""
 }
 
-func (x *UpsertModelPricingRequest) GetOutputPer_1MUsd() string {
-	if x != nil && x.OutputPer_1MUsd != nil {
-		return *x.OutputPer_1MUsd
+func (x *UpsertModelPricingRequest) GetOutputPer_1M() string {
+	if x != nil && x.OutputPer_1M != nil {
+		return *x.OutputPer_1M
 	}
 	return ""
 }
 
-func (x *UpsertModelPricingRequest) GetCachedInputPer_1MUsd() string {
-	if x != nil && x.CachedInputPer_1MUsd != nil {
-		return *x.CachedInputPer_1MUsd
+func (x *UpsertModelPricingRequest) GetCachedInputPer_1M() string {
+	if x != nil && x.CachedInputPer_1M != nil {
+		return *x.CachedInputPer_1M
 	}
 	return ""
 }
 
-func (x *UpsertModelPricingRequest) GetThinkingPer_1MUsd() string {
-	if x != nil && x.ThinkingPer_1MUsd != nil {
-		return *x.ThinkingPer_1MUsd
+func (x *UpsertModelPricingRequest) GetThinkingPer_1M() string {
+	if x != nil && x.ThinkingPer_1M != nil {
+		return *x.ThinkingPer_1M
 	}
 	return ""
 }
@@ -446,6 +459,13 @@ func (x *UpsertModelPricingRequest) GetEffectiveTo() *timestamppb.Timestamp {
 		return x.EffectiveTo
 	}
 	return nil
+}
+
+func (x *UpsertModelPricingRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
 }
 
 type ModelPricingResponse struct {
@@ -584,16 +604,17 @@ var File_agents_v1_pricing_proto protoreflect.FileDescriptor
 
 const file_agents_v1_pricing_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/pricing.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd8\x05\n" +
+	"\x17agents/v1/pricing.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x05\n" +
 	"\fModelPricing\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x14\n" +
 	"\x05model\x18\x03 \x01(\tR\x05model\x12\x12\n" +
-	"\x04kind\x18\x04 \x01(\tR\x04kind\x12,\n" +
-	"\x10input_per_1m_usd\x18\x05 \x01(\tH\x00R\rinputPer1mUsd\x88\x01\x01\x12.\n" +
-	"\x11output_per_1m_usd\x18\x06 \x01(\tH\x01R\x0eoutputPer1mUsd\x88\x01\x01\x129\n" +
-	"\x17cached_input_per_1m_usd\x18\a \x01(\tH\x02R\x13cachedInputPer1mUsd\x88\x01\x01\x122\n" +
-	"\x13thinking_per_1m_usd\x18\b \x01(\tH\x03R\x10thinkingPer1mUsd\x88\x01\x01\x128\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12%\n" +
+	"\finput_per_1m\x18\x05 \x01(\tH\x00R\n" +
+	"inputPer1m\x88\x01\x01\x12'\n" +
+	"\routput_per_1m\x18\x06 \x01(\tH\x01R\voutputPer1m\x88\x01\x01\x122\n" +
+	"\x13cached_input_per_1m\x18\a \x01(\tH\x02R\x10cachedInputPer1m\x88\x01\x01\x12+\n" +
+	"\x0fthinking_per_1m\x18\b \x01(\tH\x03R\rthinkingPer1m\x88\x01\x01\x128\n" +
 	"\fimage_prices\x18\t \x03(\v2\x15.agents.v1.ImagePriceR\vimagePrices\x12A\n" +
 	"\x0eeffective_from\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\reffectiveFrom\x12B\n" +
@@ -601,17 +622,18 @@ const file_agents_v1_pricing_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x13\n" +
-	"\x11_input_per_1m_usdB\x14\n" +
-	"\x12_output_per_1m_usdB\x1a\n" +
-	"\x18_cached_input_per_1m_usdB\x16\n" +
-	"\x14_thinking_per_1m_usdB\x0f\n" +
-	"\r_effective_to\"W\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
+	"\bcurrency\x18\x0e \x01(\tR\bcurrencyB\x0f\n" +
+	"\r_input_per_1mB\x10\n" +
+	"\x0e_output_per_1mB\x16\n" +
+	"\x14_cached_input_per_1mB\x12\n" +
+	"\x10_thinking_per_1mB\x0f\n" +
+	"\r_effective_to\"P\n" +
 	"\n" +
 	"ImagePrice\x12\x12\n" +
 	"\x04size\x18\x01 \x01(\tR\x04size\x12\x18\n" +
-	"\aquality\x18\x02 \x01(\tR\aquality\x12\x1b\n" +
-	"\tprice_usd\x18\x03 \x01(\tR\bpriceUsd\"\xa9\x01\n" +
+	"\aquality\x18\x02 \x01(\tR\aquality\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\tR\x05price\"\xa9\x01\n" +
 	"\x17ListModelPricingRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tH\x00R\bprovider\x88\x01\x01\x12\x17\n" +
 	"\x04kind\x18\x02 \x01(\tH\x01R\x04kind\x88\x01\x01\x124\n" +
@@ -620,23 +642,25 @@ const file_agents_v1_pricing_proto_rawDesc = "" +
 	"\x05_kindB\b\n" +
 	"\x06_as_of\"G\n" +
 	"\x18ListModelPricingResponse\x12+\n" +
-	"\x04rows\x18\x01 \x03(\v2\x17.agents.v1.ModelPricingR\x04rows\"\xdf\x04\n" +
+	"\x04rows\x18\x01 \x03(\v2\x17.agents.v1.ModelPricingR\x04rows\"\xcf\x04\n" +
 	"\x19UpsertModelPricingRequest\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\x12,\n" +
-	"\x10input_per_1m_usd\x18\x04 \x01(\tH\x00R\rinputPer1mUsd\x88\x01\x01\x12.\n" +
-	"\x11output_per_1m_usd\x18\x05 \x01(\tH\x01R\x0eoutputPer1mUsd\x88\x01\x01\x129\n" +
-	"\x17cached_input_per_1m_usd\x18\x06 \x01(\tH\x02R\x13cachedInputPer1mUsd\x88\x01\x01\x122\n" +
-	"\x13thinking_per_1m_usd\x18\a \x01(\tH\x03R\x10thinkingPer1mUsd\x88\x01\x01\x128\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12%\n" +
+	"\finput_per_1m\x18\x04 \x01(\tH\x00R\n" +
+	"inputPer1m\x88\x01\x01\x12'\n" +
+	"\routput_per_1m\x18\x05 \x01(\tH\x01R\voutputPer1m\x88\x01\x01\x122\n" +
+	"\x13cached_input_per_1m\x18\x06 \x01(\tH\x02R\x10cachedInputPer1m\x88\x01\x01\x12+\n" +
+	"\x0fthinking_per_1m\x18\a \x01(\tH\x03R\rthinkingPer1m\x88\x01\x01\x128\n" +
 	"\fimage_prices\x18\b \x03(\v2\x15.agents.v1.ImagePriceR\vimagePrices\x12A\n" +
 	"\x0eeffective_from\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\reffectiveFrom\x12B\n" +
 	"\feffective_to\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampH\x04R\veffectiveTo\x88\x01\x01B\x13\n" +
-	"\x11_input_per_1m_usdB\x14\n" +
-	"\x12_output_per_1m_usdB\x1a\n" +
-	"\x18_cached_input_per_1m_usdB\x16\n" +
-	"\x14_thinking_per_1m_usdB\x0f\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x04R\veffectiveTo\x88\x01\x01\x12\x1a\n" +
+	"\bcurrency\x18\v \x01(\tR\bcurrencyB\x0f\n" +
+	"\r_input_per_1mB\x10\n" +
+	"\x0e_output_per_1mB\x16\n" +
+	"\x14_cached_input_per_1mB\x12\n" +
+	"\x10_thinking_per_1mB\x0f\n" +
 	"\r_effective_to\"A\n" +
 	"\x14ModelPricingResponse\x12)\n" +
 	"\x03row\x18\x01 \x01(\v2\x17.agents.v1.ModelPricingR\x03row\"+\n" +

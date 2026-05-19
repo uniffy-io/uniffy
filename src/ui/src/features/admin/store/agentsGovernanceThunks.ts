@@ -9,9 +9,10 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { agentsGovernanceApi } from '@/features/admin/api/agentsGovernanceApi';
-import type { OrgBudget, UserQuota } from '@uniffy/proto/agents/v1/budgets_pb';
+import type { CurrencyRate, OrgBudget, UserQuota } from '@uniffy/proto/agents/v1/budgets_pb';
 import type { RateLimit } from '@uniffy/proto/agents/v1/rate_limits_pb';
 import type {
+    CurrencyRateState,
     OrgBudgetState,
     SpendState,
     RateLimitState,
@@ -20,11 +21,12 @@ import type {
 function serialiseBudget(row: OrgBudget): OrgBudgetState {
     return {
         id: row.id,
-        monthlyLimitUsd: row.monthlyLimitUsd ?? null,
+        monthlyLimit: row.monthlyLimit ?? null,
         imageMonthlyLimit: row.imageMonthlyLimit ?? null,
         hardLimit: row.hardLimit,
         alertThresholds: [...row.alertThresholds],
         resetDay: row.resetDay,
+        currency: row.currency || 'EUR',
     };
 }
 
@@ -34,6 +36,17 @@ function serialiseRateLimit(row: RateLimit): RateLimitState {
         limit: row.limit,
         windowSeconds: row.windowSeconds,
         isOverride: row.isOverride,
+    };
+}
+
+function serialiseCurrencyRate(row: CurrencyRate): CurrencyRateState {
+    return {
+        fromCurrency: row.fromCurrency,
+        toCurrency: row.toCurrency,
+        rate: row.rate,
+        updatedAt: row.updatedAt
+            ? new Date(Number(row.updatedAt.seconds) * 1000).toISOString()
+            : new Date().toISOString(),
     };
 }
 
@@ -56,11 +69,12 @@ export const fetchOrgBudget = createAsyncThunk<
 });
 
 export interface UpdateOrgBudgetArgs {
-    monthlyLimitUsd?: string | null;
+    monthlyLimit?: string | null;
     imageMonthlyLimit?: number | null;
     hardLimit: boolean;
     alertThresholds: number[];
     resetDay: number;
+    currency?: string;
 }
 
 export const updateOrgBudget = createAsyncThunk<
@@ -71,11 +85,12 @@ export const updateOrgBudget = createAsyncThunk<
     const organizationId = requireOrg(getState);
     const resp = await agentsGovernanceApi.updateOrgBudget({
         organizationId,
-        monthlyLimitUsd: args.monthlyLimitUsd ?? undefined,
+        monthlyLimit: args.monthlyLimit ?? undefined,
         imageMonthlyLimit: args.imageMonthlyLimit ?? undefined,
         hardLimit: args.hardLimit,
         alertThresholds: args.alertThresholds,
         resetDay: args.resetDay,
+        currency: args.currency ?? '',
     });
     if (!resp.budget) throw new Error('Empty budget response');
     return serialiseBudget(resp.budget);
@@ -98,7 +113,8 @@ export const fetchCurrentSpend = createAsyncThunk<
     const resp = await agentsGovernanceApi.getCurrentSpend({ organizationId });
     const summary = resp.summary;
     return {
-        spendUsd: summary?.spendUsd ?? '0',
+        spend: summary?.spend ?? '0',
+        currency: summary?.currency ?? 'EUR',
         imageCount: summary?.imageCount ?? 0,
         periodStart: summary?.periodStart
             ? new Date(Number(summary.periodStart.seconds) * 1000).toISOString()
@@ -153,15 +169,87 @@ export const deleteRateLimit = createAsyncThunk<
     return kind;
 });
 
-// --- User quota (used by member edit dialog batch later) ---
+// --- Currencies ---
+
+export const fetchCurrencyRates = createAsyncThunk<
+    CurrencyRateState[],
+    void,
+    { state: RootState }
+>('agentsGovernance/fetchCurrencyRates', async (_, { getState }) => {
+    const organizationId = requireOrg(getState);
+    const resp = await agentsGovernanceApi.listCurrencyRates({ organizationId });
+    return resp.rates.map(serialiseCurrencyRate);
+});
+
+export interface UpsertCurrencyRateArgs {
+    fromCurrency: string;
+    toCurrency: string;
+    rate: string;
+}
+
+export const upsertCurrencyRate = createAsyncThunk<
+    CurrencyRateState,
+    UpsertCurrencyRateArgs,
+    { state: RootState }
+>('agentsGovernance/upsertCurrencyRate', async (args, { getState }) => {
+    const organizationId = requireOrg(getState);
+    const resp = await agentsGovernanceApi.upsertCurrencyRate({
+        organizationId,
+        fromCurrency: args.fromCurrency,
+        toCurrency: args.toCurrency,
+        rate: args.rate,
+    });
+    if (!resp.rate) throw new Error('Empty currency-rate response');
+    return serialiseCurrencyRate(resp.rate);
+});
+
+export const deleteCurrencyRate = createAsyncThunk<
+    { from: string; to: string },
+    { fromCurrency: string; toCurrency: string },
+    { state: RootState }
+>('agentsGovernance/deleteCurrencyRate', async (args, { getState }) => {
+    const organizationId = requireOrg(getState);
+    await agentsGovernanceApi.deleteCurrencyRate({
+        organizationId,
+        fromCurrency: args.fromCurrency,
+        toCurrency: args.toCurrency,
+    });
+    return { from: args.fromCurrency, to: args.toCurrency };
+});
+
+export const fetchDisplayCurrency = createAsyncThunk<
+    string,
+    void,
+    { state: RootState }
+>('agentsGovernance/fetchDisplayCurrency', async (_, { getState }) => {
+    const organizationId = requireOrg(getState);
+    const resp = await agentsGovernanceApi.getDisplayCurrency({ organizationId });
+    return resp.displayCurrency || 'EUR';
+});
+
+export const setDisplayCurrency = createAsyncThunk<
+    string,
+    { currency: string },
+    { state: RootState }
+>('agentsGovernance/setDisplayCurrency', async ({ currency }, { getState }) => {
+    const organizationId = requireOrg(getState);
+    const resp = await agentsGovernanceApi.setDisplayCurrency({
+        organizationId,
+        displayCurrency: currency,
+    });
+    return resp.displayCurrency;
+});
+
+// --- User quota ---
 
 export interface UpsertUserQuotaArgs {
     userId: string;
-    dailyLimitUsd?: string | null;
-    monthlyLimitUsd?: string | null;
+    dailyLimit?: string | null;
+    monthlyLimit?: string | null;
     dailyImageLimit?: number | null;
     monthlyImageLimit?: number | null;
     hardLimit: boolean;
+    currency?: string;
 }
 
 export const upsertUserQuota = createAsyncThunk<
@@ -173,11 +261,12 @@ export const upsertUserQuota = createAsyncThunk<
     const resp = await agentsGovernanceApi.updateUserQuota({
         organizationId,
         userId: args.userId,
-        dailyLimitUsd: args.dailyLimitUsd ?? undefined,
-        monthlyLimitUsd: args.monthlyLimitUsd ?? undefined,
+        dailyLimit: args.dailyLimit ?? undefined,
+        monthlyLimit: args.monthlyLimit ?? undefined,
         dailyImageLimit: args.dailyImageLimit ?? undefined,
         monthlyImageLimit: args.monthlyImageLimit ?? undefined,
         hardLimit: args.hardLimit,
+        currency: args.currency ?? '',
     });
     if (!resp.quota) throw new Error('Empty quota response');
     return resp.quota;

@@ -106,9 +106,13 @@ class AgentRunLog(SQLModel, table=True):
         sa_column=Column(String(16), nullable=False, default="chat"),
     )
     image_count: int = Field(default=0, nullable=False)
-    cost_usd: Decimal | None = Field(
+    cost: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(12, 6), nullable=True),
+    )
+    cost_currency: str | None = Field(
+        default=None,
+        sa_column=Column(String(3), nullable=True),
     )
     input_tokens: int = Field(default=0, nullable=False)
     output_tokens: int = Field(default=0, nullable=False)

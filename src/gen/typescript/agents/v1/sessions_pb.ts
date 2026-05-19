@@ -928,6 +928,14 @@ export const SessionsService: GenService<{
    */
   previousContent?: string;
 
+  /**
+   * True if this assistant turn was cancelled by the user before
+   * completion. The UI renders it as a "cancelled" placeholder.
+   *
+   * @generated from field: bool was_cancelled = 19;
+   */
+  wasCancelled = false;
+
   constructor(data?: PartialMessage<MessageInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -954,6 +962,7 @@ export const SessionsService: GenService<{
     { no: 16, name: "is_invalidated", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 17, name: "edited_at", kind: "message", T: Timestamp, opt: true },
     { no: 18, name: "previous_content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 19, name: "was_cancelled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MessageInfo {

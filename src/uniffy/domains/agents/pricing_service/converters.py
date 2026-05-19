@@ -29,7 +29,7 @@ def _image_prices_to_proto(
             continue
         for quality, price in qualities.items():
             out.append(
-                ImagePrice(size=size, quality=quality, price_usd=str(price))
+                ImagePrice(size=size, quality=quality, price=str(price))
             )
     return out
 
@@ -44,14 +44,14 @@ def model_pricing_to_proto(row: AgentModelPricing) -> ModelPricing:
         image_prices=_image_prices_to_proto(row.image_prices),
     )
 
-    if row.input_per_1m_usd is not None:
-        msg.input_per_1m_usd = _decimal_to_str(row.input_per_1m_usd) or ""
-    if row.output_per_1m_usd is not None:
-        msg.output_per_1m_usd = _decimal_to_str(row.output_per_1m_usd) or ""
-    if row.cached_input_per_1m_usd is not None:
-        msg.cached_input_per_1m_usd = _decimal_to_str(row.cached_input_per_1m_usd) or ""
-    if row.thinking_per_1m_usd is not None:
-        msg.thinking_per_1m_usd = _decimal_to_str(row.thinking_per_1m_usd) or ""
+    if row.input_per_1m is not None:
+        msg.input_per_1m = _decimal_to_str(row.input_per_1m) or ""
+    if row.output_per_1m is not None:
+        msg.output_per_1m = _decimal_to_str(row.output_per_1m) or ""
+    if row.cached_input_per_1m is not None:
+        msg.cached_input_per_1m = _decimal_to_str(row.cached_input_per_1m) or ""
+    if row.thinking_per_1m is not None:
+        msg.thinking_per_1m = _decimal_to_str(row.thinking_per_1m) or ""
 
     msg.effective_from.CopyFrom(datetime_to_timestamp(row.effective_from))
     if row.effective_to is not None:

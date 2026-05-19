@@ -27,8 +27,8 @@ type OrgBudget struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Dollar cap per billing period. Absent means no cap.
-	MonthlyLimitUsd *string `protobuf:"bytes,3,opt,name=monthly_limit_usd,json=monthlyLimitUsd,proto3,oneof" json:"monthly_limit_usd,omitempty"`
+	// Spend cap per billing period in “currency“. Absent means no cap.
+	MonthlyLimit *string `protobuf:"bytes,3,opt,name=monthly_limit,json=monthlyLimit,proto3,oneof" json:"monthly_limit,omitempty"`
 	// Count cap on image generations per billing period. Absent means
 	// fall through to defaults.
 	ImageMonthlyLimit *int32 `protobuf:"varint,4,opt,name=image_monthly_limit,json=imageMonthlyLimit,proto3,oneof" json:"image_monthly_limit,omitempty"`
@@ -36,9 +36,11 @@ type OrgBudget struct {
 	// Percent thresholds that fire alert notifications.
 	AlertThresholds []int32 `protobuf:"varint,6,rep,packed,name=alert_thresholds,json=alertThresholds,proto3" json:"alert_thresholds,omitempty"`
 	// 1..28 (values beyond 28 are clamped by the server at read time).
-	ResetDay      int32                  `protobuf:"varint,7,opt,name=reset_day,json=resetDay,proto3" json:"reset_day,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResetDay  int32                  `protobuf:"varint,7,opt,name=reset_day,json=resetDay,proto3" json:"reset_day,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// ISO 4217 currency for “monthly_limit“.
+	Currency      string `protobuf:"bytes,10,opt,name=currency,proto3" json:"currency,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,9 +89,9 @@ func (x *OrgBudget) GetOrganizationId() string {
 	return ""
 }
 
-func (x *OrgBudget) GetMonthlyLimitUsd() string {
-	if x != nil && x.MonthlyLimitUsd != nil {
-		return *x.MonthlyLimitUsd
+func (x *OrgBudget) GetMonthlyLimit() string {
+	if x != nil && x.MonthlyLimit != nil {
+		return *x.MonthlyLimit
 	}
 	return ""
 }
@@ -136,20 +138,29 @@ func (x *OrgBudget) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *OrgBudget) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
 type UserQuota struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	OrganizationId    string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	UserId            string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	DailyLimitUsd     *string                `protobuf:"bytes,4,opt,name=daily_limit_usd,json=dailyLimitUsd,proto3,oneof" json:"daily_limit_usd,omitempty"`
-	MonthlyLimitUsd   *string                `protobuf:"bytes,5,opt,name=monthly_limit_usd,json=monthlyLimitUsd,proto3,oneof" json:"monthly_limit_usd,omitempty"`
+	DailyLimit        *string                `protobuf:"bytes,4,opt,name=daily_limit,json=dailyLimit,proto3,oneof" json:"daily_limit,omitempty"`
+	MonthlyLimit      *string                `protobuf:"bytes,5,opt,name=monthly_limit,json=monthlyLimit,proto3,oneof" json:"monthly_limit,omitempty"`
 	DailyImageLimit   *int32                 `protobuf:"varint,6,opt,name=daily_image_limit,json=dailyImageLimit,proto3,oneof" json:"daily_image_limit,omitempty"`
 	MonthlyImageLimit *int32                 `protobuf:"varint,7,opt,name=monthly_image_limit,json=monthlyImageLimit,proto3,oneof" json:"monthly_image_limit,omitempty"`
 	HardLimit         bool                   `protobuf:"varint,8,opt,name=hard_limit,json=hardLimit,proto3" json:"hard_limit,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// ISO 4217 currency for “daily_limit“ and “monthly_limit“.
+	Currency      string `protobuf:"bytes,11,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserQuota) Reset() {
@@ -203,16 +214,16 @@ func (x *UserQuota) GetUserId() string {
 	return ""
 }
 
-func (x *UserQuota) GetDailyLimitUsd() string {
-	if x != nil && x.DailyLimitUsd != nil {
-		return *x.DailyLimitUsd
+func (x *UserQuota) GetDailyLimit() string {
+	if x != nil && x.DailyLimit != nil {
+		return *x.DailyLimit
 	}
 	return ""
 }
 
-func (x *UserQuota) GetMonthlyLimitUsd() string {
-	if x != nil && x.MonthlyLimitUsd != nil {
-		return *x.MonthlyLimitUsd
+func (x *UserQuota) GetMonthlyLimit() string {
+	if x != nil && x.MonthlyLimit != nil {
+		return *x.MonthlyLimit
 	}
 	return ""
 }
@@ -252,6 +263,13 @@ func (x *UserQuota) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *UserQuota) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
 type SpendSummary struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Organization in which this summary was computed.
@@ -261,15 +279,18 @@ type SpendSummary struct {
 	// When the current period ends (half-open: usage from [start, end) is
 	// counted).
 	PeriodEnd *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=period_end,json=periodEnd,proto3" json:"period_end,omitempty"`
-	// Total dollar spend in the period (string-encoded Decimal).
-	SpendUsd string `protobuf:"bytes,4,opt,name=spend_usd,json=spendUsd,proto3" json:"spend_usd,omitempty"`
+	// Total spend in the period (string-encoded Decimal) in the org's
+	// display currency.
+	Spend string `protobuf:"bytes,4,opt,name=spend,proto3" json:"spend,omitempty"`
 	// Image-generation count in the period.
 	ImageCount int32 `protobuf:"varint,5,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
-	// Percent of the configured “monthly_limit_usd“ used so far.
-	// Null when no limit is configured.
+	// Percent of the configured “monthly_limit“ used so far. Null when
+	// no limit is configured.
 	PctOfLimit *int32 `protobuf:"varint,6,opt,name=pct_of_limit,json=pctOfLimit,proto3,oneof" json:"pct_of_limit,omitempty"`
 	// Optional user filter this summary was scoped to.
-	UserId        *string `protobuf:"bytes,7,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	UserId *string `protobuf:"bytes,7,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	// ISO 4217 currency for “spend“.
+	Currency      string `protobuf:"bytes,8,opt,name=currency,proto3" json:"currency,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -325,9 +346,9 @@ func (x *SpendSummary) GetPeriodEnd() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *SpendSummary) GetSpendUsd() string {
+func (x *SpendSummary) GetSpend() string {
 	if x != nil {
-		return x.SpendUsd
+		return x.Spend
 	}
 	return ""
 }
@@ -353,6 +374,98 @@ func (x *SpendSummary) GetUserId() string {
 	return ""
 }
 
+func (x *SpendSummary) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+type CurrencyRate struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	FromCurrency   string                 `protobuf:"bytes,3,opt,name=from_currency,json=fromCurrency,proto3" json:"from_currency,omitempty"`
+	ToCurrency     string                 `protobuf:"bytes,4,opt,name=to_currency,json=toCurrency,proto3" json:"to_currency,omitempty"`
+	// Decimal as string (10dp precision).
+	Rate          string                 `protobuf:"bytes,5,opt,name=rate,proto3" json:"rate,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CurrencyRate) Reset() {
+	*x = CurrencyRate{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CurrencyRate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CurrencyRate) ProtoMessage() {}
+
+func (x *CurrencyRate) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CurrencyRate.ProtoReflect.Descriptor instead.
+func (*CurrencyRate) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CurrencyRate) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CurrencyRate) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *CurrencyRate) GetFromCurrency() string {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return ""
+}
+
+func (x *CurrencyRate) GetToCurrency() string {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return ""
+}
+
+func (x *CurrencyRate) GetRate() string {
+	if x != nil {
+		return x.Rate
+	}
+	return ""
+}
+
+func (x *CurrencyRate) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type GetOrgBudgetRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -362,7 +475,7 @@ type GetOrgBudgetRequest struct {
 
 func (x *GetOrgBudgetRequest) Reset() {
 	*x = GetOrgBudgetRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[3]
+	mi := &file_agents_v1_budgets_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +487,7 @@ func (x *GetOrgBudgetRequest) String() string {
 func (*GetOrgBudgetRequest) ProtoMessage() {}
 
 func (x *GetOrgBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[3]
+	mi := &file_agents_v1_budgets_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +500,7 @@ func (x *GetOrgBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrgBudgetRequest.ProtoReflect.Descriptor instead.
 func (*GetOrgBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{3}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetOrgBudgetRequest) GetOrganizationId() string {
@@ -407,7 +520,7 @@ type GetOrgBudgetResponse struct {
 
 func (x *GetOrgBudgetResponse) Reset() {
 	*x = GetOrgBudgetResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[4]
+	mi := &file_agents_v1_budgets_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -419,7 +532,7 @@ func (x *GetOrgBudgetResponse) String() string {
 func (*GetOrgBudgetResponse) ProtoMessage() {}
 
 func (x *GetOrgBudgetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[4]
+	mi := &file_agents_v1_budgets_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -432,7 +545,7 @@ func (x *GetOrgBudgetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrgBudgetResponse.ProtoReflect.Descriptor instead.
 func (*GetOrgBudgetResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{4}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetOrgBudgetResponse) GetBudget() *OrgBudget {
@@ -445,18 +558,20 @@ func (x *GetOrgBudgetResponse) GetBudget() *OrgBudget {
 type UpdateOrgBudgetRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	MonthlyLimitUsd   *string                `protobuf:"bytes,2,opt,name=monthly_limit_usd,json=monthlyLimitUsd,proto3,oneof" json:"monthly_limit_usd,omitempty"`
+	MonthlyLimit      *string                `protobuf:"bytes,2,opt,name=monthly_limit,json=monthlyLimit,proto3,oneof" json:"monthly_limit,omitempty"`
 	ImageMonthlyLimit *int32                 `protobuf:"varint,3,opt,name=image_monthly_limit,json=imageMonthlyLimit,proto3,oneof" json:"image_monthly_limit,omitempty"`
 	HardLimit         bool                   `protobuf:"varint,4,opt,name=hard_limit,json=hardLimit,proto3" json:"hard_limit,omitempty"`
 	AlertThresholds   []int32                `protobuf:"varint,5,rep,packed,name=alert_thresholds,json=alertThresholds,proto3" json:"alert_thresholds,omitempty"`
 	ResetDay          int32                  `protobuf:"varint,6,opt,name=reset_day,json=resetDay,proto3" json:"reset_day,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// ISO 4217. Defaults to the org's display currency when empty.
+	Currency      string `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateOrgBudgetRequest) Reset() {
 	*x = UpdateOrgBudgetRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[5]
+	mi := &file_agents_v1_budgets_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -468,7 +583,7 @@ func (x *UpdateOrgBudgetRequest) String() string {
 func (*UpdateOrgBudgetRequest) ProtoMessage() {}
 
 func (x *UpdateOrgBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[5]
+	mi := &file_agents_v1_budgets_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -481,7 +596,7 @@ func (x *UpdateOrgBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOrgBudgetRequest.ProtoReflect.Descriptor instead.
 func (*UpdateOrgBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{5}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpdateOrgBudgetRequest) GetOrganizationId() string {
@@ -491,9 +606,9 @@ func (x *UpdateOrgBudgetRequest) GetOrganizationId() string {
 	return ""
 }
 
-func (x *UpdateOrgBudgetRequest) GetMonthlyLimitUsd() string {
-	if x != nil && x.MonthlyLimitUsd != nil {
-		return *x.MonthlyLimitUsd
+func (x *UpdateOrgBudgetRequest) GetMonthlyLimit() string {
+	if x != nil && x.MonthlyLimit != nil {
+		return *x.MonthlyLimit
 	}
 	return ""
 }
@@ -526,6 +641,13 @@ func (x *UpdateOrgBudgetRequest) GetResetDay() int32 {
 	return 0
 }
 
+func (x *UpdateOrgBudgetRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
 type OrgBudgetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Budget        *OrgBudget             `protobuf:"bytes,1,opt,name=budget,proto3" json:"budget,omitempty"`
@@ -535,7 +657,7 @@ type OrgBudgetResponse struct {
 
 func (x *OrgBudgetResponse) Reset() {
 	*x = OrgBudgetResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[6]
+	mi := &file_agents_v1_budgets_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -547,7 +669,7 @@ func (x *OrgBudgetResponse) String() string {
 func (*OrgBudgetResponse) ProtoMessage() {}
 
 func (x *OrgBudgetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[6]
+	mi := &file_agents_v1_budgets_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +682,7 @@ func (x *OrgBudgetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrgBudgetResponse.ProtoReflect.Descriptor instead.
 func (*OrgBudgetResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *OrgBudgetResponse) GetBudget() *OrgBudget {
@@ -579,7 +701,7 @@ type DeleteOrgBudgetRequest struct {
 
 func (x *DeleteOrgBudgetRequest) Reset() {
 	*x = DeleteOrgBudgetRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[7]
+	mi := &file_agents_v1_budgets_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -591,7 +713,7 @@ func (x *DeleteOrgBudgetRequest) String() string {
 func (*DeleteOrgBudgetRequest) ProtoMessage() {}
 
 func (x *DeleteOrgBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[7]
+	mi := &file_agents_v1_budgets_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -604,7 +726,7 @@ func (x *DeleteOrgBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteOrgBudgetRequest.ProtoReflect.Descriptor instead.
 func (*DeleteOrgBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{7}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteOrgBudgetRequest) GetOrganizationId() string {
@@ -623,7 +745,7 @@ type DeleteOrgBudgetResponse struct {
 
 func (x *DeleteOrgBudgetResponse) Reset() {
 	*x = DeleteOrgBudgetResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[8]
+	mi := &file_agents_v1_budgets_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -635,7 +757,7 @@ func (x *DeleteOrgBudgetResponse) String() string {
 func (*DeleteOrgBudgetResponse) ProtoMessage() {}
 
 func (x *DeleteOrgBudgetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[8]
+	mi := &file_agents_v1_budgets_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -648,7 +770,7 @@ func (x *DeleteOrgBudgetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteOrgBudgetResponse.ProtoReflect.Descriptor instead.
 func (*DeleteOrgBudgetResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{8}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteOrgBudgetResponse) GetSuccess() bool {
@@ -668,7 +790,7 @@ type GetUserQuotaRequest struct {
 
 func (x *GetUserQuotaRequest) Reset() {
 	*x = GetUserQuotaRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[9]
+	mi := &file_agents_v1_budgets_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -680,7 +802,7 @@ func (x *GetUserQuotaRequest) String() string {
 func (*GetUserQuotaRequest) ProtoMessage() {}
 
 func (x *GetUserQuotaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[9]
+	mi := &file_agents_v1_budgets_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -693,7 +815,7 @@ func (x *GetUserQuotaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserQuotaRequest.ProtoReflect.Descriptor instead.
 func (*GetUserQuotaRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{9}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetUserQuotaRequest) GetOrganizationId() string {
@@ -719,7 +841,7 @@ type GetUserQuotaResponse struct {
 
 func (x *GetUserQuotaResponse) Reset() {
 	*x = GetUserQuotaResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[10]
+	mi := &file_agents_v1_budgets_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +853,7 @@ func (x *GetUserQuotaResponse) String() string {
 func (*GetUserQuotaResponse) ProtoMessage() {}
 
 func (x *GetUserQuotaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[10]
+	mi := &file_agents_v1_budgets_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +866,7 @@ func (x *GetUserQuotaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserQuotaResponse.ProtoReflect.Descriptor instead.
 func (*GetUserQuotaResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{10}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetUserQuotaResponse) GetQuota() *UserQuota {
@@ -758,18 +880,20 @@ type UpdateUserQuotaRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	UserId            string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	DailyLimitUsd     *string                `protobuf:"bytes,3,opt,name=daily_limit_usd,json=dailyLimitUsd,proto3,oneof" json:"daily_limit_usd,omitempty"`
-	MonthlyLimitUsd   *string                `protobuf:"bytes,4,opt,name=monthly_limit_usd,json=monthlyLimitUsd,proto3,oneof" json:"monthly_limit_usd,omitempty"`
+	DailyLimit        *string                `protobuf:"bytes,3,opt,name=daily_limit,json=dailyLimit,proto3,oneof" json:"daily_limit,omitempty"`
+	MonthlyLimit      *string                `protobuf:"bytes,4,opt,name=monthly_limit,json=monthlyLimit,proto3,oneof" json:"monthly_limit,omitempty"`
 	DailyImageLimit   *int32                 `protobuf:"varint,5,opt,name=daily_image_limit,json=dailyImageLimit,proto3,oneof" json:"daily_image_limit,omitempty"`
 	MonthlyImageLimit *int32                 `protobuf:"varint,6,opt,name=monthly_image_limit,json=monthlyImageLimit,proto3,oneof" json:"monthly_image_limit,omitempty"`
 	HardLimit         bool                   `protobuf:"varint,7,opt,name=hard_limit,json=hardLimit,proto3" json:"hard_limit,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// ISO 4217. Defaults to the org's display currency when empty.
+	Currency      string `protobuf:"bytes,8,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateUserQuotaRequest) Reset() {
 	*x = UpdateUserQuotaRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[11]
+	mi := &file_agents_v1_budgets_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -781,7 +905,7 @@ func (x *UpdateUserQuotaRequest) String() string {
 func (*UpdateUserQuotaRequest) ProtoMessage() {}
 
 func (x *UpdateUserQuotaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[11]
+	mi := &file_agents_v1_budgets_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +918,7 @@ func (x *UpdateUserQuotaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserQuotaRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserQuotaRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{11}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateUserQuotaRequest) GetOrganizationId() string {
@@ -811,16 +935,16 @@ func (x *UpdateUserQuotaRequest) GetUserId() string {
 	return ""
 }
 
-func (x *UpdateUserQuotaRequest) GetDailyLimitUsd() string {
-	if x != nil && x.DailyLimitUsd != nil {
-		return *x.DailyLimitUsd
+func (x *UpdateUserQuotaRequest) GetDailyLimit() string {
+	if x != nil && x.DailyLimit != nil {
+		return *x.DailyLimit
 	}
 	return ""
 }
 
-func (x *UpdateUserQuotaRequest) GetMonthlyLimitUsd() string {
-	if x != nil && x.MonthlyLimitUsd != nil {
-		return *x.MonthlyLimitUsd
+func (x *UpdateUserQuotaRequest) GetMonthlyLimit() string {
+	if x != nil && x.MonthlyLimit != nil {
+		return *x.MonthlyLimit
 	}
 	return ""
 }
@@ -846,6 +970,13 @@ func (x *UpdateUserQuotaRequest) GetHardLimit() bool {
 	return false
 }
 
+func (x *UpdateUserQuotaRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
 type UserQuotaResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Quota         *UserQuota             `protobuf:"bytes,1,opt,name=quota,proto3" json:"quota,omitempty"`
@@ -855,7 +986,7 @@ type UserQuotaResponse struct {
 
 func (x *UserQuotaResponse) Reset() {
 	*x = UserQuotaResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[12]
+	mi := &file_agents_v1_budgets_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -867,7 +998,7 @@ func (x *UserQuotaResponse) String() string {
 func (*UserQuotaResponse) ProtoMessage() {}
 
 func (x *UserQuotaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[12]
+	mi := &file_agents_v1_budgets_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +1011,7 @@ func (x *UserQuotaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserQuotaResponse.ProtoReflect.Descriptor instead.
 func (*UserQuotaResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{12}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UserQuotaResponse) GetQuota() *UserQuota {
@@ -900,7 +1031,7 @@ type DeleteUserQuotaRequest struct {
 
 func (x *DeleteUserQuotaRequest) Reset() {
 	*x = DeleteUserQuotaRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[13]
+	mi := &file_agents_v1_budgets_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -912,7 +1043,7 @@ func (x *DeleteUserQuotaRequest) String() string {
 func (*DeleteUserQuotaRequest) ProtoMessage() {}
 
 func (x *DeleteUserQuotaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[13]
+	mi := &file_agents_v1_budgets_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -925,7 +1056,7 @@ func (x *DeleteUserQuotaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserQuotaRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserQuotaRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{13}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteUserQuotaRequest) GetOrganizationId() string {
@@ -951,7 +1082,7 @@ type DeleteUserQuotaResponse struct {
 
 func (x *DeleteUserQuotaResponse) Reset() {
 	*x = DeleteUserQuotaResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[14]
+	mi := &file_agents_v1_budgets_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -963,7 +1094,7 @@ func (x *DeleteUserQuotaResponse) String() string {
 func (*DeleteUserQuotaResponse) ProtoMessage() {}
 
 func (x *DeleteUserQuotaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[14]
+	mi := &file_agents_v1_budgets_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -976,7 +1107,7 @@ func (x *DeleteUserQuotaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserQuotaResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserQuotaResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{14}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteUserQuotaResponse) GetSuccess() bool {
@@ -996,7 +1127,7 @@ type ListUserQuotasRequest struct {
 
 func (x *ListUserQuotasRequest) Reset() {
 	*x = ListUserQuotasRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[15]
+	mi := &file_agents_v1_budgets_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1139,7 @@ func (x *ListUserQuotasRequest) String() string {
 func (*ListUserQuotasRequest) ProtoMessage() {}
 
 func (x *ListUserQuotasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[15]
+	mi := &file_agents_v1_budgets_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1152,7 @@ func (x *ListUserQuotasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserQuotasRequest.ProtoReflect.Descriptor instead.
 func (*ListUserQuotasRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{15}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListUserQuotasRequest) GetOrganizationId() string {
@@ -1048,7 +1179,7 @@ type ListUserQuotasResponse struct {
 
 func (x *ListUserQuotasResponse) Reset() {
 	*x = ListUserQuotasResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[16]
+	mi := &file_agents_v1_budgets_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1060,7 +1191,7 @@ func (x *ListUserQuotasResponse) String() string {
 func (*ListUserQuotasResponse) ProtoMessage() {}
 
 func (x *ListUserQuotasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[16]
+	mi := &file_agents_v1_budgets_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1073,7 +1204,7 @@ func (x *ListUserQuotasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserQuotasResponse.ProtoReflect.Descriptor instead.
 func (*ListUserQuotasResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{16}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListUserQuotasResponse) GetQuotas() []*UserQuota {
@@ -1102,7 +1233,7 @@ type GetCurrentSpendRequest struct {
 
 func (x *GetCurrentSpendRequest) Reset() {
 	*x = GetCurrentSpendRequest{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[17]
+	mi := &file_agents_v1_budgets_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1114,7 +1245,7 @@ func (x *GetCurrentSpendRequest) String() string {
 func (*GetCurrentSpendRequest) ProtoMessage() {}
 
 func (x *GetCurrentSpendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[17]
+	mi := &file_agents_v1_budgets_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1127,7 +1258,7 @@ func (x *GetCurrentSpendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentSpendRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentSpendRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{17}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetCurrentSpendRequest) GetOrganizationId() string {
@@ -1153,7 +1284,7 @@ type GetCurrentSpendResponse struct {
 
 func (x *GetCurrentSpendResponse) Reset() {
 	*x = GetCurrentSpendResponse{}
-	mi := &file_agents_v1_budgets_proto_msgTypes[18]
+	mi := &file_agents_v1_budgets_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1165,7 +1296,7 @@ func (x *GetCurrentSpendResponse) String() string {
 func (*GetCurrentSpendResponse) ProtoMessage() {}
 
 func (x *GetCurrentSpendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_budgets_proto_msgTypes[18]
+	mi := &file_agents_v1_budgets_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1178,7 +1309,7 @@ func (x *GetCurrentSpendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentSpendResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentSpendResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{18}
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetCurrentSpendResponse) GetSummary() *SpendSummary {
@@ -1188,15 +1319,505 @@ func (x *GetCurrentSpendResponse) GetSummary() *SpendSummary {
 	return nil
 }
 
+type ListCurrencyRatesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListCurrencyRatesRequest) Reset() {
+	*x = ListCurrencyRatesRequest{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCurrencyRatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCurrencyRatesRequest) ProtoMessage() {}
+
+func (x *ListCurrencyRatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCurrencyRatesRequest.ProtoReflect.Descriptor instead.
+func (*ListCurrencyRatesRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListCurrencyRatesRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type ListCurrencyRatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rates         []*CurrencyRate        `protobuf:"bytes,1,rep,name=rates,proto3" json:"rates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCurrencyRatesResponse) Reset() {
+	*x = ListCurrencyRatesResponse{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCurrencyRatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCurrencyRatesResponse) ProtoMessage() {}
+
+func (x *ListCurrencyRatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCurrencyRatesResponse.ProtoReflect.Descriptor instead.
+func (*ListCurrencyRatesResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListCurrencyRatesResponse) GetRates() []*CurrencyRate {
+	if x != nil {
+		return x.Rates
+	}
+	return nil
+}
+
+type UpsertCurrencyRateRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	FromCurrency   string                 `protobuf:"bytes,2,opt,name=from_currency,json=fromCurrency,proto3" json:"from_currency,omitempty"`
+	ToCurrency     string                 `protobuf:"bytes,3,opt,name=to_currency,json=toCurrency,proto3" json:"to_currency,omitempty"`
+	// Decimal as string.
+	Rate          string `protobuf:"bytes,4,opt,name=rate,proto3" json:"rate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertCurrencyRateRequest) Reset() {
+	*x = UpsertCurrencyRateRequest{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertCurrencyRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertCurrencyRateRequest) ProtoMessage() {}
+
+func (x *UpsertCurrencyRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertCurrencyRateRequest.ProtoReflect.Descriptor instead.
+func (*UpsertCurrencyRateRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *UpsertCurrencyRateRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *UpsertCurrencyRateRequest) GetFromCurrency() string {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return ""
+}
+
+func (x *UpsertCurrencyRateRequest) GetToCurrency() string {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return ""
+}
+
+func (x *UpsertCurrencyRateRequest) GetRate() string {
+	if x != nil {
+		return x.Rate
+	}
+	return ""
+}
+
+type CurrencyRateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rate          *CurrencyRate          `protobuf:"bytes,1,opt,name=rate,proto3" json:"rate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CurrencyRateResponse) Reset() {
+	*x = CurrencyRateResponse{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CurrencyRateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CurrencyRateResponse) ProtoMessage() {}
+
+func (x *CurrencyRateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CurrencyRateResponse.ProtoReflect.Descriptor instead.
+func (*CurrencyRateResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CurrencyRateResponse) GetRate() *CurrencyRate {
+	if x != nil {
+		return x.Rate
+	}
+	return nil
+}
+
+type DeleteCurrencyRateRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	FromCurrency   string                 `protobuf:"bytes,2,opt,name=from_currency,json=fromCurrency,proto3" json:"from_currency,omitempty"`
+	ToCurrency     string                 `protobuf:"bytes,3,opt,name=to_currency,json=toCurrency,proto3" json:"to_currency,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DeleteCurrencyRateRequest) Reset() {
+	*x = DeleteCurrencyRateRequest{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteCurrencyRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteCurrencyRateRequest) ProtoMessage() {}
+
+func (x *DeleteCurrencyRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteCurrencyRateRequest.ProtoReflect.Descriptor instead.
+func (*DeleteCurrencyRateRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *DeleteCurrencyRateRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *DeleteCurrencyRateRequest) GetFromCurrency() string {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return ""
+}
+
+func (x *DeleteCurrencyRateRequest) GetToCurrency() string {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return ""
+}
+
+type DeleteCurrencyRateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteCurrencyRateResponse) Reset() {
+	*x = DeleteCurrencyRateResponse{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteCurrencyRateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteCurrencyRateResponse) ProtoMessage() {}
+
+func (x *DeleteCurrencyRateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteCurrencyRateResponse.ProtoReflect.Descriptor instead.
+func (*DeleteCurrencyRateResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeleteCurrencyRateResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type SetDisplayCurrencyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// ISO 4217.
+	DisplayCurrency string `protobuf:"bytes,2,opt,name=display_currency,json=displayCurrency,proto3" json:"display_currency,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetDisplayCurrencyRequest) Reset() {
+	*x = SetDisplayCurrencyRequest{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetDisplayCurrencyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetDisplayCurrencyRequest) ProtoMessage() {}
+
+func (x *SetDisplayCurrencyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetDisplayCurrencyRequest.ProtoReflect.Descriptor instead.
+func (*SetDisplayCurrencyRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *SetDisplayCurrencyRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetDisplayCurrencyRequest) GetDisplayCurrency() string {
+	if x != nil {
+		return x.DisplayCurrency
+	}
+	return ""
+}
+
+type SetDisplayCurrencyResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	DisplayCurrency string                 `protobuf:"bytes,1,opt,name=display_currency,json=displayCurrency,proto3" json:"display_currency,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetDisplayCurrencyResponse) Reset() {
+	*x = SetDisplayCurrencyResponse{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetDisplayCurrencyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetDisplayCurrencyResponse) ProtoMessage() {}
+
+func (x *SetDisplayCurrencyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetDisplayCurrencyResponse.ProtoReflect.Descriptor instead.
+func (*SetDisplayCurrencyResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *SetDisplayCurrencyResponse) GetDisplayCurrency() string {
+	if x != nil {
+		return x.DisplayCurrency
+	}
+	return ""
+}
+
+type GetDisplayCurrencyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetDisplayCurrencyRequest) Reset() {
+	*x = GetDisplayCurrencyRequest{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDisplayCurrencyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDisplayCurrencyRequest) ProtoMessage() {}
+
+func (x *GetDisplayCurrencyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDisplayCurrencyRequest.ProtoReflect.Descriptor instead.
+func (*GetDisplayCurrencyRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetDisplayCurrencyRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type GetDisplayCurrencyResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	DisplayCurrency string                 `protobuf:"bytes,1,opt,name=display_currency,json=displayCurrency,proto3" json:"display_currency,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetDisplayCurrencyResponse) Reset() {
+	*x = GetDisplayCurrencyResponse{}
+	mi := &file_agents_v1_budgets_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDisplayCurrencyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDisplayCurrencyResponse) ProtoMessage() {}
+
+func (x *GetDisplayCurrencyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_budgets_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDisplayCurrencyResponse.ProtoReflect.Descriptor instead.
+func (*GetDisplayCurrencyResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetDisplayCurrencyResponse) GetDisplayCurrency() string {
+	if x != nil {
+		return x.DisplayCurrency
+	}
+	return ""
+}
+
 var File_agents_v1_budgets_proto protoreflect.FileDescriptor
 
 const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/budgets.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xb5\x03\n" +
+	"\x17agents/v1/budgets.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xc6\x03\n" +
 	"\tOrgBudget\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12/\n" +
-	"\x11monthly_limit_usd\x18\x03 \x01(\tH\x00R\x0fmonthlyLimitUsd\x88\x01\x01\x123\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12(\n" +
+	"\rmonthly_limit\x18\x03 \x01(\tH\x00R\fmonthlyLimit\x88\x01\x01\x123\n" +
 	"\x13image_monthly_limit\x18\x04 \x01(\x05H\x01R\x11imageMonthlyLimit\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"hard_limit\x18\x05 \x01(\bR\thardLimit\x12)\n" +
@@ -1205,15 +1826,18 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x14\n" +
-	"\x12_monthly_limit_usdB\x16\n" +
-	"\x14_image_monthly_limit\"\x8e\x04\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
+	"\bcurrency\x18\n" +
+	" \x01(\tR\bcurrencyB\x10\n" +
+	"\x0e_monthly_limitB\x16\n" +
+	"\x14_image_monthly_limit\"\x94\x04\n" +
 	"\tUserQuota\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n" +
-	"\auser_id\x18\x03 \x01(\tR\x06userId\x12+\n" +
-	"\x0fdaily_limit_usd\x18\x04 \x01(\tH\x00R\rdailyLimitUsd\x88\x01\x01\x12/\n" +
-	"\x11monthly_limit_usd\x18\x05 \x01(\tH\x01R\x0fmonthlyLimitUsd\x88\x01\x01\x12/\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12$\n" +
+	"\vdaily_limit\x18\x04 \x01(\tH\x00R\n" +
+	"dailyLimit\x88\x01\x01\x12(\n" +
+	"\rmonthly_limit\x18\x05 \x01(\tH\x01R\fmonthlyLimit\x88\x01\x01\x12/\n" +
 	"\x11daily_image_limit\x18\x06 \x01(\x05H\x02R\x0fdailyImageLimit\x88\x01\x01\x123\n" +
 	"\x13monthly_image_limit\x18\a \x01(\x05H\x03R\x11monthlyImageLimit\x88\x01\x01\x12\x1d\n" +
 	"\n" +
@@ -1222,39 +1846,51 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x12\n" +
-	"\x10_daily_limit_usdB\x14\n" +
-	"\x12_monthly_limit_usdB\x14\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
+	"\bcurrency\x18\v \x01(\tR\bcurrencyB\x0e\n" +
+	"\f_daily_limitB\x10\n" +
+	"\x0e_monthly_limitB\x14\n" +
 	"\x12_daily_image_limitB\x16\n" +
-	"\x14_monthly_image_limit\"\xd1\x02\n" +
+	"\x14_monthly_image_limit\"\xe6\x02\n" +
 	"\fSpendSummary\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12=\n" +
 	"\fperiod_start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\vperiodStart\x129\n" +
 	"\n" +
-	"period_end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tperiodEnd\x12\x1b\n" +
-	"\tspend_usd\x18\x04 \x01(\tR\bspendUsd\x12\x1f\n" +
+	"period_end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tperiodEnd\x12\x14\n" +
+	"\x05spend\x18\x04 \x01(\tR\x05spend\x12\x1f\n" +
 	"\vimage_count\x18\x05 \x01(\x05R\n" +
 	"imageCount\x12%\n" +
 	"\fpct_of_limit\x18\x06 \x01(\x05H\x00R\n" +
 	"pctOfLimit\x88\x01\x01\x12\x1c\n" +
-	"\auser_id\x18\a \x01(\tH\x01R\x06userId\x88\x01\x01B\x0f\n" +
+	"\auser_id\x18\a \x01(\tH\x01R\x06userId\x88\x01\x01\x12\x1a\n" +
+	"\bcurrency\x18\b \x01(\tR\bcurrencyB\x0f\n" +
 	"\r_pct_of_limitB\n" +
 	"\n" +
-	"\b_user_id\">\n" +
+	"\b_user_id\"\xdc\x01\n" +
+	"\fCurrencyRate\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12#\n" +
+	"\rfrom_currency\x18\x03 \x01(\tR\ffromCurrency\x12\x1f\n" +
+	"\vto_currency\x18\x04 \x01(\tR\n" +
+	"toCurrency\x12\x12\n" +
+	"\x04rate\x18\x05 \x01(\tR\x04rate\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\">\n" +
 	"\x13GetOrgBudgetRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"T\n" +
 	"\x14GetOrgBudgetResponse\x121\n" +
 	"\x06budget\x18\x01 \x01(\v2\x14.agents.v1.OrgBudgetH\x00R\x06budget\x88\x01\x01B\t\n" +
-	"\a_budget\"\xbc\x02\n" +
+	"\a_budget\"\xcd\x02\n" +
 	"\x16UpdateOrgBudgetRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n" +
-	"\x11monthly_limit_usd\x18\x02 \x01(\tH\x00R\x0fmonthlyLimitUsd\x88\x01\x01\x123\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12(\n" +
+	"\rmonthly_limit\x18\x02 \x01(\tH\x00R\fmonthlyLimit\x88\x01\x01\x123\n" +
 	"\x13image_monthly_limit\x18\x03 \x01(\x05H\x01R\x11imageMonthlyLimit\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"hard_limit\x18\x04 \x01(\bR\thardLimit\x12)\n" +
 	"\x10alert_thresholds\x18\x05 \x03(\x05R\x0falertThresholds\x12\x1b\n" +
-	"\treset_day\x18\x06 \x01(\x05R\bresetDayB\x14\n" +
-	"\x12_monthly_limit_usdB\x16\n" +
+	"\treset_day\x18\x06 \x01(\x05R\bresetDay\x12\x1a\n" +
+	"\bcurrency\x18\a \x01(\tR\bcurrencyB\x10\n" +
+	"\x0e_monthly_limitB\x16\n" +
 	"\x14_image_monthly_limit\"A\n" +
 	"\x11OrgBudgetResponse\x12,\n" +
 	"\x06budget\x18\x01 \x01(\v2\x14.agents.v1.OrgBudgetR\x06budget\"A\n" +
@@ -1267,18 +1903,20 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\"Q\n" +
 	"\x14GetUserQuotaResponse\x12/\n" +
 	"\x05quota\x18\x01 \x01(\v2\x14.agents.v1.UserQuotaH\x00R\x05quota\x88\x01\x01B\b\n" +
-	"\x06_quota\"\x95\x03\n" +
+	"\x06_quota\"\x9b\x03\n" +
 	"\x16UpdateUserQuotaRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12+\n" +
-	"\x0fdaily_limit_usd\x18\x03 \x01(\tH\x00R\rdailyLimitUsd\x88\x01\x01\x12/\n" +
-	"\x11monthly_limit_usd\x18\x04 \x01(\tH\x01R\x0fmonthlyLimitUsd\x88\x01\x01\x12/\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12$\n" +
+	"\vdaily_limit\x18\x03 \x01(\tH\x00R\n" +
+	"dailyLimit\x88\x01\x01\x12(\n" +
+	"\rmonthly_limit\x18\x04 \x01(\tH\x01R\fmonthlyLimit\x88\x01\x01\x12/\n" +
 	"\x11daily_image_limit\x18\x05 \x01(\x05H\x02R\x0fdailyImageLimit\x88\x01\x01\x123\n" +
 	"\x13monthly_image_limit\x18\x06 \x01(\x05H\x03R\x11monthlyImageLimit\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"hard_limit\x18\a \x01(\bR\thardLimitB\x12\n" +
-	"\x10_daily_limit_usdB\x14\n" +
-	"\x12_monthly_limit_usdB\x14\n" +
+	"hard_limit\x18\a \x01(\bR\thardLimit\x12\x1a\n" +
+	"\bcurrency\x18\b \x01(\tR\bcurrencyB\x0e\n" +
+	"\f_daily_limitB\x10\n" +
+	"\x0e_monthly_limitB\x14\n" +
 	"\x12_daily_image_limitB\x16\n" +
 	"\x14_monthly_image_limit\"?\n" +
 	"\x11UserQuotaResponse\x12*\n" +
@@ -1305,7 +1943,35 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\n" +
 	"\b_user_id\"L\n" +
 	"\x17GetCurrentSpendResponse\x121\n" +
-	"\asummary\x18\x01 \x01(\v2\x17.agents.v1.SpendSummaryR\asummary2\xcf\x05\n" +
+	"\asummary\x18\x01 \x01(\v2\x17.agents.v1.SpendSummaryR\asummary\"C\n" +
+	"\x18ListCurrencyRatesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"J\n" +
+	"\x19ListCurrencyRatesResponse\x12-\n" +
+	"\x05rates\x18\x01 \x03(\v2\x17.agents.v1.CurrencyRateR\x05rates\"\x9e\x01\n" +
+	"\x19UpsertCurrencyRateRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
+	"\rfrom_currency\x18\x02 \x01(\tR\ffromCurrency\x12\x1f\n" +
+	"\vto_currency\x18\x03 \x01(\tR\n" +
+	"toCurrency\x12\x12\n" +
+	"\x04rate\x18\x04 \x01(\tR\x04rate\"C\n" +
+	"\x14CurrencyRateResponse\x12+\n" +
+	"\x04rate\x18\x01 \x01(\v2\x17.agents.v1.CurrencyRateR\x04rate\"\x8a\x01\n" +
+	"\x19DeleteCurrencyRateRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
+	"\rfrom_currency\x18\x02 \x01(\tR\ffromCurrency\x12\x1f\n" +
+	"\vto_currency\x18\x03 \x01(\tR\n" +
+	"toCurrency\"6\n" +
+	"\x1aDeleteCurrencyRateResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"o\n" +
+	"\x19SetDisplayCurrencyRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12)\n" +
+	"\x10display_currency\x18\x02 \x01(\tR\x0fdisplayCurrency\"G\n" +
+	"\x1aSetDisplayCurrencyResponse\x12)\n" +
+	"\x10display_currency\x18\x01 \x01(\tR\x0fdisplayCurrency\"D\n" +
+	"\x19GetDisplayCurrencyRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"G\n" +
+	"\x1aGetDisplayCurrencyResponse\x12)\n" +
+	"\x10display_currency\x18\x01 \x01(\tR\x0fdisplayCurrency2\xbf\t\n" +
 	"\x0eBudgetsService\x12Q\n" +
 	"\fGetOrgBudget\x12\x1e.agents.v1.GetOrgBudgetRequest\x1a\x1f.agents.v1.GetOrgBudgetResponse\"\x00\x12T\n" +
 	"\x0fUpdateOrgBudget\x12!.agents.v1.UpdateOrgBudgetRequest\x1a\x1c.agents.v1.OrgBudgetResponse\"\x00\x12Z\n" +
@@ -1314,7 +1980,12 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\x0fUpdateUserQuota\x12!.agents.v1.UpdateUserQuotaRequest\x1a\x1c.agents.v1.UserQuotaResponse\"\x00\x12Z\n" +
 	"\x0fDeleteUserQuota\x12!.agents.v1.DeleteUserQuotaRequest\x1a\".agents.v1.DeleteUserQuotaResponse\"\x00\x12W\n" +
 	"\x0eListUserQuotas\x12 .agents.v1.ListUserQuotasRequest\x1a!.agents.v1.ListUserQuotasResponse\"\x00\x12Z\n" +
-	"\x0fGetCurrentSpend\x12!.agents.v1.GetCurrentSpendRequest\x1a\".agents.v1.GetCurrentSpendResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x0fGetCurrentSpend\x12!.agents.v1.GetCurrentSpendRequest\x1a\".agents.v1.GetCurrentSpendResponse\"\x00\x12`\n" +
+	"\x11ListCurrencyRates\x12#.agents.v1.ListCurrencyRatesRequest\x1a$.agents.v1.ListCurrencyRatesResponse\"\x00\x12]\n" +
+	"\x12UpsertCurrencyRate\x12$.agents.v1.UpsertCurrencyRateRequest\x1a\x1f.agents.v1.CurrencyRateResponse\"\x00\x12c\n" +
+	"\x12DeleteCurrencyRate\x12$.agents.v1.DeleteCurrencyRateRequest\x1a%.agents.v1.DeleteCurrencyRateResponse\"\x00\x12c\n" +
+	"\x12SetDisplayCurrency\x12$.agents.v1.SetDisplayCurrencyRequest\x1a%.agents.v1.SetDisplayCurrencyResponse\"\x00\x12c\n" +
+	"\x12GetDisplayCurrency\x12$.agents.v1.GetDisplayCurrencyRequest\x1a%.agents.v1.GetDisplayCurrencyResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_budgets_proto_rawDescOnce sync.Once
@@ -1328,67 +1999,91 @@ func file_agents_v1_budgets_proto_rawDescGZIP() []byte {
 	return file_agents_v1_budgets_proto_rawDescData
 }
 
-var file_agents_v1_budgets_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_agents_v1_budgets_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_agents_v1_budgets_proto_goTypes = []any{
-	(*OrgBudget)(nil),               // 0: agents.v1.OrgBudget
-	(*UserQuota)(nil),               // 1: agents.v1.UserQuota
-	(*SpendSummary)(nil),            // 2: agents.v1.SpendSummary
-	(*GetOrgBudgetRequest)(nil),     // 3: agents.v1.GetOrgBudgetRequest
-	(*GetOrgBudgetResponse)(nil),    // 4: agents.v1.GetOrgBudgetResponse
-	(*UpdateOrgBudgetRequest)(nil),  // 5: agents.v1.UpdateOrgBudgetRequest
-	(*OrgBudgetResponse)(nil),       // 6: agents.v1.OrgBudgetResponse
-	(*DeleteOrgBudgetRequest)(nil),  // 7: agents.v1.DeleteOrgBudgetRequest
-	(*DeleteOrgBudgetResponse)(nil), // 8: agents.v1.DeleteOrgBudgetResponse
-	(*GetUserQuotaRequest)(nil),     // 9: agents.v1.GetUserQuotaRequest
-	(*GetUserQuotaResponse)(nil),    // 10: agents.v1.GetUserQuotaResponse
-	(*UpdateUserQuotaRequest)(nil),  // 11: agents.v1.UpdateUserQuotaRequest
-	(*UserQuotaResponse)(nil),       // 12: agents.v1.UserQuotaResponse
-	(*DeleteUserQuotaRequest)(nil),  // 13: agents.v1.DeleteUserQuotaRequest
-	(*DeleteUserQuotaResponse)(nil), // 14: agents.v1.DeleteUserQuotaResponse
-	(*ListUserQuotasRequest)(nil),   // 15: agents.v1.ListUserQuotasRequest
-	(*ListUserQuotasResponse)(nil),  // 16: agents.v1.ListUserQuotasResponse
-	(*GetCurrentSpendRequest)(nil),  // 17: agents.v1.GetCurrentSpendRequest
-	(*GetCurrentSpendResponse)(nil), // 18: agents.v1.GetCurrentSpendResponse
-	(*timestamppb.Timestamp)(nil),   // 19: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),    // 20: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),   // 21: common.v1.PaginationResponse
+	(*OrgBudget)(nil),                  // 0: agents.v1.OrgBudget
+	(*UserQuota)(nil),                  // 1: agents.v1.UserQuota
+	(*SpendSummary)(nil),               // 2: agents.v1.SpendSummary
+	(*CurrencyRate)(nil),               // 3: agents.v1.CurrencyRate
+	(*GetOrgBudgetRequest)(nil),        // 4: agents.v1.GetOrgBudgetRequest
+	(*GetOrgBudgetResponse)(nil),       // 5: agents.v1.GetOrgBudgetResponse
+	(*UpdateOrgBudgetRequest)(nil),     // 6: agents.v1.UpdateOrgBudgetRequest
+	(*OrgBudgetResponse)(nil),          // 7: agents.v1.OrgBudgetResponse
+	(*DeleteOrgBudgetRequest)(nil),     // 8: agents.v1.DeleteOrgBudgetRequest
+	(*DeleteOrgBudgetResponse)(nil),    // 9: agents.v1.DeleteOrgBudgetResponse
+	(*GetUserQuotaRequest)(nil),        // 10: agents.v1.GetUserQuotaRequest
+	(*GetUserQuotaResponse)(nil),       // 11: agents.v1.GetUserQuotaResponse
+	(*UpdateUserQuotaRequest)(nil),     // 12: agents.v1.UpdateUserQuotaRequest
+	(*UserQuotaResponse)(nil),          // 13: agents.v1.UserQuotaResponse
+	(*DeleteUserQuotaRequest)(nil),     // 14: agents.v1.DeleteUserQuotaRequest
+	(*DeleteUserQuotaResponse)(nil),    // 15: agents.v1.DeleteUserQuotaResponse
+	(*ListUserQuotasRequest)(nil),      // 16: agents.v1.ListUserQuotasRequest
+	(*ListUserQuotasResponse)(nil),     // 17: agents.v1.ListUserQuotasResponse
+	(*GetCurrentSpendRequest)(nil),     // 18: agents.v1.GetCurrentSpendRequest
+	(*GetCurrentSpendResponse)(nil),    // 19: agents.v1.GetCurrentSpendResponse
+	(*ListCurrencyRatesRequest)(nil),   // 20: agents.v1.ListCurrencyRatesRequest
+	(*ListCurrencyRatesResponse)(nil),  // 21: agents.v1.ListCurrencyRatesResponse
+	(*UpsertCurrencyRateRequest)(nil),  // 22: agents.v1.UpsertCurrencyRateRequest
+	(*CurrencyRateResponse)(nil),       // 23: agents.v1.CurrencyRateResponse
+	(*DeleteCurrencyRateRequest)(nil),  // 24: agents.v1.DeleteCurrencyRateRequest
+	(*DeleteCurrencyRateResponse)(nil), // 25: agents.v1.DeleteCurrencyRateResponse
+	(*SetDisplayCurrencyRequest)(nil),  // 26: agents.v1.SetDisplayCurrencyRequest
+	(*SetDisplayCurrencyResponse)(nil), // 27: agents.v1.SetDisplayCurrencyResponse
+	(*GetDisplayCurrencyRequest)(nil),  // 28: agents.v1.GetDisplayCurrencyRequest
+	(*GetDisplayCurrencyResponse)(nil), // 29: agents.v1.GetDisplayCurrencyResponse
+	(*timestamppb.Timestamp)(nil),      // 30: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),       // 31: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),      // 32: common.v1.PaginationResponse
 }
 var file_agents_v1_budgets_proto_depIdxs = []int32{
-	19, // 0: agents.v1.OrgBudget.created_at:type_name -> google.protobuf.Timestamp
-	19, // 1: agents.v1.OrgBudget.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 2: agents.v1.UserQuota.created_at:type_name -> google.protobuf.Timestamp
-	19, // 3: agents.v1.UserQuota.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 4: agents.v1.SpendSummary.period_start:type_name -> google.protobuf.Timestamp
-	19, // 5: agents.v1.SpendSummary.period_end:type_name -> google.protobuf.Timestamp
-	0,  // 6: agents.v1.GetOrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
-	0,  // 7: agents.v1.OrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
-	1,  // 8: agents.v1.GetUserQuotaResponse.quota:type_name -> agents.v1.UserQuota
-	1,  // 9: agents.v1.UserQuotaResponse.quota:type_name -> agents.v1.UserQuota
-	20, // 10: agents.v1.ListUserQuotasRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 11: agents.v1.ListUserQuotasResponse.quotas:type_name -> agents.v1.UserQuota
-	21, // 12: agents.v1.ListUserQuotasResponse.pagination:type_name -> common.v1.PaginationResponse
-	2,  // 13: agents.v1.GetCurrentSpendResponse.summary:type_name -> agents.v1.SpendSummary
-	3,  // 14: agents.v1.BudgetsService.GetOrgBudget:input_type -> agents.v1.GetOrgBudgetRequest
-	5,  // 15: agents.v1.BudgetsService.UpdateOrgBudget:input_type -> agents.v1.UpdateOrgBudgetRequest
-	7,  // 16: agents.v1.BudgetsService.DeleteOrgBudget:input_type -> agents.v1.DeleteOrgBudgetRequest
-	9,  // 17: agents.v1.BudgetsService.GetUserQuota:input_type -> agents.v1.GetUserQuotaRequest
-	11, // 18: agents.v1.BudgetsService.UpdateUserQuota:input_type -> agents.v1.UpdateUserQuotaRequest
-	13, // 19: agents.v1.BudgetsService.DeleteUserQuota:input_type -> agents.v1.DeleteUserQuotaRequest
-	15, // 20: agents.v1.BudgetsService.ListUserQuotas:input_type -> agents.v1.ListUserQuotasRequest
-	17, // 21: agents.v1.BudgetsService.GetCurrentSpend:input_type -> agents.v1.GetCurrentSpendRequest
-	4,  // 22: agents.v1.BudgetsService.GetOrgBudget:output_type -> agents.v1.GetOrgBudgetResponse
-	6,  // 23: agents.v1.BudgetsService.UpdateOrgBudget:output_type -> agents.v1.OrgBudgetResponse
-	8,  // 24: agents.v1.BudgetsService.DeleteOrgBudget:output_type -> agents.v1.DeleteOrgBudgetResponse
-	10, // 25: agents.v1.BudgetsService.GetUserQuota:output_type -> agents.v1.GetUserQuotaResponse
-	12, // 26: agents.v1.BudgetsService.UpdateUserQuota:output_type -> agents.v1.UserQuotaResponse
-	14, // 27: agents.v1.BudgetsService.DeleteUserQuota:output_type -> agents.v1.DeleteUserQuotaResponse
-	16, // 28: agents.v1.BudgetsService.ListUserQuotas:output_type -> agents.v1.ListUserQuotasResponse
-	18, // 29: agents.v1.BudgetsService.GetCurrentSpend:output_type -> agents.v1.GetCurrentSpendResponse
-	22, // [22:30] is the sub-list for method output_type
-	14, // [14:22] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	30, // 0: agents.v1.OrgBudget.created_at:type_name -> google.protobuf.Timestamp
+	30, // 1: agents.v1.OrgBudget.updated_at:type_name -> google.protobuf.Timestamp
+	30, // 2: agents.v1.UserQuota.created_at:type_name -> google.protobuf.Timestamp
+	30, // 3: agents.v1.UserQuota.updated_at:type_name -> google.protobuf.Timestamp
+	30, // 4: agents.v1.SpendSummary.period_start:type_name -> google.protobuf.Timestamp
+	30, // 5: agents.v1.SpendSummary.period_end:type_name -> google.protobuf.Timestamp
+	30, // 6: agents.v1.CurrencyRate.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 7: agents.v1.GetOrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
+	0,  // 8: agents.v1.OrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
+	1,  // 9: agents.v1.GetUserQuotaResponse.quota:type_name -> agents.v1.UserQuota
+	1,  // 10: agents.v1.UserQuotaResponse.quota:type_name -> agents.v1.UserQuota
+	31, // 11: agents.v1.ListUserQuotasRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 12: agents.v1.ListUserQuotasResponse.quotas:type_name -> agents.v1.UserQuota
+	32, // 13: agents.v1.ListUserQuotasResponse.pagination:type_name -> common.v1.PaginationResponse
+	2,  // 14: agents.v1.GetCurrentSpendResponse.summary:type_name -> agents.v1.SpendSummary
+	3,  // 15: agents.v1.ListCurrencyRatesResponse.rates:type_name -> agents.v1.CurrencyRate
+	3,  // 16: agents.v1.CurrencyRateResponse.rate:type_name -> agents.v1.CurrencyRate
+	4,  // 17: agents.v1.BudgetsService.GetOrgBudget:input_type -> agents.v1.GetOrgBudgetRequest
+	6,  // 18: agents.v1.BudgetsService.UpdateOrgBudget:input_type -> agents.v1.UpdateOrgBudgetRequest
+	8,  // 19: agents.v1.BudgetsService.DeleteOrgBudget:input_type -> agents.v1.DeleteOrgBudgetRequest
+	10, // 20: agents.v1.BudgetsService.GetUserQuota:input_type -> agents.v1.GetUserQuotaRequest
+	12, // 21: agents.v1.BudgetsService.UpdateUserQuota:input_type -> agents.v1.UpdateUserQuotaRequest
+	14, // 22: agents.v1.BudgetsService.DeleteUserQuota:input_type -> agents.v1.DeleteUserQuotaRequest
+	16, // 23: agents.v1.BudgetsService.ListUserQuotas:input_type -> agents.v1.ListUserQuotasRequest
+	18, // 24: agents.v1.BudgetsService.GetCurrentSpend:input_type -> agents.v1.GetCurrentSpendRequest
+	20, // 25: agents.v1.BudgetsService.ListCurrencyRates:input_type -> agents.v1.ListCurrencyRatesRequest
+	22, // 26: agents.v1.BudgetsService.UpsertCurrencyRate:input_type -> agents.v1.UpsertCurrencyRateRequest
+	24, // 27: agents.v1.BudgetsService.DeleteCurrencyRate:input_type -> agents.v1.DeleteCurrencyRateRequest
+	26, // 28: agents.v1.BudgetsService.SetDisplayCurrency:input_type -> agents.v1.SetDisplayCurrencyRequest
+	28, // 29: agents.v1.BudgetsService.GetDisplayCurrency:input_type -> agents.v1.GetDisplayCurrencyRequest
+	5,  // 30: agents.v1.BudgetsService.GetOrgBudget:output_type -> agents.v1.GetOrgBudgetResponse
+	7,  // 31: agents.v1.BudgetsService.UpdateOrgBudget:output_type -> agents.v1.OrgBudgetResponse
+	9,  // 32: agents.v1.BudgetsService.DeleteOrgBudget:output_type -> agents.v1.DeleteOrgBudgetResponse
+	11, // 33: agents.v1.BudgetsService.GetUserQuota:output_type -> agents.v1.GetUserQuotaResponse
+	13, // 34: agents.v1.BudgetsService.UpdateUserQuota:output_type -> agents.v1.UserQuotaResponse
+	15, // 35: agents.v1.BudgetsService.DeleteUserQuota:output_type -> agents.v1.DeleteUserQuotaResponse
+	17, // 36: agents.v1.BudgetsService.ListUserQuotas:output_type -> agents.v1.ListUserQuotasResponse
+	19, // 37: agents.v1.BudgetsService.GetCurrentSpend:output_type -> agents.v1.GetCurrentSpendResponse
+	21, // 38: agents.v1.BudgetsService.ListCurrencyRates:output_type -> agents.v1.ListCurrencyRatesResponse
+	23, // 39: agents.v1.BudgetsService.UpsertCurrencyRate:output_type -> agents.v1.CurrencyRateResponse
+	25, // 40: agents.v1.BudgetsService.DeleteCurrencyRate:output_type -> agents.v1.DeleteCurrencyRateResponse
+	27, // 41: agents.v1.BudgetsService.SetDisplayCurrency:output_type -> agents.v1.SetDisplayCurrencyResponse
+	29, // 42: agents.v1.BudgetsService.GetDisplayCurrency:output_type -> agents.v1.GetDisplayCurrencyResponse
+	30, // [30:43] is the sub-list for method output_type
+	17, // [17:30] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_budgets_proto_init() }
@@ -1399,19 +2094,19 @@ func file_agents_v1_budgets_proto_init() {
 	file_agents_v1_budgets_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_budgets_proto_msgTypes[1].OneofWrappers = []any{}
 	file_agents_v1_budgets_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agents_v1_budgets_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agents_v1_budgets_proto_msgTypes[5].OneofWrappers = []any{}
-	file_agents_v1_budgets_proto_msgTypes[10].OneofWrappers = []any{}
+	file_agents_v1_budgets_proto_msgTypes[6].OneofWrappers = []any{}
 	file_agents_v1_budgets_proto_msgTypes[11].OneofWrappers = []any{}
-	file_agents_v1_budgets_proto_msgTypes[15].OneofWrappers = []any{}
-	file_agents_v1_budgets_proto_msgTypes[17].OneofWrappers = []any{}
+	file_agents_v1_budgets_proto_msgTypes[12].OneofWrappers = []any{}
+	file_agents_v1_budgets_proto_msgTypes[16].OneofWrappers = []any{}
+	file_agents_v1_budgets_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_budgets_proto_rawDesc), len(file_agents_v1_budgets_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

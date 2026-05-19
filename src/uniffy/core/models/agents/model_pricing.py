@@ -32,14 +32,14 @@ class AgentModelPricing(SQLModel, table=True):
     kind : str
         ``text`` or ``image``. Text models use the four per-1M-token
         rates; image models use ``image_prices``.
-    input_per_1m_usd : Decimal | None
+    input_per_1m : Decimal | None
         Text: price per 1M input tokens.
-    output_per_1m_usd : Decimal | None
+    output_per_1m : Decimal | None
         Text: price per 1M output tokens.
-    cached_input_per_1m_usd : Decimal | None
+    cached_input_per_1m : Decimal | None
         Text: discounted rate for prompt-cache reads. Null means cached
         inputs are priced at the regular input rate.
-    thinking_per_1m_usd : Decimal | None
+    thinking_per_1m : Decimal | None
         Text: surcharge rate for extended-thinking tokens. Null means
         thinking tokens are priced at the regular output rate.
     image_prices : dict | None
@@ -82,19 +82,23 @@ class AgentModelPricing(SQLModel, table=True):
     kind: str = Field(
         sa_column=Column(String(20), nullable=False),
     )
-    input_per_1m_usd: Decimal | None = Field(
+    currency: str = Field(
+        default="USD",
+        sa_column=Column(String(3), nullable=False, default="USD"),
+    )
+    input_per_1m: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 4), nullable=True),
     )
-    output_per_1m_usd: Decimal | None = Field(
+    output_per_1m: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 4), nullable=True),
     )
-    cached_input_per_1m_usd: Decimal | None = Field(
+    cached_input_per_1m: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 4), nullable=True),
     )
-    thinking_per_1m_usd: Decimal | None = Field(
+    thinking_per_1m: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 4), nullable=True),
     )

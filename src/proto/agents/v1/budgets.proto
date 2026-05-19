@@ -11,8 +11,10 @@ import "common/v1/common.proto";
 // per-user quotas within an organization. Absent rows mean no cap on
 // that axis - the runtime falls through to server-side defaults.
 //
-// Dollar values are carried as strings on the wire to preserve Decimal
+// Money values are carried as strings on the wire to preserve Decimal
 // precision; clients should parse with their language's Decimal type.
+// Each amount is paired with an ISO 4217 currency code so the wire
+// never assumes a single currency.
 service BudgetsService {
   // Get the organization's budget, if any. Returns an empty message
   // when no budget row exists.
@@ -40,13 +42,30 @@ service BudgetsService {
   // Get the current-period spend summary for the org, optionally
   // scoped to a single user. Non-admin callers see only their own.
   rpc GetCurrentSpend(GetCurrentSpendRequest) returns (GetCurrentSpendResponse) {}
+
+  // List the org's manual exchange rates. Org admin only.
+  rpc ListCurrencyRates(ListCurrencyRatesRequest) returns (ListCurrencyRatesResponse) {}
+
+  // Create or update a single (from -> to) rate. Org admin only.
+  rpc UpsertCurrencyRate(UpsertCurrencyRateRequest) returns (CurrencyRateResponse) {}
+
+  // Delete a single (from -> to) rate. Org admin only.
+  rpc DeleteCurrencyRate(DeleteCurrencyRateRequest) returns (DeleteCurrencyRateResponse) {}
+
+  // Set the org's display currency (writes to AgentRuntimeSettings).
+  // Org admin only.
+  rpc SetDisplayCurrency(SetDisplayCurrencyRequest) returns (SetDisplayCurrencyResponse) {}
+
+  // Get the org's display currency. Falls back to the module default
+  // ("EUR") when no row exists. Any org member can call.
+  rpc GetDisplayCurrency(GetDisplayCurrencyRequest) returns (GetDisplayCurrencyResponse) {}
 }
 
 message OrgBudget {
   string id = 1;
   string organization_id = 2;
-  // Dollar cap per billing period. Absent means no cap.
-  optional string monthly_limit_usd = 3;
+  // Spend cap per billing period in ``currency``. Absent means no cap.
+  optional string monthly_limit = 3;
   // Count cap on image generations per billing period. Absent means
   // fall through to defaults.
   optional int32 image_monthly_limit = 4;
@@ -57,19 +76,23 @@ message OrgBudget {
   int32 reset_day = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  // ISO 4217 currency for ``monthly_limit``.
+  string currency = 10;
 }
 
 message UserQuota {
   string id = 1;
   string organization_id = 2;
   string user_id = 3;
-  optional string daily_limit_usd = 4;
-  optional string monthly_limit_usd = 5;
+  optional string daily_limit = 4;
+  optional string monthly_limit = 5;
   optional int32 daily_image_limit = 6;
   optional int32 monthly_image_limit = 7;
   bool hard_limit = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  // ISO 4217 currency for ``daily_limit`` and ``monthly_limit``.
+  string currency = 11;
 }
 
 message SpendSummary {
@@ -80,15 +103,28 @@ message SpendSummary {
   // When the current period ends (half-open: usage from [start, end) is
   // counted).
   google.protobuf.Timestamp period_end = 3;
-  // Total dollar spend in the period (string-encoded Decimal).
-  string spend_usd = 4;
+  // Total spend in the period (string-encoded Decimal) in the org's
+  // display currency.
+  string spend = 4;
   // Image-generation count in the period.
   int32 image_count = 5;
-  // Percent of the configured ``monthly_limit_usd`` used so far.
-  // Null when no limit is configured.
+  // Percent of the configured ``monthly_limit`` used so far. Null when
+  // no limit is configured.
   optional int32 pct_of_limit = 6;
   // Optional user filter this summary was scoped to.
   optional string user_id = 7;
+  // ISO 4217 currency for ``spend``.
+  string currency = 8;
+}
+
+message CurrencyRate {
+  string id = 1;
+  string organization_id = 2;
+  string from_currency = 3;
+  string to_currency = 4;
+  // Decimal as string (10dp precision).
+  string rate = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }
 
 message GetOrgBudgetRequest {
@@ -102,11 +138,13 @@ message GetOrgBudgetResponse {
 
 message UpdateOrgBudgetRequest {
   string organization_id = 1;
-  optional string monthly_limit_usd = 2;
+  optional string monthly_limit = 2;
   optional int32 image_monthly_limit = 3;
   bool hard_limit = 4;
   repeated int32 alert_thresholds = 5;
   int32 reset_day = 6;
+  // ISO 4217. Defaults to the org's display currency when empty.
+  string currency = 7;
 }
 
 message OrgBudgetResponse {
@@ -133,11 +171,13 @@ message GetUserQuotaResponse {
 message UpdateUserQuotaRequest {
   string organization_id = 1;
   string user_id = 2;
-  optional string daily_limit_usd = 3;
-  optional string monthly_limit_usd = 4;
+  optional string daily_limit = 3;
+  optional string monthly_limit = 4;
   optional int32 daily_image_limit = 5;
   optional int32 monthly_image_limit = 6;
   bool hard_limit = 7;
+  // ISO 4217. Defaults to the org's display currency when empty.
+  string currency = 8;
 }
 
 message UserQuotaResponse {
@@ -172,4 +212,52 @@ message GetCurrentSpendRequest {
 
 message GetCurrentSpendResponse {
   SpendSummary summary = 1;
+}
+
+message ListCurrencyRatesRequest {
+  string organization_id = 1;
+}
+
+message ListCurrencyRatesResponse {
+  repeated CurrencyRate rates = 1;
+}
+
+message UpsertCurrencyRateRequest {
+  string organization_id = 1;
+  string from_currency = 2;
+  string to_currency = 3;
+  // Decimal as string.
+  string rate = 4;
+}
+
+message CurrencyRateResponse {
+  CurrencyRate rate = 1;
+}
+
+message DeleteCurrencyRateRequest {
+  string organization_id = 1;
+  string from_currency = 2;
+  string to_currency = 3;
+}
+
+message DeleteCurrencyRateResponse {
+  bool success = 1;
+}
+
+message SetDisplayCurrencyRequest {
+  string organization_id = 1;
+  // ISO 4217.
+  string display_currency = 2;
+}
+
+message SetDisplayCurrencyResponse {
+  string display_currency = 1;
+}
+
+message GetDisplayCurrencyRequest {
+  string organization_id = 1;
+}
+
+message GetDisplayCurrencyResponse {
+  string display_currency = 1;
 }

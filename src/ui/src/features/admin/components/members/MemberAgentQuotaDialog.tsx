@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
-import { useAppDispatch } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -22,6 +22,7 @@ import {
     fetchUserQuota,
     upsertUserQuota,
     deleteUserQuota,
+    fetchDisplayCurrency,
 } from '@/features/admin/store/agentsGovernanceThunks';
 
 interface Props {
@@ -32,16 +33,16 @@ interface Props {
 }
 
 interface FormState {
-    dailyLimitUsd: string;
-    monthlyLimitUsd: string;
+    dailyLimit: string;
+    monthlyLimit: string;
     dailyImageLimit: string;
     monthlyImageLimit: string;
     hardLimit: boolean;
 }
 
 const EMPTY: FormState = {
-    dailyLimitUsd: '',
-    monthlyLimitUsd: '',
+    dailyLimit: '',
+    monthlyLimit: '',
     dailyImageLimit: '',
     monthlyImageLimit: '',
     hardLimit: false,
@@ -49,10 +50,16 @@ const EMPTY: FormState = {
 
 export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: Props) {
     const dispatch = useAppDispatch();
+    const displayCurrency = useAppSelector((s) => s.agentsGovernance.displayCurrency);
     const [form, setForm] = useState<FormState>(EMPTY);
     const [hasOverride, setHasOverride] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (!open) return;
+        dispatch(fetchDisplayCurrency());
+    }, [dispatch, open]);
 
     useEffect(() => {
         if (!open || !userId) return;
@@ -65,8 +72,8 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                 if (quota) {
                     setHasOverride(true);
                     setForm({
-                        dailyLimitUsd: quota.dailyLimitUsd ?? '',
-                        monthlyLimitUsd: quota.monthlyLimitUsd ?? '',
+                        dailyLimit: quota.dailyLimit ?? '',
+                        monthlyLimit: quota.monthlyLimit ?? '',
                         dailyImageLimit: quota.dailyImageLimit?.toString() ?? '',
                         monthlyImageLimit: quota.monthlyImageLimit?.toString() ?? '',
                         hardLimit: quota.hardLimit,
@@ -101,8 +108,8 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
             await dispatch(
                 upsertUserQuota({
                     userId,
-                    dailyLimitUsd: form.dailyLimitUsd.trim() || null,
-                    monthlyLimitUsd: form.monthlyLimitUsd.trim() || null,
+                    dailyLimit: form.dailyLimit.trim() || null,
+                    monthlyLimit: form.monthlyLimit.trim() || null,
                     dailyImageLimit: form.dailyImageLimit.trim()
                         ? parseInt(form.dailyImageLimit.trim(), 10)
                         : null,
@@ -154,26 +161,28 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                     <div className="py-4 text-sm text-muted-foreground">Loading...</div>
                 ) : (
                     <>
-                        <FormRow label="Daily spend cap (USD)">
+                        <FormRow label={`Daily spend cap (${displayCurrency})`}>
                             <Input
                                 type="number"
                                 min="0"
                                 step="0.01"
                                 placeholder="No cap"
-                                value={form.dailyLimitUsd}
-                                onChange={(e) => update('dailyLimitUsd', e.target.value)}
+                                value={form.dailyLimit}
+                                onChange={(e) => update('dailyLimit', e.target.value)}
                                 disabled={saving}
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
-                        <FormRow label="Monthly spend cap (USD)">
+                        <FormRow label={`Monthly spend cap (${displayCurrency})`}>
                             <Input
                                 type="number"
                                 min="0"
                                 step="0.01"
                                 placeholder="No cap"
-                                value={form.monthlyLimitUsd}
-                                onChange={(e) => update('monthlyLimitUsd', e.target.value)}
+                                value={form.monthlyLimit}
+                                onChange={(e) => update('monthlyLimit', e.target.value)}
                                 disabled={saving}
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <FormRow label="Daily image cap">
@@ -184,6 +193,7 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                                 value={form.dailyImageLimit}
                                 onChange={(e) => update('dailyImageLimit', e.target.value)}
                                 disabled={saving}
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <FormRow label="Monthly image cap">
@@ -194,6 +204,7 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                                 value={form.monthlyImageLimit}
                                 onChange={(e) => update('monthlyImageLimit', e.target.value)}
                                 disabled={saving}
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <div className="flex items-center justify-between gap-4 pt-2">
@@ -242,8 +253,8 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
 
 function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">{label}</label>
+        <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">{label}</label>
             {children}
         </div>
     );

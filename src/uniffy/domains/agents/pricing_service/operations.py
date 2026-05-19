@@ -84,10 +84,10 @@ class PricingServiceOperations:
         provider: str,
         model: str,
         kind: str,
-        input_per_1m_usd: str | None,
-        output_per_1m_usd: str | None,
-        cached_input_per_1m_usd: str | None,
-        thinking_per_1m_usd: str | None,
+        input_per_1m: str | None,
+        output_per_1m: str | None,
+        cached_input_per_1m: str | None,
+        thinking_per_1m: str | None,
         image_prices: list[tuple[str, str, str]] | None,
         effective_from: datetime,
         effective_to: datetime | None,
@@ -112,10 +112,10 @@ class PricingServiceOperations:
                 "effective_to must be strictly after effective_from",
             )
 
-        input_rate = _parse_decimal(input_per_1m_usd, "input_per_1m_usd")
-        output_rate = _parse_decimal(output_per_1m_usd, "output_per_1m_usd")
-        cached_rate = _parse_decimal(cached_input_per_1m_usd, "cached_input_per_1m_usd")
-        thinking_rate = _parse_decimal(thinking_per_1m_usd, "thinking_per_1m_usd")
+        input_rate = _parse_decimal(input_per_1m, "input_per_1m")
+        output_rate = _parse_decimal(output_per_1m, "output_per_1m")
+        cached_rate = _parse_decimal(cached_input_per_1m, "cached_input_per_1m")
+        thinking_rate = _parse_decimal(thinking_per_1m, "thinking_per_1m")
 
         image_prices_dict: dict[str, dict[str, str]] | None = None
         if image_prices:
@@ -129,7 +129,7 @@ class PricingServiceOperations:
         if kind == "text" and input_rate is None and output_rate is None:
             raise ValidationError(
                 "rates",
-                "text kind requires at least input_per_1m_usd or output_per_1m_usd",
+                "text kind requires at least input_per_1m or output_per_1m",
             )
         if kind == "image" and not image_prices_dict:
             raise ValidationError(
@@ -151,10 +151,10 @@ class PricingServiceOperations:
                 provider=provider,
                 model=model,
                 kind=kind,
-                input_per_1m_usd=input_rate,
-                output_per_1m_usd=output_rate,
-                cached_input_per_1m_usd=cached_rate,
-                thinking_per_1m_usd=thinking_rate,
+                input_per_1m=input_rate,
+                output_per_1m=output_rate,
+                cached_input_per_1m=cached_rate,
+                thinking_per_1m=thinking_rate,
                 image_prices=image_prices_dict,
                 effective_from=effective_from,
                 effective_to=effective_to,
@@ -162,10 +162,10 @@ class PricingServiceOperations:
             self._session.add(row)
         else:
             existing.kind = kind
-            existing.input_per_1m_usd = input_rate
-            existing.output_per_1m_usd = output_rate
-            existing.cached_input_per_1m_usd = cached_rate
-            existing.thinking_per_1m_usd = thinking_rate
+            existing.input_per_1m = input_rate
+            existing.output_per_1m = output_rate
+            existing.cached_input_per_1m = cached_rate
+            existing.thinking_per_1m = thinking_rate
             existing.image_prices = image_prices_dict
             existing.effective_to = effective_to
             existing.updated_at = datetime.now(UTC)

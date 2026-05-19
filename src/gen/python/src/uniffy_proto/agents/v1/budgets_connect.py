@@ -40,6 +40,21 @@ class BudgetsService(Protocol):
     async def get_current_spend(self, request: agents_dot_v1_dot_budgets__pb2.GetCurrentSpendRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetCurrentSpendResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_currency_rates(self, request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_display_currency(self, request: agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_display_currency(self, request: agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
     def __init__(self, service: BudgetsService | AsyncGenerator[BudgetsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -125,6 +140,56 @@ class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_current_spend,
+                ),
+                "/agents.v1.BudgetsService/ListCurrencyRates": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListCurrencyRates",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_currency_rates,
+                ),
+                "/agents.v1.BudgetsService/UpsertCurrencyRate": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpsertCurrencyRate",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.upsert_currency_rate,
+                ),
+                "/agents.v1.BudgetsService/DeleteCurrencyRate": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteCurrencyRate",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_currency_rate,
+                ),
+                "/agents.v1.BudgetsService/SetDisplayCurrency": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetDisplayCurrency",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_display_currency,
+                ),
+                "/agents.v1.BudgetsService/GetDisplayCurrency": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetDisplayCurrency",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_display_currency,
                 ),
             },
             interceptors=interceptors,
@@ -298,6 +363,106 @@ class BudgetsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_currency_rates(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCurrencyRates",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+                output=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def upsert_currency_rate(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpsertCurrencyRate",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+                output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_currency_rate(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteCurrencyRate",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+                output=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_display_currency(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetDisplayCurrency",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+                output=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_display_currency(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDisplayCurrency",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+                output=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class BudgetsServiceSync(Protocol):
     def get_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.GetOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetOrgBudgetResponse:
@@ -315,6 +480,16 @@ class BudgetsServiceSync(Protocol):
     def list_user_quotas(self, request: agents_dot_v1_dot_budgets__pb2.ListUserQuotasRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.ListUserQuotasResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_current_spend(self, request: agents_dot_v1_dot_budgets__pb2.GetCurrentSpendRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetCurrentSpendResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_currency_rates(self, request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_display_currency(self, request: agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_display_currency(self, request: agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -401,6 +576,56 @@ class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_current_spend,
+                ),
+                "/agents.v1.BudgetsService/ListCurrencyRates": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListCurrencyRates",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_currency_rates,
+                ),
+                "/agents.v1.BudgetsService/UpsertCurrencyRate": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpsertCurrencyRate",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.upsert_currency_rate,
+                ),
+                "/agents.v1.BudgetsService/DeleteCurrencyRate": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteCurrencyRate",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_currency_rate,
+                ),
+                "/agents.v1.BudgetsService/SetDisplayCurrency": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetDisplayCurrency",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_display_currency,
+                ),
+                "/agents.v1.BudgetsService/GetDisplayCurrency": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetDisplayCurrency",
+                        service_name="agents.v1.BudgetsService",
+                        input=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+                        output=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_display_currency,
                 ),
             },
             interceptors=interceptors,
@@ -568,6 +793,106 @@ class BudgetsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.GetCurrentSpendRequest,
                 output=agents_dot_v1_dot_budgets__pb2.GetCurrentSpendResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_currency_rates(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCurrencyRates",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest,
+                output=agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def upsert_currency_rate(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpsertCurrencyRate",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
+                output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_currency_rate(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteCurrencyRate",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest,
+                output=agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_display_currency(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetDisplayCurrency",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyRequest,
+                output=agents_dot_v1_dot_budgets__pb2.SetDisplayCurrencyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_display_currency(
+        self,
+        request: agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDisplayCurrency",
+                service_name="agents.v1.BudgetsService",
+                input=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyRequest,
+                output=agents_dot_v1_dot_budgets__pb2.GetDisplayCurrencyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -1,9 +1,9 @@
 /**
  * Redux slice for the agents governance admin surface.
  *
- * Holds the org budget row, current-period spend snapshot, the five
- * per-org rate-limit overrides, and per-tab loading / saving flags.
- * Thunks live alongside in agentsGovernanceThunks.ts.
+ * Holds the org budget row, current-period spend snapshot, per-org
+ * rate-limit overrides, the org's display currency, and the manual
+ * exchange-rate table.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -15,19 +15,26 @@ import {
     fetchRateLimits,
     upsertRateLimit,
     deleteRateLimit,
+    fetchCurrencyRates,
+    upsertCurrencyRate,
+    deleteCurrencyRate,
+    fetchDisplayCurrency,
+    setDisplayCurrency,
 } from './agentsGovernanceThunks';
 
 export interface OrgBudgetState {
     id: string;
-    monthlyLimitUsd: string | null;
+    monthlyLimit: string | null;
     imageMonthlyLimit: number | null;
     hardLimit: boolean;
     alertThresholds: number[];
     resetDay: number;
+    currency: string;
 }
 
 export interface SpendState {
-    spendUsd: string;
+    spend: string;
+    currency: string;
     imageCount: number;
     periodStart: string | null;
     periodEnd: string | null;
@@ -40,26 +47,43 @@ export interface RateLimitState {
     isOverride: boolean;
 }
 
+export interface CurrencyRateState {
+    fromCurrency: string;
+    toCurrency: string;
+    rate: string;
+    updatedAt: string;
+}
+
 interface AgentsGovernanceState {
     budget: OrgBudgetState | null;
     spend: SpendState | null;
     rateLimits: RateLimitState[];
+    currencyRates: CurrencyRateState[];
+    displayCurrency: string;
     loadingBudget: boolean;
     savingBudget: boolean;
     loadingSpend: boolean;
     loadingRateLimits: boolean;
     savingRateLimit: boolean;
+    loadingCurrencyRates: boolean;
+    savingCurrencyRate: boolean;
+    savingDisplayCurrency: boolean;
 }
 
 const initialState: AgentsGovernanceState = {
     budget: null,
     spend: null,
     rateLimits: [],
+    currencyRates: [],
+    displayCurrency: 'EUR',
     loadingBudget: false,
     savingBudget: false,
     loadingSpend: false,
     loadingRateLimits: false,
     savingRateLimit: false,
+    loadingCurrencyRates: false,
+    savingCurrencyRate: false,
+    savingDisplayCurrency: false,
 };
 
 const slice = createSlice({
@@ -130,6 +154,51 @@ const slice = createSlice({
             })
             .addCase(deleteRateLimit.fulfilled, (s, a: PayloadAction<number>) => {
                 s.rateLimits = s.rateLimits.filter((r) => r.kind !== a.payload);
+            })
+            .addCase(fetchCurrencyRates.pending, (s) => {
+                s.loadingCurrencyRates = true;
+            })
+            .addCase(fetchCurrencyRates.fulfilled, (s, a: PayloadAction<CurrencyRateState[]>) => {
+                s.loadingCurrencyRates = false;
+                s.currencyRates = a.payload;
+            })
+            .addCase(fetchCurrencyRates.rejected, (s) => {
+                s.loadingCurrencyRates = false;
+            })
+            .addCase(upsertCurrencyRate.pending, (s) => {
+                s.savingCurrencyRate = true;
+            })
+            .addCase(upsertCurrencyRate.fulfilled, (s, a: PayloadAction<CurrencyRateState>) => {
+                s.savingCurrencyRate = false;
+                const idx = s.currencyRates.findIndex(
+                    (r) => r.fromCurrency === a.payload.fromCurrency && r.toCurrency === a.payload.toCurrency,
+                );
+                if (idx >= 0) {
+                    s.currencyRates[idx] = a.payload;
+                } else {
+                    s.currencyRates.push(a.payload);
+                }
+            })
+            .addCase(upsertCurrencyRate.rejected, (s) => {
+                s.savingCurrencyRate = false;
+            })
+            .addCase(deleteCurrencyRate.fulfilled, (s, a: PayloadAction<{ from: string; to: string }>) => {
+                s.currencyRates = s.currencyRates.filter(
+                    (r) => !(r.fromCurrency === a.payload.from && r.toCurrency === a.payload.to),
+                );
+            })
+            .addCase(fetchDisplayCurrency.fulfilled, (s, a: PayloadAction<string>) => {
+                s.displayCurrency = a.payload;
+            })
+            .addCase(setDisplayCurrency.pending, (s) => {
+                s.savingDisplayCurrency = true;
+            })
+            .addCase(setDisplayCurrency.fulfilled, (s, a: PayloadAction<string>) => {
+                s.savingDisplayCurrency = false;
+                s.displayCurrency = a.payload;
+            })
+            .addCase(setDisplayCurrency.rejected, (s) => {
+                s.savingDisplayCurrency = false;
             });
     },
 });

@@ -20,10 +20,10 @@ from typing import TypedDict
 class TextPricing(TypedDict, total=False):
     provider: str
     model: str
-    input_per_1m_usd: Decimal
-    output_per_1m_usd: Decimal
-    cached_input_per_1m_usd: Decimal
-    thinking_per_1m_usd: Decimal
+    input_per_1m: Decimal
+    output_per_1m: Decimal
+    cached_input_per_1m: Decimal
+    thinking_per_1m: Decimal
 
 
 class ImagePricing(TypedDict):
@@ -36,60 +36,60 @@ TEXT_PRICING_SEED: list[TextPricing] = [
     {
         "provider": "anthropic",
         "model": "claude-opus-4-6",
-        "input_per_1m_usd": Decimal("15.00"),
-        "output_per_1m_usd": Decimal("75.00"),
-        "cached_input_per_1m_usd": Decimal("1.50"),
+        "input_per_1m": Decimal("15.00"),
+        "output_per_1m": Decimal("75.00"),
+        "cached_input_per_1m": Decimal("1.50"),
     },
     {
         "provider": "anthropic",
         "model": "claude-sonnet-4-6",
-        "input_per_1m_usd": Decimal("3.00"),
-        "output_per_1m_usd": Decimal("15.00"),
-        "cached_input_per_1m_usd": Decimal("0.30"),
+        "input_per_1m": Decimal("3.00"),
+        "output_per_1m": Decimal("15.00"),
+        "cached_input_per_1m": Decimal("0.30"),
     },
     {
         "provider": "anthropic",
         "model": "claude-3-5-sonnet-20241022",
-        "input_per_1m_usd": Decimal("3.00"),
-        "output_per_1m_usd": Decimal("15.00"),
-        "cached_input_per_1m_usd": Decimal("0.30"),
+        "input_per_1m": Decimal("3.00"),
+        "output_per_1m": Decimal("15.00"),
+        "cached_input_per_1m": Decimal("0.30"),
     },
     {
         "provider": "openai",
         "model": "gpt-4o",
-        "input_per_1m_usd": Decimal("2.50"),
-        "output_per_1m_usd": Decimal("10.00"),
-        "cached_input_per_1m_usd": Decimal("1.25"),
+        "input_per_1m": Decimal("2.50"),
+        "output_per_1m": Decimal("10.00"),
+        "cached_input_per_1m": Decimal("1.25"),
     },
     {
         "provider": "openai",
         "model": "gpt-4-turbo",
-        "input_per_1m_usd": Decimal("10.00"),
-        "output_per_1m_usd": Decimal("30.00"),
+        "input_per_1m": Decimal("10.00"),
+        "output_per_1m": Decimal("30.00"),
     },
     {
         "provider": "openai",
         "model": "o1",
-        "input_per_1m_usd": Decimal("15.00"),
-        "output_per_1m_usd": Decimal("60.00"),
+        "input_per_1m": Decimal("15.00"),
+        "output_per_1m": Decimal("60.00"),
     },
     {
         "provider": "openai",
         "model": "o1-mini",
-        "input_per_1m_usd": Decimal("3.00"),
-        "output_per_1m_usd": Decimal("12.00"),
+        "input_per_1m": Decimal("3.00"),
+        "output_per_1m": Decimal("12.00"),
     },
     {
         "provider": "google",
         "model": "gemini-2.0-flash",
-        "input_per_1m_usd": Decimal("0.10"),
-        "output_per_1m_usd": Decimal("0.40"),
+        "input_per_1m": Decimal("0.10"),
+        "output_per_1m": Decimal("0.40"),
     },
     {
         "provider": "google",
         "model": "gemini-1.5-pro",
-        "input_per_1m_usd": Decimal("1.25"),
-        "output_per_1m_usd": Decimal("5.00"),
+        "input_per_1m": Decimal("1.25"),
+        "output_per_1m": Decimal("5.00"),
     },
 ]
 

@@ -311,8 +311,11 @@ type MessageInfo struct {
 	EditedAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=edited_at,json=editedAt,proto3,oneof" json:"edited_at,omitempty"`
 	// Pre-edit content. Populated only for messages with edited_at set.
 	PreviousContent *string `protobuf:"bytes,18,opt,name=previous_content,json=previousContent,proto3,oneof" json:"previous_content,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// True if this assistant turn was cancelled by the user before
+	// completion. The UI renders it as a "cancelled" placeholder.
+	WasCancelled  bool `protobuf:"varint,19,opt,name=was_cancelled,json=wasCancelled,proto3" json:"was_cancelled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -469,6 +472,13 @@ func (x *MessageInfo) GetPreviousContent() string {
 		return *x.PreviousContent
 	}
 	return ""
+}
+
+func (x *MessageInfo) GetWasCancelled() bool {
+	if x != nil {
+		return x.WasCancelled
+	}
+	return false
 }
 
 type CreateSessionRequest struct {
@@ -2105,7 +2115,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xae\x06\n" +
+	"\x10_last_model_used\"\xd3\x06\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2130,7 +2140,8 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\bfile_ids\x18\x0f \x03(\tR\afileIds\x12%\n" +
 	"\x0eis_invalidated\x18\x10 \x01(\bR\risInvalidated\x12<\n" +
 	"\tedited_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\beditedAt\x88\x01\x01\x12.\n" +
-	"\x10previous_content\x18\x12 \x01(\tH\aR\x0fpreviousContent\x88\x01\x01B\n" +
+	"\x10previous_content\x18\x12 \x01(\tH\aR\x0fpreviousContent\x88\x01\x01\x12#\n" +
+	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelledB\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +

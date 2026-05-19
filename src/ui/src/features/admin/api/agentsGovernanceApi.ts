@@ -20,6 +20,11 @@ import type {
     DeleteUserQuotaRequest,
     ListUserQuotasRequest,
     GetCurrentSpendRequest,
+    ListCurrencyRatesRequest,
+    UpsertCurrencyRateRequest,
+    DeleteCurrencyRateRequest,
+    GetDisplayCurrencyRequest,
+    SetDisplayCurrencyRequest,
 } from '@uniffy/proto/agents/v1/budgets_pb';
 import type {
     ListModelPricingRequest,
@@ -71,4 +76,16 @@ export const agentsGovernanceApi = {
         rateLimitsClient.upsertRateLimit(req),
     deleteRateLimit: (req: PartialMessage<DeleteRateLimitRequest>) =>
         rateLimitsClient.deleteRateLimit(req),
+
+    // Currencies
+    listCurrencyRates: (req: PartialMessage<ListCurrencyRatesRequest>) =>
+        budgetsClient.listCurrencyRates(req),
+    upsertCurrencyRate: (req: PartialMessage<UpsertCurrencyRateRequest>) =>
+        budgetsClient.upsertCurrencyRate(req),
+    deleteCurrencyRate: (req: PartialMessage<DeleteCurrencyRateRequest>) =>
+        budgetsClient.deleteCurrencyRate(req),
+    getDisplayCurrency: (req: PartialMessage<GetDisplayCurrencyRequest>) =>
+        budgetsClient.getDisplayCurrency(req),
+    setDisplayCurrency: (req: PartialMessage<SetDisplayCurrencyRequest>) =>
+        budgetsClient.setDisplayCurrency(req),
 };

@@ -16,6 +16,7 @@ from sqlalchemy import (
     Index,
     Integer,
     Numeric,
+    String,
     UniqueConstraint,
 )
 from sqlmodel import Field, SQLModel
@@ -34,9 +35,9 @@ class AgentUserQuota(SQLModel, table=True):
         Organization scope.
     user_id : UUID
         Target user.
-    daily_limit_usd : Decimal | None
+    daily_limit : Decimal | None
         Dollar cap per UTC day. Null means no daily dollar cap.
-    monthly_limit_usd : Decimal | None
+    monthly_limit : Decimal | None
         Dollar cap per billing period. Null means no monthly dollar cap.
     daily_image_limit : int | None
         Image-count cap per UTC day. Null means fall through to default.
@@ -66,13 +67,17 @@ class AgentUserQuota(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(nullable=False)
     user_id: UUID = Field(nullable=False)
-    daily_limit_usd: Decimal | None = Field(
+    daily_limit: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 2), nullable=True),
     )
-    monthly_limit_usd: Decimal | None = Field(
+    monthly_limit: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(10, 2), nullable=True),
+    )
+    currency: str = Field(
+        default="EUR",
+        sa_column=Column(String(3), nullable=False, default="EUR"),
     )
     daily_image_limit: int | None = Field(
         default=None,

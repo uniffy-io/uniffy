@@ -14,14 +14,16 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { CurrencyDollar, Gauge, Wallet } from '@phosphor-icons/react';
+import { Coins, CurrencyDollar, Gauge, Trash, Wallet } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/shared/utils/cn';
+import { COMMON_CURRENCIES, currencySymbol, formatCurrency } from '@/shared/utils/currencyFormatting';
 import {
     fetchOrgBudget,
     updateOrgBudget,
@@ -29,14 +31,20 @@ import {
     fetchRateLimits,
     upsertRateLimit,
     deleteRateLimit,
+    fetchCurrencyRates,
+    upsertCurrencyRate,
+    deleteCurrencyRate,
+    fetchDisplayCurrency,
+    setDisplayCurrency,
 } from '@/features/admin/store/agentsGovernanceThunks';
 import type { RateLimitState } from '@/features/admin/store/agentsGovernanceSlice';
 
-type TabId = 'budget' | 'rate-limits';
+type TabId = 'budget' | 'rate-limits' | 'currencies';
 
 const TABS: { id: TabId; label: string }[] = [
     { id: 'budget', label: 'Budget' },
     { id: 'rate-limits', label: 'Rate limits' },
+    { id: 'currencies', label: 'Currencies' },
 ];
 
 const RATE_LIMIT_LABELS: Record<number, { name: string; description: string }> = {
@@ -98,6 +106,7 @@ export function AgentsBudgetsPage() {
 
             {activeTab === 'budget' && <BudgetTab />}
             {activeTab === 'rate-limits' && <RateLimitsTab />}
+            {activeTab === 'currencies' && <CurrenciesTab />}
         </div>
     );
 }
@@ -109,6 +118,7 @@ function BudgetTab() {
     const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
     const budget = useAppSelector((s) => s.agentsGovernance.budget);
     const spend = useAppSelector((s) => s.agentsGovernance.spend);
+    const displayCurrency = useAppSelector((s) => s.agentsGovernance.displayCurrency);
     const loading = useAppSelector((s) => s.agentsGovernance.loadingBudget);
     const saving = useAppSelector((s) => s.agentsGovernance.savingBudget);
 
@@ -122,17 +132,21 @@ function BudgetTab() {
         if (!orgId) return;
         dispatch(fetchOrgBudget());
         dispatch(fetchCurrentSpend());
+        dispatch(fetchDisplayCurrency());
     }, [dispatch, orgId]);
 
     useEffect(() => {
         if (!budget) return;
         // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form fields when the fetched budget loads or changes
-        setMonthlyLimit(budget.monthlyLimitUsd ?? '');
+        setMonthlyLimit(budget.monthlyLimit ?? '');
         setImageLimit(budget.imageMonthlyLimit?.toString() ?? '');
         setHardLimit(budget.hardLimit);
         setThresholds(budget.alertThresholds.join(', '));
         setResetDay(budget.resetDay.toString());
     }, [budget]);
+
+    const budgetCurrency = budget?.currency || displayCurrency;
+    const symbol = currencySymbol(budgetCurrency);
 
     const parsedThresholds = useMemo(() => {
         return thresholds
@@ -148,18 +162,19 @@ function BudgetTab() {
         if (!resetDayValid) return;
         dispatch(
             updateOrgBudget({
-                monthlyLimitUsd: monthlyLimit.trim() || null,
+                monthlyLimit: monthlyLimit.trim() || null,
                 imageMonthlyLimit: imageLimit.trim() ? parseInt(imageLimit.trim(), 10) : null,
                 hardLimit,
                 alertThresholds: parsedThresholds,
                 resetDay: parsedResetDay,
+                currency: budgetCurrency,
             }),
         );
     };
 
     const spendPct = useMemo(() => {
-        if (!spend?.spendUsd || !monthlyLimit) return null;
-        const s = parseFloat(spend.spendUsd);
+        if (!spend?.spend || !monthlyLimit) return null;
+        const s = parseFloat(spend.spend);
         const cap = parseFloat(monthlyLimit);
         if (!cap) return null;
         return Math.min(100, Math.round((s / cap) * 100));
@@ -184,10 +199,10 @@ function BudgetTab() {
                         <div className="min-w-0">
                             <div className="text-xs text-muted-foreground">Current period spend</div>
                             <div className="text-lg font-semibold tabular-nums">
-                                ${parseFloat(spend.spendUsd || '0').toFixed(2)}
+                                {formatCurrency(spend.spend || '0', spend.currency || budgetCurrency)}
                                 {monthlyLimit && (
                                     <span className="text-sm font-normal text-muted-foreground ml-1">
-                                        / ${parseFloat(monthlyLimit).toFixed(2)}
+                                        / {formatCurrency(monthlyLimit, budgetCurrency)}
                                     </span>
                                 )}
                             </div>
@@ -216,8 +231,8 @@ function BudgetTab() {
                 )}
 
                 <FieldRow
-                    label="Monthly spend cap (USD)"
-                    description="Leave blank for no cap. Combined dollar cost of every agent run in the period."
+                    label={`Monthly spend cap (${budgetCurrency})`}
+                    description={`Leave blank for no cap. Combined cost (in ${symbol}) of every agent run in the period. Change the org's display currency on the Currencies tab.`}
                 >
                     <Input
                         type="number"
@@ -226,7 +241,7 @@ function BudgetTab() {
                         placeholder="No cap"
                         value={monthlyLimit}
                         onChange={(e) => setMonthlyLimit(e.target.value)}
-                        className="w-40"
+                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -241,7 +256,7 @@ function BudgetTab() {
                         placeholder="No cap"
                         value={imageLimit}
                         onChange={(e) => setImageLimit(e.target.value)}
-                        className="w-40"
+                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -266,7 +281,7 @@ function BudgetTab() {
                         placeholder="50, 75, 90"
                         value={thresholds}
                         onChange={(e) => setThresholds(e.target.value)}
-                        className="w-40"
+                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -281,7 +296,7 @@ function BudgetTab() {
                         max="28"
                         value={resetDay}
                         onChange={(e) => setResetDay(e.target.value)}
-                        className="w-24"
+                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -393,7 +408,7 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
                         min="1"
                         value={limit}
                         onChange={(e) => setLimit(e.target.value)}
-                        className="w-24"
+                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={saving}
                     />
                     <span className="text-xs text-muted-foreground">/</span>
@@ -402,7 +417,7 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
                         min="1"
                         value={windowSec}
                         onChange={(e) => setWindowSec(e.target.value)}
-                        className="w-24"
+                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={saving}
                     />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">sec</span>
@@ -422,6 +437,222 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
                 </Button>
             </div>
         </div>
+    );
+}
+
+// --- Currencies tab ---
+
+function CurrenciesTab() {
+    const dispatch = useAppDispatch();
+    const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const displayCurrency = useAppSelector((s) => s.agentsGovernance.displayCurrency);
+    const rates = useAppSelector((s) => s.agentsGovernance.currencyRates);
+    const loading = useAppSelector((s) => s.agentsGovernance.loadingCurrencyRates);
+    const savingRate = useAppSelector((s) => s.agentsGovernance.savingCurrencyRate);
+    const savingDisplay = useAppSelector((s) => s.agentsGovernance.savingDisplayCurrency);
+
+    const [picked, setPicked] = useState(displayCurrency);
+    const [newFrom, setNewFrom] = useState('USD');
+    const [newTo, setNewTo] = useState(displayCurrency || 'EUR');
+    const [newRate, setNewRate] = useState('');
+
+    useEffect(() => {
+        if (!orgId) return;
+        dispatch(fetchDisplayCurrency());
+        dispatch(fetchCurrencyRates());
+    }, [dispatch, orgId]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form select when the org's display currency loads
+        setPicked(displayCurrency);
+        setNewTo(displayCurrency || 'EUR');
+    }, [displayCurrency]);
+
+    const handleSaveDisplay = () => {
+        if (!picked || picked === displayCurrency) return;
+        dispatch(setDisplayCurrency({ currency: picked }));
+    };
+
+    const parsedRate = parseFloat(newRate);
+    const canAddRate =
+        newFrom.length === 3 &&
+        newTo.length === 3 &&
+        newFrom !== newTo &&
+        Number.isFinite(parsedRate) &&
+        parsedRate > 0;
+
+    const handleAddRate = () => {
+        if (!canAddRate) return;
+        dispatch(
+            upsertCurrencyRate({
+                fromCurrency: newFrom.toUpperCase(),
+                toCurrency: newTo.toUpperCase(),
+                rate: newRate,
+            }),
+        );
+        setNewRate('');
+    };
+
+    return (
+        <section className="border border-border rounded-xl bg-card">
+            <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <Coins size={20} weight="duotone" className="text-amber-500" />
+                <div>
+                    <h2 className="text-base font-semibold">Currencies</h2>
+                    <p className="text-xs text-muted-foreground">
+                        The display currency is what your team sees in cost columns, budgets, and
+                        quotas. Provider pricing (e.g. Anthropic in USD, Azure Europe in EUR) is
+                        converted to this currency at write time using the manual rates below.
+                    </p>
+                </div>
+            </header>
+
+            <div className="px-5 py-4 space-y-6">
+                <FieldRow
+                    label="Display currency"
+                    description={`Costs are formatted in this currency throughout the app. Currently: ${displayCurrency}.`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Select
+                            value={picked}
+                            onChange={setPicked}
+                            disabled={savingDisplay}
+                            options={COMMON_CURRENCIES.map((c) => ({
+                                value: c,
+                                label: `${c} (${currencySymbol(c)})`,
+                            }))}
+                        />
+                        <Button
+                            size="sm"
+                            onClick={handleSaveDisplay}
+                            disabled={savingDisplay || picked === displayCurrency}
+                        >
+                            {savingDisplay ? 'Saving...' : 'Save'}
+                        </Button>
+                    </div>
+                </FieldRow>
+
+                <div>
+                    <div className="text-sm font-medium mb-2">Exchange rates</div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                        Required when a model's pricing currency differs from the display
+                        currency. Enter each direction explicitly (USD-&gt;EUR and EUR-&gt;USD
+                        are separate rows).
+                    </p>
+                    <div className="border border-border rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                                <tr>
+                                    <th className="text-left px-3 py-2">From</th>
+                                    <th className="text-left px-3 py-2">To</th>
+                                    <th className="text-right px-3 py-2">Rate</th>
+                                    <th className="text-left px-3 py-2 hidden md:table-cell">
+                                        Updated
+                                    </th>
+                                    <th className="w-10" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {loading && rates.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="px-3 py-4 text-center text-muted-foreground"
+                                        >
+                                            Loading...
+                                        </td>
+                                    </tr>
+                                ) : rates.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="px-3 py-4 text-center text-muted-foreground"
+                                        >
+                                            No exchange rates configured.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    rates.map((r) => (
+                                        <tr key={`${r.fromCurrency}-${r.toCurrency}`}>
+                                            <td className="px-3 py-2 font-mono">
+                                                {r.fromCurrency}
+                                            </td>
+                                            <td className="px-3 py-2 font-mono">{r.toCurrency}</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">
+                                                {r.rate}
+                                            </td>
+                                            <td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
+                                                {new Date(r.updatedAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        dispatch(
+                                                            deleteCurrencyRate({
+                                                                fromCurrency: r.fromCurrency,
+                                                                toCurrency: r.toCurrency,
+                                                            }),
+                                                        )
+                                                    }
+                                                    aria-label="Delete rate"
+                                                    className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
+                                                >
+                                                    <Trash size={14} />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex items-end gap-2 mt-3 flex-wrap">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">
+                                From
+                            </label>
+                            <Select
+                                value={newFrom}
+                                onChange={setNewFrom}
+                                options={COMMON_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">To</label>
+                            <Select
+                                value={newTo}
+                                onChange={setNewTo}
+                                options={COMMON_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                            />
+                        </div>
+                        <div className="flex-1 min-w-32">
+                            <label className="block text-xs text-muted-foreground mb-1">
+                                Rate
+                            </label>
+                            <Input
+                                type="number"
+                                step="0.0001"
+                                min="0"
+                                placeholder="e.g. 0.92"
+                                value={newRate}
+                                onChange={(e) => setNewRate(e.target.value)}
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                        </div>
+                        <Button
+                            onClick={handleAddRate}
+                            disabled={!canAddRate || savingRate}
+                            className="self-end"
+                        >
+                            {savingRate ? 'Saving...' : 'Add / update'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </section>
     );
 }
 

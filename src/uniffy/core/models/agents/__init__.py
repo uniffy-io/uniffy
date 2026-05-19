@@ -6,6 +6,7 @@ from uniffy.core.models.agents.audit_log import AgentAuditLog
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.budget_alert import AgentBudgetAlert
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
+from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.model_pricing import AgentModelPricing
@@ -24,6 +25,7 @@ __all__ = [
     "AgentBudget",
     "AgentBudgetAlert",
     "AgentChannelBinding",
+    "AgentCurrencyRate",
     "AgentMemory",
     "AgentMessage",
     "AgentModelPricing",

@@ -88,7 +88,7 @@ class TestCheckAndFireAlertsEdges:
             await check_and_fire_alerts(
                 session,
                 organization_id=uuid4(),
-                run_cost_usd=Decimal(0),
+                run_cost=Decimal(0),
                 run_image_count=0,
             )
 
@@ -104,7 +104,7 @@ class TestCheckAndFireAlertsEdges:
             await check_and_fire_alerts(
                 session,
                 organization_id=uuid4(),
-                run_cost_usd=Decimal("10"),
+                run_cost=Decimal("10"),
                 run_image_count=0,
             )
 
@@ -116,7 +116,7 @@ class TestCheckAndFireAlertsEdges:
         org_id = uuid4()
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=None,
+            monthly_limit=None,
             image_monthly_limit=None,
             hard_limit=False,
             reset_day=1,
@@ -127,7 +127,7 @@ class TestCheckAndFireAlertsEdges:
             await check_and_fire_alerts(
                 session,
                 organization_id=org_id,
-                run_cost_usd=Decimal("10"),
+                run_cost=Decimal("10"),
                 run_image_count=1,
             )
 
@@ -163,7 +163,7 @@ class TestCheckAndFireAlertsFires:
         org_id = uuid4()
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=Decimal("100.00"),
+            monthly_limit=Decimal("100.00"),
             hard_limit=False,
             reset_day=1,
         )
@@ -183,7 +183,7 @@ class TestCheckAndFireAlertsFires:
                 await check_and_fire_alerts(
                     session,
                     organization_id=org_id,
-                    run_cost_usd=Decimal("20"),  # 40 -> 60 crosses 50
+                    run_cost=Decimal("20"),  # 40 -> 60 crosses 50
                     run_image_count=0,
                 )
 
@@ -195,7 +195,7 @@ class TestCheckAndFireAlertsFires:
         org_id = uuid4()
         budget = AgentBudget(
             organization_id=org_id,
-            monthly_limit_usd=Decimal("100.00"),
+            monthly_limit=Decimal("100.00"),
             hard_limit=False,
             reset_day=1,
         )
@@ -225,7 +225,7 @@ class TestCheckAndFireAlertsFires:
                 await check_and_fire_alerts(
                     session,
                     organization_id=org_id,
-                    run_cost_usd=Decimal("20"),
+                    run_cost=Decimal("20"),
                     run_image_count=0,
                 )
 
@@ -244,7 +244,7 @@ class TestCheckAndFireAlertsFires:
             await check_and_fire_alerts(
                 session,
                 organization_id=org_id,
-                run_cost_usd=Decimal("10"),
+                run_cost=Decimal("10"),
                 run_image_count=0,
             )
 

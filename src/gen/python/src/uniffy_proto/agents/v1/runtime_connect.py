@@ -24,6 +24,9 @@ class RuntimeService(Protocol):
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    def rerun_from_message(self, request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -61,6 +64,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stream_send_message,
+                ),
+                "/agents.v1.RuntimeService/RerunFromMessage": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="RerunFromMessage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rerun_from_message,
                 ),
                 "/agents.v1.RuntimeService/SubscribeToRun": Endpoint.server_stream(
                     method=MethodInfo(
@@ -149,6 +162,26 @@ class RuntimeServiceClient(ConnectClient):
                 name="StreamSendMessage",
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rerun_from_message(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="RerunFromMessage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
                 output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
@@ -245,6 +278,8 @@ class RuntimeServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rerun_from_message(self, request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def cancel_stream(self, request: agents_dot_v1_dot_runtime__pb2.CancelStreamRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.CancelStreamResponse:
@@ -278,6 +313,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stream_send_message,
+                ),
+                "/agents.v1.RuntimeService/RerunFromMessage": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="RerunFromMessage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rerun_from_message,
                 ),
                 "/agents.v1.RuntimeService/SubscribeToRun": EndpointSync.server_stream(
                     method=MethodInfo(
@@ -366,6 +411,26 @@ class RuntimeServiceClientSync(ConnectClientSync):
                 name="StreamSendMessage",
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rerun_from_message(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="RerunFromMessage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
                 output=agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),

@@ -9,7 +9,7 @@ operate on orgs that have never been configured.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -79,6 +79,10 @@ class AgentRuntimeSettings(SQLModel, table=True):
     circuit_breaker_recovery_seconds: int = Field(
         default=DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
         sa_column=Column(Integer, nullable=False, default=DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS),
+    )
+    display_currency: str = Field(
+        default="EUR",
+        sa_column=Column(String(3), nullable=False, default="EUR"),
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

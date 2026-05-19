@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteOrgBudgetRequest, DeleteOrgBudgetResponse, DeleteUserQuotaRequest, DeleteUserQuotaResponse, GetCurrentSpendRequest, GetCurrentSpendResponse, GetOrgBudgetRequest, GetOrgBudgetResponse, GetUserQuotaRequest, GetUserQuotaResponse, ListUserQuotasRequest, ListUserQuotasResponse, OrgBudgetResponse, UpdateOrgBudgetRequest, UpdateUserQuotaRequest, UserQuotaResponse } from "./budgets_pb.js";
+import { CurrencyRateResponse, DeleteCurrencyRateRequest, DeleteCurrencyRateResponse, DeleteOrgBudgetRequest, DeleteOrgBudgetResponse, DeleteUserQuotaRequest, DeleteUserQuotaResponse, GetCurrentSpendRequest, GetCurrentSpendResponse, GetDisplayCurrencyRequest, GetDisplayCurrencyResponse, GetOrgBudgetRequest, GetOrgBudgetResponse, GetUserQuotaRequest, GetUserQuotaResponse, ListCurrencyRatesRequest, ListCurrencyRatesResponse, ListUserQuotasRequest, ListUserQuotasResponse, OrgBudgetResponse, SetDisplayCurrencyRequest, SetDisplayCurrencyResponse, UpdateOrgBudgetRequest, UpdateUserQuotaRequest, UpsertCurrencyRateRequest, UserQuotaResponse } from "./budgets_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -11,8 +11,10 @@ import { MethodKind } from "@bufbuild/protobuf";
  * per-user quotas within an organization. Absent rows mean no cap on
  * that axis - the runtime falls through to server-side defaults.
  *
- * Dollar values are carried as strings on the wire to preserve Decimal
+ * Money values are carried as strings on the wire to preserve Decimal
  * precision; clients should parse with their language's Decimal type.
+ * Each amount is paired with an ISO 4217 currency code so the wire
+ * never assumes a single currency.
  *
  * @generated from service agents.v1.BudgetsService
  */
@@ -108,6 +110,63 @@ export const BudgetsService = {
       name: "GetCurrentSpend",
       I: GetCurrentSpendRequest,
       O: GetCurrentSpendResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List the org's manual exchange rates. Org admin only.
+     *
+     * @generated from rpc agents.v1.BudgetsService.ListCurrencyRates
+     */
+    listCurrencyRates: {
+      name: "ListCurrencyRates",
+      I: ListCurrencyRatesRequest,
+      O: ListCurrencyRatesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Create or update a single (from -> to) rate. Org admin only.
+     *
+     * @generated from rpc agents.v1.BudgetsService.UpsertCurrencyRate
+     */
+    upsertCurrencyRate: {
+      name: "UpsertCurrencyRate",
+      I: UpsertCurrencyRateRequest,
+      O: CurrencyRateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Delete a single (from -> to) rate. Org admin only.
+     *
+     * @generated from rpc agents.v1.BudgetsService.DeleteCurrencyRate
+     */
+    deleteCurrencyRate: {
+      name: "DeleteCurrencyRate",
+      I: DeleteCurrencyRateRequest,
+      O: DeleteCurrencyRateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Set the org's display currency (writes to AgentRuntimeSettings).
+     * Org admin only.
+     *
+     * @generated from rpc agents.v1.BudgetsService.SetDisplayCurrency
+     */
+    setDisplayCurrency: {
+      name: "SetDisplayCurrency",
+      I: SetDisplayCurrencyRequest,
+      O: SetDisplayCurrencyResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get the org's display currency. Falls back to the module default
+     * ("EUR") when no row exists. Any org member can call.
+     *
+     * @generated from rpc agents.v1.BudgetsService.GetDisplayCurrency
+     */
+    getDisplayCurrency: {
+      name: "GetDisplayCurrency",
+      I: GetDisplayCurrencyRequest,
+      O: GetDisplayCurrencyResponse,
       kind: MethodKind.Unary,
     },
   }

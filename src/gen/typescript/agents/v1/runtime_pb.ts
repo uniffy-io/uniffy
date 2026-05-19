@@ -158,11 +158,11 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
   /**
    * Cost + usage extensions sourced from the run-log columns. Decimal
    * money values are encoded as strings so the wire never loses
-   * precision.
+   * precision; the org's display currency is carried separately.
    *
-   * @generated from field: string total_cost_usd = 18;
+   * @generated from field: string total_cost = 18;
    */
-  totalCostUsd = "";
+  totalCost = "";
 
   /**
    * @generated from field: int64 total_thinking_tokens = 19;
@@ -189,6 +189,15 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
    */
   totalDeadlineExceeded = protoInt64.zero;
 
+  /**
+   * ISO 4217 currency for ``total_cost`` and per-bucket ``cost``
+   * values in DailyUsage / ModelUsage. Defaults to "EUR" when no
+   * org row exists.
+   *
+   * @generated from field: string display_currency = 24;
+   */
+  displayCurrency = "";
+
   constructor(data?: PartialMessage<GetUsageStatsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -214,12 +223,13 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
     { no: 15, name: "cron_total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 16, name: "cron_total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 17, name: "total_cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 18, name: "total_cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "total_cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 19, name: "total_thinking_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 20, name: "total_image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 21, name: "total_retries", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 22, name: "total_cancelled", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 23, name: "total_deadline_exceeded", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 24, name: "display_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUsageStatsResponse {
@@ -274,9 +284,9 @@ export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
 };
 
   /**
-   * @generated from field: string cost_usd = 6;
+   * @generated from field: string cost = 6;
    */
-  costUsd = "";
+  cost = "";
 
   /**
    * @generated from field: int64 image_count = 7;
@@ -296,7 +306,7 @@ export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
     { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 5, name: "cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 6, name: "cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
@@ -343,9 +353,9 @@ export type ModelUsage = Message<"agents.v1.ModelUsage"> & {
 };
 
   /**
-   * @generated from field: string cost_usd = 5;
+   * @generated from field: string cost = 5;
    */
-  costUsd = "";
+  cost = "";
 
   /**
    * @generated from field: int64 image_count = 6;
@@ -364,7 +374,7 @@ export type ModelUsage = Message<"agents.v1.ModelUsage"> & {
     { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 5, name: "cost_usd", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
@@ -591,6 +601,61 @@ export type SendMessageRequest = Message<"agents.v1.SendMessageRequest"> & {
  */
 export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PURE__*/
   messageDesc(file_agents_v1_runtime, 8);
+
+/**
+ * @generated from message agents.v1.RerunFromMessageRequest
+ */
+export class RerunFromMessageRequest extends Message<RerunFromMessageRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * The user-role message to re-run from. Must already have its downstream
+   * invalidated (typically via EditMessage). The runtime treats it as the
+   * last message in context and streams a fresh assistant response.
+   *
+   * @generated from field: string message_id = 2;
+   */
+  messageId = "";
+
+  /**
+   * IANA timezone of the user's browser (e.g. "America/New_York")
+   *
+   * @generated from field: string user_timezone = 3;
+   */
+  userTimezone = "";
+
+  constructor(data?: PartialMessage<RerunFromMessageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.RerunFromMessageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "user_timezone", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RerunFromMessageRequest {
+    return new RerunFromMessageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RerunFromMessageRequest {
+    return new RerunFromMessageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RerunFromMessageRequest {
+    return new RerunFromMessageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RerunFromMessageRequest | PlainMessage<RerunFromMessageRequest> | undefined, b: RerunFromMessageRequest | PlainMessage<RerunFromMessageRequest> | undefined): boolean {
+    return proto3.util.equals(RerunFromMessageRequest, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.StreamSendMessageRequest
@@ -920,7 +985,13 @@ export type StreamSendMessageResponse = Message<"agents.v1.StreamSendMessageResp
      */
     value: StreamConfirmationRequiredEvent;
     case: "confirmationRequired";
-  } | { case: undefined; value?: undefined };
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
+     */
+    value: StreamFailoverEvent;
+    case: "failover";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   /**
    * The egress run id this event belongs to. Populated on every event
@@ -934,12 +1005,41 @@ export type StreamSendMessageResponse = Message<"agents.v1.StreamSendMessageResp
   runId: string;
 };
 
-/**
- * Describes the message agents.v1.StreamSendMessageResponse.
- * Use `create(StreamSendMessageResponseSchema)` to create a new message.
- */
-export const StreamSendMessageResponseSchema: GenMessage<StreamSendMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 15);
+  constructor(data?: PartialMessage<StreamSendMessageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.StreamSendMessageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
+    { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
+    { no: 3, name: "tool_result", kind: "message", T: StreamToolResultEvent, oneof: "event" },
+    { no: 4, name: "message_stored", kind: "message", T: StreamMessageStoredEvent, oneof: "event" },
+    { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
+    { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
+    { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
+    { no: 9, name: "failover", kind: "message", T: StreamFailoverEvent, oneof: "event" },
+    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
+    return new StreamSendMessageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined, b: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined): boolean {
+    return proto3.util.equals(StreamSendMessageResponse, a, b);
+  }
+}
 
 /**
  * @generated from message agents.v1.SubscribeToRunResponse

@@ -70,7 +70,7 @@ async def _sum_cost(
 ) -> Decimal:
     """Return total ``cost_usd`` for the org in the period (inclusive of now)."""
     result = await session.execute(
-        select(func.coalesce(func.sum(AgentRunLog.cost_usd), 0)).where(
+        select(func.coalesce(func.sum(AgentRunLog.cost), 0)).where(
             AgentRunLog.organization_id == organization_id,
             AgentRunLog.created_at >= period_start,
             AgentRunLog.created_at < period_end,
@@ -216,14 +216,14 @@ async def check_and_fire_alerts(
     session: AsyncSession,
     *,
     organization_id: UUID,
-    run_cost_usd: Decimal | None,
+    run_cost: Decimal | None,
     run_image_count: int,
     run_at: datetime | None = None,
 ) -> None:
     """Detect threshold crossings for the just-written run and fan out alerts.
 
     Must be called after the run log is committed so the ``SUM`` queries
-    include the new row. ``run_cost_usd`` and ``run_image_count`` describe
+    include the new row. ``run_cost`` and ``run_image_count`` describe
     the run that just landed; the helper subtracts them to reconstruct
     the pre-run total when evaluating threshold crossings.
 
@@ -232,7 +232,7 @@ async def check_and_fire_alerts(
     """
     try:
         run_at = run_at or datetime.now(UTC)
-        run_cost = run_cost_usd or Decimal(0)
+        run_cost = run_cost or Decimal(0)
         run_images = run_image_count or 0
 
         # No crossings possible if this run had no billable activity.
@@ -253,8 +253,8 @@ async def check_and_fire_alerts(
 
         # --- Dollar-spend crossings
         if (
-            budget.monthly_limit_usd is not None
-            and budget.monthly_limit_usd > 0
+            budget.monthly_limit is not None
+            and budget.monthly_limit > 0
             and run_cost > 0
         ):
             curr_total = await _sum_cost(
@@ -264,7 +264,7 @@ async def check_and_fire_alerts(
                 period_end=period_end,
             )
             prev_total = curr_total - run_cost
-            cap = Decimal(budget.monthly_limit_usd)
+            cap = Decimal(budget.monthly_limit)
             for threshold in _compute_crossings(
                 prev_total, curr_total, cap, thresholds
             ):

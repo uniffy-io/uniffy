@@ -7,21 +7,31 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.budgets_pb2 import (
+    CurrencyRateResponse,
+    DeleteCurrencyRateRequest,
+    DeleteCurrencyRateResponse,
     DeleteOrgBudgetRequest,
     DeleteOrgBudgetResponse,
     DeleteUserQuotaRequest,
     DeleteUserQuotaResponse,
     GetCurrentSpendRequest,
     GetCurrentSpendResponse,
+    GetDisplayCurrencyRequest,
+    GetDisplayCurrencyResponse,
     GetOrgBudgetRequest,
     GetOrgBudgetResponse,
     GetUserQuotaRequest,
     GetUserQuotaResponse,
+    ListCurrencyRatesRequest,
+    ListCurrencyRatesResponse,
     ListUserQuotasRequest,
     ListUserQuotasResponse,
     OrgBudgetResponse,
+    SetDisplayCurrencyRequest,
+    SetDisplayCurrencyResponse,
     UpdateOrgBudgetRequest,
     UpdateUserQuotaRequest,
+    UpsertCurrencyRateRequest,
     UserQuotaResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
@@ -29,6 +39,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.agents.budgets.converters import (
+    currency_rate_to_proto,
     org_budget_to_proto,
     spend_summary_to_proto,
     user_quota_to_proto,
@@ -86,8 +97,8 @@ class BudgetsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
         monthly = (
-            request.monthly_limit_usd
-            if request.HasField("monthly_limit_usd")
+            request.monthly_limit
+            if request.HasField("monthly_limit")
             else None
         )
         image_monthly = (
@@ -102,11 +113,12 @@ class BudgetsHandlers:
                 row = await ops.upsert_org_budget(
                     user_id=user_id,
                     organization_id=org_id,
-                    monthly_limit_usd=monthly,
+                    monthly_limit=monthly,
                     image_monthly_limit=image_monthly,
                     hard_limit=bool(request.hard_limit),
                     alert_thresholds=list(request.alert_thresholds),
                     reset_day=int(request.reset_day) or 1,
+                    currency=request.currency or None,
                 )
                 return OrgBudgetResponse(budget=org_budget_to_proto(row))
 
@@ -201,11 +213,11 @@ class BudgetsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         daily_dollar = (
-            request.daily_limit_usd if request.HasField("daily_limit_usd") else None
+            request.daily_limit if request.HasField("daily_limit") else None
         )
         monthly_dollar = (
-            request.monthly_limit_usd
-            if request.HasField("monthly_limit_usd")
+            request.monthly_limit
+            if request.HasField("monthly_limit")
             else None
         )
         daily_img = (
@@ -226,11 +238,12 @@ class BudgetsHandlers:
                     actor_user_id=actor_id,
                     organization_id=org_id,
                     target_user_id=target_id,
-                    daily_limit_usd=daily_dollar,
-                    monthly_limit_usd=monthly_dollar,
+                    daily_limit=daily_dollar,
+                    monthly_limit=monthly_dollar,
                     daily_image_limit=daily_img,
                     monthly_image_limit=monthly_img,
                     hard_limit=bool(request.hard_limit),
+                    currency=request.currency or None,
                 )
                 return UserQuotaResponse(quota=user_quota_to_proto(row))
 
@@ -370,4 +383,152 @@ class BudgetsHandlers:
             raise
         except Exception as e:
             logger.error(f"Error getting current spend: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_currency_rates(
+        self,
+        request: ListCurrencyRatesRequest,
+        ctx: RequestContext,
+    ) -> ListCurrencyRatesResponse:
+        """Return the org's manual exchange rates (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        try:
+            async with open_session() as session:
+                ops = BudgetsOperations(session)
+                rows = await ops.list_currency_rates(
+                    user_id=user_id, organization_id=org_id
+                )
+                return ListCurrencyRatesResponse(
+                    rates=[currency_rate_to_proto(r) for r in rows],
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error listing currency rates: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def upsert_currency_rate(
+        self,
+        request: UpsertCurrencyRateRequest,
+        ctx: RequestContext,
+    ) -> CurrencyRateResponse:
+        """Create or update a single exchange rate row."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        try:
+            async with open_session() as session:
+                ops = BudgetsOperations(session)
+                row = await ops.upsert_currency_rate(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    from_currency=request.from_currency,
+                    to_currency=request.to_currency,
+                    rate=request.rate,
+                )
+                return CurrencyRateResponse(rate=currency_rate_to_proto(row))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error upserting currency rate: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def delete_currency_rate(
+        self,
+        request: DeleteCurrencyRateRequest,
+        ctx: RequestContext,
+    ) -> DeleteCurrencyRateResponse:
+        """Delete a single exchange rate row."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        try:
+            async with open_session() as session:
+                ops = BudgetsOperations(session)
+                await ops.delete_currency_rate(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    from_currency=request.from_currency,
+                    to_currency=request.to_currency,
+                )
+                return DeleteCurrencyRateResponse(success=True)
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting currency rate: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_display_currency(
+        self,
+        request: GetDisplayCurrencyRequest,
+        ctx: RequestContext,
+    ) -> GetDisplayCurrencyResponse:
+        """Return the org's display currency (or the module default)."""
+        get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        try:
+            async with open_session() as session:
+                ops = BudgetsOperations(session)
+                cur = await ops.get_display_currency(organization_id=org_id)
+                return GetDisplayCurrencyResponse(display_currency=cur)
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting display currency: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def set_display_currency(
+        self,
+        request: SetDisplayCurrencyRequest,
+        ctx: RequestContext,
+    ) -> SetDisplayCurrencyResponse:
+        """Set the org's display currency (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+
+        try:
+            async with open_session() as session:
+                ops = BudgetsOperations(session)
+                cur = await ops.set_display_currency(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    currency=request.display_currency,
+                )
+                return SetDisplayCurrencyResponse(display_currency=cur)
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error setting display currency: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

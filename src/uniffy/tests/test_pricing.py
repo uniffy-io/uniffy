@@ -28,12 +28,12 @@ def _text_pricing(
         provider="anthropic",
         model="claude-sonnet-4-6",
         kind="text",
-        input_per_1m_usd=Decimal(input_rate) if input_rate is not None else None,
-        output_per_1m_usd=Decimal(output_rate) if output_rate is not None else None,
-        cached_input_per_1m_usd=(
+        input_per_1m=Decimal(input_rate) if input_rate is not None else None,
+        output_per_1m=Decimal(output_rate) if output_rate is not None else None,
+        cached_input_per_1m=(
             Decimal(cached_rate) if cached_rate is not None else None
         ),
-        thinking_per_1m_usd=(
+        thinking_per_1m=(
             Decimal(thinking_rate) if thinking_rate is not None else None
         ),
         effective_from=now - timedelta(days=30),
@@ -92,7 +92,7 @@ class TestComputeTextCost:
             output_tokens=0,
             cache_read_input_tokens=1_000_000,
         )
-        # Falls back to input_per_1m_usd = $3
+        # Falls back to input_per_1m = $3
         assert cost == Decimal("3.000000")
 
     def test_thinking_uses_surcharge_rate_when_set(self) -> None:
@@ -114,7 +114,7 @@ class TestComputeTextCost:
             output_tokens=0,
             thinking_tokens=1_000_000,
         )
-        # Falls back to output_per_1m_usd = $15
+        # Falls back to output_per_1m = $15
         assert cost == Decimal("15.000000")
 
     def test_all_four_subfields_compose(self) -> None:
@@ -260,10 +260,10 @@ class TestSeedConsistency:
 
         for row in TEXT_PRICING_SEED:
             for key in (
-                "input_per_1m_usd",
-                "output_per_1m_usd",
-                "cached_input_per_1m_usd",
-                "thinking_per_1m_usd",
+                "input_per_1m",
+                "output_per_1m",
+                "cached_input_per_1m",
+                "thinking_per_1m",
             ):
                 if key in row:
                     assert isinstance(row[key], Decimal)
@@ -306,10 +306,10 @@ class TestPricingServiceOperationsValidation:
                     provider="openai",
                     model="gpt-4o",
                     kind="badkind",
-                    input_per_1m_usd="3.00",
-                    output_per_1m_usd="10.00",
-                    cached_input_per_1m_usd=None,
-                    thinking_per_1m_usd=None,
+                    input_per_1m="3.00",
+                    output_per_1m="10.00",
+                    cached_input_per_1m=None,
+                    thinking_per_1m=None,
                     image_prices=None,
                     effective_from=now,
                     effective_to=None,
@@ -332,10 +332,10 @@ class TestPricingServiceOperationsValidation:
                     provider="openai",
                     model="gpt-4o",
                     kind="text",
-                    input_per_1m_usd=None,
-                    output_per_1m_usd=None,
-                    cached_input_per_1m_usd=None,
-                    thinking_per_1m_usd=None,
+                    input_per_1m=None,
+                    output_per_1m=None,
+                    cached_input_per_1m=None,
+                    thinking_per_1m=None,
                     image_prices=None,
                     effective_from=now,
                     effective_to=None,
@@ -358,10 +358,10 @@ class TestPricingServiceOperationsValidation:
                     provider="openai",
                     model="gpt-4o",
                     kind="text",
-                    input_per_1m_usd="3.00",
-                    output_per_1m_usd="10.00",
-                    cached_input_per_1m_usd=None,
-                    thinking_per_1m_usd=None,
+                    input_per_1m="3.00",
+                    output_per_1m="10.00",
+                    cached_input_per_1m=None,
+                    thinking_per_1m=None,
                     image_prices=None,
                     effective_from=now,
                     effective_to=now - timedelta(hours=1),

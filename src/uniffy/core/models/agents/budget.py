@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     Integer,
     Numeric,
+    String,
     UniqueConstraint,
 )
 from sqlalchemy.types import JSON
@@ -33,7 +34,7 @@ class AgentBudget(SQLModel, table=True):
         Primary key (UUIDv7).
     organization_id : UUID
         Unique key: one budget row per organization.
-    monthly_limit_usd : Decimal | None
+    monthly_limit : Decimal | None
         Dollar cap per billing period. Null means no dollar cap.
     image_monthly_limit : int | None
         Count cap on image generations per billing period. Null means no
@@ -64,9 +65,13 @@ class AgentBudget(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(nullable=False)
-    monthly_limit_usd: Decimal | None = Field(
+    monthly_limit: Decimal | None = Field(
         default=None,
         sa_column=Column(Numeric(12, 2), nullable=True),
+    )
+    currency: str = Field(
+        default="EUR",
+        sa_column=Column(String(3), nullable=False, default="EUR"),
     )
     image_monthly_limit: int | None = Field(
         default=None,
@@ -94,6 +99,6 @@ class AgentBudget(SQLModel, table=True):
         """Return string representation of AgentBudget."""
         return (
             f"<AgentBudget(org={self.organization_id}, "
-            f"monthly_limit_usd={self.monthly_limit_usd}, "
+            f"monthly_limit={self.monthly_limit}, "
             f"hard_limit={self.hard_limit})>"
         )

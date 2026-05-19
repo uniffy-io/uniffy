@@ -18,7 +18,7 @@ class GetUsageStatsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., days: _Optional[int] = ..., interval: _Optional[str] = ...) -> None: ...
 
 class GetUsageStatsResponse(_message.Message):
-    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens", "total_cache_read_input_tokens", "total_cost_usd", "total_thinking_tokens", "total_image_count", "total_retries", "total_cancelled", "total_deadline_exceeded")
+    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens", "total_cache_read_input_tokens", "total_cost", "total_thinking_tokens", "total_image_count", "total_retries", "total_cancelled", "total_deadline_exceeded", "display_currency")
     TOTAL_RUNS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -36,12 +36,13 @@ class GetUsageStatsResponse(_message.Message):
     CRON_TOTAL_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     CRON_TOTAL_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_COST_USD_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_COST_FIELD_NUMBER: _ClassVar[int]
     TOTAL_THINKING_TOKENS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_IMAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
     TOTAL_RETRIES_FIELD_NUMBER: _ClassVar[int]
     TOTAL_CANCELLED_FIELD_NUMBER: _ClassVar[int]
     TOTAL_DEADLINE_EXCEEDED_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_CURRENCY_FIELD_NUMBER: _ClassVar[int]
     total_runs: int
     total_input_tokens: int
     total_output_tokens: int
@@ -59,47 +60,48 @@ class GetUsageStatsResponse(_message.Message):
     cron_total_input_tokens: int
     cron_total_output_tokens: int
     total_cache_read_input_tokens: int
-    total_cost_usd: str
+    total_cost: str
     total_thinking_tokens: int
     total_image_count: int
     total_retries: int
     total_cancelled: int
     total_deadline_exceeded: int
-    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ..., total_cache_read_input_tokens: _Optional[int] = ..., total_cost_usd: _Optional[str] = ..., total_thinking_tokens: _Optional[int] = ..., total_image_count: _Optional[int] = ..., total_retries: _Optional[int] = ..., total_cancelled: _Optional[int] = ..., total_deadline_exceeded: _Optional[int] = ...) -> None: ...
+    display_currency: str
+    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ..., total_cache_read_input_tokens: _Optional[int] = ..., total_cost: _Optional[str] = ..., total_thinking_tokens: _Optional[int] = ..., total_image_count: _Optional[int] = ..., total_retries: _Optional[int] = ..., total_cancelled: _Optional[int] = ..., total_deadline_exceeded: _Optional[int] = ..., display_currency: _Optional[str] = ...) -> None: ...
 
 class DailyUsage(_message.Message):
-    __slots__ = ("date", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cost_usd", "image_count")
+    __slots__ = ("date", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cost", "image_count")
     DATE_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
-    COST_USD_FIELD_NUMBER: _ClassVar[int]
+    COST_FIELD_NUMBER: _ClassVar[int]
     IMAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
     date: str
     runs: int
     input_tokens: int
     output_tokens: int
     cache_read_input_tokens: int
-    cost_usd: str
+    cost: str
     image_count: int
-    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cost_usd: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
+    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
 
 class ModelUsage(_message.Message):
-    __slots__ = ("model", "runs", "input_tokens", "output_tokens", "cost_usd", "image_count")
+    __slots__ = ("model", "runs", "input_tokens", "output_tokens", "cost", "image_count")
     MODEL_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
-    COST_USD_FIELD_NUMBER: _ClassVar[int]
+    COST_FIELD_NUMBER: _ClassVar[int]
     IMAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
     model: str
     runs: int
     input_tokens: int
     output_tokens: int
-    cost_usd: str
+    cost: str
     image_count: int
-    def __init__(self, model: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cost_usd: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
+    def __init__(self, model: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
 
 class AgentUsageInfo(_message.Message):
     __slots__ = ("agent_id", "agent_name", "runs", "input_tokens", "output_tokens")
@@ -174,6 +176,16 @@ class SendMessageRequest(_message.Message):
     user_timezone: str
     chat_context: ChatChannelContext
     def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
+
+class RerunFromMessageRequest(_message.Message):
+    __slots__ = ("organization_id", "message_id", "user_timezone")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_TIMEZONE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    message_id: str
+    user_timezone: str
+    def __init__(self, organization_id: _Optional[str] = ..., message_id: _Optional[str] = ..., user_timezone: _Optional[str] = ...) -> None: ...
 
 class StreamSendMessageRequest(_message.Message):
     __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context")
@@ -254,7 +266,7 @@ class RespondToConfirmationResponse(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
 class StreamSendMessageResponse(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "run_id")
+    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
     TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
@@ -262,6 +274,7 @@ class StreamSendMessageResponse(_message.Message):
     DONE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    FAILOVER_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     token: StreamTokenEvent
     tool_call: StreamToolCallEvent
@@ -270,8 +283,9 @@ class StreamSendMessageResponse(_message.Message):
     done: StreamDoneEvent
     error: StreamErrorEvent
     confirmation_required: StreamConfirmationRequiredEvent
+    failover: StreamFailoverEvent
     run_id: str
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class SubscribeToRunResponse(_message.Message):
     __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")

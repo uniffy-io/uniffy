@@ -3,10 +3,11 @@
 The public surface is intentionally small so every code path that
 writes an ``AgentRunLog`` agrees on how cost is calculated. Callers
 are expected to handle ``None`` returns from ``get_pricing`` by
-leaving ``AgentRunLog.cost_usd`` null and logging a warning - we
+leaving ``AgentRunLog.cost`` null and logging a warning - we
 never guess at a price.
 """
 
+import re
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -17,6 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.agents.model_pricing import AgentModelPricing
 
 _ONE_MILLION = Decimal("1000000")
+
+# Provider model ids commonly include a trailing date snapshot
+# (OpenAI: ``gpt-4o-2024-08-06``; Anthropic: ``claude-3-5-sonnet-20241022``).
+# When a pricing row is not seeded for the exact snapshot, fall back to
+# the alias by stripping this suffix.
+_DATE_SUFFIX_RE = re.compile(r"-(\d{8}|\d{4}-\d{2}-\d{2})$")
 
 
 async def get_pricing(
@@ -45,21 +52,31 @@ async def get_pricing(
 
     """
     when = at_time or datetime.now(UTC)
-    result = await session.execute(
-        select(AgentModelPricing)
-        .where(
-            AgentModelPricing.provider == provider,
-            AgentModelPricing.model == model,
-            AgentModelPricing.effective_from <= when,
-            or_(
-                AgentModelPricing.effective_to.is_(None),
-                AgentModelPricing.effective_to > when,
-            ),
-        )
-        .order_by(AgentModelPricing.effective_from.desc())
-        .limit(1)
-    )
-    return result.scalar_one_or_none()
+    candidates = [model]
+    alias = _DATE_SUFFIX_RE.sub("", model)
+    if alias != model:
+        candidates.append(alias)
+
+    for candidate in candidates:
+        row = (
+            await session.execute(
+                select(AgentModelPricing)
+                .where(
+                    AgentModelPricing.provider == provider,
+                    AgentModelPricing.model == candidate,
+                    AgentModelPricing.effective_from <= when,
+                    or_(
+                        AgentModelPricing.effective_to.is_(None),
+                        AgentModelPricing.effective_to > when,
+                    ),
+                )
+                .order_by(AgentModelPricing.effective_from.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if row is not None:
+            return row
+    return None
 
 
 def compute_text_cost(
@@ -72,9 +89,9 @@ def compute_text_cost(
 ) -> Decimal:
     """Compute a text-model cost from token counts and the pricing row.
 
-    Cached input tokens are priced using ``cached_input_per_1m_usd`` when
+    Cached input tokens are priced using ``cached_input_per_1m`` when
     set, otherwise at the regular input rate. Thinking tokens are priced
-    using ``thinking_per_1m_usd`` when set, otherwise at the regular
+    using ``thinking_per_1m`` when set, otherwise at the regular
     output rate. Regular ``input_tokens`` is expected to exclude cached
     reads and ``output_tokens`` is expected to exclude thinking tokens;
     the caller is responsible for splitting the counts correctly.
@@ -100,19 +117,19 @@ def compute_text_cost(
     """
     cost = Decimal(0)
 
-    if pricing.input_per_1m_usd is not None and input_tokens > 0:
-        cost += (Decimal(input_tokens) * pricing.input_per_1m_usd) / _ONE_MILLION
+    if pricing.input_per_1m is not None and input_tokens > 0:
+        cost += (Decimal(input_tokens) * pricing.input_per_1m) / _ONE_MILLION
 
-    if pricing.output_per_1m_usd is not None and output_tokens > 0:
-        cost += (Decimal(output_tokens) * pricing.output_per_1m_usd) / _ONE_MILLION
+    if pricing.output_per_1m is not None and output_tokens > 0:
+        cost += (Decimal(output_tokens) * pricing.output_per_1m) / _ONE_MILLION
 
     if cache_read_input_tokens > 0:
-        cached_rate = pricing.cached_input_per_1m_usd or pricing.input_per_1m_usd
+        cached_rate = pricing.cached_input_per_1m or pricing.input_per_1m
         if cached_rate is not None:
             cost += (Decimal(cache_read_input_tokens) * cached_rate) / _ONE_MILLION
 
     if thinking_tokens > 0:
-        thinking_rate = pricing.thinking_per_1m_usd or pricing.output_per_1m_usd
+        thinking_rate = pricing.thinking_per_1m or pricing.output_per_1m
         if thinking_rate is not None:
             cost += (Decimal(thinking_tokens) * thinking_rate) / _ONE_MILLION
 
