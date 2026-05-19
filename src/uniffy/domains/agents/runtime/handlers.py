@@ -38,6 +38,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
 )
 
 from uniffy.core.errors import (
+    BudgetExceededError,
     NotFoundError,
     PermissionDeniedError,
     RateLimitExceededError,
@@ -47,7 +48,7 @@ from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.core.valkey.queue import get_queue
-from uniffy.core.valkey.rate_limit import check_agent_rate_limits
+from uniffy.core.valkey.rate_limit import check_agent_message_limits
 from uniffy.core.valkey.streams import (
     get_run_state,
     request_run_cancel,
@@ -56,6 +57,7 @@ from uniffy.core.valkey.streams import (
     stream_xread,
 )
 from uniffy.db import open_session
+from uniffy.domains.agents.budgets.operations import BudgetsOperations
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.converters import (
     runtime_stream_event_from_json,
@@ -316,6 +318,8 @@ class RuntimeHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ConnectError:
             raise
         except Exception as exc:
@@ -402,6 +406,8 @@ class RuntimeHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ConnectError:
             raise
@@ -525,15 +531,22 @@ class RuntimeHandlers:
             await org_ops.require_org_member(user_id, organization_id)
 
             session_ops = SessionOperations(session)
-            await session_ops.get_session(
+            agent_session = await session_ops.get_session(
                 user_id=user_id,
                 organization_id=organization_id,
                 session_id=session_id,
             )
 
-            await check_agent_rate_limits(
-                user_id=str(user_id),
-                organization_id=str(organization_id),
+            await check_agent_message_limits(
+                session,
+                user_id=user_id,
+                organization_id=organization_id,
+                agent_id=agent_session.agent_id,
+            )
+
+            await BudgetsOperations(session).check_preflight(
+                user_id=user_id,
+                organization_id=organization_id,
             )
 
             files: list[FileContext] | None = None

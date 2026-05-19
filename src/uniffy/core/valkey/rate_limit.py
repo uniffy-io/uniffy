@@ -1,8 +1,8 @@
 """Rate limiting via Valkey fixed-window counters.
 
-Uses atomic INCR + EXPIRE on the shared Pub/Sub publisher connection.
-All low-level operations are non-fatal: if Valkey is unavailable,
-requests are allowed through with a warning log.
+Uses atomic INCR + EXPIRE on the ops Valkey connection. All low-level
+operations are non-fatal: if Valkey is unavailable, requests are
+allowed through with a warning log.
 
 The agents domain uses five logical buckets:
 
@@ -72,10 +72,10 @@ _overrides_cache: dict[UUID, tuple[float, dict[str, LimitConfig]]] = {}
 
 
 def _get_client():
-    """Return the Pub/Sub publisher connection (lazy import to avoid cycles)."""
-    from uniffy.core.valkey.pubsub import _publisher
+    """Return the ops Valkey connection (lazy import to avoid cycles)."""
+    from uniffy.core.valkey.ops import _get_ops_client
 
-    return _publisher
+    return _get_ops_client()
 
 
 async def check_rate_limit(
