@@ -33,6 +33,7 @@ import {
 } from "recharts";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { formatCurrency } from "@/shared/utils/currencyFormatting";
 import { useAdminAccess } from "@/features/admin";
 import {
     selectUsageStats,
@@ -98,13 +99,9 @@ function formatDuration(ms: number): string {
     return `${ms}ms`;
 }
 
-function formatCost(usd: string | number): string {
-    const n = typeof usd === 'string' ? parseFloat(usd) : usd;
-    if (!Number.isFinite(n) || n === 0) return '0.00';
-    if (n < 0.01) return n.toFixed(4);
-    if (n < 1) return n.toFixed(3);
-    return n.toFixed(2);
-}
+// Cost formatting flows through the shared currency helper so we never
+// hardcode a symbol. The org's display currency comes in via the stats
+// response.
 
 const SECONDARY_TONES = {
     emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
@@ -205,10 +202,11 @@ function StatCard({
     return (
         <div className="bg-card border border-border rounded-xl p-4 relative overflow-hidden group hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div
-                className="absolute top-0 left-0 w-1 h-full rounded-l-xl"
+                aria-hidden
+                className="pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full blur-2xl opacity-25 group-hover:opacity-40 transition-opacity duration-300"
                 style={{ backgroundColor: accentColor }}
             />
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-3 relative">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {label}
                 </span>
@@ -223,11 +221,11 @@ function StatCard({
                     />
                 </div>
             </div>
-            <p className="text-2xl font-bold text-foreground tracking-tight">
+            <p className="relative text-2xl font-bold text-foreground tracking-tight">
                 {value}
             </p>
             {subtitle && (
-                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+                <p className="relative text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}
         </div>
     );
@@ -912,7 +910,7 @@ export function UsageView() {
         inputTokens: m.inputTokens,
         outputTokens: m.outputTokens,
         totalTokens: m.inputTokens + m.outputTokens,
-        costUsd: parseFloat(m.costUsd) || 0,
+        cost: parseFloat(m.cost) || 0,
     }));
 
     const agentRows: TableRow[] = stats.agentUsage.map((a) => ({
@@ -984,7 +982,7 @@ export function UsageView() {
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
                         label="Total Cost"
-                        value={`$${formatCost(stats.totalCostUsd)}`}
+                        value={formatCurrency(stats.totalCost, stats.displayCurrency)}
                         icon={CurrencyDollar}
                         subtitle={
                             stats.totalImageCount > 0
@@ -1005,8 +1003,8 @@ export function UsageView() {
                         value={formatNumber(stats.totalCacheReadInputTokens)}
                         icon={Database}
                         subtitle={
-                            stats.totalInputTokens > 0
-                                ? `${Math.round((stats.totalCacheReadInputTokens / stats.totalInputTokens) * 100)}% of input cached`
+                            stats.totalCacheReadInputTokens + stats.totalInputTokens > 0
+                                ? `${Math.round((stats.totalCacheReadInputTokens / (stats.totalCacheReadInputTokens + stats.totalInputTokens)) * 100)}% of prompt from cache`
                                 : "no input yet"
                         }
                         accentColor="#10b981"
@@ -1278,11 +1276,13 @@ export function UsageView() {
                                 format: fmtNum,
                             },
                             {
-                                key: "costUsd",
+                                key: "cost",
                                 label: "Cost",
                                 align: "right",
                                 format: (v: unknown) =>
-                                    typeof v === "number" ? `$${formatCost(v)}` : "—",
+                                    typeof v === "number"
+                                        ? formatCurrency(v, stats.displayCurrency)
+                                        : "—",
                             },
                         ]}
                         rows={modelRows}
