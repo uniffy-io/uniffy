@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // PricingService manages the global model pricing table. Reads are
 // available to any org member (prices are not sensitive). Writes are

@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package agents.v1;
 
-option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
-
-import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // BudgetsService manages per-organization spend caps, image caps, and
 // per-user quotas within an organization. Absent rows mean no cap on
