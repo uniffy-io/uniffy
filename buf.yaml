@@ -4,6 +4,14 @@ modules:
 lint:
   use:
     - STANDARD
+  except:
+    # We share response types across related RPCs (e.g. one OrgBudgetResponse
+    # for both Get and Update, StreamSendMessageResponse for StreamSendMessage
+    # and RerunFromMessage). This is a deliberate design choice for symmetric
+    # CRUD-style services; the canonical "X / XResponse" naming would force
+    # us into 1:1 messages that just duplicate fields.
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
 breaking:
   use:
     - FILE
