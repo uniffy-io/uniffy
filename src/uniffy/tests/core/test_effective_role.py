@@ -230,18 +230,37 @@ class TestAccessModeBaseline:
             )
         assert role is None
 
-    def test_open_to_org_with_null_baseline_denies(self) -> None:
-        """A null baseline_role on OPEN_TO_ORG content should never appear, but
-        the checker must handle it safely and deny rather than crash."""
+    def test_open_to_org_null_baseline_inherits_org_default(self) -> None:
+        """A null baseline_role on OPEN_TO_ORG content inherits live from the
+        org default; with no org default the policy floors to VIEWER."""
         checker = _make_checker()
         with (
             patch.object(checker, "_is_org_admin", AsyncMock(return_value=False)),
             patch.object(checker, "_is_domain_admin_for_content", AsyncMock(return_value=False)),
             patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
             patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
+            patch.object(
+                checker,
+                "get_org_defaults",
+                AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, ContentRole.EDITOR)),
+            ),
         ):
             role = _call(checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=None)
-        assert role is None
+        assert role == ContentRole.EDITOR
+
+    def test_open_to_org_null_baseline_falls_back_to_viewer_floor(self) -> None:
+        """When neither the row nor the org default supplies a baseline, the
+        policy resolver floors to VIEWER rather than denying."""
+        checker = _make_checker()
+        with (
+            patch.object(checker, "_is_org_admin", AsyncMock(return_value=False)),
+            patch.object(checker, "_is_domain_admin_for_content", AsyncMock(return_value=False)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
+            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
+            patch.object(checker, "get_org_defaults", AsyncMock(return_value=(None, None))),
+        ):
+            role = _call(checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=None)
+        assert role == ContentRole.VIEWER
 
     def test_open_to_org_blocked_user_denied_despite_baseline(self) -> None:
         """BLOCKED overrides the OPEN_TO_ORG baseline for that specific user."""

@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.prompts_pb2 import (
     CreatePromptRequest,
     CreatePromptResponse,
@@ -20,15 +21,35 @@ from uniffy_proto.agents.v1.prompts_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.prompt import AgentPrompt
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.prompts.converters import prompt_to_proto
 from uniffy.domains.agents.prompts.operations import PromptOperations
 from uniffy.domains.auth.context import get_user_id_from_context
+
+
+async def _resolve_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    prompt: AgentPrompt,
+    checker: PermissionChecker | None = None,
+):
+    """Return the prompt's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.PROMPT,
+    )
+    return resolve_effective_policy(
+        prompt.access_mode, prompt.baseline_role, default_mode, default_baseline,
+    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -88,7 +109,16 @@ class PromptsHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return CreatePromptResponse(prompt=prompt_to_proto(prompt))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, prompt,
+                )
+                return CreatePromptResponse(
+                    prompt=prompt_to_proto(
+                        prompt,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -112,7 +142,16 @@ class PromptsHandlers:
                     organization_id=org_id,
                     prompt_id=prompt_id,
                 )
-                return GetPromptResponse(prompt=prompt_to_proto(prompt))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, prompt,
+                )
+                return GetPromptResponse(
+                    prompt=prompt_to_proto(
+                        prompt,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -146,8 +185,24 @@ class PromptsHandlers:
                     page_size=page_size,
                 )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    org_id, ContentType.PROMPT,
+                )
+                proto_prompts = []
+                for p in prompts:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        p.access_mode, p.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_prompts.append(
+                        prompt_to_proto(
+                            p,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
                 return ListPromptsResponse(
-                    prompts=[prompt_to_proto(p) for p in prompts],
+                    prompts=proto_prompts,
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -187,7 +242,16 @@ class PromptsHandlers:
                     description=description,
                     content=content,
                 )
-                return UpdatePromptResponse(prompt=prompt_to_proto(prompt))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, prompt,
+                )
+                return UpdatePromptResponse(
+                    prompt=prompt_to_proto(
+                        prompt,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:

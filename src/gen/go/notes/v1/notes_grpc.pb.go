@@ -28,7 +28,6 @@ const (
 	NotesService_GetBacklinks_FullMethodName         = "/notes.v1.NotesService/GetBacklinks"
 	NotesService_RestoreNote_FullMethodName          = "/notes.v1.NotesService/RestoreNote"
 	NotesService_EmptyTrash_FullMethodName           = "/notes.v1.NotesService/EmptyTrash"
-	NotesService_AutosaveNote_FullMethodName         = "/notes.v1.NotesService/AutosaveNote"
 	NotesService_MoveNote_FullMethodName             = "/notes.v1.NotesService/MoveNote"
 	NotesService_CopyNote_FullMethodName             = "/notes.v1.NotesService/CopyNote"
 	NotesService_ShareNoteWithGroup_FullMethodName   = "/notes.v1.NotesService/ShareNoteWithGroup"
@@ -62,8 +61,6 @@ type NotesServiceClient interface {
 	RestoreNote(ctx context.Context, in *RestoreNoteRequest, opts ...grpc.CallOption) (*RestoreNoteResponse, error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(ctx context.Context, in *EmptyTrashRequest, opts ...grpc.CallOption) (*EmptyTrashResponse, error)
-	// Autosave note content (optimized for frequent updates)
-	AutosaveNote(ctx context.Context, in *AutosaveNoteRequest, opts ...grpc.CallOption) (*AutosaveNoteResponse, error)
 	// Move note between spaces (personal, group, organization)
 	MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*MoveNoteResponse, error)
 	// Copy note to another space
@@ -178,16 +175,6 @@ func (c *notesServiceClient) EmptyTrash(ctx context.Context, in *EmptyTrashReque
 	return out, nil
 }
 
-func (c *notesServiceClient) AutosaveNote(ctx context.Context, in *AutosaveNoteRequest, opts ...grpc.CallOption) (*AutosaveNoteResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AutosaveNoteResponse)
-	err := c.cc.Invoke(ctx, NotesService_AutosaveNote_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *notesServiceClient) MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*MoveNoteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MoveNoteResponse)
@@ -282,8 +269,6 @@ type NotesServiceServer interface {
 	RestoreNote(context.Context, *RestoreNoteRequest) (*RestoreNoteResponse, error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error)
-	// Autosave note content (optimized for frequent updates)
-	AutosaveNote(context.Context, *AutosaveNoteRequest) (*AutosaveNoteResponse, error)
 	// Move note between spaces (personal, group, organization)
 	MoveNote(context.Context, *MoveNoteRequest) (*MoveNoteResponse, error)
 	// Copy note to another space
@@ -334,9 +319,6 @@ func (UnimplementedNotesServiceServer) RestoreNote(context.Context, *RestoreNote
 }
 func (UnimplementedNotesServiceServer) EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EmptyTrash not implemented")
-}
-func (UnimplementedNotesServiceServer) AutosaveNote(context.Context, *AutosaveNoteRequest) (*AutosaveNoteResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AutosaveNote not implemented")
 }
 func (UnimplementedNotesServiceServer) MoveNote(context.Context, *MoveNoteRequest) (*MoveNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveNote not implemented")
@@ -542,24 +524,6 @@ func _NotesService_EmptyTrash_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NotesService_AutosaveNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AutosaveNoteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).AutosaveNote(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_AutosaveNote_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).AutosaveNote(ctx, req.(*AutosaveNoteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _NotesService_MoveNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MoveNoteRequest)
 	if err := dec(in); err != nil {
@@ -728,10 +692,6 @@ var NotesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EmptyTrash",
 			Handler:    _NotesService_EmptyTrash_Handler,
-		},
-		{
-			MethodName: "AutosaveNote",
-			Handler:    _NotesService_AutosaveNote_Handler,
 		},
 		{
 			MethodName: "MoveNote",

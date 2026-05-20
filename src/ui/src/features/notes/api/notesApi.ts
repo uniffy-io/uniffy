@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
-import { NotesService, AutosaveNoteRequestSchema, CopyNoteRequestSchema, CreateNoteRequestSchema, DeleteNoteRequestSchema, EmptyTrashRequestSchema, GetBacklinksRequestSchema, GetNoteRequestSchema, ListNotesRequestSchema, MoveNoteRequestSchema, RestoreNoteRequestSchema, SearchNotesRequestSchema, UpdateNoteRequestSchema } from '@uniffy/proto/notes/v1/notes_pb';
+import { NotesService, CopyNoteRequestSchema, CreateNoteRequestSchema, DeleteNoteRequestSchema, EmptyTrashRequestSchema, GetBacklinksRequestSchema, GetNoteRequestSchema, ListNotesRequestSchema, MoveNoteRequestSchema, RestoreNoteRequestSchema, SearchNotesRequestSchema, UpdateNoteRequestSchema } from '@uniffy/proto/notes/v1/notes_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 /**
@@ -73,13 +73,6 @@ export const notesApi = {
      */
     restoreNote: async (request: MessageInitShape<typeof RestoreNoteRequestSchema>) => {
         return notesClient.restoreNote(request);
-    },
-
-    /**
-     * Autosave note content (optimized for frequent updates).
-     */
-    autosaveNote: async (request: MessageInitShape<typeof AutosaveNoteRequestSchema>) => {
-        return notesClient.autosaveNote(request);
     },
 
     /**

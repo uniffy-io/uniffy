@@ -174,6 +174,7 @@ export function OrganizationPicker() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           organizationId: response.organizationId,
+          organizationSlug: orgSlug,
           organizationRole: response.organizationRole,
           sessionId: response.sessionId,
           domainAdminDomains: Array.from(response.domainAdminDomains),

@@ -18,12 +18,16 @@ export function AccountSection() {
         const buffer = await file.arrayBuffer();
         const imageData = new Uint8Array(buffer);
         const profile = await usersApi.uploadAvatar(imageData, file.name);
-        dispatch(updateUser({ avatarUrl: profile.avatarUrl }));
+        // ``hasAvatar`` gates every avatar consumer in the app
+        // (realtime presence, peer cursors, SubjectAvatar, etc.).
+        // Without flipping it here, every consumer keeps rendering
+        // initials until the next full ``GetCurrentUser`` round-trip.
+        dispatch(updateUser({ avatarUrl: profile.avatarUrl, hasAvatar: true }));
     }, [dispatch]);
 
     const handleDelete = useCallback(async () => {
         await usersApi.deleteAvatar();
-        dispatch(updateUser({ avatarUrl: '' }));
+        dispatch(updateUser({ avatarUrl: '', hasAvatar: false }));
     }, [dispatch]);
 
     if (!user) {

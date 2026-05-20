@@ -1674,3 +1674,51 @@
   max-width: 20rem;
   width: 100%;
 }
+
+/*
+ * Realtime collaboration cursors + selections (y-prosemirror)
+ * Custom builders live in CrepeEditor.tsx (buildRealtimeCursor /
+ * buildRealtimeSelection). The label fades out after 2.5s of
+ * inactivity to keep the gutter quiet during typing pauses; it
+ * springs back on every awareness ping (cursor move, selection
+ * change, awareness state update -- y-prosemirror re-renders the
+ * caret span which restarts the CSS animation).
+ */
+.uniffy-yjs-cursor {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 1em;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left-width: 2px;
+  border-left-style: solid;
+  vertical-align: text-bottom;
+  pointer-events: none;
+  user-select: none;
+}
+
+.uniffy-yjs-cursor__flag {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  padding: 0.1em 0.45em;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  border-radius: 3px 3px 3px 0;
+  pointer-events: none;
+  user-select: none;
+  /* Always visible. An auto-fade was tried briefly but a hidden
+   * label + a colored caret looks indistinguishable from "text
+   * typed by nobody" when the local user is looking elsewhere on
+   * the page -- non-technical users read that as a bug. Figma /
+   * Notion / Google Docs all keep peer labels persistent for the
+   * same reason. */
+}
+
+.uniffy-yjs-selection {
+  border-radius: 2px;
+}

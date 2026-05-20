@@ -38,7 +38,7 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
-from uniffy.core.types import ContentRole
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -75,6 +75,8 @@ def file_to_proto(
     owner_info: dict | None = None,
     group_ids: list[str] | None = None,
     tags: list[Tag] | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> ProtoFile:
     """Convert :class:`File` to its proto representation.
 
@@ -108,12 +110,16 @@ def file_to_proto(
         ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
     )
 
+    resolved_mode = effective_access_mode if effective_access_mode is not None else file.access_mode
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else file.baseline_role
+    )
     proto_file = ProtoFile(
         id=str(file.id),
         urn=file.urn,
         organization_id=str(file.organization_id),
         owner_id=str(file.owner_id),
-        access_mode=access_mode_to_proto(file.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         filename=file.filename,
         original_filename=file.original_filename,
         mime_type=file.mime_type,
@@ -128,8 +134,8 @@ def file_to_proto(
         tags=[tag_to_proto(t) for t in tags] if tags else [],
     )
 
-    if file.baseline_role is not None:
-        proto_file.baseline_role = content_role_to_proto(file.baseline_role)
+    if resolved_baseline is not None:
+        proto_file.baseline_role = content_role_to_proto(resolved_baseline)
 
     if user_role is not None:
         proto_file.user_role = content_role_to_proto(user_role)
@@ -191,14 +197,24 @@ def _build_file_metadata_from_model(info: FileMediaInfo) -> ProtoFileMetadata:
     return proto_meta
 
 
-def folder_to_proto(folder: Folder) -> ProtoFolder:
+def folder_to_proto(
+    folder: Folder,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> ProtoFolder:
     """Convert :class:`Folder` to its proto representation."""
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else folder.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else folder.baseline_role
+    )
     proto_folder = ProtoFolder(
         id=str(folder.id),
         urn=folder.urn,
         organization_id=str(folder.organization_id),
         owner_id=str(folder.owner_id),
-        access_mode=access_mode_to_proto(folder.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         name=folder.name,
         is_deleted=folder.is_deleted,
         created_at=datetime_to_timestamp(folder.created_at),
@@ -206,8 +222,8 @@ def folder_to_proto(folder: Folder) -> ProtoFolder:
         is_system=folder.is_system,
     )
 
-    if folder.baseline_role is not None:
-        proto_folder.baseline_role = content_role_to_proto(folder.baseline_role)
+    if resolved_baseline is not None:
+        proto_folder.baseline_role = content_role_to_proto(resolved_baseline)
 
     if folder.parent_id:
         proto_folder.parent_id = str(folder.parent_id)
@@ -240,13 +256,18 @@ def upload_to_proto_status(upload: MultipartUpload) -> ProtoUploadStatus:
     )
 
 
-def tree_node_from_file(file: File, child_count: int = 0) -> ProtoTreeNode:
+def tree_node_from_file(
+    file: File,
+    child_count: int = 0,
+    effective_access_mode: AccessMode | None = None,
+) -> ProtoTreeNode:
     """Build a :class:`ProtoTreeNode` from a :class:`File` row."""
+    resolved_mode = effective_access_mode if effective_access_mode is not None else file.access_mode
     node = ProtoTreeNode(
         id=str(file.id),
         name=file.filename,
         is_folder=False,
-        access_mode=access_mode_to_proto(file.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         child_count=0,
         size_bytes=file.size_bytes,
         mime_type=file.mime_type,
@@ -262,13 +283,17 @@ def tree_node_from_folder(
     folder: Folder,
     child_count: int = 0,
     size_bytes: int | None = None,
+    effective_access_mode: AccessMode | None = None,
 ) -> ProtoTreeNode:
     """Build a :class:`ProtoTreeNode` from a :class:`Folder` row."""
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else folder.access_mode
+    )
     node = ProtoTreeNode(
         id=str(folder.id),
         name=folder.name,
         is_folder=True,
-        access_mode=access_mode_to_proto(folder.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         child_count=child_count,
     )
 

@@ -6,9 +6,7 @@ import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
 import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
 import { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
-import { parseCanvasContent, serializeCanvas } from '@/features/notes/canvas/types';
-import type { CanvasState } from '@/features/notes/canvas/types';
-import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
+import { parseCanvasContent } from '@/features/notes/canvas/types';
 import { useMyContentRole } from '@/features/permissions';
 import { roleCanEdit, roleCanManage } from '@/shared/utils/contentRoles';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
@@ -18,6 +16,10 @@ import { EditorHandleContext } from '@/components/editor/EditorHandle';
 import type { EditorHandle } from '@/components/editor/EditorHandle';
 import { NoteTitleBlock } from '@/features/notes/components/editor/NoteTitleBlock';
 import { FloatingFormattingToolbar } from '@/features/notes/components/editor/FloatingFormattingToolbar';
+import { useNoteRealtimeSession } from '@/features/notes/realtime/useNoteRealtimeSession';
+import { useCanvasRealtimeSession } from '@/features/notes/realtime/useCanvasRealtimeSession';
+import { ErrorBoundary } from '@/components/feedback';
+import { EditorErrorFallback } from '@/features/notes/components/editor/EditorErrorFallback';
 
 export function NotesEditor() {
   const location = useLocation();
@@ -34,10 +36,10 @@ export function NotesEditor() {
 
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
+  const canvasTitleHidden = settings?.canvasTitleHidden ?? false;
 
-  // Check user's role on the current note. Pass the note row's userRole so
-  // the hook doesn't have to wait for a separate permissions fetch; the hook
-  // treats UNSPECIFIED (0) as not-set and falls through to its own resolver.
+  // Pass the note row's userRole so the hook skips a separate fetch;
+  // UNSPECIFIED (0) falls through to the hook's own resolver.
   const role = useMyContentRole(
     ContentType.NOTE,
     currentNoteId ?? '',
@@ -49,15 +51,18 @@ export function NotesEditor() {
   const canShare = roleCanManage(role);
   const editorMode = canEdit ? userSelectedMode : 'readonly';
 
-  // Autosave hook - handles debounced saving
-  const { scheduleAutosave, draftContent } = useAutosave(
-    canEdit && currentNoteId ? currentNoteId : null
+  const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
+  const { binding: realtimeBinding, status: realtimeStatus } = useNoteRealtimeSession(
+    currentNoteId ?? null,
+    Boolean(currentNoteId) && canEdit && !isCanvas,
   );
+  const { binding: canvasRealtimeBinding, status: canvasRealtimeStatus } =
+    useCanvasRealtimeSession(
+      currentNoteId ?? null,
+      Boolean(currentNoteId) && canEdit && isCanvas,
+    );
 
-  // Get draft content from autosave hook
-  const noteContent = currentNote
-    ? (draftContent != null ? draftContent : currentNote.content)
-    : '';
+  const noteContent = currentNote?.content ?? '';
 
   // Scroll to heading when URL has a hash fragment (e.g. /notes/:id#heading-slug).
   // The editor renders asynchronously, so we poll until the heading appears in the DOM.
@@ -100,24 +105,11 @@ export function NotesEditor() {
 
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleContentChange = useCallback((markdown: string) => {
-    scheduleAutosave(markdown);
-  }, [scheduleAutosave]);
-
   // Editor handle - published by CrepeEditor on mount, consumed by formatting toolbar
   const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
   const handleEditorReady = useCallback((handle: EditorHandle | null) => {
     setEditorHandle(handle);
   }, []);
-
-  const handleCanvasChange = useCallback(
-    (state: CanvasState) => {
-      scheduleAutosave(serializeCanvas(state));
-    },
-    [scheduleAutosave]
-  );
-
-  const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
 
   const canvasState = useMemo(
     () => (isCanvas ? parseCanvasContent(noteContent) : null),
@@ -155,23 +147,35 @@ export function NotesEditor() {
   }
 
   const titleBlock = <NoteTitleBlock note={currentNote} canEdit={canEdit} />;
+  const compactTitleBlock = <NoteTitleBlock note={currentNote} canEdit={canEdit} compact />;
   const toolbarPinned = settings?.toolbarPinned ?? true;
 
-  // Canvas notes use a dedicated editor; the title sits above the canvas
-  // since the canvas does not have a scrolling document surface.
+  // Canvas notes: title block sits above the canvas because the
+  // canvas surface has no scrolling document of its own.
   if (isCanvas && canvasState) {
     return (
       <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
-        {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} isCanvas />}
-        {!isZenMode && titleBlock}
-        <div className="flex-1 overflow-hidden">
-          <CanvasEditor
-            key={currentNote.id}
-            canvasState={canvasState}
-            onChange={handleCanvasChange}
-            readonly={!canEdit}
-            contentId={currentNote.id}
+        {!isZenMode && (
+          <EditorHeader
+            note={currentNote}
+            canEdit={canEdit}
+            canShare={canShare}
+            isCanvas
+            realtimeStatus={canvasRealtimeStatus}
+            realtimeAwareness={canvasRealtimeBinding?.awareness ?? null}
           />
+        )}
+        {!isZenMode && !canvasTitleHidden && compactTitleBlock}
+        <div className="flex-1 overflow-hidden">
+          <ErrorBoundary fallback={({ reset }) => <EditorErrorFallback onRetry={reset} />}>
+            <CanvasEditor
+              key={currentNote.id}
+              canvasState={canvasState}
+              readonly={!canEdit}
+              contentId={currentNote.id}
+              realtime={canvasRealtimeBinding ?? undefined}
+            />
+          </ErrorBoundary>
         </div>
       </div>
     );
@@ -185,28 +189,41 @@ export function NotesEditor() {
             contentType={ContentType.NOTE}
             contentId={currentNote.id}
             value={noteContent}
-            onChange={handleContentChange}
             enableComments={true}
             onEditorReady={handleEditorReady}
             headerSlot={titleBlock}
             floatingToolbar={false}
+            realtime={realtimeBinding ?? undefined}
           />
         );
       case 'markdown':
-        return <MarkdownSplitEditor note={currentNote} titleSlot={titleBlock} />;
+        return (
+          <MarkdownSplitEditor
+            note={currentNote}
+            titleSlot={titleBlock}
+            realtime={realtimeBinding ?? undefined}
+          />
+        );
       case 'readonly':
-        return <ReadOnlyViewer note={currentNote} content={noteContent} titleSlot={titleBlock} />;
+        return (
+          <ReadOnlyViewer
+            note={currentNote}
+            content={noteContent}
+            titleSlot={titleBlock}
+            realtime={realtimeBinding ?? undefined}
+          />
+        );
       default:
         return (
           <CrepeEditor
             contentType={ContentType.NOTE}
             contentId={currentNote.id}
             value={noteContent}
-            onChange={handleContentChange}
             enableComments={true}
             onEditorReady={handleEditorReady}
             headerSlot={titleBlock}
             floatingToolbar={false}
+            realtime={realtimeBinding ?? undefined}
           />
         );
     }
@@ -215,13 +232,22 @@ export function NotesEditor() {
   return (
     <EditorHandleContext.Provider value={editorHandle}>
       <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
-        {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />}
+        {!isZenMode && (
+          <EditorHeader
+            note={currentNote}
+            canEdit={canEdit}
+            canShare={canShare}
+            realtimeStatus={realtimeStatus}
+            realtimeAwareness={realtimeBinding?.awareness ?? null}
+          />
+        )}
         <div ref={editorContainerRef} className="flex-1 overflow-hidden">
-          {renderEditor()}
+          <ErrorBoundary fallback={({ reset }) => <EditorErrorFallback onRetry={reset} />}>
+            {renderEditor()}
+          </ErrorBoundary>
         </div>
-        {/* Floating selection toolbar: only mounts when the persistent bar is
-            unpinned and the user is editing in crepe mode. Same wiring as
-            the persistent bar, compact horizontal layout. */}
+        {/* Floating selection toolbar mounts only when the persistent
+            bar is unpinned and the user is editing in crepe mode. */}
         {canEdit && editorMode === 'crepe' && !toolbarPinned && (
           <FloatingFormattingToolbar />
         )}

@@ -3,14 +3,6 @@
 Revision ID: 021
 Revises: 020
 Create Date: 2026-05-07
-
-Adds ``tags`` and ``tag_assignments`` for the unified, polymorphic tag
-namespace, plus ``tags_saved_filters`` so Phase 5 can persist user
-filter views without a follow-up migration. The four legacy JSONB tag
-columns (notes_notes.tags / .inline_tags, files_files.tags,
-calendar_events.tags) are not dropped here; their cut-overs land in
-Phase 2-4 alongside the domain code that reads them, to keep each
-phase's schema and code change in lockstep.
 """
 
 from collections.abc import Sequence

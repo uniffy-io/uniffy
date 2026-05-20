@@ -41,7 +41,7 @@ from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
-from uniffy.core.types import ContentRole
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags.converters import tag_to_proto
 
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
@@ -112,6 +112,8 @@ def project_to_proto(
     views: list[ViewConfig],
     user_role: ContentRole | None = None,
     tags: list[Tag] | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> ProtoProject:
     """Convert a :class:`Project` row to its proto representation.
 
@@ -134,6 +136,12 @@ def project_to_proto(
                 required_field_ids=schema.get("required_field_ids", []),
             )
 
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else project.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else project.baseline_role
+    )
     proto = ProtoProject(
         id=str(project.id),
         organization_id=str(project.organization_id),
@@ -143,7 +151,7 @@ def project_to_proto(
         icon=project.icon,
         color=project.color,
         slug=project.slug,
-        access_mode=access_mode_to_proto(project.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         field_definitions=[field_to_proto(f) for f in fields],
         views=[view_to_proto(v) for v in views],
         default_view_id=project.default_view_id or "",
@@ -154,8 +162,8 @@ def project_to_proto(
         tags=[tag_to_proto(tag) for tag in (tags or [])],
     )
 
-    if project.baseline_role is not None:
-        proto.baseline_role = content_role_to_proto(project.baseline_role)
+    if resolved_baseline is not None:
+        proto.baseline_role = content_role_to_proto(resolved_baseline)
     if user_role is not None:
         proto.user_role = content_role_to_proto(user_role)
 

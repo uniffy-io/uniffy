@@ -24,6 +24,7 @@ from uniffy.core.auth.cache import (
     get_or_load_effective_role,
     get_or_load_org_admin,
 )
+from uniffy.core.auth.permissions.defaults import resolve_effective_policy
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
 from uniffy.core.types import (
     AccessMode,
@@ -77,6 +78,9 @@ class PermissionChecker:
         self.session = session
         self._org_role_cache: dict[tuple[UUID, UUID], OrganizationRole | None] = {}
         self._domain_admin_cache: dict[tuple[UUID, UUID, DomainType], bool] = {}
+        self._org_defaults_cache: dict[
+            tuple[UUID, ContentType], tuple[AccessMode | None, ContentRole | None]
+        ] = {}
 
     async def effective_role(
         self,
@@ -134,6 +138,10 @@ class PermissionChecker:
             if owner_id == user_id:
                 return ContentRole.OWNER
 
+            effective_mode, effective_baseline = await self._resolve_effective(
+                organization_id, content_type, access_mode, baseline_role,
+            )
+
             member_role = await self._get_member_role(
                 organization_id, content_type, content_id, user_id
             )
@@ -142,23 +150,65 @@ class PermissionChecker:
             if member_role is not None:
                 return member_role
 
-            if access_mode == AccessMode.OWNER_ONLY:
+            if effective_mode == AccessMode.OWNER_ONLY:
                 return None
-            if access_mode == AccessMode.EXPLICIT_MEMBERS:
+            if effective_mode == AccessMode.EXPLICIT_MEMBERS:
                 return None
-            if access_mode == AccessMode.OPEN_TO_ORG:
-                if baseline_role is None:
+            if effective_mode == AccessMode.OPEN_TO_ORG:
+                if effective_baseline is None:
                     return None
                 if not await self._is_user_in_organization(
                     user_id, organization_id
                 ):
                     return None
-                return baseline_role
+                return effective_baseline
 
             return None
 
         return await get_or_load_effective_role(
             organization_id, user_id, content_type, content_id, _compute
+        )
+
+    async def get_org_defaults(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+    ) -> tuple[AccessMode | None, ContentRole | None]:
+        """Return the org's default ``(access_mode, baseline_role)`` for a content type.
+
+        Cached for the lifetime of this checker so repeated lookups within
+        the same request are free. Falls back to the static
+        ``ORG_PERMISSION_DEFAULTS`` dict, then ``(None, None)``.
+        """
+        key = (organization_id, content_type)
+        if key in self._org_defaults_cache:
+            return self._org_defaults_cache[key]
+
+        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
+
+        defaults = await resolve_content_defaults(self.session, organization_id, content_type)
+        self._org_defaults_cache[key] = defaults
+        return defaults
+
+    async def _resolve_effective(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        raw_access_mode: AccessMode | None,
+        raw_baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Materialise the effective ``(access_mode, baseline_role)`` for a row."""
+        if raw_access_mode is not None and (
+            raw_access_mode != AccessMode.OPEN_TO_ORG or raw_baseline_role is not None
+        ):
+            return resolve_effective_policy(
+                raw_access_mode, raw_baseline_role, None, None,
+            )
+        default_mode, default_baseline = await self.get_org_defaults(
+            organization_id, content_type,
+        )
+        return resolve_effective_policy(
+            raw_access_mode, raw_baseline_role, default_mode, default_baseline,
         )
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:

@@ -1,11 +1,24 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Crepe } from '@milkdown/crepe';
-import { editorViewCtx } from '@milkdown/core';
-import { Selection } from '@milkdown/prose/state';
+import { editorViewCtx, parserCtx, serializerCtx } from '@milkdown/core';
+import { Plugin, Selection } from '@milkdown/prose/state';
 import type { Node } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import { upload, uploadConfig, type Uploader } from '@milkdown/kit/plugin/upload';
 import { $prose } from '@milkdown/kit/utils';
+import {
+  ySyncPlugin,
+  yCursorPlugin,
+  yUndoPlugin,
+  prosemirrorToYXmlFragment,
+} from 'y-prosemirror';
+import * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
+import {
+  MARKDOWN_TEXT_FIELD,
+  PROSEMIRROR_FRAGMENT_FIELD,
+  replaceMarkdownYText,
+} from '@/features/notes/realtime/markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
@@ -64,6 +77,18 @@ import '@/features/comments/styles/comments.css';
 // Import our custom overrides that handle theming
 import '@/components/editor/styles/editor.css';
 
+export interface CrepeRealtimeBinding {
+  ydoc: Y.Doc;
+  awareness: Awareness;
+  undoManager: Y.UndoManager | null;
+  sessionId: string;
+  /**
+   * Resolves on the first ``sync`` event from the provider. Gates
+   * cold-start seeding so we never race the SyncStep2 frame.
+   */
+  whenSynced: Promise<void>;
+}
+
 interface CrepeEditorProps {
   /** Content type for uploads and comments */
   contentType: ContentType;
@@ -73,6 +98,12 @@ interface CrepeEditorProps {
   value: string;
   /** Called when content changes (consumers handle persistence) */
   onChange?: (markdown: string) => void;
+  /**
+   * When set, the editor binds to a Yjs document via y-prosemirror;
+   * the doc (not ``value``) is the source of truth. ``onChange`` still
+   * fires with serialized markdown for title / save-indicator slots.
+   */
+  realtime?: CrepeRealtimeBinding;
   /** When true, the editor is read-only (no editing, no toolbar, no slash commands) */
   readonly?: boolean;
   /** Custom class name for the wrapper */
@@ -112,6 +143,33 @@ function clearContainer(container: HTMLElement) {
   }
 }
 
+// Custom y-prosemirror cursor builder: colored caret with an
+// auto-hiding name flag so static labels do not clutter the editor.
+function buildRealtimeCursor(user: { name?: string; color?: string } | null): HTMLElement {
+  const color = user?.color ?? '#6366f1';
+  const name = user?.name ?? 'Anonymous';
+
+  const caret = document.createElement('span');
+  caret.classList.add('uniffy-yjs-cursor');
+  caret.setAttribute('style', `border-color: ${color}; background-color: ${color}`);
+
+  const flag = document.createElement('div');
+  flag.classList.add('uniffy-yjs-cursor__flag');
+  flag.setAttribute('style', `background-color: ${color}`);
+  flag.textContent = name;
+
+  caret.appendChild(flag);
+  return caret;
+}
+
+function buildRealtimeSelection(user: { color?: string } | null): { class?: string; style?: string } {
+  const color = user?.color ?? '#6366f1';
+  return {
+    class: 'uniffy-yjs-selection',
+    style: `background-color: ${color}33`,
+  };
+}
+
 /** Creates Crepe configuration */
 function createCrepeConfig(
   root: HTMLElement,
@@ -123,10 +181,13 @@ function createCrepeConfig(
   videoUploadHandler?: (file: File) => Promise<string>,
   audioUploadHandler?: (file: File) => Promise<string>,
   floatingToolbar: boolean = true,
+  realtime: boolean = false,
 ) {
   return {
     root,
-    defaultValue: content,
+    // y-prosemirror owns the doc under realtime; seeding via
+    // ``defaultValue`` would race the ySyncPlugin and dup content.
+    defaultValue: realtime ? '' : content,
     features: {
       [Crepe.Feature.CodeMirror]: true,
       [Crepe.Feature.ListItem]: true,
@@ -346,7 +407,10 @@ export function CrepeEditor({
   onEditorReady,
   headerSlot,
   floatingToolbar = true,
+  realtime,
 }: CrepeEditorProps) {
+  const realtimeRef = useRef<CrepeRealtimeBinding | undefined>(realtime);
+  realtimeRef.current = realtime;
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -575,7 +639,7 @@ export function CrepeEditor({
     const crepe = new Crepe(createCrepeConfig(
       container, content, readonly, compact, placeholder,
       imageUploadHandler, videoUploadHandler, audioUploadHandler,
-      floatingToolbar,
+      floatingToolbar, Boolean(realtimeRef.current),
     ));
 
     // CRITICAL: Add plugins BEFORE calling create()
@@ -606,6 +670,58 @@ export function CrepeEditor({
       // Register comment highlight decorations (edit mode with comments enabled only)
       if (!readonly && enableComments) {
         editor.use(commentDecorationsPlugin);
+      }
+
+      // Wire y-prosemirror plugins under realtime: shared fragment
+      // sync, peer cursors from awareness, origin-scoped undo.
+      const rt = realtimeRef.current;
+      if (rt) {
+        const fragment = rt.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
+        editor.use($prose(() => ySyncPlugin(fragment)));
+        editor.use($prose(() =>
+          yCursorPlugin(rt.awareness, {
+            cursorBuilder: buildRealtimeCursor,
+            selectionBuilder: buildRealtimeSelection,
+          }),
+        ));
+        if (rt.undoManager) {
+          editor.use($prose(() => yUndoPlugin({ undoManager: rt.undoManager! })));
+        }
+
+        // Mirror serialized markdown into ``Y.Text("markdown")`` for
+        // the snapshot pipeline. Milkdown's ``markdownUpdated`` is
+        // filtered for ``ySync``-meta transactions, so we hook
+        // ``view.update`` via a ``$prose`` plugin and debounce 250ms.
+        editor.use(
+          $prose((ctx) => {
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            const flush = (view: EditorView) => {
+              timer = null;
+              try {
+                const serializer = ctx.get(serializerCtx);
+                const markdown = serializer(view.state.doc);
+                replaceMarkdownYText(rt.ydoc, markdown, rt.sessionId);
+              } catch {
+                // Serializer not ready yet - next update retries.
+              }
+            };
+            return new Plugin({
+              view: () => ({
+                update: (updatedView, prevState) => {
+                  if (updatedView.state.doc.eq(prevState.doc)) return;
+                  if (timer) clearTimeout(timer);
+                  timer = setTimeout(() => flush(updatedView), 250);
+                },
+                destroy: () => {
+                  if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                  }
+                },
+              }),
+            });
+          }),
+        );
       }
 
       // Register upload plugin for paste/drop image handling (only in edit mode with uploads enabled)
@@ -767,14 +883,50 @@ export function CrepeEditor({
       // Listen for markdown changes AFTER editor is fully created (only if not readonly)
       // This ensures editorViewCtx is available during serialization
       if (!readonly) {
+        const rt = realtimeRef.current;
         crepe.on((listener) => {
           listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
             // Guard against callbacks firing after editor is destroyed
             if (cancelled || !crepeRef.current) return;
             if (markdown !== prevMarkdown) {
               handleContentChange(markdown);
+              // Mirror into ``Y.Text("markdown")`` so the snapshot
+              // pipeline can render without running a JS parser.
+              if (rt) {
+                replaceMarkdownYText(rt.ydoc, markdown, rt.sessionId);
+              }
             }
           });
+        });
+      }
+
+      // First-attach cold-start: convert ``Y.Text("markdown")`` into
+      // ``Y.XmlFragment("prosemirror")`` for ySyncPlugin to mirror.
+      // Gated on ``whenSynced`` to avoid racing SyncStep2.
+      const rtBinding = realtimeRef.current;
+      if (rtBinding && !readonly) {
+        void rtBinding.whenSynced.then(() => {
+          if (cancelled || !crepeRef.current) return;
+          try {
+            crepeRef.current.editor.action((ctx) => {
+              const fragment = rtBinding.ydoc.get(
+                PROSEMIRROR_FRAGMENT_FIELD,
+                Y.XmlFragment,
+              );
+              if (fragment.length > 0) return;
+              const ytext = rtBinding.ydoc.get(MARKDOWN_TEXT_FIELD, Y.Text);
+              const md = ytext.toString();
+              if (!md) return;
+              const parser = ctx.get(parserCtx);
+              const node = parser(md);
+              if (!node) return;
+              rtBinding.ydoc.transact(() => {
+                prosemirrorToYXmlFragment(node, fragment);
+              }, 'hydration');
+            });
+          } catch (err) {
+            console.warn('[CrepeEditor] realtime cold-start seed failed', err);
+          }
         });
       }
 
@@ -810,10 +962,11 @@ export function CrepeEditor({
       clearContainer(container);
       initializedNoteIdRef.current = null;
     };
-    // Only recreate when content ID, readonly mode, or upload handlers change
-    // Content changes in edit mode are handled by editor's internal state
+    // Recreate on content ID / readonly / upload handler change, and
+    // on ydoc identity change so ySyncPlugin rebinds to the new shared
+    // types when the realtime session is replaced.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentId, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler]);
+  }, [contentId, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler, realtime?.ydoc]);
 
   // Separate effect to handle content updates in readonly mode only
   useEffect(() => {

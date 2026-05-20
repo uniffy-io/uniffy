@@ -75,12 +75,11 @@ export function useAutosave(noteId: string | undefined, orgId: string | null) {
 
   const mutation = useMutation({
     mutationFn: (args: { content: string; title?: string }) =>
-      notesApi.autosaveNote({
+      notesApi.updateNote({
         noteId: noteId!,
         organizationId: orgId!,
         content: args.content,
         title: args.title,
-        clientTimestamp: BigInt(Date.now()),
       }),
     onSuccess: () => {
       setLastSaved(Date.now());

@@ -1,17 +1,8 @@
-"""Handlers for ``permissions.v1.MembersService``.
-
-Thin RPC layer that delegates to the generic
-:class:`~uniffy.core.content.members.ContentMembersOperations`. Each
-handler:
-
-1. Extracts the user id from the JWT context.
-2. Parses the request fields into domain types.
-3. Opens an async session and calls the appropriate operations method.
-4. Maps the result back to the proto response.
-
-The generic operations class enforces all permission rules, writes audit
-log rows, syncs the search index, and emits notifications. The handlers
-do not duplicate any of that logic.
+"""Handlers for ``permissions.v1.MembersService``. Thin RPC layer
+that delegates to
+:class:`~uniffy.core.content.members.ContentMembersOperations`,
+which owns permission checks, audit logging, search-index sync, and
+notifications.
 """
 
 from math import ceil
@@ -142,8 +133,8 @@ class MembersHandlers:
                     content_id=content_id,
                 )
 
-                # Reload the content via the registered loader so we can
-                # return the access policy alongside the member list.
+                # Reload via the registered loader so the response
+                # carries the access policy alongside the members.
                 loader = get_content_loader(content_type)
                 content = await loader(session, organization_id, content_id)
                 if content is None:
@@ -269,12 +260,16 @@ class MembersHandlers:
         request: SetAccessModeRequest,
         ctx: RequestContext,
     ) -> SetAccessModeResponse:
-        """Change the access mode and/or baseline role of a content item."""
+        """Change the access mode and/or baseline role. Proto
+        ``ACCESS_MODE_UNSPECIFIED`` clears the per-item override and
+        the row inherits live from org defaults.
+        """
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         content_type = _resolve_content_type(request.content_type)
-        new_access_mode = _resolve_access_mode(request.access_mode)
+
+        new_access_mode: AccessMode | None = access_mode_from_proto(request.access_mode)
 
         baseline_role = None
         if request.baseline_role:
@@ -408,9 +403,8 @@ class MembersHandlers:
                 response = ListMemberEventsResponse()
                 response.events.extend(content_member_event_to_proto(event) for event in events)
 
-                # Pagination response: total_count is unknown without an
-                # extra count query, so we report the page contents and a
-                # best-effort total based on whether the page was full.
+                # total_count would need an extra count query;
+                # report a best-effort total derived from the page.
                 approx_total = offset + len(events)
                 total_pages = max(1, ceil(approx_total / page_size)) if page_size else 1
                 response.pagination.CopyFrom(

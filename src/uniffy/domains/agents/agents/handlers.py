@@ -28,11 +28,14 @@ from uniffy_proto.agents.v1.agents_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
@@ -45,6 +48,22 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
+
+
+async def _resolve_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    agent: Agent,
+    checker: PermissionChecker | None = None,
+):
+    """Return the agent's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.AGENT,
+    )
+    return resolve_effective_policy(
+        agent.access_mode, agent.baseline_role, default_mode, default_baseline,
+    )
 
 
 def _parse_tag_ids(raw_ids: list[str]) -> list[UUID]:
@@ -180,9 +199,16 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
                 return CreateAgentResponse(
                     agent=agent_to_proto(
-                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -206,9 +232,16 @@ class AgentsHandlers:
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
                 return GetAgentResponse(
                     agent=agent_to_proto(
-                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -257,11 +290,26 @@ class AgentsHandlers:
                 tags_by_id = await _hydrate_agent_tags(
                     session, org_id, [a.id for a in agents]
                 )
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    org_id, ContentType.AGENT,
+                )
+                proto_agents = []
+                for a, r in zip(agents, roles, strict=True):
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        a.access_mode, a.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_agents.append(
+                        agent_to_proto(
+                            a,
+                            user_role=r,
+                            tags=tags_by_id.get(a.id),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
                 return ListAgentsResponse(
-                    agents=[
-                        agent_to_proto(a, user_role=r, tags=tags_by_id.get(a.id))
-                        for a, r in zip(agents, roles, strict=True)
-                    ],
+                    agents=proto_agents,
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -357,9 +405,16 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
                 return UpdateAgentResponse(
                     agent=agent_to_proto(
-                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -419,9 +474,16 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
                 return UploadAgentAvatarResponse(
                     agent=agent_to_proto(
-                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ValueError as exc:
@@ -451,9 +513,16 @@ class AgentsHandlers:
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
                 return DeleteAgentAvatarResponse(
                     agent=agent_to_proto(
-                        agent, user_role=user_role, tags=tags_by_id.get(agent.id)
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:

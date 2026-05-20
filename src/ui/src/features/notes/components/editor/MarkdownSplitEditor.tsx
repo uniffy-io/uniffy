@@ -7,8 +7,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { defaultKeymap } from '@codemirror/commands';
 import { useAppSelector } from '@/app/hooks';
-import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
-import { CrepeEditor } from '@/components/editor/CrepeEditor';
+import { CrepeEditor, type CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -16,18 +15,25 @@ import { MarkdownMentionSearch } from '@/components/editor/plugins/mention/Markd
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { createMarkdownEditorTheme } from '@/features/notes/components/editor/markdownEditorTheme';
+import { useRealtimeMarkdownContent } from '@/features/notes/realtime/useMarkdownContent';
+import { replaceMarkdownYText } from '@/features/notes/realtime/markdown';
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
   /** Optional title/metadata block rendered above the editor surface in the preview pane. */
   titleSlot?: ReactNode;
+  /**
+   * Both panes read / write the shared ``Y.Text("markdown")`` so the
+   * editor and the preview cannot drift.
+   */
+  realtime?: CrepeRealtimeBinding;
 }
 
 const MIN_PANE_WIDTH = 200; // Minimum width in pixels
 
 const defaultSettings = { editorMode: 'markdown' as const, showMarkdownPreview: true, showMarkdownLineNumbers: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
-export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProps) {
+export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
   const settings = editorState?.settings ?? defaultSettings;
   const showMarkdownPreview = settings.showMarkdownPreview ?? true;
@@ -36,12 +42,18 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
   const { resolvedTheme } = useTheme();
   const stackVertically = isMobile && showMarkdownPreview;
 
-  // Autosave hook
-  const { scheduleAutosave, draftContent } = useAutosave(note.id);
-  
-  // Check for both null and undefined in draft content
-  const content = draftContent != null ? draftContent : note.content;
-  
+  // CodeMirror takes remote updates immediately. The preview pane
+  // rebuilds Milkdown per value change, so it gets a small debounce
+  // to avoid thrashing when a peer is typing.
+  const whenSynced = realtime?.whenSynced ?? null;
+  const content = useRealtimeMarkdownContent(realtime?.ydoc ?? null, note.content, {
+    whenSynced,
+  });
+  const previewContent = useRealtimeMarkdownContent(realtime?.ydoc ?? null, note.content, {
+    whenSynced,
+    debounceMs: 300,
+  });
+
   // CodeMirror refs
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const codemirrorViewRef = useRef<EditorView | null>(null);
@@ -52,15 +64,20 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
   const [splitRatio, setSplitRatio] = useState(0.5); // 50% by default
   const [isDragging, setIsDragging] = useState(false);
 
-  // Mention popup state - records the position of `@` so we know what range
-  // to overwrite with `[[[label|urn]]]` when the user selects a result.
+  // Records the position of `@` so we know what range to overwrite
+  // with `[[[label|urn]]]` when the user selects a result.
   const [mentionPopup, setMentionPopup] = useState<{ triggerFrom: number; triggerTo: number; query: string } | null>(null);
   const mentionPopupRef = useRef(mentionPopup);
   mentionPopupRef.current = mentionPopup;
 
+  const realtimeRef = useRef(realtime);
+  realtimeRef.current = realtime;
+
   const handleContentChange = useCallback((newContent: string) => {
-    scheduleAutosave(newContent);
-  }, [scheduleAutosave]);
+    const rt = realtimeRef.current;
+    if (!rt) return;
+    replaceMarkdownYText(rt.ydoc, newContent, rt.sessionId);
+  }, []);
 
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     const popup = mentionPopupRef.current;
@@ -69,8 +86,8 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
       setMentionPopup(null);
       return;
     }
-    // Extend the replace range to cover anything the user typed between `@`
-    // and the popup taking focus (e.g. partial query text like "@fo").
+    // Extend the replace range over partial query text typed between
+    // the `@` and the popup taking focus (e.g. "@fo").
     const doc = view.state.doc;
     let to = popup.triggerTo;
     while (to < doc.length) {
@@ -158,9 +175,8 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
             const newContent = update.state.doc.toString();
             handleContentChange(newContent);
           }
-          // Mention trigger: detect a single `@` char inserted at a word
-          // boundary. Runs after the change is committed so the doc state is
-          // authoritative - no microtask races with CodeMirror's beforeinput.
+          // Detect a single `@` inserted at a word boundary. Running
+          // after the change is committed avoids races with beforeinput.
           if (update.docChanged && !mentionPopupRef.current) {
             update.changes.iterChanges((_fromA, _toA, fromB, _toB, inserted) => {
               if (inserted.length !== 1 || inserted.sliceString(0) !== '@') return;
@@ -186,8 +202,8 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
         codemirrorViewRef.current = null;
       }
     };
-    // Only re-init when the note swaps. Theme + sizing live in a Compartment
-    // below so they reconfigure in place.
+    // Only re-init when the note swaps. Theme + sizing live in a
+    // Compartment so they reconfigure in place.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
 
@@ -281,7 +297,7 @@ export function MarkdownSplitEditor({ note, titleSlot }: MarkdownSplitEditorProp
             <CrepeEditor
               contentType={ContentType.NOTE}
               contentId={note.id}
-              value={content}
+              value={previewContent}
               readonly
               enableUpload={false}
               headerSlot={titleSlot}

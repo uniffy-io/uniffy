@@ -5,15 +5,18 @@ services:
   # Playwright MCP server. Drives a headless chromium inside the container,
   # reachable from Claude Code via SSE at http://localhost:8931/sse. The
   # container reaches host-side dev stack via host.docker.internal.
+  #
+  # Custom image (see .docker/dev/mcp-playwright.Dockerfile) bakes the MCP
+  # server + chrome-for-testing browser so the first request after a fresh
+  # ``docker compose up`` does not stall on a 100MB+ download.
   mcp-playwright:
-    image: mcr.microsoft.com/playwright:v1.59.0-jammy
+    build:
+      context: ../..
+      dockerfile: .docker/dev/mcp-playwright.Dockerfile
+    image: uniffy-mcp-playwright
     container_name: uniffy-mcp-playwright
     profiles: ["dev"]
     restart: unless-stopped
-    command: >-
-      npx -y @playwright/mcp@latest
-      --port 8931 --host 0.0.0.0
-      --browser chromium --headless --isolated
     ports:
       - "8931:8931"
     extra_hosts:

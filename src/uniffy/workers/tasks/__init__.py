@@ -31,6 +31,8 @@ from uniffy.workers.tasks.notifications import (
     process_notification_event,
     send_email_digest,
 )
+from uniffy.workers.tasks.permissions_reindex import reindex_org_content_for_defaults
+from uniffy.workers.tasks.realtime import save_realtime_snapshot
 from uniffy.workers.tasks.reminders import check_calendar_reminders
 from uniffy.workers.tasks.storage_recalculation import recalculate_all_storage_usage
 from uniffy.workers.tasks.tags_reindex import reindex_tag_doc, reindex_tag_urns
@@ -61,6 +63,8 @@ CORE_TASKS = (
     reindex_tag_urns,
     reindex_tag_doc,
     reap_expired_multipart_uploads,
+    reindex_org_content_for_defaults,
+    save_realtime_snapshot,
 )
 
 EGRESS_TASKS = (
@@ -100,10 +104,12 @@ __all__ = [
     "process_notification_event",
     "reap_expired_multipart_uploads",
     "recalculate_all_storage_usage",
+    "reindex_org_content_for_defaults",
     "reindex_tag_doc",
     "reindex_tag_urns",
     "respond_to_chat_message",
     "run_agent_session",
+    "save_realtime_snapshot",
     "send_email_digest",
     "transcode_video_to_mp4",
 ]

@@ -149,6 +149,7 @@ export function AccessPolicyPanel({
                     }}
                     onChange={(next) => setMode(next.accessMode, next.baselineRole)}
                     disabled={!canManage}
+                    showInheritOption
                 />
             </div>
 

@@ -180,7 +180,7 @@ async def _seed_initial_data_locked() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.FOLDER,
                 title="Uniffy",
                 slug="uniffy-folder",
@@ -197,7 +197,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.FOLDER,
                 title="Docs",
                 slug="docs-folder",
@@ -217,7 +217,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="About",
                 content="",  # Placeholder, will be updated
@@ -232,7 +232,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="Plans",
                 content="",
@@ -247,7 +247,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="Transparency",
                 content="",
@@ -262,7 +262,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="Licenses",
                 content="",
@@ -277,7 +277,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=docs_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="Searching",
                 content="",
@@ -292,7 +292,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 parent_id=docs_folder.id,
                 access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER,
+                baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="Sharing",
                 content="",
@@ -372,6 +372,34 @@ async def _seed_initial_data_locked() -> None:
                 sharing_note,
             ]
 
+            # 8b. Seed shared "documentation" + "uniffy" tags and assign to
+            # every seeded folder, note, and canvas so the org-tree content
+            # comes pre-organized under the same tags new orgs filter by.
+            from uniffy.domains.tags.operations import TagOperations
+
+            tag_ops = TagOperations(session)
+            doc_tag = await tag_ops.create(
+                actor_id=admin_user.id,
+                organization_id=default_org.id,
+                name="documentation",
+            )
+            uniffy_tag = await tag_ops.create(
+                actor_id=admin_user.id,
+                organization_id=default_org.id,
+                name="uniffy",
+            )
+            seed_tag_ids = [doc_tag.id, uniffy_tag.id]
+            seed_tag_slugs = [doc_tag.slug, uniffy_tag.slug]
+
+            for tagged in (uniffy_folder, docs_folder, *all_notes):
+                await tag_ops.assign(
+                    actor_id=admin_user.id,
+                    organization_id=default_org.id,
+                    content_urn=build_content_urn(ContentType.NOTE, tagged.id),
+                    tag_ids=seed_tag_ids,
+                )
+            logger.info("Tagged seed notes with documentation + uniffy")
+
             # 9. Index all notes for search
             search_indexer = SearchIndexer(session)
 
@@ -391,6 +419,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 keywords=uniffy_folder.title,
                 description=uniffy_folder.content[:200] if uniffy_folder.content else None,
+                tags=seed_tag_slugs,
             )
 
             # Index Docs folder
@@ -409,6 +438,7 @@ async def _seed_initial_data_locked() -> None:
                 owner_id=admin_user.id,
                 keywords=docs_folder.title,
                 description=docs_folder.content[:200] if docs_folder.content else None,
+                tags=seed_tag_slugs,
             )
 
             # Index all notes
@@ -426,6 +456,7 @@ async def _seed_initial_data_locked() -> None:
                     owner_id=admin_user.id,
                     keywords=" ".join([note.title, note.content[:1000]]),
                     description=note.content[:200] if note.content else None,
+                    tags=seed_tag_slugs,
                 )
 
             logger.info("Indexed seed notes for search")
@@ -443,6 +474,8 @@ async def _seed_initial_data_locked() -> None:
                     "sharing": sharing_note,
                 },
                 search_indexer=search_indexer,
+                tag_ids=seed_tag_ids,
+                tag_slugs=seed_tag_slugs,
             )
 
             # 10. Seed bundled agent skills
@@ -636,6 +669,8 @@ async def _seed_welcome_canvas(
     uniffy_folder: Note,
     seed_notes: dict[str, Note],
     search_indexer: SearchIndexer,
+    tag_ids: list[UUID],
+    tag_slugs: list[str],
 ) -> None:
     """Seed the organization logo file and a Welcome canvas note.
 
@@ -715,7 +750,7 @@ async def _seed_welcome_canvas(
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
-        baseline_role=ContentRole.VIEWER,
+        baseline_role=ContentRole.EDITOR,
         node_type=NodeType.CANVAS,
         title="Welcome to Uniffy",
         content="",
@@ -729,6 +764,16 @@ async def _seed_welcome_canvas(
     session.add(canvas_note)
     await session.flush()
     await session.refresh(canvas_note)
+
+    from uniffy.domains.tags.operations import TagOperations
+
+    tag_ops = TagOperations(session)
+    await tag_ops.assign(
+        actor_id=admin_user.id,
+        organization_id=org.id,
+        content_urn=build_content_urn(ContentType.NOTE, canvas_note.id),
+        tag_ids=tag_ids,
+    )
 
     await search_indexer.index(
         urn=build_content_urn(ContentType.NOTE, canvas_note.id),
@@ -746,6 +791,7 @@ async def _seed_welcome_canvas(
             "Visual tour of Uniffy - notes, files, chat, calendar, "
             "projects, and agents connected on one canvas."
         ),
+        tags=tag_slugs,
     )
     logger.info("Seeded Welcome canvas note with interlinked content")
 

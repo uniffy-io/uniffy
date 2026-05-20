@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum, text
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy import Column, DateTime, Enum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import AccessMode, ContentRole, NodeType, generate_id
@@ -48,8 +48,6 @@ class Note(SQLModel, table=True):
         Additional metadata (custom fields, AI-generated summaries, etc).
     outgoing_references : list[str] | None
         List of URNs referenced in this note (e.g. ["urn:uniffy:file:123", ...]).
-    content_search : Any
-        Full-text search vector (managed by database trigger).
     created_at : datetime
         Timestamp when the note was created.
     updated_at : datetime
@@ -66,8 +64,8 @@ class Note(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    access_mode: AccessMode = Field(
-        default=AccessMode.OWNER_ONLY,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             Enum(
                 AccessMode,
@@ -75,7 +73,7 @@ class Note(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )
@@ -108,14 +106,6 @@ class Note(SQLModel, table=True):
     parent_id: UUID | None = Field(default=None, foreign_key="notes_notes.id", index=True)
     note_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
-    content_search: Any = Field(
-        default=None,
-        sa_column=Column(
-            TSVECTOR,
-            nullable=True,
-            server_default=text("to_tsvector('english', '')"),
-        ),
-    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

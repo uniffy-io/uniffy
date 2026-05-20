@@ -50,8 +50,10 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import (
+    AccessMode,
     AttendeeRole,
     AttendeeStatus,
+    ContentRole,
     RecurrencePattern,
     ResourceType,
 )
@@ -174,6 +176,8 @@ def event_to_proto(
     room_location: str | None = None,
     room_capacity: int = 0,
     room_amenities: list[str] | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> ProtoCalendarEvent:
     """Convert a :class:`CalendarEvent` row to its proto representation.
 
@@ -195,6 +199,13 @@ def event_to_proto(
         ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
     )
 
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else event.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else event.baseline_role
+    )
+
     proto_event = ProtoCalendarEvent(
         id=str(event.id),
         organization_id=str(event.organization_id),
@@ -209,7 +220,7 @@ def event_to_proto(
         category_id=str(event.category_id) if event.category_id else "",
         organizer_id=str(event.organizer_id),
         is_focus_time=event.is_focus_time,
-        access_mode=access_mode_to_proto(event.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         is_deleted=event.is_deleted,
         tags=[tag_to_proto(t) for t in tags] if tags else [],
         outgoing_references=event.outgoing_references or [],
@@ -217,8 +228,8 @@ def event_to_proto(
         updated_at=datetime_to_timestamp(event.updated_at),
     )
 
-    if event.baseline_role is not None:
-        proto_event.baseline_role = content_role_to_proto(event.baseline_role)
+    if resolved_baseline is not None:
+        proto_event.baseline_role = content_role_to_proto(resolved_baseline)
 
     proto_event.is_recurring = event.recurrence_pattern != RecurrencePattern.NONE
 
@@ -355,8 +366,18 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
     return config
 
 
-def template_to_proto(template: EventTemplate) -> ProtoEventTemplate:
+def template_to_proto(
+    template: EventTemplate,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> ProtoEventTemplate:
     """Convert an :class:`EventTemplate` row to its proto representation."""
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else template.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else template.baseline_role
+    )
     proto = ProtoEventTemplate(
         id=str(template.id),
         organization_id=str(template.organization_id),
@@ -367,11 +388,11 @@ def template_to_proto(template: EventTemplate) -> ProtoEventTemplate:
         meeting_url=template.meeting_url,
         category_id=str(template.category_id) if template.category_id else None,
         tags=template.tags or [],
-        access_mode=access_mode_to_proto(template.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         created_by=str(template.created_by),
         created_at=datetime_to_timestamp(template.created_at),
         updated_at=datetime_to_timestamp(template.updated_at),
     )
-    if template.baseline_role is not None:
-        proto.baseline_role = content_role_to_proto(template.baseline_role)
+    if resolved_baseline is not None:
+        proto.baseline_role = content_role_to_proto(resolved_baseline)
     return proto

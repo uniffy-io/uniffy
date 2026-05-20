@@ -9,7 +9,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.types import ContentRole
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -18,6 +18,8 @@ def agent_to_proto(
     agent: Agent,
     user_role: ContentRole | None = None,
     tags: list[Tag] | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> AgentInfo:
     """Convert an :class:`Agent` row to its proto representation.
 
@@ -37,6 +39,15 @@ def agent_to_proto(
         url_prefix="/api/agents/avatars",
     )
 
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else agent.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role
+        if effective_baseline_role is not None
+        else agent.baseline_role
+    )
+
     proto = AgentInfo(
         id=str(agent.id),
         organization_id=str(agent.organization_id),
@@ -52,7 +63,7 @@ def agent_to_proto(
         created_at=datetime_to_timestamp(agent.created_at),
         updated_at=datetime_to_timestamp(agent.updated_at),
         enabled_skills=agent.enabled_skills or [],
-        access_mode=access_mode_to_proto(agent.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         avatar_key=avatar_url,
         image_model=agent.image_model or "",
         primary_provider_key_id=(
@@ -64,8 +75,8 @@ def agent_to_proto(
         prompt_id=str(agent.prompt_id) if agent.prompt_id else "",
     )
 
-    if agent.baseline_role is not None:
-        proto.baseline_role = content_role_to_proto(agent.baseline_role)
+    if resolved_baseline is not None:
+        proto.baseline_role = content_role_to_proto(resolved_baseline)
     if user_role is not None:
         proto.user_role = content_role_to_proto(user_role)
 

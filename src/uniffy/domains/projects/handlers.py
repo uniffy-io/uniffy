@@ -75,12 +75,15 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     UpdateViewResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
@@ -160,6 +163,22 @@ async def _hydrate_project_tags(
     return {pid: bulk.get(urn, []) for urn, pid in urn_to_id.items()}
 
 
+async def _resolve_project_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    project: Project,
+    checker: PermissionChecker | None = None,
+):
+    """Return the project's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.PROJECT,
+    )
+    return resolve_effective_policy(
+        project.access_mode, project.baseline_role, default_mode, default_baseline,
+    )
+
+
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
     """Translate a domain exception into the matching ``ConnectError``."""
     if isinstance(exc, NotFoundError):
@@ -211,9 +230,18 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
+                eff_mode, eff_baseline = await _resolve_project_effective_policy(
+                    session, organization_id, project,
+                )
                 return CreateProjectResponse(
                     project=project_to_proto(
-                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                        project,
+                        fields,
+                        views,
+                        user_role,
+                        tags=tags_by_id.get(project.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -240,10 +268,19 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
+                eff_mode, eff_baseline = await _resolve_project_effective_policy(
+                    session, organization_id, project,
+                )
 
                 return GetProjectResponse(
                     project=project_to_proto(
-                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                        project,
+                        fields,
+                        views,
+                        user_role,
+                        tags=tags_by_id.get(project.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -300,9 +337,18 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
+                eff_mode, eff_baseline = await _resolve_project_effective_policy(
+                    session, organization_id, project,
+                )
                 return UpdateProjectResponse(
                     project=project_to_proto(
-                        project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                        project,
+                        fields,
+                        views,
+                        user_role,
+                        tags=tags_by_id.get(project.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -369,14 +415,30 @@ class ProjectsHandlers:
                 views_map = await queries.get_views_for_projects(session, project_ids)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, project_ids)
 
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.PROJECT,
+                )
                 project_protos = []
                 for project in projects:
                     user_role = await ops._resolve_role(user_id, organization_id, project)
                     fields = fields_map.get(str(project.id), [])
                     views = views_map.get(str(project.id), [])
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        project.access_mode,
+                        project.baseline_role,
+                        default_mode,
+                        default_baseline,
+                    )
                     project_protos.append(
                         project_to_proto(
-                            project, fields, views, user_role, tags=tags_by_id.get(project.id)
+                            project,
+                            fields,
+                            views,
+                            user_role,
+                            tags=tags_by_id.get(project.id),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
                         )
                     )
 

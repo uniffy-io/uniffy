@@ -45,9 +45,6 @@ class NotesService(Protocol):
     async def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -164,16 +161,6 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.empty_trash,
-                ),
-                "/notes.v1.NotesService/AutosaveNote": Endpoint.unary(
-                    method=MethodInfo(
-                        name="AutosaveNote",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.autosave_note,
                 ),
                 "/notes.v1.NotesService/MoveNote": Endpoint.unary(
                     method=MethodInfo(
@@ -439,26 +426,6 @@ class NotesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def autosave_note(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AutosaveNote",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def move_note(
         self,
         request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest,
@@ -622,8 +589,6 @@ class NotesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
@@ -733,16 +698,6 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.empty_trash,
-                ),
-                "/notes.v1.NotesService/AutosaveNote": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="AutosaveNote",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-                        output=notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.autosave_note,
                 ),
                 "/notes.v1.NotesService/MoveNote": EndpointSync.unary(
                     method=MethodInfo(
@@ -1002,26 +957,6 @@ class NotesServiceClientSync(ConnectClientSync):
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
                 output=notes_dot_v1_dot_notes__pb2.EmptyTrashResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def autosave_note(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AutosaveNote",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
-                output=notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

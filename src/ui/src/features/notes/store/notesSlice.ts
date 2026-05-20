@@ -7,7 +7,6 @@ import {
     createNote,
     updateNote,
     updateNoteIcon,
-    autosaveNote,
     deleteNote,
     restoreNote,
     searchNotes,
@@ -341,24 +340,6 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to update note icon';
             });
 
-        // autosaveNote
-        builder
-            .addCase(autosaveNote.pending, (state) => {
-                state.savingNote = true;
-            })
-            .addCase(autosaveNote.fulfilled, (state, action) => {
-                state.savingNote = false;
-                // Update version in the note if it exists
-                const note = state.notes[action.payload.noteId];
-                if (note) {
-                    note.version = action.payload.version;
-                }
-            })
-            .addCase(autosaveNote.rejected, (state, action) => {
-                state.savingNote = false;
-                state.error = action.payload ?? 'Autosave failed';
-            });
-
         // deleteNote
         builder
             .addCase(deleteNote.fulfilled, (state, action) => {
@@ -410,9 +391,8 @@ export const notesSlice = createSlice({
                 state.notes[action.payload.id] = normalizeNote(action.payload);
             });
 
-        // setContentAccessMode (Share dialog): keep in-memory note row in
-        // sync with the new policy so accessMode-driven UI (e.g. sidebar
-        // section grouping) reflects the change without a refetch.
+        // Keep the in-memory note row in sync with the new policy so
+        // accessMode-driven UI updates without a refetch.
         builder
             .addCase(setContentAccessMode.fulfilled, (state, action) => {
                 if (action.meta.arg.contentType !== ContentType.NOTE) return;
@@ -504,7 +484,6 @@ export {
     fetchNote,
     createNote,
     updateNote,
-    autosaveNote,
     deleteNote,
     restoreNote,
     searchNotes,

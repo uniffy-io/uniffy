@@ -46,10 +46,21 @@ def _fake_content(
 class TestValidateAccessMode:
     """_validate_access_mode is synchronous and has no DB dependency."""
 
-    def test_open_to_org_requires_baseline_role(self) -> None:
+    def test_open_to_org_accepts_null_baseline_role(self) -> None:
+        """Null baseline on OPEN_TO_ORG inherits the org default at read time;
+        the validator must accept the storage shape."""
+        ops = _make_ops()
+        ops._validate_access_mode(AccessMode.OPEN_TO_ORG, None)
+
+    def test_baseline_without_access_mode_rejected(self) -> None:
         ops = _make_ops()
         with pytest.raises(ValidationError, match="baseline_role"):
-            ops._validate_access_mode(AccessMode.OPEN_TO_ORG, None)
+            ops._validate_access_mode(None, ContentRole.VIEWER)
+
+    def test_null_access_mode_and_null_baseline_valid(self) -> None:
+        """`(None, None)` is the inherit-from-org-defaults shape."""
+        ops = _make_ops()
+        ops._validate_access_mode(None, None)
 
     def test_open_to_org_rejects_owner_baseline(self) -> None:
         ops = _make_ops()
@@ -223,7 +234,9 @@ class TestSetAccessModeRejections:
             ),
         )
 
-    def test_rejects_open_to_org_without_baseline(self) -> None:
+    def test_rejects_baseline_without_access_mode(self) -> None:
+        """`(access_mode=None, baseline_role=X)` is an undefined storage shape
+        and must be rejected before any DB work."""
         ops = _make_ops()
         content = _fake_content()
         p1, p2 = self._patch_prereqs(ops, content)
@@ -234,8 +247,8 @@ class TestSetAccessModeRejections:
                     organization_id=uuid7(),
                     content_type=ContentType.NOTE,
                     content_id=content.id,
-                    new_access_mode=AccessMode.OPEN_TO_ORG,
-                    new_baseline_role=None,
+                    new_access_mode=None,
+                    new_baseline_role=ContentRole.VIEWER,
                 )
             )
 

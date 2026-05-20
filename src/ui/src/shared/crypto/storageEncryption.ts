@@ -7,28 +7,40 @@
  * See docs/specs/client-storage-encryption-spec.md for full design.
  */
 
-// --- Constants ---
-
 const HKDF_SALT = new TextEncoder().encode('uniffy-client-storage-kek');
 const WRAPPED_DEK_KEY = 'uniffy_wrapped_dek';
 const ENCRYPTION_CHANNEL_NAME = 'uniffy-storage-encryption';
 
-// --- Module state (never in Redux - see spec Section 7.4) ---
-
+// Module state lives outside Redux (see spec Section 7.4).
 let activeDEK: CryptoKey | null = null;
 let cachedKEK: CryptoKey | null = null;
 let cachedSeed: Uint8Array | null = null;
 let cachedUserId: string | null = null;
 let encryptionChannel: BroadcastChannel | null = null;
 
-// --- Types ---
+// DOM events consumers (e.g. the realtime Yjs IDB adapter) listen
+// to so they can re-seed or stop writing without reaching into
+// module state. Fired alongside the BroadcastChannel.
+
+export const ENCRYPTION_REKEY_EVENT = 'uniffy:encryption:rekey';
+export const ENCRYPTION_TEARDOWN_EVENT = 'uniffy:encryption:teardown';
+
+function dispatchRekey(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(ENCRYPTION_REKEY_EVENT));
+  }
+}
+
+function dispatchTeardown(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(ENCRYPTION_TEARDOWN_EVENT));
+  }
+}
 
 type EncryptionMessage =
   | { type: 'ENCRYPTION_REKEY'; seed: string; userId: string }
   | { type: 'ENCRYPTION_DEK_CHANGED' }
   | { type: 'ENCRYPTION_TEARDOWN' };
-
-// --- Key derivation ---
 
 async function deriveKEK(cacheKeySeed: Uint8Array, userId: string): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey('raw', cacheKeySeed as BufferSource, 'HKDF', false, [
@@ -71,8 +83,6 @@ async function unwrapDEK(wrappedDek: ArrayBuffer, kek: CryptoKey): Promise<Crypt
   );
 }
 
-// --- Base64 helpers ---
-
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -99,8 +109,6 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return new Uint8Array(base64ToArrayBuffer(base64));
 }
 
-// --- Multi-tab coordination ---
-
 function initEncryptionChannel(): void {
   if (encryptionChannel) return;
 
@@ -119,6 +127,7 @@ function initEncryptionChannel(): void {
         await clearAllEncryptedStorage();
         localStorage.removeItem(WRAPPED_DEK_KEY);
         await initStorageEncryption(newSeed, msg.userId);
+        dispatchRekey();
         break;
       }
       case 'ENCRYPTION_DEK_CHANGED': {
@@ -133,6 +142,7 @@ function initEncryptionChannel(): void {
         } else {
           activeDEK = null;
         }
+        dispatchRekey();
         break;
       }
       case 'ENCRYPTION_TEARDOWN': {
@@ -141,6 +151,7 @@ function initEncryptionChannel(): void {
         cachedSeed = null;
         cachedUserId = null;
         localStorage.removeItem(WRAPPED_DEK_KEY);
+        dispatchTeardown();
         break;
       }
     }
@@ -165,11 +176,9 @@ function initStorageFallback(): void {
   });
 }
 
-// --- Initialization and teardown ---
-
 /**
- * Initialize client-side storage encryption.
- * Called once per session after GetCacheKeySeed returns.
+ * Initialize client-side storage encryption. Called once per
+ * session after GetCacheKeySeed returns.
  */
 export async function initStorageEncryption(
   cacheKeySeed: Uint8Array,
@@ -219,6 +228,7 @@ export function teardownStorageEncryption(): void {
   cachedSeed = null;
   cachedUserId = null;
   localStorage.removeItem(WRAPPED_DEK_KEY);
+  dispatchTeardown();
 }
 
 /**
@@ -228,11 +238,9 @@ export function isStorageEncryptionReady(): boolean {
   return activeDEK !== null;
 }
 
-// --- Encrypt and decrypt ---
-
 /**
- * Encrypt an object for IndexedDB storage.
- * Returns an ArrayBuffer containing [12-byte IV | ciphertext].
+ * Encrypt an object for IndexedDB storage. Returns an ArrayBuffer
+ * containing [12-byte IV | ciphertext].
  */
 export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
   if (!activeDEK) {
@@ -263,11 +271,9 @@ export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Prom
   return JSON.parse(new TextDecoder().decode(plaintext)) as T;
 }
 
-// --- Kill switch functions ---
-
 /**
- * Clear this device only (no backend call).
- * Deletes all encrypted IndexedDB stores, generates a new DEK.
+ * Clear this device only (no backend call). Deletes all encrypted
+ * IndexedDB stores and generates a new DEK.
  */
 export async function clearLocalEncryptedStorage(): Promise<void> {
   await clearAllEncryptedStorage();
@@ -278,6 +284,7 @@ export async function clearLocalEncryptedStorage(): Promise<void> {
   }
 
   encryptionChannel?.postMessage({ type: 'ENCRYPTION_DEK_CHANGED' } as EncryptionMessage);
+  dispatchRekey();
 }
 
 /**
@@ -297,17 +304,15 @@ export async function rotateAndClearAll(
     seed: uint8ArrayToBase64(newCacheKeySeed),
     userId,
   } as EncryptionMessage);
+  dispatchRekey();
 }
 
-// --- IndexedDB cleanup ---
-
 /**
- * Delete all IndexedDB databases that contain encrypted content.
- * Encrypted store names are registered here as they are added.
+ * IndexedDB databases that hold encrypted content. New encrypted
+ * stores must be registered here.
  */
 const ENCRYPTED_DB_NAMES: string[] = [
-  // Chat message content will be added here when chat is implemented
-  // 'uniffy-messages',
+  'uniffy-realtime-yjs',
 ];
 
 async function clearAllEncryptedStorage(): Promise<void> {

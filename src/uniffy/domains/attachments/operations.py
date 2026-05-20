@@ -27,6 +27,7 @@ from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
 # Name of the system Attachments folder
 ATTACHMENTS_FOLDER_NAME = "Attachments"
+ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
 
 
 class AttachmentOperations:
@@ -109,6 +110,94 @@ class AttachmentOperations:
         await self._session.refresh(folder)
 
         return folder
+
+    async def get_or_create_org_attachments_folder(
+        self,
+        organization_id: UUID,
+    ) -> Folder:
+        """Return the per-org system Attachments folder.
+
+        Created on demand if missing (defensive - migration ``031`` seeds
+        one per org). The folder carries an explicit
+        ``OPEN_TO_ORG/EDITOR`` policy so it serves every active member
+        of the org and is immune to org Files-default flips.
+        """
+        result = await self._session.execute(
+            select(Folder).where(
+                Folder.organization_id == organization_id,
+                Folder.is_org_attachments == True,  # noqa: E712
+                Folder.is_deleted == False,  # noqa: E712
+            )
+        )
+        folder = result.scalar_one_or_none()
+        if folder:
+            return folder
+
+        from uniffy.core.models.login.organization_member import (
+            OrganizationMember,
+            OrganizationRole,
+        )
+
+        # The folder's FK owner is nominal - access comes from the
+        # explicit OPEN_TO_ORG/EDITOR policy. Pick the highest-ranking
+        # active member so the FK survives even if the original creator
+        # is later deactivated.
+        members = (
+            await self._session.execute(
+                select(OrganizationMember.user_id, OrganizationMember.role)
+                .where(
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active == True,  # noqa: E712
+                )
+                .order_by(OrganizationMember.joined_at)
+            )
+        ).all()
+        if not members:
+            raise NotFoundError("Organization", str(organization_id))
+
+        role_rank = {OrganizationRole.OWNER: 0, OrganizationRole.ADMIN: 1}
+        owner_member = min(
+            members,
+            key=lambda row: role_rank.get(row[1], 2),
+        )
+        owner_user_id = owner_member[0]
+
+        folder = Folder(
+            organization_id=organization_id,
+            owner_id=owner_user_id,
+            name=ORG_ATTACHMENTS_FOLDER_NAME,
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.EDITOR,
+            is_system=True,
+            is_org_attachments=True,
+            parent_id=None,
+        )
+        self._session.add(folder)
+        await self._session.flush()
+        await self._session.refresh(folder)
+        return folder
+
+    async def _resolve_parent_effective(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        raw_access_mode: AccessMode | None,
+        raw_baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Resolve a parent row's effective ``(mode, baseline)`` for routing.
+
+        Consults the org defaults when the parent's columns are NULL.
+        """
+        from uniffy.core.auth.permissions import resolve_effective_policy
+        from uniffy.core.auth.permissions.checker import PermissionChecker
+
+        checker = PermissionChecker(self._session)
+        default_mode, default_baseline = await checker.get_org_defaults(
+            organization_id, content_type,
+        )
+        return resolve_effective_policy(
+            raw_access_mode, raw_baseline_role, default_mode, default_baseline,
+        )
 
     async def get_attachments_folder_id(
         self,
@@ -196,23 +285,29 @@ class AttachmentOperations:
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
         # Load parent content policy so the attachment file can inherit it.
-        _, parent_mode, parent_baseline, _, _ = await self._load_parent_policy(
-            organization_id, content_type, content_id
+        _, parent_mode_raw, parent_baseline_raw, parent_type, _ = (
+            await self._load_parent_policy(organization_id, content_type, content_id)
+        )
+        parent_mode, parent_baseline = await self._resolve_parent_effective(
+            organization_id, parent_type, parent_mode_raw, parent_baseline_raw,
         )
 
-        # Only inherit OPEN_TO_ORG; otherwise keep the attachment private.
+        # Org-wide content → org Attachments folder + OPEN_TO_ORG/EDITOR
+        # policy on the file. Otherwise the file goes to the attacher's
+        # personal Attachments folder and stays OWNER_ONLY.
         if parent_mode == AccessMode.OPEN_TO_ORG:
+            folder = await self.get_or_create_org_attachments_folder(organization_id)
             file_access_mode = AccessMode.OPEN_TO_ORG
-            file_baseline_role = parent_baseline
+            file_baseline_role = parent_baseline or ContentRole.EDITOR
         else:
+            folder = await self.get_or_create_attachments_folder(user_id, organization_id)
             file_access_mode = AccessMode.OWNER_ONLY
             file_baseline_role = None
 
-        # Get or create Attachments folder
-        folder = await self.get_or_create_attachments_folder(user_id, organization_id)
-
-        # Check if file is already in user's Attachments folder
-        if source_file.folder_id == folder.id and source_file.owner_id == user_id:
+        # Check if file is already in the target folder
+        if source_file.folder_id == folder.id and (
+            parent_mode == AccessMode.OPEN_TO_ORG or source_file.owner_id == user_id
+        ):
             if (
                 source_file.access_mode != file_access_mode
                 or source_file.baseline_role != file_baseline_role

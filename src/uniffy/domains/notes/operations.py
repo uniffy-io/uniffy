@@ -9,19 +9,21 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
     ContentMembersOperations,
+    register_attachment_cascade_loader,
     register_content_loader,
 )
 from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.errors import ConflictError, NotFoundError
+from uniffy.core.errors import NotFoundError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
@@ -70,10 +72,9 @@ _WS_RE = re.compile(r"\s+")
 
 
 def _strip_markdown(text: str) -> str:
-    """Strip markdown formatting and URN mention syntax to plain text.
-
-    Mirrors the frontend ``stripMarkdown`` helper so the snippet that
-    feeds the search index matches what the chip would render.
+    """Strip markdown + URN mention syntax to plain text. Mirrors
+    the frontend ``stripMarkdown`` so search snippets match what
+    a mention chip would render.
     """
     if not text:
         return ""
@@ -102,11 +103,9 @@ def _strip_markdown(text: str) -> str:
 
 @dataclass
 class NoteSharingInfo:
-    """Sharing info attached to a note for UI rendering.
-
-    For notes the requesting user owns: ``shared_with`` lists the
-    explicit ``ContentMember`` rows. For notes shared with the user:
-    ``owner_info`` carries the owner's display details.
+    """Sharing info attached to a note for UI rendering. Owned notes
+    populate ``shared_with``; notes shared with the user populate
+    ``owner_info``.
     """
 
     owner_info: dict | None = None
@@ -135,12 +134,10 @@ class NoteOperations(BaseContentOperations[Note]):
         super().__init__(session)
 
     def _build_search_keywords(self, model: Note) -> str:
-        """Aggregate searchable text from a note.
-
-        Tag slugs are written into the dedicated ``tags`` array on the
-        search document via :meth:`_get_search_tags_async`, so they are
-        not duplicated into the keyword stream. For canvas notes,
-        text-node content and shape labels are concatenated.
+        """Aggregate searchable text from a note. Tag slugs land in
+        the dedicated ``tags`` array (see ``_get_search_tags_async``)
+        and are not duplicated here. Canvas notes concatenate text-node
+        content and shape labels.
         """
         parts = [model.title]
         if model.node_type == NodeType.CANVAS and model.canvas_content:
@@ -158,12 +155,9 @@ class NoteOperations(BaseContentOperations[Note]):
         return f"/notes/{model.id}"
 
     def _get_search_description(self, model: Note) -> str | None:
-        """Return a snippet for search result previews.
-
-        Markdown is stripped before slicing so the preview text reads
-        cleanly in mention chips and search results -- otherwise the
-        first 200 bytes of a note would render as raw ``[[[label|urn]]]``
-        / ``# heading`` / ``**bold**`` syntax.
+        """Return a snippet for search previews. Markdown is stripped
+        before slicing so chips render plain text instead of raw
+        ``[[[label|urn]]]`` / ``# heading`` / ``**bold**`` syntax.
         """
         if model.node_type == NodeType.CANVAS:
             texts = self._extract_canvas_text(model.canvas_content or {})
@@ -234,11 +228,10 @@ class NoteOperations(BaseContentOperations[Note]):
     ) -> Note:
         """Create a new note.
 
-        ``access_mode`` and ``baseline_role`` default to the org's
-        configured defaults for ``ContentType.NOTE``. ``group_ids`` is a
-        convenience for adding initial VIEWER group members atomically;
-        each entry is added through :class:`ContentMembersOperations` so
-        the audit log captures the additions.
+        ``access_mode``/``baseline_role`` default to ``None`` so the
+        row inherits live from the org defaults. ``group_ids`` adds
+        initial VIEWER group members via ContentMembersOperations so
+        the audit log captures them.
         """
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
@@ -265,8 +258,8 @@ class NoteOperations(BaseContentOperations[Note]):
         await self.session.commit()
         await self.session.refresh(note)
 
-        # Add initial group members through the canonical members API so
-        # the audit log records the additions.
+        # Initial group members go through the canonical members API
+        # so the audit log records each addition.
         if group_ids:
             members_ops = ContentMembersOperations(self.session)
             for gid in group_ids:
@@ -291,7 +284,8 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(note, skip_member_lookup=not group_ids)
         await self.session.commit()
 
-        if access_mode != AccessMode.OWNER_ONLY or group_ids:
+        effective_mode, _ = await self._effective_policy(organization_id, note)
+        if effective_mode != AccessMode.OWNER_ONLY or group_ids:
             await self._emit_shared_notification(user_id, organization_id, note)
         await self._notify_new_mentions(user_id, organization_id, note, old_refs=None)
 
@@ -372,7 +366,8 @@ class NoteOperations(BaseContentOperations[Note]):
             if note.node_type == NodeType.FOLDER:
                 await self._refresh_children_parent_label(note)
 
-        if note.access_mode != AccessMode.OWNER_ONLY:
+        effective_mode, _ = await self._effective_policy(organization_id, note)
+        if effective_mode != AccessMode.OWNER_ONLY:
             await emit_notification(
                 NotificationEvent(
                     notification_type=NotificationType.CONTENT_EDITED,
@@ -452,58 +447,73 @@ class NoteOperations(BaseContentOperations[Note]):
 
         return note
 
-    async def autosave(
+    async def realtime_save(
         self,
-        user_id: UUID,
         organization_id: UUID,
         note_id: UUID,
-        content: str = "",
-        canvas_content: dict[str, Any] | None = None,
-        title: str | None = None,
-        expected_version: int | None = None,
-    ) -> Note:
-        """Fast-path content save used by the editor.
+        content: str,
+        canvas_content: dict[str, Any] | None,
+    ) -> Note | None:
+        """Persist a debounced Yjs snapshot back into ``notes_notes``.
 
-        Skips the heavier ``update()`` machinery (no rename propagation,
-        no shared-note edit notifications); only the new mentions are
-        diffed and notified.
-
-        When ``expected_version`` is provided, the save is rejected with
-        :class:`ConflictError` if the stored note has advanced past it.
-        This is the optimistic-concurrency check that prevents a stale
-        client draft from clobbering edits made by another user while
-        the editor was in the background.
+        Called from the snapshot ARQ task. Skips the permission gate
+        (system actor) but enforces a CAS on ``version`` so racing
+        workers cannot both succeed - the loser returns ``None`` and
+        the winner drives the side effects. Soft-deleted notes return
+        ``None`` so the task stays idempotent. ``owner_id`` is the
+        actor for tag assignments + mention notifications because a
+        snapshot accumulates writes from N concurrent editors with no
+        per-edit attribution.
         """
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
-
-        await self._require_edit(user_id, organization_id, note)
-
-        if expected_version is not None and note.version != expected_version:
-            raise ConflictError(
-                "Note",
-                f"version mismatch (client={expected_version}, server={note.version})",
+        note = (
+            await self.session.execute(
+                select(Note).where(
+                    Note.id == note_id,
+                    Note.organization_id == organization_id,
+                    Note.is_deleted == False,  # noqa: E712
+                )
             )
+        ).scalar_one_or_none()
+        if not note:
+            return None
 
         old_refs = note.outgoing_references
-
         fields = self._extract_content_fields(
             note.node_type, content, canvas_content, organization_id
         )
-        note.content = fields.content
-        note.canvas_content = fields.canvas_content
-        note.outgoing_references = fields.outgoing_references
-        if title is not None:
-            note.title = title
-        note.version += 1
-        note.updated_at = datetime.now(UTC)
+        existing_version = note.version
+        new_version = existing_version + 1
+        now = datetime.now(UTC)
 
+        result = await self.session.execute(
+            sql_update(Note)
+            .where(
+                Note.id == note_id,
+                Note.organization_id == organization_id,
+                Note.is_deleted == False,  # noqa: E712
+                Note.version == existing_version,
+            )
+            .values(
+                content=fields.content,
+                canvas_content=fields.canvas_content,
+                outgoing_references=fields.outgoing_references,
+                version=new_version,
+                updated_at=now,
+            )
+            .execution_options(synchronize_session=False)
+        )
         await self.session.commit()
+
+        if result.rowcount == 0:
+            # Lost the CAS race or the note was soft-deleted between
+            # the read and the UPDATE.
+            return None
+
         await self.session.refresh(note)
+        actor_id = note.owner_id
 
         await self._sync_tags_after_save(
-            user_id=user_id,
+            user_id=actor_id,
             organization_id=organization_id,
             note=note,
             tag_ids=None,
@@ -513,7 +523,7 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(note)
         await self.session.commit()
 
-        await self._notify_new_mentions(user_id, organization_id, note, old_refs=old_refs)
+        await self._notify_new_mentions(actor_id, organization_id, note, old_refs=old_refs)
 
         return note
 
@@ -522,17 +532,13 @@ class NoteOperations(BaseContentOperations[Note]):
         user_id: UUID,
         organization_id: UUID,
         note_id: UUID,
-        target_access_mode: AccessMode,
+        target_access_mode: AccessMode | None,
         target_baseline_role: ContentRole | None = None,
         target_group_ids: list[UUID] | None = None,
     ) -> Note:
-        """Change a note's access mode (formerly the visibility scope).
-
-        Thin wrapper that delegates to
-        :class:`ContentMembersOperations.set_access_mode` for the policy
-        change, then optionally adds group VIEWER members. The members
-        operation handles permission checks, validation, audit logging,
-        and search-index sync.
+        """Change a note's access mode. Thin wrapper around
+        :meth:`ContentMembersOperations.set_access_mode` plus optional
+        group VIEWER additions.
         """
         members_ops = ContentMembersOperations(self.session)
         await members_ops.set_access_mode(
@@ -561,7 +567,8 @@ class NoteOperations(BaseContentOperations[Note]):
         if note is None:
             raise NotFoundError("Note", note_id)
 
-        if target_access_mode != AccessMode.OWNER_ONLY:
+        effective_mode, _ = await self._effective_policy(organization_id, note)
+        if effective_mode != AccessMode.OWNER_ONLY:
             await self._emit_shared_notification(user_id, organization_id, note)
 
         return note
@@ -594,8 +601,8 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
     ) -> int:
         """Permanently delete every soft-deleted note in the org."""
-        # Snapshot trash ids before deletion so we can update the search
-        # index after the rows are gone.
+        # Snapshot ids before deletion to drive search-index cleanup
+        # after the rows are gone.
         trash_ids_result = await self.session.execute(
             select(Note.id).where(
                 Note.organization_id == organization_id,
@@ -633,10 +640,8 @@ class NoteOperations(BaseContentOperations[Note]):
         sort_by: str = "updated_at",
         sort_order: str = "desc",
     ) -> tuple[list[Note], int]:
-        """List notes the user can access, with the usual filters.
-
-        Bookmark filtering is intentionally not supported here; the
-        BookmarksService is the canonical surface for that.
+        """List notes the user can access. Bookmark filtering belongs
+        to BookmarksService and is not supported here.
         """
         query = select(Note).where(Note.organization_id == organization_id)
         query = await self._apply_access_filter(
@@ -672,11 +677,8 @@ class NoteOperations(BaseContentOperations[Note]):
         notes: list[Note],
         current_user_id: UUID,
     ) -> dict[UUID, NoteSharingInfo]:
-        """Batch-fetch the per-note sharing info for the UI.
-
-        Owned notes get a ``shared_with`` list (one entry per explicit
-        non-blocked ContentMember). Notes the user does not own get an
-        ``owner_info`` dict instead.
+        """Batch-fetch the per-note sharing info for the UI. Owned
+        notes get ``shared_with``; non-owned notes get ``owner_info``.
         """
         result: dict[UUID, NoteSharingInfo] = {}
 
@@ -721,13 +723,10 @@ class NoteOperations(BaseContentOperations[Note]):
         canvas_content: dict[str, Any] | None,
         organization_id: UUID,
     ) -> _NoteContentFields:
-        """Compute the body-derived fields of a note from raw inputs.
-
-        For canvas notes the JSONB ``canvas_content`` is the source of
-        truth and ``content`` is forced empty. For markdown notes the
-        opposite holds. Both paths derive ``outgoing_references`` and
-        the parsed inline-tag names; the names are reconciled into
-        unified-tag assignments by ``_sync_tags_after_save``.
+        """Compute body-derived fields from raw inputs. Canvas notes
+        use JSONB ``canvas_content`` (markdown forced empty); markdown
+        notes use ``content`` (canvas forced None). Both derive
+        ``outgoing_references`` and inline tag names.
         """
         if node_type == NodeType.CANVAS:
             outgoing = (
@@ -765,12 +764,8 @@ class NoteOperations(BaseContentOperations[Note]):
         tag_ids: list[UUID] | None,
         parsed_inline_names: list[str] | None,
     ) -> None:
-        """Reconcile manual + inline tag assignments after a note write.
-
-        ``tag_ids=None`` leaves manual assignments untouched (used by
-        autosave and partial updates that did not ship tags).
-        ``parsed_inline_names=None`` leaves inline assignments untouched
-        (used by metadata-only updates that did not modify content).
+        """Reconcile manual + inline tag assignments after a write.
+        ``None`` for either argument leaves that side untouched.
         """
         urn = build_content_urn(self.content_type, note.id)
         tag_ops = TagOperations(self.session)
@@ -793,12 +788,8 @@ class NoteOperations(BaseContentOperations[Note]):
             )
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        """Subquery: note ids that carry every tag id in ``tag_ids``.
-
-        Implements logical AND across the tag set via a GROUP BY +
-        HAVING COUNT(DISTINCT) check so the request shape mirrors the
-        explorer's filter rail. Empty input is filtered out by the
-        caller.
+        """Subquery: note ids that carry every tag in ``tag_ids``.
+        Logical AND via GROUP BY + HAVING COUNT(DISTINCT).
         """
         urn_prefix = "urn:uniffy:content:NOTE:"
         urn_expr = func.concat(urn_prefix, cast(Note.id, String))
@@ -817,11 +808,9 @@ class NoteOperations(BaseContentOperations[Note]):
         note: Note,
         old_refs: list[str] | None,
     ) -> None:
-        """Emit ``CONTENT_MENTIONED`` to users newly mentioned in the note.
-
-        ``old_refs`` is the previous outgoing-references list. Pass
-        ``None`` on initial create (so every mention is "new"). Self-
-        mentions are filtered out.
+        """Emit ``CONTENT_MENTIONED`` to newly mentioned users.
+        Pass ``None`` for ``old_refs`` on initial create so every
+        mention counts as new. Self-mentions are skipped.
         """
         new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
         new_mentioned.discard(user_id)
@@ -862,11 +851,8 @@ class NoteOperations(BaseContentOperations[Note]):
         )
 
     async def _refresh_children_parent_label(self, parent: Note) -> None:
-        """Re-index every direct child note under a renamed folder.
-
-        Children carry the folder's title as ``parent_label`` in their
-        search metadata, so a rename forces a per-child re-index plus a
-        mention-state broadcast for visible chips.
+        """Re-index direct child notes after a folder rename and
+        broadcast the new ``parent_label`` to visible chips.
         """
         from uniffy.core.valkey.mentions import publish_mention_state
 
@@ -936,12 +922,9 @@ class NoteOperations(BaseContentOperations[Note]):
         *,
         personal_only: bool,
     ) -> Any:
-        """Apply the right ``WHERE`` clause to a list query.
-
-        - ``personal_only`` short-circuits to ``owner_id == user``.
-        - Org admins and domain admins bypass the access filter entirely.
-        - Everyone else gets the canonical
-          ``ContentAccessQuery.build_accessible_filter`` clause.
+        """Apply the access ``WHERE`` clause: ``personal_only``
+        short-circuits to owner; org / domain admins bypass; everyone
+        else gets the canonical accessible-filter.
         """
         if personal_only:
             return query.where(Note.owner_id == user_id)
@@ -1114,3 +1097,35 @@ async def _load_note(
 
 
 register_content_loader(ContentType.NOTE, _load_note)
+
+
+async def _note_attachment_cascade(
+    session: AsyncSession,
+    organization_id: UUID,
+    parent_id: UUID,
+) -> list[tuple[ContentType, UUID]]:
+    """Walk every descendant note (folder children + grandchildren) of a parent."""
+    affected: list[tuple[ContentType, UUID]] = []
+    stack: list[UUID] = [parent_id]
+    seen: set[UUID] = set()
+    while stack:
+        current = stack.pop()
+        rows = (
+            await session.execute(
+                select(Note.id).where(
+                    Note.parent_id == current,
+                    Note.organization_id == organization_id,
+                    Note.is_deleted == False,  # noqa: E712
+                )
+            )
+        ).scalars().all()
+        for child_id in rows:
+            if child_id in seen:
+                continue
+            seen.add(child_id)
+            affected.append((ContentType.NOTE, child_id))
+            stack.append(child_id)
+    return affected
+
+
+register_attachment_cascade_loader(ContentType.NOTE, _note_attachment_cascade)

@@ -7,7 +7,6 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
-import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { notesApi } from '@/features/notes/api/notesApi';
 import type { RootState, AppDispatch } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
@@ -37,11 +36,9 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-// Helper to convert proto Note to serializable plain object
-// Note: bigint values are converted to number for Redux serialization
-// Note: Bookmark status is managed separately in the bookmarks store
-// Note: hydrated unified tags travel as ids on the note row; the rich
-// Tag objects live in the tags slice (hydrated once via dispatch).
+// Convert a proto Note to a Redux-serializable plain object.
+// Bigints become numbers; tags travel as ids on the note row while
+// the rich Tag objects are hydrated into the tags slice.
 const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
@@ -78,9 +75,8 @@ const noteToPlain = (note: Note) => ({
 });
 
 /**
- * Push hydrated unified Tag rows from a note proto into the tags slice
- * cache. Domain thunks call this after every API call that returns a
- * note so chips can render without a follow-up fetch.
+ * Push hydrated Tag rows from note protos into the tags slice cache
+ * so chips can render without a follow-up fetch.
  */
 function hydrateNoteTags(dispatch: Dispatch<UnknownAction>, notes: ReadonlyArray<Note>): void {
     const seen = new Map<string, ReturnType<typeof tagToPlain>>();
@@ -352,56 +348,6 @@ export const updateNoteIcon = createAsyncThunk<
 });
 
 /**
- * Autosave note content (debounced calls should happen at component level).
- *
- * Sends the version the client based the draft on. If another user has
- * advanced the note past that version, the server replies with
- * `[aborted]` and we surface a `versionConflict` rejection so callers
- * can refresh and preserve the user's draft.
- */
-export const VERSION_CONFLICT_REJECTION = 'versionConflict';
-
-export const autosaveNote = createAsyncThunk<
-    { noteId: string; version: number; savedAt: string },
-    {
-        noteId: string;
-        content: string;
-        title?: string;
-    },
-    { state: RootState; rejectValue: string }
->('notes/autosaveNote', async (params, { getState, rejectWithValue }) => {
-    try {
-        const state = getState();
-        const organizationId = getOrganizationId(state);
-        const baseVersion = state.notes.notes[params.noteId]?.version;
-        const response = await notesApi.autosaveNote({
-            noteId: params.noteId,
-            organizationId,
-            content: params.content,
-            title: params.title,
-            clientTimestamp: BigInt(Date.now()),
-            expectedVersion: baseVersion != null ? BigInt(baseVersion) : undefined,
-        });
-        if (!response.success) {
-            return rejectWithValue('Autosave failed');
-        }
-        return {
-            noteId: params.noteId,
-            // Convert BigInt to Number for Redux serialization
-            version: typeof response.version === 'bigint' ? Number(response.version) : response.version,
-            // Convert Date to ISO string for Redux serialization
-            savedAt: (response.savedAt ? timestampDate(response.savedAt) : new Date()).toISOString(),
-        };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Autosave failed';
-        if (/\[aborted\]/i.test(message)) {
-            return rejectWithValue(VERSION_CONFLICT_REJECTION);
-        }
-        return rejectWithValue(message);
-    }
-});
-
-/**
  * Delete a note (soft delete by default).
  */
 export const deleteNote = createAsyncThunk<
@@ -655,10 +601,9 @@ export const initializeNotesData = createAsyncThunk<
 
         const forceRefresh = params?.forceRefresh ?? false;
 
-        // Skip the fetch only if the tree itself has been hydrated.
-        // notesCount > 0 is unreliable here: fetchNote / searchNotes can populate
-        // state.notes.notes without ever loading the tree, which would otherwise
-        // cause this thunk to short-circuit with a partial tree.
+        // Skip only if the tree itself is hydrated; notesCount > 0
+        // is unreliable because fetchNote / searchNotes can populate
+        // state.notes.notes without ever loading the tree.
         if (state.notesTree.treeLoaded && !forceRefresh) {
             const existingNotes = Object.values(state.notes.notes);
             return {

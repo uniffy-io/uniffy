@@ -1,17 +1,6 @@
 /**
- * useMentionState Hook
- *
- * Registers a URN with the MentionStateProvider and returns its live state.
- * Used by MentionChip components to automatically get real-time updates.
- *
- * When used inside MentionStateProvider context:
- *   - Registers URN on mount, unregisters on unmount
- *   - Returns live state from the provider's batch-resolved cache
- *   - Updates automatically when streaming events arrive
- *
- * When used outside context (e.g., ProseMirror NodeView):
- *   - Falls back to the module-level state store
- *   - Still gets updates when state changes are emitted
+ * Subscribe a URN to the MentionStateProvider (or the module-level
+ * emitter outside the provider tree) and return its live state.
  */
 
 import { useContext, useEffect, useState } from 'react';
@@ -30,32 +19,30 @@ import { resolveUrnBatched } from '@/components/mention/useBatchedSubjectResolve
 import type { MentionLiveState } from '@/components/mention/types';
 
 /**
- * Resolved mention display mode from the provider. Falls back to `'expanded'`
- * when no provider is mounted (default context value), keeping standalone
- * renders sane.
+ * Resolved mention display mode from the provider. Falls back to
+ * `'expanded'` when no provider is mounted.
  */
 export function useMentionDisplay(): MentionDisplayMode {
   return useContext(MentionStateContext).mentionDisplay;
 }
 
 /**
- * Get live state for a URN. Automatically registers with the provider
- * for batch resolution and real-time streaming updates.
+ * Live state for a URN. Registers with the provider for batch resolve
+ * and streaming updates; falls back to the module-level emitter when
+ * mounted outside the provider tree (e.g. ProseMirror NodeViews).
  */
 export function useMentionState(urn: string): MentionLiveState | null {
   const context = useContext(MentionStateContext);
   const hasProvider = context.register !== MENTION_NOOP;
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
 
-  // Track state from module-level store for outside-context usage
   const [fallbackState, setFallbackState] = useState<MentionLiveState | null>(
     () => getMentionState(urn),
   );
 
-  // Register/unregister with provider. Depend on the stable callbacks, not
-  // the whole context object - the context's `states` field changes on
-  // every batch resolve, which would otherwise re-fire this effect and
-  // cause register/unregister to thrash, retriggering resolution forever.
+  // Depend on stable callbacks, not the whole context: ``states``
+  // changes on every batch resolve and would thrash register /
+  // unregister into an infinite resolution loop.
   const { register, unregister } = context;
   useEffect(() => {
     if (!urn) return;
@@ -63,11 +50,9 @@ export function useMentionState(urn: string): MentionLiveState | null {
     return () => unregister(urn);
   }, [urn, register, unregister]);
 
-  // Outside provider (e.g. ProseMirror NodeView roots in the editor):
-  // kick off resolution through the global batch resolver. The flush
-  // path broadcasts a publishMentionState which our listener below
-  // picks up, so the chip catches the same live state the main app
-  // would have given it.
+  // Outside the provider, kick resolution through the global batch
+  // resolver; its flush broadcasts via publishMentionState so the
+  // listener below picks the state up.
   useEffect(() => {
     if (hasProvider || !urn || !organizationId) return;
     if (getMentionState(urn)) return;
@@ -76,29 +61,32 @@ export function useMentionState(urn: string): MentionLiveState | null {
     });
   }, [urn, hasProvider, organizationId]);
 
-  // For outside-context usage: listen to emitter directly. The emitter
-  // is shared across two callers: the notification stream (raw
-  // snake_case ``Record<string, string>``) and the local batch
-  // resolver (already-typed ``Partial<MentionLiveState>``). Spread
-  // both shapes -- snake_case keys that don't match are harmless
-  // because nothing reads them -- and overlay the translated
-  // camelCase patch so stream deltas land on the right fields.
+  // Stream merge for outside-context chips. ``changes`` arrives in
+  // mixed snake_case + typed shapes; spread both and overlay the
+  // translated camelCase patch so deltas land on the right fields.
   useEffect(() => {
     if (hasProvider || !urn) return;
+
+    // Resync against any publish that landed between the useState
+    // initializer and the listener subscribing.
+    const current = getMentionState(urn);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot resync to close the initializer-vs-subscribe race
+    if (current) setFallbackState(current);
 
     return onMentionStateChange((changedUrn, changes) => {
       if (changedUrn !== urn) return;
       setFallbackState((prev) => {
-        if (!prev) return prev;
         const patch = streamChangesToLiveState(
           changes as Record<string, string>,
         );
+        if (!prev) {
+          return { urn, ...changes, ...patch } as MentionLiveState;
+        }
         return { ...prev, ...changes, ...patch };
       });
     });
   }, [urn, hasProvider]);
 
-  // Provider state takes precedence
   const providerState = context.states.get(urn) ?? null;
   return providerState ?? fallbackState;
 }

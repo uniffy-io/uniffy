@@ -9,8 +9,6 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.notes.v1.notes_pb2 import (
-    AutosaveNoteRequest,
-    AutosaveNoteResponse,
     CreateNoteRequest,
     CreateNoteResponse,
     DeleteNoteRequest,
@@ -31,8 +29,8 @@ from uniffy_proto.notes.v1.notes_pb2 import (
     UpdateNoteResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -63,10 +61,9 @@ async def _resolve_user_role(
     note: Note,
     checker: PermissionChecker | None = None,
 ) -> ContentRole | None:
-    """Resolve the caller's effective role on ``note`` for outbound proto.
-
-    Passing a shared ``checker`` lets list endpoints avoid re-loading the
-    org role / domain admin status for every row.
+    """Resolve the caller's effective role on ``note`` for outbound
+    proto. Pass a shared ``checker`` from list endpoints to avoid
+    re-loading org role / domain admin per row.
     """
     permission_checker = checker or PermissionChecker(session)
     return await permission_checker.effective_role(
@@ -77,6 +74,22 @@ async def _resolve_user_role(
         owner_id=note.owner_id,
         access_mode=note.access_mode,
         baseline_role=note.baseline_role,
+    )
+
+
+async def _resolve_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    note: Note,
+    checker: PermissionChecker | None = None,
+):
+    """Return the note's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.NOTE,
+    )
+    return resolve_effective_policy(
+        note.access_mode, note.baseline_role, default_mode, default_baseline,
     )
 
 
@@ -94,12 +107,9 @@ def _parse_tag_id_list(values: list[str]) -> list[UUID]:
 
 
 def _parse_canvas_content(content: str | None) -> dict | None:
-    """Try to interpret ``content`` as JSON canvas data.
-
-    Returns the parsed dict on success, ``None`` if ``content`` is empty
-    or does not parse. Used by the create / update / autosave handlers
-    to support the canvas note type, where the editor sends the canvas
-    state as a JSON-encoded string in the ``content`` field.
+    """Interpret ``content`` as a JSON canvas dict. Canvas notes ship
+    the canvas state as a JSON string in the ``content`` field;
+    returns ``None`` if empty or unparseable.
     """
     if not content:
         return None
@@ -187,11 +197,16 @@ class NotesHandlers:
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, organization_id, note,
+                )
                 return CreateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                         user_role=user_role,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -219,6 +234,9 @@ class NotesHandlers:
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, organization_id, note,
+                )
                 return GetNoteResponse(
                     note=note_to_proto(
                         note,
@@ -226,6 +244,8 @@ class NotesHandlers:
                         shared_with=sharing.shared_with if sharing else None,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                         user_role=user_role,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -284,11 +304,16 @@ class NotesHandlers:
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, organization_id, note,
+                )
                 return UpdateNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                         user_role=user_role,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -341,11 +366,16 @@ class NotesHandlers:
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, organization_id, note,
+                )
                 return RestoreNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                         user_role=user_role,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -405,14 +435,20 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[urn_for(n) for n in notes],
                 )
-                # Share one PermissionChecker so org-role / domain-admin lookups
-                # hit the cache once for the whole page instead of per-note.
+                # Share one PermissionChecker so org-role / domain-admin
+                # cache hits once per page instead of per row.
                 checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.NOTE,
+                )
                 proto_notes = []
                 for n in notes:
                     info = sharing.get(n.id)
                     user_role = await _resolve_user_role(
                         session, user_id, organization_id, n, checker=checker
+                    )
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        n.access_mode, n.baseline_role, default_mode, default_baseline,
                     )
                     proto_notes.append(
                         note_to_proto(
@@ -422,6 +458,8 @@ class NotesHandlers:
                             shared_with=info.shared_with if info else None,
                             tags=tags_by_urn.get(urn_for(n), []),
                             user_role=user_role,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
                         )
                     )
 
@@ -437,44 +475,6 @@ class NotesHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error("list_notes", exc) from exc
-
-    async def autosave_note(
-        self,
-        request: AutosaveNoteRequest,
-        ctx: RequestContext,
-    ) -> AutosaveNoteResponse:
-        """Fast-path content save used by the editor."""
-        user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        note_id = _parse_uuid(request.note_id, "note_id")
-
-        canvas_content = _parse_canvas_content(request.content)
-
-        try:
-            async with open_session() as session:
-                ops = NoteOperations(session)
-                note = await ops.autosave(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    note_id=note_id,
-                    content=request.content,
-                    canvas_content=canvas_content,
-                    title=request.title if request.HasField("title") else None,
-                    expected_version=(
-                        request.expected_version
-                        if request.HasField("expected_version")
-                        else None
-                    ),
-                )
-                return AutosaveNoteResponse(
-                    success=True,
-                    saved_at=datetime_to_timestamp(note.updated_at),
-                    version=note.version,
-                )
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error("autosave_note", exc) from exc
 
     async def get_backlinks(
         self,
@@ -529,8 +529,6 @@ class NotesHandlers:
         note_id = _parse_uuid(request.note_id, "note_id")
 
         target_access_mode = access_mode_from_proto(request.target_access_mode)
-        if target_access_mode is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid target_access_mode")
 
         target_baseline_role = (
             content_role_from_proto(request.target_baseline_role)
@@ -559,21 +557,22 @@ class NotesHandlers:
                     content_urns=[f"urn:uniffy:content:NOTE:{note.id}"],
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, organization_id, note,
+                )
                 return MoveNoteResponse(
                     note=note_to_proto(
                         note,
                         tags=tags_by_urn.get(f"urn:uniffy:content:NOTE:{note.id}", []),
                         user_role=user_role,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
             raise
         except Exception as exc:
             raise _map_domain_error("move_note", exc) from exc
-
-    # Stubs for RPCs still in the proto. All replaced by MembersService
-    # (and SearchService for search_notes); remove from notes.proto in a
-    # follow-up pass.
 
     async def search_notes(self, request: SearchNotesRequest, ctx: RequestContext):
         """Use ``search.v1.SearchService`` instead."""

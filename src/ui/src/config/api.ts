@@ -38,15 +38,17 @@ function getAuthState(): {
   refreshToken: string | null;
   user: unknown;
   currentOrganizationId: string | null;
+  currentOrganizationSlug: string | null;
   currentOrganizationRole: string | null;
 } {
   // Access token from memory
   const accessToken = memoryAccessToken;
 
-  // Refresh token, user, org ID, and org role from localStorage (via redux-persist)
+  // Refresh token, user, org ID, slug, and role from localStorage (via redux-persist)
   let refreshToken: string | null = null;
   let user: unknown = null;
   let currentOrganizationId: string | null = null;
+  let currentOrganizationSlug: string | null = null;
   let currentOrganizationRole: string | null = null;
 
   try {
@@ -57,13 +59,21 @@ function getAuthState(): {
       refreshToken = authState.refreshToken || null;
       user = authState.user || null;
       currentOrganizationId = authState.currentOrganizationId || null;
+      currentOrganizationSlug = authState.currentOrganizationSlug || null;
       currentOrganizationRole = authState.currentOrganizationRole || null;
     }
   } catch {
     // Ignore parse errors
   }
 
-  return { accessToken, refreshToken, user, currentOrganizationId, currentOrganizationRole };
+  return {
+    accessToken,
+    refreshToken,
+    user,
+    currentOrganizationId,
+    currentOrganizationSlug,
+    currentOrganizationRole,
+  };
 }
 
 /**
@@ -200,7 +210,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return refreshPromise;
   }
 
-  const { refreshToken, user } = getAuthState();
+  const { refreshToken, user, currentOrganizationSlug } = getAuthState();
 
   if (!refreshToken || !user) {
     return null;
@@ -216,7 +226,13 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       const client = createClient(AuthService, refreshTransport);
-      const response = await client.refreshToken({ refreshToken });
+      // Pass the persisted org slug so the refreshed access token
+      // keeps its ``org_id`` claim - handlers enforcing token org
+      // parity (e.g. realtime WS upgrade) require it.
+      const response = await client.refreshToken({
+        refreshToken,
+        ...(currentOrganizationSlug ? { organizationSlug: currentOrganizationSlug } : {}),
+      });
 
       // Store access token in memory
       setMemoryAccessToken(response.accessToken);
@@ -230,6 +246,10 @@ async function refreshAccessToken(): Promise<string | null> {
         response.sessionId,
         response.domainAdminDomains.length > 0 ? Array.from(response.domainAdminDomains) : undefined,
       );
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('uniffy:auth:refreshed'));
+      }
 
       return response.accessToken;
     } catch (error) {
@@ -283,6 +303,7 @@ export async function rehydrateAuth(): Promise<boolean> {
     refreshToken,
     user,
     currentOrganizationId: persistedOrgId,
+    currentOrganizationSlug: persistedOrgSlug,
     currentOrganizationRole: persistedOrgRole,
   } = getAuthState();
 
@@ -333,6 +354,7 @@ export async function rehydrateAuth(): Promise<boolean> {
         accessToken: newToken,
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
+        organizationSlug: state.auth?.currentOrganizationSlug || persistedOrgSlug || undefined,
         organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
         sessionId: state.auth?.currentSessionId || undefined,
       }));

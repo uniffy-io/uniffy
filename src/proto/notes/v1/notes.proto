@@ -50,9 +50,6 @@ service NotesService {
   // Empty trash (permanently delete all soft-deleted notes)
   rpc EmptyTrash(EmptyTrashRequest) returns (EmptyTrashResponse) {}
 
-  // Autosave note content (optimized for frequent updates)
-  rpc AutosaveNote(AutosaveNoteRequest) returns (AutosaveNoteResponse) {}
-
   // Move note between spaces (personal, group, organization)
   rpc MoveNote(MoveNoteRequest) returns (MoveNoteResponse) {}
 
@@ -302,33 +299,6 @@ message EmptyTrashResponse {
   bool success = 2;
   // Message
   string message = 3;
-}
-
-// Request to autosave note (lightweight, frequent updates)
-message AutosaveNoteRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Updated content (markdown)
-  string content = 3;
-  // Optional updated title
-  optional string title = 4;
-  // Client timestamp for conflict resolution
-  int64 client_timestamp = 5;
-  // Version the client based this draft on. When set, server rejects with
-  // ABORTED if the stored note has advanced past it (concurrent edit).
-  optional int64 expected_version = 6;
-}
-
-// Response for autosave operation
-message AutosaveNoteResponse {
-  // Success flag
-  bool success = 1;
-  // Server timestamp of the save
-  google.protobuf.Timestamp saved_at = 2;
-  // Note version for conflict detection
-  int64 version = 3;
 }
 
 // Note icon - can be a heroicon name or emoji

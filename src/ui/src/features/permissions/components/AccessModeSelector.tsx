@@ -1,5 +1,5 @@
 import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
-import { LockSimple, Users, Buildings } from '@phosphor-icons/react';
+import { LockSimple, Users, Buildings, Sparkle } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import {
     accessModeDescription,
@@ -17,6 +17,14 @@ interface AccessModeSelectorProps {
     onChange: (value: AccessModeValue) => void;
     disabled?: boolean;
     defaultBaselineRole?: ContentRole;
+    /**
+     * When true, prepend an "Use organization default" action that
+     * clears the per-item override (writes ACCESS_MODE_UNSPECIFIED,
+     * stored as NULL so the row inherits live). The button has no
+     * selected state - the backend resolves NULL into an effective
+     * mode before serializing, so the click acts as a one-shot reset.
+     */
+    showInheritOption?: boolean;
 }
 
 const OPTIONS = [
@@ -30,6 +38,7 @@ export function AccessModeSelector({
     onChange,
     disabled,
     defaultBaselineRole = ContentRole.VIEWER,
+    showInheritOption = false,
 }: AccessModeSelectorProps) {
     const handleModeChange = (mode: AccessMode) => {
         if (mode === AccessMode.OPEN_TO_ORG) {
@@ -42,8 +51,35 @@ export function AccessModeSelector({
         }
     };
 
+    const handleInherit = () => {
+        onChange({ accessMode: AccessMode.UNSPECIFIED, baselineRole: null });
+    };
+
     return (
         <div className="space-y-2">
+            {showInheritOption && (
+                <button
+                    type="button"
+                    onClick={handleInherit}
+                    disabled={disabled}
+                    className={cn(
+                        'w-full flex items-start gap-3 p-3 rounded-lg border border-dashed text-left transition-colors',
+                        'border-border hover:bg-muted',
+                        disabled && 'opacity-50 cursor-not-allowed',
+                    )}
+                >
+                    <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-muted-foreground shrink-0" />
+                    <Sparkle size={20} weight="duotone" className="shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground">
+                            Use organization default
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                            Clear the per-item override. This item will follow the org's live default for its content type.
+                        </div>
+                    </div>
+                </button>
+            )}
             {OPTIONS.map(({ mode, icon: Icon }) => {
                 const selected = value.accessMode === mode;
                 return (

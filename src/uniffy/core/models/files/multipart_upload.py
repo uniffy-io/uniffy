@@ -103,8 +103,8 @@ class MultipartUpload(SQLModel, table=True):
     total_chunks: int = Field(nullable=False)
     chunk_size: int = Field(nullable=False)
     folder_id: UUID | None = Field(default=None, foreign_key="files_folders.id", nullable=True)
-    access_mode: AccessMode = Field(
-        default=AccessMode.OWNER_ONLY,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             SAEnum(
                 AccessMode,
@@ -112,7 +112,7 @@ class MultipartUpload(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )

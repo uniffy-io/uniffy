@@ -137,8 +137,8 @@ class AgentCronTask(SQLModel, table=True):
     run_count: int = Field(default=0, nullable=False)
     consecutive_failures: int = Field(default=0, nullable=False)
     max_consecutive_failures: int = Field(default=3, nullable=False)
-    access_mode: AccessMode = Field(
-        default=AccessMode.OWNER_ONLY,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             Enum(
                 AccessMode,
@@ -146,7 +146,7 @@ class AgentCronTask(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )

@@ -97,11 +97,7 @@ export function NotesMetadataPanel() {
   // Get the note (may be undefined)
   const note = currentNoteId ? notes[currentNoteId] : undefined;
 
-  // Get the actual content (draft or saved) - compute before useMemo to ensure consistent hook order
-  const draftContent = editorState?.draftContent || {};
-  const currentContent = currentNoteId && note
-    ? (draftContent[currentNoteId] ?? note.content)
-    : '';
+  const currentContent = note?.content ?? '';
 
   // Parse outgoing links (mentions) from content - MUST be called before any returns
   const outgoingLinks = useMemo(

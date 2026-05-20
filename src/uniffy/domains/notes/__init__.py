@@ -8,6 +8,7 @@ This domain handles:
 - Hierarchical organization (folders)
 """
 
+import uniffy.domains.notes.realtime_adapter  # noqa: F401 - registers NoteRealtimeAdapter on import
 from uniffy.domains.notes.converters import note_to_proto, note_to_reference
 from uniffy.domains.notes.handlers import NotesHandlers
 from uniffy.domains.notes.operations import NoteOperations

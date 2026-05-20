@@ -1,11 +1,9 @@
 /**
- * CanvasToolbar - Floating toolbar for canvas operations.
- *
- * Provides buttons for adding text, content references, media, shapes,
- * and a defaults picker for per-canvas default node styles.
+ * Floating toolbar for adding canvas content (text, references,
+ * media, shapes, mind maps) and editing per-canvas defaults.
  */
 
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   TextT,
   At,
@@ -20,10 +18,18 @@ import {
   Path,
   ArrowBendRightDown,
   TreeStructure,
+  Cursor,
+  CursorClick,
+  Check,
+  Sparkle,
+  Eye,
+  EyeSlash,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { NODE_COLORS, BORDER_WIDTHS } from '@/features/notes/canvas/components/nodeStyleConstants';
 import type { CanvasDefaults, EdgeShape } from '@/features/notes/canvas/types';
+import type { CanvasCursorsMode } from '@/features/notes/store/editorSlice';
+import { AUTO_CURSORS_HIDE_THRESHOLD } from '@/features/notes/store/editorSlice';
 
 interface CanvasToolbarProps {
   onAddTextBlock: () => void;
@@ -33,8 +39,43 @@ interface CanvasToolbarProps {
   onAddMindMap?: () => void;
   canvasDefaults?: CanvasDefaults;
   onDefaultsChange?: (defaults: CanvasDefaults) => void;
+  /** Cursors visibility mode + cycle handler. Omit to hide the
+   * button (e.g. when realtime is not attached). */
+  cursorsMode?: CanvasCursorsMode;
+  onCursorsModeChange?: (next: CanvasCursorsMode) => void;
+  /** Live peer count for the ``'auto'`` mode hint. */
+  peerCount?: number;
   className?: string;
 }
+
+const CURSOR_MODE_OPTIONS: Array<{
+  value: CanvasCursorsMode;
+  label: string;
+  icon: typeof Sparkle;
+  description: (peerCount: number) => string;
+}> = [
+  {
+    value: 'auto',
+    label: 'Auto',
+    icon: Sparkle,
+    description: (peerCount) =>
+      peerCount > AUTO_CURSORS_HIDE_THRESHOLD
+        ? `Hidden (${peerCount} peers)`
+        : `Shown (up to ${AUTO_CURSORS_HIDE_THRESHOLD} peers)`,
+  },
+  {
+    value: 'on',
+    label: 'Always show',
+    icon: Eye,
+    description: () => 'Render every collaborator cursor',
+  },
+  {
+    value: 'off',
+    label: 'Always hide',
+    icon: EyeSlash,
+    description: () => 'Never render collaborator cursors',
+  },
+];
 
 export const CanvasToolbar = memo(function CanvasToolbar({
   onAddTextBlock,
@@ -44,12 +85,34 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   onAddMindMap,
   canvasDefaults,
   onDefaultsChange,
+  cursorsMode,
+  onCursorsModeChange,
+  peerCount = 0,
   className,
 }: CanvasToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [showDefaultsMenu, setShowDefaultsMenu] = useState(false);
+  const [showCursorsMenu, setShowCursorsMenu] = useState(false);
   const [defaultsPanel, setDefaultsPanel] = useState<'bg' | 'border' | 'width' | 'edgeColor' | 'edgeWidth' | 'edgeShape' | false>(false);
+
+  // Close every popover on outside mousedown. One ref covers triggers
+  // + panels; per-button clicks already close sibling popovers.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const anyMenuOpen = showShapeMenu || showDefaultsMenu || showCursorsMenu;
+  useEffect(() => {
+    if (!anyMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (target && toolbarRef.current?.contains(target)) return;
+      setShowShapeMenu(false);
+      setShowDefaultsMenu(false);
+      setShowCursorsMenu(false);
+      setDefaultsPanel(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [anyMenuOpen]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,6 +136,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
   return (
     <div
+      ref={toolbarRef}
       className={cn(
         'absolute bottom-4 left-1/2 -translate-x-1/2 z-10',
         'flex items-center gap-1 px-2 py-1.5',
@@ -125,7 +189,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       {onAddShape && (
         <div className="relative">
           <button
-            onClick={() => { setShowShapeMenu(!showShapeMenu); setShowDefaultsMenu(false); }}
+            onClick={() => { setShowShapeMenu(!showShapeMenu); setShowDefaultsMenu(false); setShowCursorsMenu(false); }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors text-foreground"
             title="Add Shape (S)"
           >
@@ -181,7 +245,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           <div className="w-px h-5 bg-border" />
           <div className="relative">
             <button
-              onClick={() => { setShowDefaultsMenu(!showDefaultsMenu); setShowShapeMenu(false); setDefaultsPanel(false); }}
+              onClick={() => { setShowDefaultsMenu(!showDefaultsMenu); setShowShapeMenu(false); setShowCursorsMenu(false); setDefaultsPanel(false); }}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors',
                 hasDefaults ? 'text-primary' : 'text-foreground'
@@ -425,6 +489,91 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Collaborator cursors popover - mirrors the Defaults menu pattern. */}
+      {cursorsMode && onCursorsModeChange && (
+        <>
+          <div className="w-px h-5 bg-border" />
+          <div className="relative">
+            {(() => {
+              const autoHidden =
+                cursorsMode === 'auto' && peerCount > AUTO_CURSORS_HIDE_THRESHOLD;
+              const effectiveOn =
+                cursorsMode === 'on' || (cursorsMode === 'auto' && !autoHidden);
+              const TriggerIcon = effectiveOn ? Cursor : CursorClick;
+              return (
+                <button
+                  onClick={() => {
+                    setShowCursorsMenu((v) => !v);
+                    setShowShapeMenu(false);
+                    setShowDefaultsMenu(false);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors',
+                    effectiveOn ? 'text-foreground' : 'text-muted-foreground',
+                    cursorsMode === 'on' && 'text-primary',
+                  )}
+                  title="Collaborator cursors"
+                  aria-haspopup="menu"
+                  aria-expanded={showCursorsMenu}
+                >
+                  <TriggerIcon size={16} weight="duotone" />
+                  <span className="hidden sm:inline">Cursors</span>
+                </button>
+              );
+            })()}
+
+            {showCursorsMenu && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[220px]">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 px-1">
+                  Collaborator cursors
+                </div>
+                {CURSOR_MODE_OPTIONS.map(({ value, label, icon: Icon, description }) => {
+                  const isSelected = cursorsMode === value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        onCursorsModeChange(value);
+                        setShowCursorsMenu(false);
+                      }}
+                      className={cn(
+                        'flex items-center gap-2 w-full px-2 py-1.5 rounded text-left transition-colors',
+                        'hover:bg-muted',
+                        isSelected && 'bg-muted',
+                      )}
+                      role="menuitemradio"
+                      aria-checked={isSelected}
+                    >
+                      <Icon
+                        size={14}
+                        weight="duotone"
+                        className={isSelected ? 'text-primary' : 'text-muted-foreground'}
+                      />
+                      <span className="flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            'block text-xs font-medium',
+                            isSelected ? 'text-foreground' : 'text-foreground',
+                          )}
+                        >
+                          {label}
+                        </span>
+                        <span className="block text-[10px] text-muted-foreground truncate">
+                          {description(peerCount)}
+                        </span>
+                      </span>
+                      {isSelected && (
+                        <Check size={14} weight="bold" className="text-primary shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

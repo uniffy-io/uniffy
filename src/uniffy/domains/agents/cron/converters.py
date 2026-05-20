@@ -9,11 +9,14 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.types import AccessMode, ContentRole
 
 
 def cron_task_to_proto(
     task: AgentCronTask,
     agent_name: str | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> CronTaskInfo:
     """Convert AgentCronTask model to proto CronTaskInfo.
 
@@ -30,6 +33,15 @@ def cron_task_to_proto(
         Proto message.
 
     """
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else task.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role
+        if effective_baseline_role is not None
+        else task.baseline_role
+    )
+
     info = CronTaskInfo(
         id=str(task.id),
         organization_id=str(task.organization_id),
@@ -45,12 +57,12 @@ def cron_task_to_proto(
         run_count=task.run_count,
         consecutive_failures=task.consecutive_failures,
         max_consecutive_failures=task.max_consecutive_failures,
-        access_mode=access_mode_to_proto(task.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         created_at=datetime_to_timestamp(task.created_at),
     )
 
-    if task.baseline_role is not None:
-        info.baseline_role = content_role_to_proto(task.baseline_role)
+    if resolved_baseline is not None:
+        info.baseline_role = content_role_to_proto(resolved_baseline)
 
     if task.session_id is not None:
         info.session_id = str(task.session_id)

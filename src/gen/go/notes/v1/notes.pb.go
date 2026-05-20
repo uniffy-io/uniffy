@@ -1503,162 +1503,6 @@ func (x *EmptyTrashResponse) GetMessage() string {
 	return ""
 }
 
-// Request to autosave note (lightweight, frequent updates)
-type AutosaveNoteRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Note ID
-	NoteId string `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
-	// Organization ID for access control
-	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Updated content (markdown)
-	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	// Optional updated title
-	Title *string `protobuf:"bytes,4,opt,name=title,proto3,oneof" json:"title,omitempty"`
-	// Client timestamp for conflict resolution
-	ClientTimestamp int64 `protobuf:"varint,5,opt,name=client_timestamp,json=clientTimestamp,proto3" json:"client_timestamp,omitempty"`
-	// Version the client based this draft on. When set, server rejects with
-	// ABORTED if the stored note has advanced past it (concurrent edit).
-	ExpectedVersion *int64 `protobuf:"varint,6,opt,name=expected_version,json=expectedVersion,proto3,oneof" json:"expected_version,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *AutosaveNoteRequest) Reset() {
-	*x = AutosaveNoteRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AutosaveNoteRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AutosaveNoteRequest) ProtoMessage() {}
-
-func (x *AutosaveNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AutosaveNoteRequest.ProtoReflect.Descriptor instead.
-func (*AutosaveNoteRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *AutosaveNoteRequest) GetNoteId() string {
-	if x != nil {
-		return x.NoteId
-	}
-	return ""
-}
-
-func (x *AutosaveNoteRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *AutosaveNoteRequest) GetContent() string {
-	if x != nil {
-		return x.Content
-	}
-	return ""
-}
-
-func (x *AutosaveNoteRequest) GetTitle() string {
-	if x != nil && x.Title != nil {
-		return *x.Title
-	}
-	return ""
-}
-
-func (x *AutosaveNoteRequest) GetClientTimestamp() int64 {
-	if x != nil {
-		return x.ClientTimestamp
-	}
-	return 0
-}
-
-func (x *AutosaveNoteRequest) GetExpectedVersion() int64 {
-	if x != nil && x.ExpectedVersion != nil {
-		return *x.ExpectedVersion
-	}
-	return 0
-}
-
-// Response for autosave operation
-type AutosaveNoteResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Success flag
-	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	// Server timestamp of the save
-	SavedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=saved_at,json=savedAt,proto3" json:"saved_at,omitempty"`
-	// Note version for conflict detection
-	Version       int64 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AutosaveNoteResponse) Reset() {
-	*x = AutosaveNoteResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AutosaveNoteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AutosaveNoteResponse) ProtoMessage() {}
-
-func (x *AutosaveNoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AutosaveNoteResponse.ProtoReflect.Descriptor instead.
-func (*AutosaveNoteResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *AutosaveNoteResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *AutosaveNoteResponse) GetSavedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.SavedAt
-	}
-	return nil
-}
-
-func (x *AutosaveNoteResponse) GetVersion() int64 {
-	if x != nil {
-		return x.Version
-	}
-	return 0
-}
-
 // Note icon - can be a heroicon name or emoji
 type NoteIcon struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1672,7 +1516,7 @@ type NoteIcon struct {
 
 func (x *NoteIcon) Reset() {
 	*x = NoteIcon{}
-	mi := &file_notes_v1_notes_proto_msgTypes[23]
+	mi := &file_notes_v1_notes_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1684,7 +1528,7 @@ func (x *NoteIcon) String() string {
 func (*NoteIcon) ProtoMessage() {}
 
 func (x *NoteIcon) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[23]
+	mi := &file_notes_v1_notes_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1697,7 +1541,7 @@ func (x *NoteIcon) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NoteIcon.ProtoReflect.Descriptor instead.
 func (*NoteIcon) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{23}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *NoteIcon) GetIconType() string {
@@ -1769,7 +1613,7 @@ type Note struct {
 
 func (x *Note) Reset() {
 	*x = Note{}
-	mi := &file_notes_v1_notes_proto_msgTypes[24]
+	mi := &file_notes_v1_notes_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1781,7 +1625,7 @@ func (x *Note) String() string {
 func (*Note) ProtoMessage() {}
 
 func (x *Note) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[24]
+	mi := &file_notes_v1_notes_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1794,7 +1638,7 @@ func (x *Note) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Note.ProtoReflect.Descriptor instead.
 func (*Note) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{24}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Note) GetId() string {
@@ -1983,7 +1827,7 @@ type NoteReference struct {
 
 func (x *NoteReference) Reset() {
 	*x = NoteReference{}
-	mi := &file_notes_v1_notes_proto_msgTypes[25]
+	mi := &file_notes_v1_notes_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1995,7 +1839,7 @@ func (x *NoteReference) String() string {
 func (*NoteReference) ProtoMessage() {}
 
 func (x *NoteReference) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[25]
+	mi := &file_notes_v1_notes_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2008,7 +1852,7 @@ func (x *NoteReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NoteReference.ProtoReflect.Descriptor instead.
 func (*NoteReference) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{25}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *NoteReference) GetId() string {
@@ -2086,7 +1930,7 @@ type MoveNoteRequest struct {
 
 func (x *MoveNoteRequest) Reset() {
 	*x = MoveNoteRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[26]
+	mi := &file_notes_v1_notes_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2098,7 +1942,7 @@ func (x *MoveNoteRequest) String() string {
 func (*MoveNoteRequest) ProtoMessage() {}
 
 func (x *MoveNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[26]
+	mi := &file_notes_v1_notes_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2111,7 +1955,7 @@ func (x *MoveNoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveNoteRequest.ProtoReflect.Descriptor instead.
 func (*MoveNoteRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{26}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *MoveNoteRequest) GetNoteId() string {
@@ -2170,7 +2014,7 @@ type CopyNoteRequest struct {
 
 func (x *CopyNoteRequest) Reset() {
 	*x = CopyNoteRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[27]
+	mi := &file_notes_v1_notes_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2182,7 +2026,7 @@ func (x *CopyNoteRequest) String() string {
 func (*CopyNoteRequest) ProtoMessage() {}
 
 func (x *CopyNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[27]
+	mi := &file_notes_v1_notes_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2195,7 +2039,7 @@ func (x *CopyNoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CopyNoteRequest.ProtoReflect.Descriptor instead.
 func (*CopyNoteRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{27}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CopyNoteRequest) GetNoteId() string {
@@ -2255,7 +2099,7 @@ type ShareNoteWithGroupRequest struct {
 
 func (x *ShareNoteWithGroupRequest) Reset() {
 	*x = ShareNoteWithGroupRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[28]
+	mi := &file_notes_v1_notes_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2267,7 +2111,7 @@ func (x *ShareNoteWithGroupRequest) String() string {
 func (*ShareNoteWithGroupRequest) ProtoMessage() {}
 
 func (x *ShareNoteWithGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[28]
+	mi := &file_notes_v1_notes_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2280,7 +2124,7 @@ func (x *ShareNoteWithGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShareNoteWithGroupRequest.ProtoReflect.Descriptor instead.
 func (*ShareNoteWithGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{28}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ShareNoteWithGroupRequest) GetNoteId() string {
@@ -2319,7 +2163,7 @@ type UnshareNoteFromGroupRequest struct {
 
 func (x *UnshareNoteFromGroupRequest) Reset() {
 	*x = UnshareNoteFromGroupRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[29]
+	mi := &file_notes_v1_notes_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2331,7 +2175,7 @@ func (x *UnshareNoteFromGroupRequest) String() string {
 func (*UnshareNoteFromGroupRequest) ProtoMessage() {}
 
 func (x *UnshareNoteFromGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[29]
+	mi := &file_notes_v1_notes_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2344,7 +2188,7 @@ func (x *UnshareNoteFromGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnshareNoteFromGroupRequest.ProtoReflect.Descriptor instead.
 func (*UnshareNoteFromGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{29}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UnshareNoteFromGroupRequest) GetNoteId() string {
@@ -2383,7 +2227,7 @@ type ShareNoteWithGroupResponse struct {
 
 func (x *ShareNoteWithGroupResponse) Reset() {
 	*x = ShareNoteWithGroupResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[30]
+	mi := &file_notes_v1_notes_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2395,7 +2239,7 @@ func (x *ShareNoteWithGroupResponse) String() string {
 func (*ShareNoteWithGroupResponse) ProtoMessage() {}
 
 func (x *ShareNoteWithGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[30]
+	mi := &file_notes_v1_notes_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2408,7 +2252,7 @@ func (x *ShareNoteWithGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShareNoteWithGroupResponse.ProtoReflect.Descriptor instead.
 func (*ShareNoteWithGroupResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{30}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ShareNoteWithGroupResponse) GetSuccess() bool {
@@ -2447,7 +2291,7 @@ type UnshareNoteFromGroupResponse struct {
 
 func (x *UnshareNoteFromGroupResponse) Reset() {
 	*x = UnshareNoteFromGroupResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[31]
+	mi := &file_notes_v1_notes_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2459,7 +2303,7 @@ func (x *UnshareNoteFromGroupResponse) String() string {
 func (*UnshareNoteFromGroupResponse) ProtoMessage() {}
 
 func (x *UnshareNoteFromGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[31]
+	mi := &file_notes_v1_notes_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2472,7 +2316,7 @@ func (x *UnshareNoteFromGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnshareNoteFromGroupResponse.ProtoReflect.Descriptor instead.
 func (*UnshareNoteFromGroupResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{31}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *UnshareNoteFromGroupResponse) GetSuccess() bool {
@@ -2509,7 +2353,7 @@ type GetNoteSharingRequest struct {
 
 func (x *GetNoteSharingRequest) Reset() {
 	*x = GetNoteSharingRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[32]
+	mi := &file_notes_v1_notes_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2521,7 +2365,7 @@ func (x *GetNoteSharingRequest) String() string {
 func (*GetNoteSharingRequest) ProtoMessage() {}
 
 func (x *GetNoteSharingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[32]
+	mi := &file_notes_v1_notes_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2534,7 +2378,7 @@ func (x *GetNoteSharingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNoteSharingRequest.ProtoReflect.Descriptor instead.
 func (*GetNoteSharingRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{32}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetNoteSharingRequest) GetNoteId() string {
@@ -2570,7 +2414,7 @@ type GetNoteSharingResponse struct {
 
 func (x *GetNoteSharingResponse) Reset() {
 	*x = GetNoteSharingResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[33]
+	mi := &file_notes_v1_notes_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2582,7 +2426,7 @@ func (x *GetNoteSharingResponse) String() string {
 func (*GetNoteSharingResponse) ProtoMessage() {}
 
 func (x *GetNoteSharingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[33]
+	mi := &file_notes_v1_notes_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2595,7 +2439,7 @@ func (x *GetNoteSharingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNoteSharingResponse.ProtoReflect.Descriptor instead.
 func (*GetNoteSharingResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{33}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetNoteSharingResponse) GetAccessMode() v1.AccessMode {
@@ -2658,7 +2502,7 @@ type GrantPermissionRequest struct {
 
 func (x *GrantPermissionRequest) Reset() {
 	*x = GrantPermissionRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[34]
+	mi := &file_notes_v1_notes_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2670,7 +2514,7 @@ func (x *GrantPermissionRequest) String() string {
 func (*GrantPermissionRequest) ProtoMessage() {}
 
 func (x *GrantPermissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[34]
+	mi := &file_notes_v1_notes_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2683,7 +2527,7 @@ func (x *GrantPermissionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantPermissionRequest.ProtoReflect.Descriptor instead.
 func (*GrantPermissionRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{34}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GrantPermissionRequest) GetNoteId() string {
@@ -2773,7 +2617,7 @@ type RevokePermissionRequest struct {
 
 func (x *RevokePermissionRequest) Reset() {
 	*x = RevokePermissionRequest{}
-	mi := &file_notes_v1_notes_proto_msgTypes[35]
+	mi := &file_notes_v1_notes_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2785,7 +2629,7 @@ func (x *RevokePermissionRequest) String() string {
 func (*RevokePermissionRequest) ProtoMessage() {}
 
 func (x *RevokePermissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[35]
+	mi := &file_notes_v1_notes_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2798,7 +2642,7 @@ func (x *RevokePermissionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokePermissionRequest.ProtoReflect.Descriptor instead.
 func (*RevokePermissionRequest) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{35}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RevokePermissionRequest) GetNoteId() string {
@@ -2842,7 +2686,7 @@ type GrantPermissionResponse struct {
 
 func (x *GrantPermissionResponse) Reset() {
 	*x = GrantPermissionResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[36]
+	mi := &file_notes_v1_notes_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2854,7 +2698,7 @@ func (x *GrantPermissionResponse) String() string {
 func (*GrantPermissionResponse) ProtoMessage() {}
 
 func (x *GrantPermissionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[36]
+	mi := &file_notes_v1_notes_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2867,7 +2711,7 @@ func (x *GrantPermissionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantPermissionResponse.ProtoReflect.Descriptor instead.
 func (*GrantPermissionResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{36}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GrantPermissionResponse) GetSuccess() bool {
@@ -2897,7 +2741,7 @@ type RevokePermissionResponse struct {
 
 func (x *RevokePermissionResponse) Reset() {
 	*x = RevokePermissionResponse{}
-	mi := &file_notes_v1_notes_proto_msgTypes[37]
+	mi := &file_notes_v1_notes_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2909,7 +2753,7 @@ func (x *RevokePermissionResponse) String() string {
 func (*RevokePermissionResponse) ProtoMessage() {}
 
 func (x *RevokePermissionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[37]
+	mi := &file_notes_v1_notes_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2922,7 +2766,7 @@ func (x *RevokePermissionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokePermissionResponse.ProtoReflect.Descriptor instead.
 func (*RevokePermissionResponse) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{37}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RevokePermissionResponse) GetSuccess() bool {
@@ -2968,7 +2812,7 @@ type ContentPermission struct {
 
 func (x *ContentPermission) Reset() {
 	*x = ContentPermission{}
-	mi := &file_notes_v1_notes_proto_msgTypes[38]
+	mi := &file_notes_v1_notes_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2980,7 +2824,7 @@ func (x *ContentPermission) String() string {
 func (*ContentPermission) ProtoMessage() {}
 
 func (x *ContentPermission) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[38]
+	mi := &file_notes_v1_notes_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2993,7 +2837,7 @@ func (x *ContentPermission) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContentPermission.ProtoReflect.Descriptor instead.
 func (*ContentPermission) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{38}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ContentPermission) GetId() string {
@@ -3095,7 +2939,7 @@ type NoteOwner struct {
 
 func (x *NoteOwner) Reset() {
 	*x = NoteOwner{}
-	mi := &file_notes_v1_notes_proto_msgTypes[39]
+	mi := &file_notes_v1_notes_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3107,7 +2951,7 @@ func (x *NoteOwner) String() string {
 func (*NoteOwner) ProtoMessage() {}
 
 func (x *NoteOwner) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[39]
+	mi := &file_notes_v1_notes_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3120,7 +2964,7 @@ func (x *NoteOwner) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NoteOwner.ProtoReflect.Descriptor instead.
 func (*NoteOwner) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{39}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *NoteOwner) GetId() string {
@@ -3165,7 +3009,7 @@ type NoteShareTarget struct {
 
 func (x *NoteShareTarget) Reset() {
 	*x = NoteShareTarget{}
-	mi := &file_notes_v1_notes_proto_msgTypes[40]
+	mi := &file_notes_v1_notes_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3177,7 +3021,7 @@ func (x *NoteShareTarget) String() string {
 func (*NoteShareTarget) ProtoMessage() {}
 
 func (x *NoteShareTarget) ProtoReflect() protoreflect.Message {
-	mi := &file_notes_v1_notes_proto_msgTypes[40]
+	mi := &file_notes_v1_notes_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3190,7 +3034,7 @@ func (x *NoteShareTarget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NoteShareTarget.ProtoReflect.Descriptor instead.
 func (*NoteShareTarget) Descriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{40}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *NoteShareTarget) GetId() string {
@@ -3368,20 +3212,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x12EmptyTrashResponse\x12#\n" +
 	"\rdeleted_count\x18\x01 \x01(\x05R\fdeletedCount\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"\x86\x02\n" +
-	"\x13AutosaveNoteRequest\x12\x17\n" +
-	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\x12\x19\n" +
-	"\x05title\x18\x04 \x01(\tH\x00R\x05title\x88\x01\x01\x12)\n" +
-	"\x10client_timestamp\x18\x05 \x01(\x03R\x0fclientTimestamp\x12.\n" +
-	"\x10expected_version\x18\x06 \x01(\x03H\x01R\x0fexpectedVersion\x88\x01\x01B\b\n" +
-	"\x06_titleB\x13\n" +
-	"\x11_expected_version\"\x81\x01\n" +
-	"\x14AutosaveNoteResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x125\n" +
-	"\bsaved_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\asavedAt\x12\x18\n" +
-	"\aversion\x18\x03 \x01(\x03R\aversion\"=\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"=\n" +
 	"\bNoteIcon\x12\x1b\n" +
 	"\ticon_type\x18\x01 \x01(\tR\biconType\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\"\xdf\b\n" +
@@ -3548,7 +3379,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x0eNODE_TYPE_NOTE\x10\x01\x12\x14\n" +
 	"\x10NODE_TYPE_FOLDER\x10\x02\x12\x16\n" +
 	"\x12NODE_TYPE_TEMPLATE\x10\x03\x12\x14\n" +
-	"\x10NODE_TYPE_CANVAS\x10\x042\xe6\n" +
+	"\x10NODE_TYPE_CANVAS\x10\x042\x95\n" +
 	"\n" +
 	"\fNotesService\x12I\n" +
 	"\n" +
@@ -3563,8 +3394,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\fGetBacklinks\x12\x1d.notes.v1.GetBacklinksRequest\x1a\x1e.notes.v1.GetBacklinksResponse\"\x00\x12L\n" +
 	"\vRestoreNote\x12\x1c.notes.v1.RestoreNoteRequest\x1a\x1d.notes.v1.RestoreNoteResponse\"\x00\x12I\n" +
 	"\n" +
-	"EmptyTrash\x12\x1b.notes.v1.EmptyTrashRequest\x1a\x1c.notes.v1.EmptyTrashResponse\"\x00\x12O\n" +
-	"\fAutosaveNote\x12\x1d.notes.v1.AutosaveNoteRequest\x1a\x1e.notes.v1.AutosaveNoteResponse\"\x00\x12C\n" +
+	"EmptyTrash\x12\x1b.notes.v1.EmptyTrashRequest\x1a\x1c.notes.v1.EmptyTrashResponse\"\x00\x12C\n" +
 	"\bMoveNote\x12\x19.notes.v1.MoveNoteRequest\x1a\x1a.notes.v1.MoveNoteResponse\"\x00\x12C\n" +
 	"\bCopyNote\x12\x19.notes.v1.CopyNoteRequest\x1a\x1a.notes.v1.CopyNoteResponse\"\x00\x12a\n" +
 	"\x12ShareNoteWithGroup\x12#.notes.v1.ShareNoteWithGroupRequest\x1a$.notes.v1.ShareNoteWithGroupResponse\"\x00\x12g\n" +
@@ -3586,7 +3416,7 @@ func file_notes_v1_notes_proto_rawDescGZIP() []byte {
 }
 
 var file_notes_v1_notes_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_notes_v1_notes_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_notes_v1_notes_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_notes_v1_notes_proto_goTypes = []any{
 	(NodeType)(0),                        // 0: notes.v1.NodeType
 	(*CreateNoteRequest)(nil),            // 1: notes.v1.CreateNoteRequest
@@ -3610,121 +3440,116 @@ var file_notes_v1_notes_proto_goTypes = []any{
 	(*RestoreNoteRequest)(nil),           // 19: notes.v1.RestoreNoteRequest
 	(*EmptyTrashRequest)(nil),            // 20: notes.v1.EmptyTrashRequest
 	(*EmptyTrashResponse)(nil),           // 21: notes.v1.EmptyTrashResponse
-	(*AutosaveNoteRequest)(nil),          // 22: notes.v1.AutosaveNoteRequest
-	(*AutosaveNoteResponse)(nil),         // 23: notes.v1.AutosaveNoteResponse
-	(*NoteIcon)(nil),                     // 24: notes.v1.NoteIcon
-	(*Note)(nil),                         // 25: notes.v1.Note
-	(*NoteReference)(nil),                // 26: notes.v1.NoteReference
-	(*MoveNoteRequest)(nil),              // 27: notes.v1.MoveNoteRequest
-	(*CopyNoteRequest)(nil),              // 28: notes.v1.CopyNoteRequest
-	(*ShareNoteWithGroupRequest)(nil),    // 29: notes.v1.ShareNoteWithGroupRequest
-	(*UnshareNoteFromGroupRequest)(nil),  // 30: notes.v1.UnshareNoteFromGroupRequest
-	(*ShareNoteWithGroupResponse)(nil),   // 31: notes.v1.ShareNoteWithGroupResponse
-	(*UnshareNoteFromGroupResponse)(nil), // 32: notes.v1.UnshareNoteFromGroupResponse
-	(*GetNoteSharingRequest)(nil),        // 33: notes.v1.GetNoteSharingRequest
-	(*GetNoteSharingResponse)(nil),       // 34: notes.v1.GetNoteSharingResponse
-	(*GrantPermissionRequest)(nil),       // 35: notes.v1.GrantPermissionRequest
-	(*RevokePermissionRequest)(nil),      // 36: notes.v1.RevokePermissionRequest
-	(*GrantPermissionResponse)(nil),      // 37: notes.v1.GrantPermissionResponse
-	(*RevokePermissionResponse)(nil),     // 38: notes.v1.RevokePermissionResponse
-	(*ContentPermission)(nil),            // 39: notes.v1.ContentPermission
-	(*NoteOwner)(nil),                    // 40: notes.v1.NoteOwner
-	(*NoteShareTarget)(nil),              // 41: notes.v1.NoteShareTarget
-	nil,                                  // 42: notes.v1.CreateNoteRequest.MetadataEntry
-	nil,                                  // 43: notes.v1.UpdateNoteRequest.MetadataEntry
-	nil,                                  // 44: notes.v1.Note.MetadataEntry
-	(v1.AccessMode)(0),                   // 45: common.v1.AccessMode
-	(v1.ContentRole)(0),                  // 46: common.v1.ContentRole
-	(*timestamppb.Timestamp)(nil),        // 47: google.protobuf.Timestamp
-	(*v11.Tag)(nil),                      // 48: tags.v1.Tag
+	(*NoteIcon)(nil),                     // 22: notes.v1.NoteIcon
+	(*Note)(nil),                         // 23: notes.v1.Note
+	(*NoteReference)(nil),                // 24: notes.v1.NoteReference
+	(*MoveNoteRequest)(nil),              // 25: notes.v1.MoveNoteRequest
+	(*CopyNoteRequest)(nil),              // 26: notes.v1.CopyNoteRequest
+	(*ShareNoteWithGroupRequest)(nil),    // 27: notes.v1.ShareNoteWithGroupRequest
+	(*UnshareNoteFromGroupRequest)(nil),  // 28: notes.v1.UnshareNoteFromGroupRequest
+	(*ShareNoteWithGroupResponse)(nil),   // 29: notes.v1.ShareNoteWithGroupResponse
+	(*UnshareNoteFromGroupResponse)(nil), // 30: notes.v1.UnshareNoteFromGroupResponse
+	(*GetNoteSharingRequest)(nil),        // 31: notes.v1.GetNoteSharingRequest
+	(*GetNoteSharingResponse)(nil),       // 32: notes.v1.GetNoteSharingResponse
+	(*GrantPermissionRequest)(nil),       // 33: notes.v1.GrantPermissionRequest
+	(*RevokePermissionRequest)(nil),      // 34: notes.v1.RevokePermissionRequest
+	(*GrantPermissionResponse)(nil),      // 35: notes.v1.GrantPermissionResponse
+	(*RevokePermissionResponse)(nil),     // 36: notes.v1.RevokePermissionResponse
+	(*ContentPermission)(nil),            // 37: notes.v1.ContentPermission
+	(*NoteOwner)(nil),                    // 38: notes.v1.NoteOwner
+	(*NoteShareTarget)(nil),              // 39: notes.v1.NoteShareTarget
+	nil,                                  // 40: notes.v1.CreateNoteRequest.MetadataEntry
+	nil,                                  // 41: notes.v1.UpdateNoteRequest.MetadataEntry
+	nil,                                  // 42: notes.v1.Note.MetadataEntry
+	(v1.AccessMode)(0),                   // 43: common.v1.AccessMode
+	(v1.ContentRole)(0),                  // 44: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),        // 45: google.protobuf.Timestamp
+	(*v11.Tag)(nil),                      // 46: tags.v1.Tag
 }
 var file_notes_v1_notes_proto_depIdxs = []int32{
-	42, // 0: notes.v1.CreateNoteRequest.metadata:type_name -> notes.v1.CreateNoteRequest.MetadataEntry
-	45, // 1: notes.v1.CreateNoteRequest.access_mode:type_name -> common.v1.AccessMode
+	40, // 0: notes.v1.CreateNoteRequest.metadata:type_name -> notes.v1.CreateNoteRequest.MetadataEntry
+	43, // 1: notes.v1.CreateNoteRequest.access_mode:type_name -> common.v1.AccessMode
 	0,  // 2: notes.v1.CreateNoteRequest.node_type:type_name -> notes.v1.NodeType
-	24, // 3: notes.v1.CreateNoteRequest.icon:type_name -> notes.v1.NoteIcon
-	46, // 4: notes.v1.CreateNoteRequest.baseline_role:type_name -> common.v1.ContentRole
-	43, // 5: notes.v1.UpdateNoteRequest.metadata:type_name -> notes.v1.UpdateNoteRequest.MetadataEntry
-	24, // 6: notes.v1.UpdateNoteRequest.icon:type_name -> notes.v1.NoteIcon
+	22, // 3: notes.v1.CreateNoteRequest.icon:type_name -> notes.v1.NoteIcon
+	44, // 4: notes.v1.CreateNoteRequest.baseline_role:type_name -> common.v1.ContentRole
+	41, // 5: notes.v1.UpdateNoteRequest.metadata:type_name -> notes.v1.UpdateNoteRequest.MetadataEntry
+	22, // 6: notes.v1.UpdateNoteRequest.icon:type_name -> notes.v1.NoteIcon
 	4,  // 7: notes.v1.UpdateNoteRequest.tag_ids:type_name -> notes.v1.NoteTagIds
-	25, // 8: notes.v1.CreateNoteResponse.note:type_name -> notes.v1.Note
-	25, // 9: notes.v1.GetNoteResponse.note:type_name -> notes.v1.Note
-	25, // 10: notes.v1.UpdateNoteResponse.note:type_name -> notes.v1.Note
-	25, // 11: notes.v1.RestoreNoteResponse.note:type_name -> notes.v1.Note
-	25, // 12: notes.v1.MoveNoteResponse.note:type_name -> notes.v1.Note
-	25, // 13: notes.v1.CopyNoteResponse.note:type_name -> notes.v1.Note
-	45, // 14: notes.v1.ListNotesRequest.access_mode:type_name -> common.v1.AccessMode
-	25, // 15: notes.v1.ListNotesResponse.notes:type_name -> notes.v1.Note
-	25, // 16: notes.v1.SearchNotesResponse.notes:type_name -> notes.v1.Note
-	26, // 17: notes.v1.GetBacklinksResponse.backlinks:type_name -> notes.v1.NoteReference
-	47, // 18: notes.v1.AutosaveNoteResponse.saved_at:type_name -> google.protobuf.Timestamp
-	45, // 19: notes.v1.Note.access_mode:type_name -> common.v1.AccessMode
-	0,  // 20: notes.v1.Note.node_type:type_name -> notes.v1.NodeType
-	44, // 21: notes.v1.Note.metadata:type_name -> notes.v1.Note.MetadataEntry
-	47, // 22: notes.v1.Note.created_at:type_name -> google.protobuf.Timestamp
-	47, // 23: notes.v1.Note.updated_at:type_name -> google.protobuf.Timestamp
-	47, // 24: notes.v1.Note.deleted_at:type_name -> google.protobuf.Timestamp
-	46, // 25: notes.v1.Note.user_role:type_name -> common.v1.ContentRole
-	24, // 26: notes.v1.Note.icon:type_name -> notes.v1.NoteIcon
-	40, // 27: notes.v1.Note.owner_info:type_name -> notes.v1.NoteOwner
-	41, // 28: notes.v1.Note.shared_with:type_name -> notes.v1.NoteShareTarget
-	46, // 29: notes.v1.Note.baseline_role:type_name -> common.v1.ContentRole
-	48, // 30: notes.v1.Note.tags:type_name -> tags.v1.Tag
-	47, // 31: notes.v1.NoteReference.updated_at:type_name -> google.protobuf.Timestamp
-	45, // 32: notes.v1.NoteReference.access_mode:type_name -> common.v1.AccessMode
-	0,  // 33: notes.v1.NoteReference.node_type:type_name -> notes.v1.NodeType
-	46, // 34: notes.v1.NoteReference.baseline_role:type_name -> common.v1.ContentRole
-	45, // 35: notes.v1.MoveNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
-	46, // 36: notes.v1.MoveNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
-	45, // 37: notes.v1.CopyNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
-	46, // 38: notes.v1.CopyNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
-	45, // 39: notes.v1.GetNoteSharingResponse.access_mode:type_name -> common.v1.AccessMode
-	39, // 40: notes.v1.GetNoteSharingResponse.permissions:type_name -> notes.v1.ContentPermission
-	46, // 41: notes.v1.GetNoteSharingResponse.baseline_role:type_name -> common.v1.ContentRole
-	46, // 42: notes.v1.GrantPermissionRequest.role:type_name -> common.v1.ContentRole
-	46, // 43: notes.v1.ContentPermission.role:type_name -> common.v1.ContentRole
-	47, // 44: notes.v1.ContentPermission.granted_at:type_name -> google.protobuf.Timestamp
-	47, // 45: notes.v1.ContentPermission.expires_at:type_name -> google.protobuf.Timestamp
-	46, // 46: notes.v1.NoteShareTarget.role:type_name -> common.v1.ContentRole
-	1,  // 47: notes.v1.NotesService.CreateNote:input_type -> notes.v1.CreateNoteRequest
-	2,  // 48: notes.v1.NotesService.GetNote:input_type -> notes.v1.GetNoteRequest
-	3,  // 49: notes.v1.NotesService.UpdateNote:input_type -> notes.v1.UpdateNoteRequest
-	5,  // 50: notes.v1.NotesService.DeleteNote:input_type -> notes.v1.DeleteNoteRequest
-	13, // 51: notes.v1.NotesService.ListNotes:input_type -> notes.v1.ListNotesRequest
-	15, // 52: notes.v1.NotesService.SearchNotes:input_type -> notes.v1.SearchNotesRequest
-	17, // 53: notes.v1.NotesService.GetBacklinks:input_type -> notes.v1.GetBacklinksRequest
-	19, // 54: notes.v1.NotesService.RestoreNote:input_type -> notes.v1.RestoreNoteRequest
-	20, // 55: notes.v1.NotesService.EmptyTrash:input_type -> notes.v1.EmptyTrashRequest
-	22, // 56: notes.v1.NotesService.AutosaveNote:input_type -> notes.v1.AutosaveNoteRequest
-	27, // 57: notes.v1.NotesService.MoveNote:input_type -> notes.v1.MoveNoteRequest
-	28, // 58: notes.v1.NotesService.CopyNote:input_type -> notes.v1.CopyNoteRequest
-	29, // 59: notes.v1.NotesService.ShareNoteWithGroup:input_type -> notes.v1.ShareNoteWithGroupRequest
-	30, // 60: notes.v1.NotesService.UnshareNoteFromGroup:input_type -> notes.v1.UnshareNoteFromGroupRequest
-	33, // 61: notes.v1.NotesService.GetNoteSharing:input_type -> notes.v1.GetNoteSharingRequest
-	35, // 62: notes.v1.NotesService.GrantPermission:input_type -> notes.v1.GrantPermissionRequest
-	36, // 63: notes.v1.NotesService.RevokePermission:input_type -> notes.v1.RevokePermissionRequest
-	7,  // 64: notes.v1.NotesService.CreateNote:output_type -> notes.v1.CreateNoteResponse
-	8,  // 65: notes.v1.NotesService.GetNote:output_type -> notes.v1.GetNoteResponse
-	9,  // 66: notes.v1.NotesService.UpdateNote:output_type -> notes.v1.UpdateNoteResponse
-	6,  // 67: notes.v1.NotesService.DeleteNote:output_type -> notes.v1.DeleteNoteResponse
-	14, // 68: notes.v1.NotesService.ListNotes:output_type -> notes.v1.ListNotesResponse
-	16, // 69: notes.v1.NotesService.SearchNotes:output_type -> notes.v1.SearchNotesResponse
-	18, // 70: notes.v1.NotesService.GetBacklinks:output_type -> notes.v1.GetBacklinksResponse
-	10, // 71: notes.v1.NotesService.RestoreNote:output_type -> notes.v1.RestoreNoteResponse
-	21, // 72: notes.v1.NotesService.EmptyTrash:output_type -> notes.v1.EmptyTrashResponse
-	23, // 73: notes.v1.NotesService.AutosaveNote:output_type -> notes.v1.AutosaveNoteResponse
-	11, // 74: notes.v1.NotesService.MoveNote:output_type -> notes.v1.MoveNoteResponse
-	12, // 75: notes.v1.NotesService.CopyNote:output_type -> notes.v1.CopyNoteResponse
-	31, // 76: notes.v1.NotesService.ShareNoteWithGroup:output_type -> notes.v1.ShareNoteWithGroupResponse
-	32, // 77: notes.v1.NotesService.UnshareNoteFromGroup:output_type -> notes.v1.UnshareNoteFromGroupResponse
-	34, // 78: notes.v1.NotesService.GetNoteSharing:output_type -> notes.v1.GetNoteSharingResponse
-	37, // 79: notes.v1.NotesService.GrantPermission:output_type -> notes.v1.GrantPermissionResponse
-	38, // 80: notes.v1.NotesService.RevokePermission:output_type -> notes.v1.RevokePermissionResponse
-	64, // [64:81] is the sub-list for method output_type
-	47, // [47:64] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	23, // 8: notes.v1.CreateNoteResponse.note:type_name -> notes.v1.Note
+	23, // 9: notes.v1.GetNoteResponse.note:type_name -> notes.v1.Note
+	23, // 10: notes.v1.UpdateNoteResponse.note:type_name -> notes.v1.Note
+	23, // 11: notes.v1.RestoreNoteResponse.note:type_name -> notes.v1.Note
+	23, // 12: notes.v1.MoveNoteResponse.note:type_name -> notes.v1.Note
+	23, // 13: notes.v1.CopyNoteResponse.note:type_name -> notes.v1.Note
+	43, // 14: notes.v1.ListNotesRequest.access_mode:type_name -> common.v1.AccessMode
+	23, // 15: notes.v1.ListNotesResponse.notes:type_name -> notes.v1.Note
+	23, // 16: notes.v1.SearchNotesResponse.notes:type_name -> notes.v1.Note
+	24, // 17: notes.v1.GetBacklinksResponse.backlinks:type_name -> notes.v1.NoteReference
+	43, // 18: notes.v1.Note.access_mode:type_name -> common.v1.AccessMode
+	0,  // 19: notes.v1.Note.node_type:type_name -> notes.v1.NodeType
+	42, // 20: notes.v1.Note.metadata:type_name -> notes.v1.Note.MetadataEntry
+	45, // 21: notes.v1.Note.created_at:type_name -> google.protobuf.Timestamp
+	45, // 22: notes.v1.Note.updated_at:type_name -> google.protobuf.Timestamp
+	45, // 23: notes.v1.Note.deleted_at:type_name -> google.protobuf.Timestamp
+	44, // 24: notes.v1.Note.user_role:type_name -> common.v1.ContentRole
+	22, // 25: notes.v1.Note.icon:type_name -> notes.v1.NoteIcon
+	38, // 26: notes.v1.Note.owner_info:type_name -> notes.v1.NoteOwner
+	39, // 27: notes.v1.Note.shared_with:type_name -> notes.v1.NoteShareTarget
+	44, // 28: notes.v1.Note.baseline_role:type_name -> common.v1.ContentRole
+	46, // 29: notes.v1.Note.tags:type_name -> tags.v1.Tag
+	45, // 30: notes.v1.NoteReference.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 31: notes.v1.NoteReference.access_mode:type_name -> common.v1.AccessMode
+	0,  // 32: notes.v1.NoteReference.node_type:type_name -> notes.v1.NodeType
+	44, // 33: notes.v1.NoteReference.baseline_role:type_name -> common.v1.ContentRole
+	43, // 34: notes.v1.MoveNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
+	44, // 35: notes.v1.MoveNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	43, // 36: notes.v1.CopyNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
+	44, // 37: notes.v1.CopyNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	43, // 38: notes.v1.GetNoteSharingResponse.access_mode:type_name -> common.v1.AccessMode
+	37, // 39: notes.v1.GetNoteSharingResponse.permissions:type_name -> notes.v1.ContentPermission
+	44, // 40: notes.v1.GetNoteSharingResponse.baseline_role:type_name -> common.v1.ContentRole
+	44, // 41: notes.v1.GrantPermissionRequest.role:type_name -> common.v1.ContentRole
+	44, // 42: notes.v1.ContentPermission.role:type_name -> common.v1.ContentRole
+	45, // 43: notes.v1.ContentPermission.granted_at:type_name -> google.protobuf.Timestamp
+	45, // 44: notes.v1.ContentPermission.expires_at:type_name -> google.protobuf.Timestamp
+	44, // 45: notes.v1.NoteShareTarget.role:type_name -> common.v1.ContentRole
+	1,  // 46: notes.v1.NotesService.CreateNote:input_type -> notes.v1.CreateNoteRequest
+	2,  // 47: notes.v1.NotesService.GetNote:input_type -> notes.v1.GetNoteRequest
+	3,  // 48: notes.v1.NotesService.UpdateNote:input_type -> notes.v1.UpdateNoteRequest
+	5,  // 49: notes.v1.NotesService.DeleteNote:input_type -> notes.v1.DeleteNoteRequest
+	13, // 50: notes.v1.NotesService.ListNotes:input_type -> notes.v1.ListNotesRequest
+	15, // 51: notes.v1.NotesService.SearchNotes:input_type -> notes.v1.SearchNotesRequest
+	17, // 52: notes.v1.NotesService.GetBacklinks:input_type -> notes.v1.GetBacklinksRequest
+	19, // 53: notes.v1.NotesService.RestoreNote:input_type -> notes.v1.RestoreNoteRequest
+	20, // 54: notes.v1.NotesService.EmptyTrash:input_type -> notes.v1.EmptyTrashRequest
+	25, // 55: notes.v1.NotesService.MoveNote:input_type -> notes.v1.MoveNoteRequest
+	26, // 56: notes.v1.NotesService.CopyNote:input_type -> notes.v1.CopyNoteRequest
+	27, // 57: notes.v1.NotesService.ShareNoteWithGroup:input_type -> notes.v1.ShareNoteWithGroupRequest
+	28, // 58: notes.v1.NotesService.UnshareNoteFromGroup:input_type -> notes.v1.UnshareNoteFromGroupRequest
+	31, // 59: notes.v1.NotesService.GetNoteSharing:input_type -> notes.v1.GetNoteSharingRequest
+	33, // 60: notes.v1.NotesService.GrantPermission:input_type -> notes.v1.GrantPermissionRequest
+	34, // 61: notes.v1.NotesService.RevokePermission:input_type -> notes.v1.RevokePermissionRequest
+	7,  // 62: notes.v1.NotesService.CreateNote:output_type -> notes.v1.CreateNoteResponse
+	8,  // 63: notes.v1.NotesService.GetNote:output_type -> notes.v1.GetNoteResponse
+	9,  // 64: notes.v1.NotesService.UpdateNote:output_type -> notes.v1.UpdateNoteResponse
+	6,  // 65: notes.v1.NotesService.DeleteNote:output_type -> notes.v1.DeleteNoteResponse
+	14, // 66: notes.v1.NotesService.ListNotes:output_type -> notes.v1.ListNotesResponse
+	16, // 67: notes.v1.NotesService.SearchNotes:output_type -> notes.v1.SearchNotesResponse
+	18, // 68: notes.v1.NotesService.GetBacklinks:output_type -> notes.v1.GetBacklinksResponse
+	10, // 69: notes.v1.NotesService.RestoreNote:output_type -> notes.v1.RestoreNoteResponse
+	21, // 70: notes.v1.NotesService.EmptyTrash:output_type -> notes.v1.EmptyTrashResponse
+	11, // 71: notes.v1.NotesService.MoveNote:output_type -> notes.v1.MoveNoteResponse
+	12, // 72: notes.v1.NotesService.CopyNote:output_type -> notes.v1.CopyNoteResponse
+	29, // 73: notes.v1.NotesService.ShareNoteWithGroup:output_type -> notes.v1.ShareNoteWithGroupResponse
+	30, // 74: notes.v1.NotesService.UnshareNoteFromGroup:output_type -> notes.v1.UnshareNoteFromGroupResponse
+	32, // 75: notes.v1.NotesService.GetNoteSharing:output_type -> notes.v1.GetNoteSharingResponse
+	35, // 76: notes.v1.NotesService.GrantPermission:output_type -> notes.v1.GrantPermissionResponse
+	36, // 77: notes.v1.NotesService.RevokePermission:output_type -> notes.v1.RevokePermissionResponse
+	62, // [62:78] is the sub-list for method output_type
+	46, // [46:62] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_notes_v1_notes_proto_init() }
@@ -3735,21 +3560,20 @@ func file_notes_v1_notes_proto_init() {
 	file_notes_v1_notes_proto_msgTypes[0].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[2].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[12].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[21].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[22].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[23].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[24].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[25].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[26].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[27].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[33].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[34].OneofWrappers = []any{}
-	file_notes_v1_notes_proto_msgTypes[38].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[31].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[32].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[36].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notes_v1_notes_proto_rawDesc), len(file_notes_v1_notes_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   44,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

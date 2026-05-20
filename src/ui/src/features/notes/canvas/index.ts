@@ -13,7 +13,6 @@ export { MindMapNode } from '@/features/notes/canvas/nodes/MindMapNode';
 export { CustomEdge } from '@/features/notes/canvas/edges/CustomEdge';
 export { MindMapEdge } from '@/features/notes/canvas/edges/MindMapEdge';
 export { EdgeStyleToolbar } from '@/features/notes/canvas/components/EdgeStyleToolbar';
-export { useCanvasHistory } from '@/features/notes/canvas/hooks/useCanvasHistory';
 export { NodeStyleToolbar } from '@/features/notes/canvas/components/NodeStyleToolbar';
 export { NODE_COLORS, BORDER_WIDTHS } from '@/features/notes/canvas/components/nodeStyleConstants';
 export { MINDMAP_BRANCH_COLORS } from '@/features/notes/canvas/components/mindmapConstants';

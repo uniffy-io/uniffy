@@ -15,6 +15,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.agents.prompt import AgentPrompt
+from uniffy.core.types import AccessMode, ContentRole
 
 # --- Prompt Source mappings ---
 
@@ -65,7 +66,11 @@ def prompt_source_from_proto(proto_source: PromptSource) -> str:
     return PROMPT_SOURCE_FROM_PROTO.get(proto_source, "bundled")
 
 
-def prompt_to_proto(prompt: AgentPrompt) -> PromptInfo:
+def prompt_to_proto(
+    prompt: AgentPrompt,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> PromptInfo:
     """Convert an AgentPrompt model to proto PromptInfo.
 
     Parameters
@@ -79,6 +84,15 @@ def prompt_to_proto(prompt: AgentPrompt) -> PromptInfo:
         Proto message.
 
     """
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else prompt.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role
+        if effective_baseline_role is not None
+        else prompt.baseline_role
+    )
+
     info = PromptInfo(
         id=str(prompt.id),
         name=prompt.name,
@@ -88,12 +102,12 @@ def prompt_to_proto(prompt: AgentPrompt) -> PromptInfo:
         source=prompt_source_to_proto(prompt.source),
         created_at=datetime_to_timestamp(prompt.created_at),
         updated_at=datetime_to_timestamp(prompt.updated_at),
-        access_mode=access_mode_to_proto(prompt.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         created_by=str(prompt.created_by) if prompt.created_by else "",
     )
 
-    if prompt.baseline_role is not None:
-        info.baseline_role = content_role_to_proto(prompt.baseline_role)
+    if resolved_baseline is not None:
+        info.baseline_role = content_role_to_proto(resolved_baseline)
 
     if prompt.organization_id is not None:
         info.organization_id = str(prompt.organization_id)

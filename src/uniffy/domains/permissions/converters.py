@@ -52,13 +52,18 @@ def content_member_to_proto(member: ContentMember) -> ProtoContentMember:
 
 def content_access_policy_to_proto(
     owner_id: UUID,
-    access_mode: AccessMode,
+    access_mode: AccessMode | None,
     baseline_role: ContentRole | None,
 ) -> ProtoContentAccessPolicy:
-    """Build a ``ContentAccessPolicy`` proto from raw access policy fields."""
+    """Build a ``ContentAccessPolicy`` proto from raw access policy fields.
+
+    ``access_mode`` may be ``None`` when the row inherits from the org
+    defaults; the proto emits ``ACCESS_MODE_UNSPECIFIED`` which the
+    sharing dialog renders as "no per-item override / inherit".
+    """
     proto = ProtoContentAccessPolicy(
         owner_id=str(owner_id),
-        access_mode=access_mode_to_proto(access_mode),
+        access_mode=access_mode_to_proto(access_mode) if access_mode is not None else 0,
     )
     if baseline_role is not None:
         proto.baseline_role = content_role_to_proto(baseline_role)

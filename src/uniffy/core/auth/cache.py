@@ -67,6 +67,10 @@ def _content_tag(content_type: ContentType, content_id: UUID) -> str:
     return f"content:{content_type.value}:{content_id}"
 
 
+def _defaults_tag(organization_id: UUID, content_type: ContentType) -> str:
+    return f"defaults:{organization_id}:{content_type.value}"
+
+
 async def get_or_load_org_admin(
     organization_id: UUID,
     user_id: UUID,
@@ -128,7 +132,11 @@ async def get_or_load_effective_role(
         _role_key(organization_id, user_id, content_type, content_id),
         _load,
         ttl=_ROLE_TTL,
-        tags=[_user_tag(user_id), _content_tag(content_type, content_id)],
+        tags=[
+            _user_tag(user_id),
+            _content_tag(content_type, content_id),
+            _defaults_tag(organization_id, content_type),
+        ],
     )
     if cached is None:
         return None
@@ -168,6 +176,21 @@ async def invalidate_content(
     users.
     """
     await cache_invalidate_by_tag(_content_tag(content_type, content_id))
+
+
+async def invalidate_org_defaults(
+    organization_id: UUID,
+    content_type: ContentType,
+) -> None:
+    """Drop every cached role entry for inheriting rows in a given (org, ct).
+
+    Called from ``OrganizationOperations.update_permission_defaults`` to
+    make the new defaults take effect immediately. Rows that carry an
+    explicit override survive (their effective role does not depend on
+    the org default), but the cache is wiped wholesale because role
+    entries do not record which rows were inheriting at compute time.
+    """
+    await cache_invalidate_by_tag(_defaults_tag(organization_id, content_type))
 
 
 async def invalidate_org_admin(organization_id: UUID, user_id: UUID) -> None:

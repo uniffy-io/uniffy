@@ -17,6 +17,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
 
 # Domain credential_type string <-> proto enum mappings
@@ -66,7 +67,11 @@ def credential_type_from_proto(proto_type: CredentialType) -> str:
     return CREDENTIAL_TYPE_FROM_PROTO.get(proto_type, "api_key")
 
 
-def provider_key_to_proto(key: ProviderKey) -> ProviderKeyInfo:
+def provider_key_to_proto(
+    key: ProviderKey,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> ProviderKeyInfo:
     """Convert a ProviderKey model to proto ProviderKeyInfo.
 
     Parameters
@@ -80,6 +85,15 @@ def provider_key_to_proto(key: ProviderKey) -> ProviderKeyInfo:
         Proto message (credential never included).
 
     """
+    resolved_mode = (
+        effective_access_mode if effective_access_mode is not None else key.access_mode
+    )
+    resolved_baseline = (
+        effective_baseline_role
+        if effective_baseline_role is not None
+        else key.baseline_role
+    )
+
     info = ProviderKeyInfo(
         id=str(key.id),
         provider=key.provider,
@@ -91,11 +105,11 @@ def provider_key_to_proto(key: ProviderKey) -> ProviderKeyInfo:
         created_at=datetime_to_timestamp(key.created_at),
         updated_at=datetime_to_timestamp(key.updated_at),
         created_by=str(key.created_by),
-        access_mode=access_mode_to_proto(key.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
     )
 
-    if key.baseline_role is not None:
-        info.baseline_role = content_role_to_proto(key.baseline_role)
+    if resolved_baseline is not None:
+        info.baseline_role = content_role_to_proto(resolved_baseline)
 
     if key.last_validated_at:
         info.last_validated_at.CopyFrom(datetime_to_timestamp(key.last_validated_at))

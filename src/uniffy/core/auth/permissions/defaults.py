@@ -1,17 +1,10 @@
-"""Helpers for resolving the per-org default access policy for new content.
+"""Per-org default access policy resolution.
 
-When a user creates a piece of content (note, project, file, etc.) the
-backend reads the organization's defaults for that content type and
-applies them to the new row's ``access_mode`` and ``baseline_role``
-columns. The helpers here are the single point of resolution; every
-domain calls them instead of inlining the lookup.
-
-The fallback chain is:
-
-1. ``permissions_org_defaults`` row for ``(organization_id, content_type)``
-2. The static ``ORG_PERMISSION_DEFAULTS`` dict shipped in
-   :mod:`uniffy.domains.organizations.defaults`
-3. ``(OWNER_ONLY, None)`` as the safe last resort if both are absent
+A NULL ``access_mode`` on a content row inherits live from
+``permissions_org_defaults``; non-NULL is an explicit override.
+:func:`resolve_effective_policy` materialises the effective pair on
+every access check. Fallback chain: org-default row →
+``ORG_PERMISSION_DEFAULTS`` static dict → ``(OWNER_ONLY, None)``.
 """
 
 from uuid import UUID
@@ -33,11 +26,8 @@ async def resolve_content_defaults(
 ) -> tuple[AccessMode, ContentRole | None]:
     """Resolve the (access_mode, baseline_role) defaults for a content type.
 
-    Reads the organization's row from ``permissions_org_defaults`` if one
-    exists. Otherwise falls back to the static ``ORG_PERMISSION_DEFAULTS``
-    dict (lazy-imported to avoid pulling in the organizations domain at
-    import time). If the static dict has no entry, returns
-    ``(OWNER_ONLY, None)``.
+    Reads the org's ``permissions_org_defaults`` row; falls back to the
+    static ``ORG_PERMISSION_DEFAULTS`` dict, then ``(OWNER_ONLY, None)``.
 
     Parameters
     ----------
@@ -85,46 +75,42 @@ async def resolve_access_policy(
     content_type: ContentType,
     access_mode: AccessMode | None,
     baseline_role: ContentRole | None,
-) -> tuple[AccessMode, ContentRole | None]:
-    """Fill in defaults and validate an ``(access_mode, baseline_role)`` pair.
+) -> tuple[AccessMode | None, ContentRole | None]:
+    """Validate an ``(access_mode, baseline_role)`` pair for storage.
 
-    Every domain ``create()`` path calls this helper to turn optional
-    caller args into the canonical tuple stored on the content row.
+    Does **not** consult org defaults. The runtime is responsible for
+    materialising the effective policy on read via
+    :func:`resolve_effective_policy`. This helper only validates the
+    pair the caller intends to store.
 
-    Resolution rules:
+    Rules:
 
-    - If ``access_mode`` is ``None``, load org defaults for ``content_type``.
-      ``baseline_role`` stays ``None`` unless also unset, in which case the
-      org default baseline fills it.
-    - If ``access_mode`` is ``OPEN_TO_ORG`` and ``baseline_role`` is
-      ``None`` (caller supplied the mode explicitly but no baseline),
-      fall back to the org default baseline. If that is also ``None``,
-      fall back to ``ContentRole.VIEWER`` as the safe least-privilege
-      baseline so callers (e.g. UI dropping content into the org tree)
-      do not need to know the org-configured default.
-    - If the resolved ``access_mode`` is ``OPEN_TO_ORG``, ``baseline_role``
-      must not be ``OWNER`` or ``BLOCKED``.
-    - For any other ``access_mode``, ``baseline_role`` is forced to ``None``.
+    - ``(None, None)`` is valid - the row will inherit org defaults at
+      read time.
+    - ``(None, X)`` is rejected - a non-NULL baseline without an explicit
+      mode has no defined semantics. Callers wanting an inherited mode
+      must pass ``baseline=None`` too.
+    - With ``access_mode == OPEN_TO_ORG``, ``baseline_role`` may be NULL
+      (inherits org default baseline) or any role except ``OWNER`` /
+      ``BLOCKED``.
+    - With any other explicit ``access_mode``, ``baseline_role`` is
+      forced to NULL.
 
     Raises
     ------
     ValidationError
-        If ``baseline_role`` is ``OWNER`` / ``BLOCKED`` on ``OPEN_TO_ORG``.
+        If ``baseline_role`` is ``OWNER`` / ``BLOCKED`` on ``OPEN_TO_ORG``,
+        or if a baseline is supplied without an access mode.
     """
     if access_mode is None:
-        access_mode, default_baseline = await resolve_content_defaults(
-            session, organization_id, content_type
-        )
-        if baseline_role is None:
-            baseline_role = default_baseline
+        if baseline_role is not None:
+            raise ValidationError(
+                "baseline_role",
+                "baseline_role cannot be set without an access_mode",
+            )
+        return None, None
 
     if access_mode == AccessMode.OPEN_TO_ORG:
-        if baseline_role is None:
-            _, default_baseline = await resolve_content_defaults(
-                session, organization_id, content_type
-            )
-            baseline_role = default_baseline or ContentRole.VIEWER
-
         if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
             raise ValidationError(
                 "baseline_role",
@@ -133,3 +119,47 @@ async def resolve_access_policy(
         return access_mode, baseline_role
 
     return access_mode, None
+
+
+def resolve_effective_policy(
+    raw_access_mode: AccessMode | None,
+    raw_baseline_role: ContentRole | None,
+    org_default_access_mode: AccessMode | None,
+    org_default_baseline_role: ContentRole | None,
+) -> tuple[AccessMode, ContentRole | None]:
+    """Materialise the live policy for a content row.
+
+    Given the row's raw ``(access_mode, baseline_role)`` columns and the
+    org's defaults for the content type, return the ``(effective_mode,
+    effective_baseline)`` pair the permission machinery should consult.
+
+    Resolution:
+
+    - ``raw_access_mode`` is NULL → use ``org_default_access_mode``.
+      ``raw_baseline_role`` is ignored (cannot be non-NULL when the mode
+      is NULL by the storage invariant in :func:`resolve_access_policy`).
+      Falls back to ``OWNER_ONLY`` if the org has no default.
+    - ``raw_access_mode`` is non-NULL and not ``OPEN_TO_ORG`` → use the
+      row's mode, force baseline to NULL.
+    - ``raw_access_mode == OPEN_TO_ORG`` and ``raw_baseline_role`` is NULL
+      → use the row's mode, baseline inherits from
+      ``org_default_baseline_role`` (or ``VIEWER`` as the safe floor).
+    - ``raw_access_mode == OPEN_TO_ORG`` and ``raw_baseline_role`` is
+      non-NULL → use the row's values verbatim.
+
+    Pure function; no DB access. The caller is responsible for caching
+    the org-defaults lookup if it's hot.
+    """
+    if raw_access_mode is None:
+        mode = org_default_access_mode or AccessMode.OWNER_ONLY
+        baseline = org_default_baseline_role if mode == AccessMode.OPEN_TO_ORG else None
+        return mode, baseline
+
+    if raw_access_mode != AccessMode.OPEN_TO_ORG:
+        return raw_access_mode, None
+
+    if raw_baseline_role is None:
+        baseline = org_default_baseline_role or ContentRole.VIEWER
+        return raw_access_mode, baseline
+
+    return raw_access_mode, raw_baseline_role

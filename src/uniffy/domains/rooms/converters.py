@@ -29,7 +29,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import BookingStatus, RoomStatus, RoomType
+from uniffy.core.types import AccessMode, BookingStatus, ContentRole, RoomStatus, RoomType
 
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
 # across every domain so they live in ``core.converters.common_proto``.
@@ -83,7 +83,11 @@ def room_status_from_proto(proto_status: ProtoRoomStatus.ValueType) -> RoomStatu
     return ROOM_STATUS_FROM_PROTO.get(proto_status, RoomStatus.ACTIVE)
 
 
-def room_to_proto(room: Room) -> ProtoRoom:
+def room_to_proto(
+    room: Room,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> ProtoRoom:
     """Convert a :class:`Room` row to its proto representation."""
     proto_room_type = ROOM_TYPE_TO_PROTO.get(
         room.room_type,
@@ -92,6 +96,11 @@ def room_to_proto(room: Room) -> ProtoRoom:
     proto_status = ROOM_STATUS_TO_PROTO.get(
         room.status,
         ProtoRoomStatus.ROOM_STATUS_ACTIVE,
+    )
+
+    resolved_mode = effective_access_mode if effective_access_mode is not None else room.access_mode
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else room.baseline_role
     )
 
     proto_room = ProtoRoom(
@@ -106,13 +115,13 @@ def room_to_proto(room: Room) -> ProtoRoom:
         location=room.location,
         amenities=room.amenities or [],
         image_file_id=str(room.image_file_id) if room.image_file_id else "",
-        access_mode=access_mode_to_proto(room.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         created_at=datetime_to_timestamp(room.created_at),
         updated_at=datetime_to_timestamp(room.updated_at),
     )
 
-    if room.baseline_role is not None:
-        proto_room.baseline_role = content_role_to_proto(room.baseline_role)
+    if resolved_baseline is not None:
+        proto_room.baseline_role = content_role_to_proto(resolved_baseline)
 
     if room.floor:
         proto_room.floor = room.floor

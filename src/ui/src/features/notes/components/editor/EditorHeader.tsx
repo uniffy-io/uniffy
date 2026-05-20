@@ -6,17 +6,24 @@ import {
   CodeSimple,
   CaretRight,
   SidebarSimple,
-  ArrowsClockwise,
-  CheckCircle,
-  WarningCircle,
   DotsThreeOutline,
   PushPin,
   PushPinSlash,
+  CaretUp,
+  CaretDown,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
-import { setEditorMode, toggleMetadataPanel, toggleToolbarPin } from '@/features/notes/store/editorSlice';
-import { useSaveStatus } from '@/features/notes/hooks/useNotesHooks';
+import {
+  setEditorMode,
+  toggleCanvasTitleHidden,
+  toggleMetadataPanel,
+  toggleToolbarPin,
+} from '@/features/notes/store/editorSlice';
+import { RealtimeStatusBadge } from '@/features/notes/realtime/RealtimeStatusBadge';
+import { RealtimePresence, type RealtimeStatus } from '@/features/realtime';
+import type { Awareness } from 'y-protocols/awareness';
+import { resolveAwarenessColor } from '@/features/notes/realtime/awarenessColor';
 import { buildBreadcrumbPath, type BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
 import { expandNode, setSelectedNode } from '@/features/notes/store/notesTreeSlice';
 import { setSidebarOpen } from '@/features/notes/store/editorSlice';
@@ -48,6 +55,10 @@ interface EditorHeaderProps {
   canEdit?: boolean;
   canShare?: boolean;
   isCanvas?: boolean;
+  realtimeStatus?: RealtimeStatus;
+  /** Awareness from the active session; powers the participant
+   * avatar stack. ``null`` while no session is attached. */
+  realtimeAwareness?: Awareness | null;
 }
 
 /**
@@ -214,19 +225,25 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
   );
 }
 
-export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false }: EditorHeaderProps) {
+export function EditorHeader({
+  note,
+  canEdit = true,
+  canShare = false,
+  isCanvas = false,
+  realtimeStatus = 'idle',
+  realtimeAwareness = null,
+}: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
+  const currentUser = useAppSelector((s) => s.auth.user);
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || 'crepe';
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
   const toolbarPinned = editorState?.settings?.toolbarPinned ?? true;
+  const canvasTitleHidden = editorState?.settings?.canvasTitleHidden ?? false;
 
   const { openFor: openAccessDialog } = useAccessPolicyDialog();
-
-  // Save status
-  const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
 
   // Build breadcrumb path from parent folders
   const breadcrumb = useMemo(() => {
@@ -263,28 +280,23 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
           {/* Breadcrumb */}
           <CollapsibleBreadcrumb items={breadcrumb} noteAccessMode={note.accessMode} noteOwnerId={note.ownerId} />
 
-          {/* Save Status */}
-          <div className="flex items-center gap-1.5 ml-2 md:ml-4 text-xs">
-            {isSaving ? (
-              <>
-                <ArrowsClockwise size={14} weight="bold" className="text-muted-foreground animate-spin" />
-                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
-              </>
-            ) : saveError ? (
-              <>
-                <WarningCircle size={14} weight="fill" style={{ color: 'var(--status-error)' }} />
-                <span className="hidden sm:inline" style={{ color: 'var(--status-error)' }}>Save failed</span>
-              </>
-            ) : hasUnsavedChanges ? (
-              <>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--status-warning)' }} />
-                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle size={14} weight="fill" style={{ color: 'var(--status-success)' }} />
-                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
-              </>
+          {/* Realtime status badge - hides on steady ``connected``,
+              surfaces on reconnect / offline / permission changes. */}
+          <div className="hidden sm:flex items-center gap-2 ml-2 md:ml-4">
+            <RealtimeStatusBadge status={realtimeStatus} />
+            {realtimeAwareness && (
+              <RealtimePresence
+                awareness={realtimeAwareness}
+                localUserId={currentUser?.id ?? null}
+                localUserName={currentUser?.fullName || currentUser?.username || null}
+                localUserColor={
+                  resolveAwarenessColor(
+                    currentUser?.accentColor,
+                    currentUser?.id ?? 'self',
+                  ).solid
+                }
+                localHasAvatar={Boolean(currentUser?.hasAvatar)}
+              />
             )}
           </div>
         </div>
@@ -318,6 +330,27 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
               title="Share"
             >
               <ShareNetwork size={16} weight="bold" />
+            </button>
+          )}
+
+          {/* Canvas title block hide / show toggle */}
+          {isCanvas && (
+            <button
+              onClick={() => dispatch(toggleCanvasTitleHidden())}
+              className={cn(
+                'px-2 py-1 rounded-md transition-colors',
+                canvasTitleHidden
+                  ? 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  : 'text-primary bg-primary/10',
+              )}
+              title={canvasTitleHidden ? 'Show title block' : 'Hide title block'}
+              aria-pressed={!canvasTitleHidden}
+            >
+              {canvasTitleHidden ? (
+                <CaretDown size={16} weight="bold" />
+              ) : (
+                <CaretUp size={16} weight="bold" />
+              )}
             </button>
           )}
 

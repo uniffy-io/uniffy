@@ -96,9 +96,12 @@ function AlignmentChip({
 interface NoteTitleBlockProps {
   note: SerializedNote;
   canEdit: boolean;
+  /** Tighter layout for canvas notes - smaller padding / title, no
+   * bottom separator. Metadata + tags still render. */
+  compact?: boolean;
 }
 
-export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
+export function NoteTitleBlock({ note, canEdit, compact = false }: NoteTitleBlockProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const alignment = useAppSelector((s) => s.editor.settings.titleAlignment ?? 'left');
@@ -106,9 +109,7 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
   const [localTitle, setLocalTitle] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
-  // Resolve the owner's display name so the "By {name}" byline renders the
-  // human label instead of an opaque user id. SubjectAvatarById falls back to
-  // initials when the photo is missing.
+  // Resolve the owner's display name for the "By {name}" byline.
   const { subjects: ownerSubjects } = useSubjectResolver(note.ownerId ? [note.ownerId] : []);
   const ownerName = ownerSubjects[0]?.name
     ?? (note.ownerId === currentUserId ? 'You' : '');
@@ -147,8 +148,15 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
   const isCenter = alignment === 'center';
 
   return (
-    <div className="group px-4 md:px-12 lg:px-[120px] pt-10 pb-4 w-full">
-      {canEdit && (
+    <div
+      className={cn(
+        'group w-full',
+        compact
+          ? 'px-3 md:px-6 pt-2 pb-2'
+          : 'px-4 md:px-12 lg:px-[120px] pt-10 pb-4',
+      )}
+    >
+      {canEdit && !compact && (
         <div
           className={cn(
             'flex items-center mb-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity',
@@ -165,20 +173,29 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
       <div
         className={cn(
           'flex gap-3',
-          isCenter ? 'flex-col items-center text-center' : 'items-start',
+          compact
+            ? 'items-center'
+            : isCenter
+              ? 'flex-col items-center text-center'
+              : 'items-start',
         )}
       >
         {/* Icon picker chip */}
         <div className="relative shrink-0">
           <button
             onClick={() => canEdit && setIsIconPickerOpen((v) => !v)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              canEdit ? 'hover:bg-muted cursor-pointer' : 'cursor-not-allowed opacity-60'
-            }`}
+            className={cn(
+              'rounded-lg transition-colors',
+              compact ? 'p-1' : 'p-1.5',
+              canEdit ? 'hover:bg-muted cursor-pointer' : 'cursor-not-allowed opacity-60',
+            )}
             title={canEdit ? 'Change icon' : 'Read only'}
             disabled={!canEdit}
           >
-            {renderNoteIcon(note.icon, 'h-8 w-8 text-muted-foreground')}
+            {renderNoteIcon(
+              note.icon,
+              compact ? 'h-5 w-5 text-muted-foreground' : 'h-8 w-8 text-muted-foreground',
+            )}
           </button>
           {isIconPickerOpen && canEdit && (
             <IconPicker
@@ -189,7 +206,12 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
           )}
         </div>
 
-        <div className={cn('min-w-0', isCenter ? 'w-full' : 'flex-1')}>
+        <div
+          className={cn(
+            'min-w-0',
+            compact ? 'flex-1 flex items-center gap-3 flex-wrap' : isCenter ? 'w-full' : 'flex-1',
+          )}
+        >
           <input
             type="text"
             value={title}
@@ -198,16 +220,20 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
             placeholder="Untitled"
             readOnly={!canEdit}
             className={cn(
-              'w-full text-4xl font-bold bg-transparent border-none outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40',
-              isCenter && 'text-center',
+              'bg-transparent border-none outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40',
+              compact
+                ? 'flex-1 min-w-0 text-base font-semibold'
+                : 'w-full text-4xl font-bold',
+              !compact && isCenter && 'text-center',
               !canEdit && 'cursor-not-allowed',
             )}
           />
 
           <div
             className={cn(
-              'flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap',
-              isCenter && 'justify-center',
+              'flex items-center gap-3 text-xs text-muted-foreground flex-wrap',
+              compact ? '' : 'mt-2',
+              !compact && isCenter && 'justify-center',
             )}
           >
             {note.ownerId && (
@@ -218,9 +244,9 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
                 </span>
               </span>
             )}
-            {note.ownerId && <span>·</span>}
-            <span>Created {formatProtoDate(note.createdAt)}</span>
-            {note.updatedAt && (
+            {!compact && note.ownerId && <span>·</span>}
+            {!compact && <span>Created {formatProtoDate(note.createdAt)}</span>}
+            {!compact && note.updatedAt && (
               <>
                 <span>·</span>
                 <span>Updated {formatProtoDate(note.updatedAt)}</span>
@@ -228,19 +254,25 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
             )}
             {isSharedWithUser && (
               <>
-                <span>·</span>
+                {!compact && <span>·</span>}
                 <span className="text-blue-500">Shared with you</span>
               </>
             )}
             {isExplicitlySharedByUser && (
               <>
-                <span>·</span>
+                {!compact && <span>·</span>}
                 <span className="text-blue-500">Shared</span>
               </>
             )}
           </div>
 
-          <div className={cn('mt-3 flex', isCenter ? 'justify-center' : '')}>
+          <div
+            className={cn(
+              'flex',
+              compact ? '' : 'mt-3',
+              !compact && isCenter && 'justify-center',
+            )}
+          >
             <TagPicker
               selectedTagIds={note.tagIds ?? []}
               onChange={(tagIds) => {
@@ -252,7 +284,9 @@ export function NoteTitleBlock({ note, canEdit }: NoteTitleBlockProps) {
         </div>
       </div>
 
-      <div className="mt-6 border-b border-border/60" aria-hidden="true" />
+      {!compact && (
+        <div className="mt-6 border-b border-border/60" aria-hidden="true" />
+      )}
     </div>
   );
 }

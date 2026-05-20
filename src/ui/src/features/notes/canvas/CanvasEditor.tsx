@@ -1,9 +1,7 @@
 /**
- * CanvasEditor - Main infinite canvas component.
- *
- * Wraps React Flow with custom node types (text, note, media, shape).
- * Supports edge connections, context menu, undo/redo,
- * and keyboard shortcuts. onChange serializes state to JSON for autosave.
+ * Infinite canvas wrapping React Flow with custom node types
+ * (text, note, media, shape, mindmap). Edits flow into the shared
+ * YDoc; undo / redo go through the per-doc ``Y.UndoManager``.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,7 +37,19 @@ import { CanvasContextMenu } from '@/features/notes/canvas/CanvasContextMenu';
 import { CustomEdge } from '@/features/notes/canvas/edges/CustomEdge';
 import { MindMapEdge } from '@/features/notes/canvas/edges/MindMapEdge';
 import { EdgeStyleToolbar } from '@/features/notes/canvas/components/EdgeStyleToolbar';
-import { useCanvasHistory } from '@/features/notes/canvas/hooks/useCanvasHistory';
+import * as Y from 'yjs';
+import {
+  nodeTextFieldKey,
+  readCanvasDefaults,
+  readCanvasFromYDoc,
+  readNodeTextField,
+  seedCanvasYDoc,
+  writeCanvasDefaults,
+  writeCanvasToYDoc,
+  writeNodeTextDiff,
+} from '@/features/notes/realtime/canvasBinding';
+import type { CanvasRealtimeBinding } from '@/features/notes/realtime/useCanvasRealtimeSession';
+import { CanvasAwarenessOverlay } from '@/features/notes/realtime/CanvasAwarenessOverlay';
 import {
   layoutMindMap,
   findMindMapRoot,
@@ -61,7 +71,8 @@ import type {
 } from '@/features/notes/canvas/types';
 import { cn } from '@/shared/utils/cn';
 import { useTheme } from '@/config/theme/ThemeProvider';
-import { useAppSelector } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { setCanvasCursorsMode } from '@/features/notes/store/editorSlice';
 import { uploadImage } from '@/components/editor/utils/imageUploader';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
@@ -73,9 +84,13 @@ import { MagnifyingGlass } from '@phosphor-icons/react';
 
 interface CanvasEditorProps {
   canvasState: CanvasState;
-  onChange: (state: CanvasState) => void;
   readonly?: boolean;
   contentId: string;
+  /**
+   * Yjs binding. Required for editing; viewers may receive
+   * ``undefined`` and every write handler then short-circuits.
+   */
+  realtime?: CanvasRealtimeBinding;
 }
 
 /** Generate a unique ID for new nodes. */
@@ -119,14 +134,21 @@ interface SelectedEdgeState {
 
 function CanvasEditorInner({
   canvasState,
-  onChange,
   readonly = false,
   contentId,
+  realtime,
 }: CanvasEditorProps) {
+  const realtimeRef = useRef<CanvasRealtimeBinding | undefined>(realtime);
+  useEffect(() => {
+    realtimeRef.current = realtime;
+  }, [realtime]);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
   const { resolvedTheme } = useTheme();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const dispatch = useAppDispatch();
+  const cursorsMode = useAppSelector((s) => s.editor.settings.canvasCursorsMode ?? 'auto');
+  const [peerCount, setPeerCount] = useState(0);
   const canvasStateRef = useRef(canvasState);
   useEffect(() => {
     canvasStateRef.current = canvasState;
@@ -134,6 +156,14 @@ function CanvasEditorInner({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(canvasState.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(canvasState.edges);
+  // Per-canvas defaults in their own state so peer changes to
+  // ``Y.Map("defaults")`` re-render the toolbar without a parent
+  // round-trip.
+  const [defaults, setDefaults] = useState<CanvasDefaults | undefined>(canvasState.defaults);
+  const defaultsRef = useRef<CanvasDefaults | undefined>(defaults);
+  useEffect(() => {
+    defaultsRef.current = defaults;
+  }, [defaults]);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<SelectedEdgeState | null>(null);
   const [showContentPicker, setShowContentPicker] = useState(false);
@@ -144,10 +174,48 @@ function CanvasEditorInner({
   const contentPickerRef = useRef<HTMLDivElement>(null);
   const { query: pickerQuery, setQuery: setPickerQuery, results: pickerResults, isLoading: pickerLoading, clearResults: clearPickerResults } = useSearch({ limit: 15 });
 
-  const { pushState, undo, redo } = useCanvasHistory();
-
-  // Track if we need to emit onChange (debounced via interaction)
+  // Coalesce rapid interaction frames into one Y write per debounce window.
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live refs so the debounced timer reads post-commit state instead
+  // of a stale closure capture; otherwise a delete -> rAF -> setTimeout
+  // chain writes the pre-delete node array back into the YDoc.
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+
+  // Last known local string per ``${nodeId}:${field}``. Diffing
+  // against this (not the live ``Y.Text``) preserves concurrent
+  // peer inserts that landed between two of our keystrokes.
+  const localTextSnapshotsRef = useRef<Map<string, string>>(new Map());
+
+  const textSnapshotKey = useCallback(
+    (nodeId: string, field: string) => `${nodeId}:${field}`,
+    [],
+  );
+
+  /** Commit a node text field through the Y.Text diff path, keeping
+   * the local snapshot in sync so the next delta is computed against
+   * the user's own timeline rather than the merged peer view. */
+  const commitNodeTextField = useCallback(
+    (nodeId: string, fieldKey: string, next: string) => {
+      const rt = realtimeRef.current;
+      if (!rt) return;
+      const key = textSnapshotKey(nodeId, fieldKey);
+      const prev =
+        localTextSnapshotsRef.current.get(key) ??
+        readNodeTextField(rt.ydoc, nodeId, fieldKey) ??
+        '';
+      writeNodeTextDiff(rt.ydoc, nodeId, fieldKey, prev, next, rt.sessionId);
+      localTextSnapshotsRef.current.set(key, next);
+    },
+    [textSnapshotKey],
+  );
 
   /** Compute mind map edges from a set of nodes (for saving). */
   const computeMmEdgesFromNodes = useCallback((nodeList: CanvasNode[]): CanvasEdge[] => {
@@ -176,28 +244,158 @@ function CanvasEditorInner({
     return result;
   }, []);
 
+  /** Body shared by debounced and immediate writes. Pulls live
+   * node / edge state via refs (so deletes committed inside the
+   * debounce window are not stomped) and writes back to the YDoc. */
+  const commitChange = useCallback(
+    (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
+      const finalNodes = updatedNodes ?? nodesRef.current;
+      const userEdges = (updatedEdges ?? edgesRef.current).filter((e) => e.type !== 'mindmapEdge');
+      const mmEdges = computeMmEdgesFromNodes(finalNodes);
+      const finalEdges = [...userEdges, ...mmEdges] as CanvasEdge[];
+      const rt = realtimeRef.current;
+      if (!rt) return;
+      // sessionId origin scopes UndoManager and lets peers skip self-echoes.
+      writeCanvasToYDoc(rt.ydoc, finalNodes, finalEdges, rt.sessionId);
+    },
+    [computeMmEdgesFromNodes]
+  );
+
   const scheduleChange = useCallback(
     (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
       if (changeTimerRef.current) {
         clearTimeout(changeTimerRef.current);
       }
       changeTimerRef.current = setTimeout(() => {
-        const currentState = canvasStateRef.current;
-        const finalNodes = updatedNodes ?? nodes;
-        // Combine user edges with computed mind map edges for persistence
-        const userEdges = (updatedEdges ?? edges).filter((e) => e.type !== 'mindmapEdge');
-        const mmEdges = computeMmEdgesFromNodes(finalNodes);
-        const newState: CanvasState = {
-          ...currentState,
-          nodes: finalNodes,
-          edges: [...userEdges, ...mmEdges] as CanvasEdge[],
-        };
-        pushState(currentState);
-        onChange(newState);
+        commitChange(updatedNodes, updatedEdges);
       }, 300);
     },
-    [onChange, nodes, edges, pushState, computeMmEdgesFromNodes]
+    [commitChange]
   );
+
+  /** Skip the 300ms debounce; used for structural mutations
+   * (add / delete) where a peer rebuild during the debounce window
+   * could wipe the new node before our write lands. */
+  const flushChange = useCallback(
+    (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
+      if (changeTimerRef.current) {
+        clearTimeout(changeTimerRef.current);
+        changeTimerRef.current = null;
+      }
+      commitChange(updatedNodes, updatedEdges);
+    },
+    [commitChange]
+  );
+
+  // Realtime cold-start seed + peer-update mirror. Without a
+  // binding, the props-driven ``canvasState`` hydration stays in charge.
+  useEffect(() => {
+    if (!realtime) return undefined;
+    let cancelled = false;
+
+    void realtime.whenSynced.then(() => {
+      if (cancelled) return;
+      const { yNodes, yOrder, yDefaults } = realtime;
+      const empty =
+        yNodes.size === 0 && yOrder.length === 0 && yDefaults.size === 0;
+      if (empty && canvasStateRef.current.nodes.length > 0) {
+        const initial = canvasStateRef.current;
+        const userEdges = initial.edges.filter((e) => e.type !== 'mindmapEdge');
+        seedCanvasYDoc(
+          realtime.ydoc,
+          { nodes: initial.nodes, edges: userEdges, defaults: initial.defaults },
+          realtime.sessionId,
+        );
+      }
+      const next = readCanvasFromYDoc(realtime.ydoc);
+      setNodes(next.nodes);
+      setEdges(next.edges as CanvasEdge[]);
+      refreshTextSnapshots(next.nodes);
+      const remoteDefaults = readCanvasDefaults(realtime.ydoc);
+      if (remoteDefaults) setDefaults(remoteDefaults);
+    });
+
+    const refreshTextSnapshots = (nextNodes: CanvasNode[]) => {
+      const snapshots = localTextSnapshotsRef.current;
+      const seen = new Set<string>();
+      for (const node of nextNodes) {
+        const field = nodeTextFieldKey(node.type);
+        if (!field) continue;
+        const key = textSnapshotKey(node.id, field);
+        seen.add(key);
+        const value = (node.data as Record<string, unknown> | undefined)?.[field];
+        snapshots.set(key, typeof value === 'string' ? value : '');
+      }
+      // Drop snapshots for nodes that no longer exist so the map
+      // does not leak across long sessions.
+      for (const key of Array.from(snapshots.keys())) {
+        if (!seen.has(key)) snapshots.delete(key);
+      }
+    };
+
+    const rebuild = (transaction: Y.Transaction) => {
+      if (transaction.origin === realtime.sessionId) return;
+      if (transaction.origin === 'hydration') return;
+      const next = readCanvasFromYDoc(realtime.ydoc);
+      // Preserve local-only UI flags (selected / dragging / resizing)
+      // across peer rebuilds; otherwise any remote write tears down
+      // the NodeResizer mid-drag and wipes selection.
+      setNodes((prev) => {
+        const flagsById = new Map(
+          prev.map((n) => [
+            n.id,
+            { selected: n.selected, dragging: n.dragging, resizing: n.resizing },
+          ]),
+        );
+        return next.nodes.map((n) => {
+          const flags = flagsById.get(n.id);
+          if (!flags) return n;
+          return { ...n, ...flags };
+        });
+      });
+      setEdges((prev) => {
+        const flagsById = new Map(prev.map((e) => [e.id, { selected: e.selected }]));
+        return (next.edges as CanvasEdge[]).map((e) => {
+          const flags = flagsById.get(e.id);
+          if (!flags) return e;
+          return { ...e, ...flags };
+        });
+      });
+      refreshTextSnapshots(next.nodes);
+    };
+    const rebuildDefaults = (transaction: Y.Transaction) => {
+      if (transaction.origin === realtime.sessionId) return;
+      if (transaction.origin === 'hydration') return;
+      setDefaults(readCanvasDefaults(realtime.ydoc) ?? undefined);
+    };
+    // observeDeep emits an array, observe a single event; both
+    // share one rebuild callback keyed off the transaction.
+    const handleDeep = (
+      _events: unknown,
+      transaction: Y.Transaction,
+    ) => rebuild(transaction);
+    const handleShallow = (
+      _event: unknown,
+      transaction: Y.Transaction,
+    ) => rebuild(transaction);
+    const handleDefaults = (
+      _event: unknown,
+      transaction: Y.Transaction,
+    ) => rebuildDefaults(transaction);
+
+    realtime.yNodes.observeDeep(handleDeep);
+    realtime.yEdges.observeDeep(handleDeep);
+    realtime.yOrder.observe(handleShallow);
+    realtime.yDefaults.observe(handleDefaults);
+
+    return () => {
+      cancelled = true;
+      realtime.yNodes.unobserveDeep(handleDeep);
+      realtime.yEdges.unobserveDeep(handleDeep);
+      realtime.yOrder.unobserve(handleShallow);
+      realtime.yDefaults.unobserve(handleDefaults);
+    };
+  }, [realtime, setNodes, setEdges, textSnapshotKey]);
 
   // Declaratively compute mind map edges from node state. This avoids all timing
   // issues - edges are always in sync with nodes because they're derived, not managed.
@@ -341,12 +539,35 @@ function CanvasEditorInner({
         });
       }
 
-      requestAnimationFrame(() => {
-        scheduleChange();
-      });
+      // Removes flush immediately: a peer rebuild in the debounce
+      // window would otherwise re-materialise the deleted node.
+      // Drags / resizes stay debounced - intermediate frames are noise.
+      const hasRemoval = changes.some((c) => c.type === 'remove');
+      if (hasRemoval) {
+        requestAnimationFrame(() => {
+          flushChange();
+        });
+      } else {
+        requestAnimationFrame(() => {
+          scheduleChange();
+        });
+      }
     },
-    [onNodesChange, readonly, scheduleChange, nodes, setNodes, applyMindMapLayout]
+    [onNodesChange, readonly, scheduleChange, flushChange, nodes, setNodes, applyMindMapLayout]
   );
+
+  // Publish local selection into awareness so peers can ring the
+  // active nodes. No throttle - selection only fires on click / lasso.
+  useEffect(() => {
+    if (!realtime) return;
+    const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+    const local = realtime.awareness.getLocalState() ?? {};
+    const prev = (local as { selection?: string[] }).selection ?? [];
+    const sameLength = prev.length === selectedIds.length;
+    const sameMembers = sameLength && prev.every((id, i) => id === selectedIds[i]);
+    if (sameMembers) return;
+    realtime.awareness.setLocalState({ ...local, selection: selectedIds });
+  }, [realtime, nodes]);
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange<CanvasEdge>[]) => {
@@ -362,7 +583,7 @@ function CanvasEditorInner({
 
   // Get per-canvas default styles for new edges
   const getEdgeDefaults = useCallback((): Partial<CanvasEdgeData> => {
-    const d = canvasStateRef.current.defaults;
+    const d = defaultsRef.current;
     if (!d) return {};
     const result: Partial<CanvasEdgeData> = {};
     if (d.edgeColor) result.strokeColor = d.edgeColor;
@@ -420,40 +641,37 @@ function CanvasEditorInner({
     [setEdges, readonly, scheduleChange]
   );
 
-  // Handle text node content changes
+  // Per-node text lives in a Y.Text; we commit a minimal delta so
+  // concurrent typing merges char-by-char. Local React Flow state
+  // updates optimistically to avoid contentEditable flicker.
   const handleTextContentChange = useCallback(
     (nodeId: string, content: string) => {
       if (readonly) return;
-      setNodes((nds) => {
-        const updated = nds.map((n) => {
-          if (n.id === nodeId && n.data.type === 'text') {
-            return { ...n, data: { ...n.data, content } };
-          }
-          return n;
-        }) as CanvasNode[];
-        scheduleChange(updated);
-        return updated;
-      });
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId && n.data.type === 'text'
+            ? { ...n, data: { ...n.data, content } }
+            : n,
+        ) as CanvasNode[],
+      );
+      commitNodeTextField(nodeId, 'content', content);
     },
-    [setNodes, readonly, scheduleChange]
+    [setNodes, readonly, commitNodeTextField],
   );
 
-  // Handle shape label changes
   const handleShapeLabelChange = useCallback(
     (nodeId: string, label: string) => {
       if (readonly) return;
-      setNodes((nds) => {
-        const updated = nds.map((n) => {
-          if (n.id === nodeId && n.data.type === 'shape') {
-            return { ...n, data: { ...n.data, label } };
-          }
-          return n;
-        }) as CanvasNode[];
-        scheduleChange(updated);
-        return updated;
-      });
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId && n.data.type === 'shape'
+            ? { ...n, data: { ...n.data, label } }
+            : n,
+        ) as CanvasNode[],
+      );
+      commitNodeTextField(nodeId, 'label', label);
     },
-    [setNodes, readonly, scheduleChange]
+    [setNodes, readonly, commitNodeTextField],
   );
 
   // Handle node style changes (bgColor, color, borderColor, borderWidth)
@@ -521,7 +739,7 @@ function CanvasEditorInner({
 
   // Get per-canvas default styles for new nodes
   const getStyleDefaults = useCallback(() => {
-    const d = canvasStateRef.current.defaults;
+    const d = defaultsRef.current;
     if (!d) return {};
     const result: Record<string, unknown> = {};
     if (d.bgColor) result.bgColor = d.bgColor;
@@ -530,20 +748,18 @@ function CanvasEditorInner({
     return result;
   }, []);
 
-  // Update per-canvas defaults
+  // Push merged defaults into ``Y.Map("defaults")`` for peers + the
+  // snapshot pipeline; the local observer mirrors the write back.
   const handleDefaultsChange = useCallback(
     (newDefaults: CanvasDefaults) => {
       if (readonly) return;
-      const currentState = canvasStateRef.current;
-      const updated: CanvasState = {
-        ...currentState,
-        defaults: { ...currentState.defaults, ...newDefaults },
-        nodes,
-        edges,
-      };
-      onChange(updated);
+      const merged: CanvasDefaults = { ...defaultsRef.current, ...newDefaults };
+      setDefaults(merged);
+      const rt = realtimeRef.current;
+      if (!rt) return;
+      writeCanvasDefaults(rt.ydoc, newDefaults, rt.sessionId);
     },
-    [readonly, onChange, nodes, edges]
+    [readonly]
   );
 
   // Add text block
@@ -564,11 +780,11 @@ function CanvasEditorInner({
       // Deselect all existing nodes
       const deselected = nds.map((n) => ({ ...n, selected: false }));
       const updated = [...deselected, newNode] as CanvasNode[];
-      scheduleChange(updated);
+      flushChange(updated);
       return updated;
     });
     setEditingNodeId(nodeId);
-  }, [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]);
+  }, [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange]);
 
   // Add media node (uploads file first, then creates canvas node)
   const handleAddMediaFile = useCallback(
@@ -596,14 +812,14 @@ function CanvasEditorInner({
         };
         setNodes((nds) => {
           const updated = [...nds, newNode] as CanvasNode[];
-          scheduleChange(updated);
+          flushChange(updated);
           return updated;
         });
       } catch {
         // Upload failed -- silently ignore for now
       }
     },
-    [readonly, organizationId, contentId, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]
+    [readonly, organizationId, contentId, getCenterPosition, getStyleDefaults, setNodes, flushChange]
   );
 
   // Add shape node
@@ -626,11 +842,11 @@ function CanvasEditorInner({
       };
       setNodes((nds) => {
         const updated = [...nds, newNode] as CanvasNode[];
-        scheduleChange(updated);
+        flushChange(updated);
         return updated;
       });
     },
-    [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]
+    [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange]
   );
 
   // -- Mind map handlers --
@@ -693,11 +909,11 @@ function CanvasEditorInner({
     setNodes((nds) => {
       const withNew = [...nds, rootNode, child1, child2] as CanvasNode[];
       const { nodes: laid } = applyMindMapLayout(rootId, withNew);
-      scheduleChange(laid);
+      flushChange(laid);
       return laid;
     });
     setEditingNodeId(rootId);
-  }, [readonly, getCenterPosition, setNodes, scheduleChange, applyMindMapLayout]);
+  }, [readonly, getCenterPosition, setNodes, flushChange, applyMindMapLayout]);
 
   /** Add child to a mind map node. */
   const handleMindMapAddChild = useCallback(
@@ -754,12 +970,12 @@ function CanvasEditorInner({
         if (!layoutRootId) return withChild;
 
         const { nodes: laid } = applyMindMapLayout(layoutRootId, withChild);
-        scheduleChange(laid);
+        flushChange(laid);
         return laid;
       });
       if (newChildId) setEditingNodeId(newChildId);
     },
-    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
   /** Add sibling after a mind map node. */
@@ -817,12 +1033,12 @@ function CanvasEditorInner({
         if (!layoutRootId) return withSibling;
 
         const { nodes: laid } = applyMindMapLayout(layoutRootId, withSibling);
-        scheduleChange(laid);
+        flushChange(laid);
         return laid;
       });
       if (newSiblingId) setEditingNodeId(newSiblingId);
     },
-    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
   /** Delete a mind map node and its entire subtree. */
@@ -853,16 +1069,16 @@ function CanvasEditorInner({
 
         const rootId = findMindMapRoot(node.data.parentNodeId || '', cleaned);
         if (!rootId) {
-          scheduleChange(cleaned);
+          flushChange(cleaned);
           return cleaned;
         }
 
         const { nodes: laid } = applyMindMapLayout(rootId, cleaned);
-        scheduleChange(laid);
+        flushChange(laid);
         return laid;
       });
     },
-    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
   /** Toggle collapse on a mind map node. */
@@ -897,22 +1113,21 @@ function CanvasEditorInner({
     [readonly, setNodes, scheduleChange, applyMindMapLayout]
   );
 
-  /** Update a mind map node label. */
+  /** Update a mind map node label via ``Y.Text`` so concurrent
+   * renames merge instead of clobbering. */
   const handleMindMapLabelChange = useCallback(
     (nodeId: string, label: string) => {
       if (readonly) return;
-      setNodes((nds) => {
-        const updated = nds.map((n) => {
-          if (n.id === nodeId && n.data.type === 'mindmap') {
-            return { ...n, data: { ...n.data, label } };
-          }
-          return n;
-        }) as CanvasNode[];
-        scheduleChange(updated);
-        return updated;
-      });
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId && n.data.type === 'mindmap'
+            ? { ...n, data: { ...n.data, label } }
+            : n,
+        ) as CanvasNode[],
+      );
+      commitNodeTextField(nodeId, 'label', label);
     },
-    [setNodes, readonly, scheduleChange]
+    [setNodes, readonly, commitNodeTextField],
   );
 
   /** Rotate the layout direction of a mind map (cycles right -> down -> left -> up). */
@@ -1134,34 +1349,15 @@ function CanvasEditorInner({
     [setNodes, scheduleChange]
   );
 
-  // Undo/Redo
+  // Undo / redo go through the origin-scoped per-doc ``Y.UndoManager``;
+  // the observer effect above mirrors the resulting state back.
   const handleUndo = useCallback(() => {
-    const current: CanvasState = {
-      ...canvasStateRef.current,
-      nodes,
-      edges,
-    };
-    const previous = undo(current);
-    if (previous) {
-      setNodes(previous.nodes);
-      setEdges(previous.edges);
-      onChange(previous);
-    }
-  }, [nodes, edges, undo, setNodes, setEdges, onChange]);
+    realtimeRef.current?.undoManager.undo();
+  }, []);
 
   const handleRedo = useCallback(() => {
-    const current: CanvasState = {
-      ...canvasStateRef.current,
-      nodes,
-      edges,
-    };
-    const next = redo(current);
-    if (next) {
-      setNodes(next.nodes);
-      setEdges(next.edges);
-      onChange(next);
-    }
-  }, [nodes, edges, redo, setNodes, setEdges, onChange]);
+    realtimeRef.current?.undoManager.redo();
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1274,9 +1470,17 @@ function CanvasEditorInner({
     [handleTextContentChange, handleShapeLabelChange, handleNodeStyleChange, handleMindMapLabelChange, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapDeleteNode, handleMindMapToggleCollapse, readonly, contentId, editingNodeId, clearEditingNodeId]
   );
 
+  const overlayContainerRef = useRef<HTMLDivElement>(null);
+
   return (
     <CanvasCallbacksContext.Provider value={callbacksValue}>
-      <div className={cn('relative w-full h-full bg-card')}>
+      <div ref={overlayContainerRef} className={cn('relative w-full h-full bg-card')}>
+        <CanvasAwarenessOverlay
+          binding={realtime ?? null}
+          containerRef={overlayContainerRef}
+          cursorsMode={cursorsMode}
+          onPeerCountChange={setPeerCount}
+        />
         <ReactFlow
           nodes={nodes}
           edges={allEdges}
@@ -1316,8 +1520,13 @@ function CanvasEditorInner({
             onAddMediaFile={handleAddMediaFile}
             onAddShape={handleAddShape}
             onAddMindMap={handleAddMindMap}
-            canvasDefaults={canvasState.defaults}
+            canvasDefaults={defaults}
             onDefaultsChange={handleDefaultsChange}
+            cursorsMode={realtime ? cursorsMode : undefined}
+            onCursorsModeChange={
+              realtime ? (mode) => dispatch(setCanvasCursorsMode(mode)) : undefined
+            }
+            peerCount={peerCount}
           />
         )}
 

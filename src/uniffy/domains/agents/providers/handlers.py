@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.providers_pb2 import (
     AddProviderKeyRequest,
     AddProviderKeyResponse,
@@ -23,11 +24,15 @@ from uniffy_proto.agents.v1.providers_pb2 import (
     ValidateProviderKeyResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.providers.converters import (
     credential_type_from_proto,
@@ -36,6 +41,22 @@ from uniffy.domains.agents.providers.converters import (
 )
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.auth.context import get_user_id_from_context
+
+
+async def _resolve_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    key: ProviderKey,
+    checker: PermissionChecker | None = None,
+):
+    """Return the provider key's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.PROVIDER_KEY,
+    )
+    return resolve_effective_policy(
+        key.access_mode, key.baseline_role, default_mode, default_baseline,
+    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -91,7 +112,16 @@ class ProvidersHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return AddProviderKeyResponse(key=provider_key_to_proto(key))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, key,
+                )
+                return AddProviderKeyResponse(
+                    key=provider_key_to_proto(
+                        key,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -116,9 +146,23 @@ class ProvidersHandlers:
                     organization_id=org_id,
                     provider=provider,
                 )
-                return ListProviderKeysResponse(
-                    keys=[provider_key_to_proto(k) for k in keys],
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    org_id, ContentType.PROVIDER_KEY,
                 )
+                proto_keys = []
+                for k in keys:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        k.access_mode, k.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_keys.append(
+                        provider_key_to_proto(
+                            k,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+                return ListProviderKeysResponse(keys=proto_keys)
         except ConnectError:
             raise
         except Exception as exc:
@@ -222,7 +266,16 @@ class ProvidersHandlers:
                     key_id=key_id,
                     enabled=request.enabled,
                 )
-                return ToggleProviderKeyResponse(key=provider_key_to_proto(key))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, key,
+                )
+                return ToggleProviderKeyResponse(
+                    key=provider_key_to_proto(
+                        key,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:

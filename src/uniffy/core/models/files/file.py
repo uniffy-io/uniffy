@@ -126,8 +126,8 @@ class File(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    access_mode: AccessMode = Field(
-        default=AccessMode.OWNER_ONLY,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             SAEnum(
                 AccessMode,
@@ -135,7 +135,7 @@ class File(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )

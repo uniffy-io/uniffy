@@ -47,6 +47,7 @@ from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
+from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -57,16 +58,9 @@ from uniffy.core.types import (
     SubjectType,
 )
 
-# Content loader registry
-
-# Each domain registers a function that loads one of its content rows
-# by id. The loader returns the raw SQLModel row (not through
-# BaseContentOperations, to avoid circular permission checks) or None
-# if the content does not exist in the organization.
-#
-# The loaded row must have: id, organization_id, owner_id, access_mode,
-# baseline_role columns.
-
+# Each domain registers a loader that fetches a content row by id
+# (raw SQLModel, bypassing permission checks). The row must expose
+# id, organization_id, owner_id, access_mode, baseline_role columns.
 ContentLoader = Callable[
     [AsyncSession, UUID, UUID],  # (session, organization_id, content_id)
     Awaitable[object | None],
@@ -75,11 +69,31 @@ ContentLoader = Callable[
 _CONTENT_LOADERS: dict[ContentType, ContentLoader] = {}
 
 
-def register_content_loader(content_type: ContentType, loader: ContentLoader) -> None:
-    """Register a loader for a content type.
+# Cascade loader: given a parent ``(content_type, content_id)``,
+# return every ``(content_type, content_id)`` whose attachments are
+# affected by an access-mode change on the parent.
+AttachmentCascadeLoader = Callable[
+    [AsyncSession, UUID, UUID],  # (session, organization_id, parent_content_id)
+    Awaitable[list[tuple[ContentType, UUID]]],
+]
 
-    Called by each domain (typically from its ``__init__`` or module
-    initializer) so :class:`ContentMembersOperations` can fetch content
+_attachment_cascade_loaders: dict[ContentType, list[AttachmentCascadeLoader]] = {}
+
+
+def register_attachment_cascade_loader(
+    parent_type: ContentType,
+    loader: AttachmentCascadeLoader,
+) -> None:
+    """Register a cascade loader for attachment migration on
+    access-mode change. Multiple loaders may register per parent
+    type; their results are concatenated in registration order.
+    """
+    _attachment_cascade_loaders.setdefault(parent_type, []).append(loader)
+
+
+def register_content_loader(content_type: ContentType, loader: ContentLoader) -> None:
+    """Register a loader for a content type. Each domain calls this
+    at import time so :class:`ContentMembersOperations` can fetch
     rows generically.
     """
     _CONTENT_LOADERS[content_type] = loader
@@ -94,9 +108,6 @@ def get_content_loader(content_type: ContentType) -> ContentLoader:
             f"No content loader registered for {content_type.value}",
         )
     return loader
-
-
-# ContentMembersOperations
 
 
 class ContentMembersOperations:
@@ -133,16 +144,11 @@ class ContentMembersOperations:
     ) -> None:
         """Drop the perm cache entries affected by a member mutation.
 
-        For a USER subject with a non-BLOCKED role we know exactly whose
-        cached role changed (one key). For BLOCKED grants and GROUP
-        subjects the affected user set isn't enumerable cheaply (groups
-        can have thousands of members; BLOCKED affects role resolution
-        for any user matched by the subject), so we wipe the whole
-        ``content:{ct}:{cid}`` tag.
-
-        Also drops the tag-visibility / content-visibility caches: a
-        member change on a content row can newly grant or revoke
-        visibility on the tags assigned to it.
+        For a USER subject with a non-BLOCKED role we drop the one
+        affected key. For BLOCKED grants and GROUP subjects the
+        affected user set is not enumerable cheaply, so wipe the
+        whole ``content:{ct}:{cid}`` tag plus the tag/content
+        visibility caches.
         """
         if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
             await invalidate_perm_role(
@@ -163,8 +169,7 @@ class ContentMembersOperations:
         """Return all member rows for a content item. Requires VIEW."""
         content = await self._load_content(organization_id, content_type, content_id)
 
-        # VIEW is the floor for listing members. We resolve effective_role
-        # and let BaseContentOperations' predicate handle it.
+        # VIEW is the floor for listing members.
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -219,10 +224,14 @@ class ContentMembersOperations:
                 "Use transfer_ownership to grant the OWNER role",
             )
 
-        if content.access_mode == AccessMode.OWNER_ONLY:
+        effective_mode = await self._resolve_effective_mode(
+            organization_id, content_type, content.access_mode,
+        )
+        if effective_mode == AccessMode.OWNER_ONLY:
             raise ValidationError(
                 "access_mode",
-                "Cannot add members while access_mode is OWNER_ONLY; change the access mode first",
+                "Cannot add members while access_mode resolves to OWNER_ONLY; "
+                "change the access mode first",
             )
 
         if subject_type == SubjectType.USER and subject_id == content.owner_id:
@@ -306,6 +315,12 @@ class ContentMembersOperations:
             role=role,
         )
         await self._sync_search_sharing(organization_id, content_type, content_id)
+        await publish_perm_change(
+            content_type,
+            content_id,
+            subject_id if subject_type == SubjectType.USER else None,
+            role.value,
+        )
 
         return member
 
@@ -372,11 +387,9 @@ class ContentMembersOperations:
         await self.session.commit()
         await self.session.refresh(existing)
 
-        # The previous role might have been BLOCKED while the new role
-        # isn't (or vice versa). Wipe both representations: drop the
-        # single key for the new role's affected user, and if either
-        # role is BLOCKED also wipe the content tag so previously-cached
-        # group/BLOCKED-derived denials drop too.
+        # When toggling in or out of BLOCKED, drop both the single
+        # affected user's key and the content tag so previously
+        # cached group/BLOCKED-derived denials clear too.
         await self._drop_perm_cache_for_member_change(
             organization_id=organization_id,
             content_type=content_type,
@@ -398,6 +411,12 @@ class ContentMembersOperations:
             role=new_role,
         )
         await self._sync_search_sharing(organization_id, content_type, content_id)
+        await publish_perm_change(
+            content_type,
+            content_id,
+            subject_id if subject_type == SubjectType.USER else None,
+            new_role.value,
+        )
 
         return existing
 
@@ -462,6 +481,12 @@ class ContentMembersOperations:
             subject_id=subject_id,
         )
         await self._sync_search_sharing(organization_id, content_type, content_id)
+        await publish_perm_change(
+            content_type,
+            content_id,
+            subject_id if subject_type == SubjectType.USER else None,
+            None,
+        )
 
     async def set_access_mode(
         self,
@@ -469,7 +494,7 @@ class ContentMembersOperations:
         organization_id: UUID,
         content_type: ContentType,
         content_id: UUID,
-        new_access_mode: AccessMode,
+        new_access_mode: AccessMode | None,
         new_baseline_role: ContentRole | None = None,
         remove_members_on_narrow: bool = False,
         note: str = "",
@@ -477,8 +502,11 @@ class ContentMembersOperations:
         """Change access mode and baseline role. Requires MANAGE.
 
         Validation:
-        - ``new_baseline_role`` must be non-null iff
-          ``new_access_mode = OPEN_TO_ORG``.
+        - ``new_access_mode = None`` clears the per-item override; the
+          row will inherit live from the org's defaults for the content
+          type. ``new_baseline_role`` must also be ``None`` in this case.
+        - ``new_baseline_role`` may be ``None`` under ``OPEN_TO_ORG`` to
+          mean "inherit the org default baseline".
         - ``new_baseline_role`` must not be ``OWNER`` or ``BLOCKED``.
         - Moving to ``OWNER_ONLY`` while member rows exist is rejected
           unless ``remove_members_on_narrow=True``; in that case the
@@ -530,10 +558,20 @@ class ContentMembersOperations:
 
         previous_access_mode = content.access_mode
         previous_baseline_role = content.baseline_role
+        previous_effective_mode = await self._resolve_effective_mode(
+            organization_id, content_type, previous_access_mode,
+        )
 
         content.access_mode = new_access_mode
-        content.baseline_role = (
-            new_baseline_role if new_access_mode == AccessMode.OPEN_TO_ORG else None
+        if new_access_mode is None:
+            content.baseline_role = None
+        elif new_access_mode == AccessMode.OPEN_TO_ORG:
+            content.baseline_role = new_baseline_role
+        else:
+            content.baseline_role = None
+
+        new_effective_mode = await self._resolve_effective_mode(
+            organization_id, content_type, content.access_mode,
         )
 
         if previous_access_mode != new_access_mode:
@@ -579,6 +617,116 @@ class ContentMembersOperations:
             baseline_role=content.baseline_role,
         )
         await self._sync_search_sharing(organization_id, content_type, content_id)
+        await publish_perm_change(content_type, content_id, None, None)
+
+        # Move attachments to the right folder if the effective mode
+        # crossed the OPEN_TO_ORG boundary. Inheritance changes alone
+        # don't fire this (they're handled by the org-defaults reindex).
+        if previous_effective_mode != new_effective_mode and (
+            previous_effective_mode == AccessMode.OPEN_TO_ORG
+            or new_effective_mode == AccessMode.OPEN_TO_ORG
+        ):
+            await self._migrate_attachments_for_access_change(
+                organization_id=organization_id,
+                content_type=content_type,
+                content_id=content_id,
+                new_effective_mode=new_effective_mode,
+                new_effective_baseline=content.baseline_role,
+                owner_id=content.owner_id,
+            )
+
+    async def _resolve_effective_mode(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        raw_access_mode: AccessMode | None,
+    ) -> AccessMode:
+        """Materialise the effective access mode for a single row."""
+        if raw_access_mode is not None:
+            return raw_access_mode
+        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
+
+        mode, _ = await resolve_content_defaults(self.session, organization_id, content_type)
+        return mode
+
+    async def _migrate_attachments_for_access_change(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        new_effective_mode: AccessMode,
+        new_effective_baseline: ContentRole | None,
+        owner_id: UUID,
+    ) -> None:
+        """Re-route a content's attachments between USER and ORG folders.
+
+        Walks the attachment list for this row (and any registered child
+        contents) and moves each file to the right folder, updating the
+        file's stored ``(access_mode, baseline_role)`` to match the new
+        effective policy. Idempotent: rows already in the right place
+        are skipped.
+        """
+        from uniffy.core.models.attachments.attachment import Attachment
+        from uniffy.core.models.files.file import File
+        from uniffy.domains.attachments.operations import AttachmentOperations
+
+        affected = [(content_type, content_id)]
+        for loader in _attachment_cascade_loaders.get(content_type, []):
+            affected.extend(await loader(self.session, organization_id, content_id))
+
+        attachments_ops = AttachmentOperations(self.session)
+        if new_effective_mode == AccessMode.OPEN_TO_ORG:
+            org_folder = await attachments_ops.get_or_create_org_attachments_folder(
+                organization_id
+            )
+            target_folder_id = org_folder.id
+            target_mode = AccessMode.OPEN_TO_ORG
+            target_baseline = new_effective_baseline or ContentRole.EDITOR
+        else:
+            target_folder_id = None
+            target_mode = AccessMode.OWNER_ONLY
+            target_baseline = None
+
+        for ct, cid in affected:
+            attachments = (
+                (
+                    await self.session.execute(
+                        select(Attachment).where(
+                            Attachment.organization_id == organization_id,
+                            Attachment.content_type == ct,
+                            Attachment.content_id == cid,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for att in attachments:
+                file_row = (
+                    await self.session.execute(select(File).where(File.id == att.file_id))
+                ).scalar_one_or_none()
+                if file_row is None:
+                    continue
+
+                if new_effective_mode == AccessMode.OPEN_TO_ORG:
+                    if file_row.folder_id != target_folder_id:
+                        file_row.folder_id = target_folder_id
+                    if file_row.access_mode != target_mode:
+                        file_row.access_mode = target_mode
+                    if file_row.baseline_role != target_baseline:
+                        file_row.baseline_role = target_baseline
+                else:
+                    user_folder = await attachments_ops.get_or_create_attachments_folder(
+                        att.attached_by_user_id or owner_id, organization_id,
+                    )
+                    if file_row.folder_id != user_folder.id:
+                        file_row.folder_id = user_folder.id
+                    if file_row.access_mode != target_mode:
+                        file_row.access_mode = target_mode
+                    if file_row.baseline_role != target_baseline:
+                        file_row.baseline_role = target_baseline
+
+        await self.session.commit()
 
     async def transfer_ownership(
         self,
@@ -697,6 +845,7 @@ class ContentMembersOperations:
             subject_id=new_owner_user_id,
             role=ContentRole.OWNER,
         )
+        await publish_perm_change(content_type, content_id, None, None)
 
     async def list_member_events(
         self,
@@ -864,27 +1013,42 @@ class ContentMembersOperations:
 
     def _validate_access_mode(
         self,
-        new_access_mode: AccessMode,
+        new_access_mode: AccessMode | None,
         new_baseline_role: ContentRole | None,
     ) -> None:
-        """Validate the (access_mode, baseline_role) combination."""
-        if new_access_mode == AccessMode.OPEN_TO_ORG:
-            if new_baseline_role is None:
+        """Validate the (access_mode, baseline_role) combination.
+
+        Storage invariants:
+
+        - ``(None, None)`` is the inherit-from-org-defaults shape.
+        - ``(None, X)`` is invalid - a baseline without a mode has no
+          defined semantics.
+        - ``(OPEN_TO_ORG, None)`` is valid and means the row uses the
+          org default baseline at read time.
+        - ``(OPEN_TO_ORG, X)`` requires X to not be OWNER / BLOCKED.
+        - Any non-OPEN_TO_ORG mode requires baseline to be NULL.
+        """
+        if new_access_mode is None:
+            if new_baseline_role is not None:
                 raise ValidationError(
                     "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                    "baseline_role cannot be set without an access_mode",
                 )
+            return
+
+        if new_access_mode == AccessMode.OPEN_TO_ORG:
             if new_baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
                 raise ValidationError(
                     "baseline_role",
                     f"{new_baseline_role.value} is not a valid baseline role",
                 )
-        else:
-            if new_baseline_role is not None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role must be null unless access_mode is OPEN_TO_ORG",
-                )
+            return
+
+        if new_baseline_role is not None:
+            raise ValidationError(
+                "baseline_role",
+                "baseline_role must be null unless access_mode is OPEN_TO_ORG",
+            )
 
     async def _is_active_org_member(
         self,

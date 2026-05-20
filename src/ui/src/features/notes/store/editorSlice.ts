@@ -10,49 +10,40 @@ export type EditorMode = 'crepe' | 'markdown' | 'readonly';
 // Metadata panel tabs
 export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'history' | 'comments';
 
+// Visibility of remote collaborator cursors on canvases.
+// - 'auto': show when peer count <= AUTO_CURSORS_HIDE_THRESHOLD, hide above.
+// - 'on':   always render regardless of peer count.
+// - 'off':  never render.
+export type CanvasCursorsMode = 'auto' | 'on' | 'off';
+
+/** Peer count above which the canvas suppresses collaborator
+ * cursors by default to avoid an arrow swarm. */
+export const AUTO_CURSORS_HIDE_THRESHOLD = 10;
+
 interface EditorState {
-    // Editor content (draft state, not saved yet)
-    draftContent: Record<string, string>;
-
-    // Unsaved changes tracking
-    hasUnsavedChanges: Record<string, boolean>;
-
-    // Autosave status
-    autosave: {
-        lastSaved: Record<string, number>; // timestamp
-        isSaving: Record<string, boolean>;
-        error: Record<string, string | null>;
-    };
-
-    // Editor settings
     settings: {
         editorMode: EditorMode;
-        showMarkdownPreview: boolean; // For markdown mode: show split preview
-        showMarkdownLineNumbers: boolean; // For markdown mode: show line numbers in gutter
+        showMarkdownPreview: boolean;
+        showMarkdownLineNumbers: boolean;
         fontSize: number;
         lineHeight: number;
         spellCheck: boolean;
-        toolbarPinned: boolean; // Persistent formatting toolbar visibility in crepe mode
-        titleAlignment: 'left' | 'center'; // Horizontal alignment of the in-doc title block
+        toolbarPinned: boolean;
+        titleAlignment: 'left' | 'center';
+        // User toggle to hide the canvas note's title metadata block
+        // entirely so the canvas surface keeps maximum vertical room.
+        canvasTitleHidden: boolean;
+        canvasCursorsMode: CanvasCursorsMode;
     };
 
-    // Left sidebar state
     isSidebarOpen: boolean;
 
-    // Right panel state
     isMetadataPanelOpen: boolean;
     metadataPanelWidth: number;
     metadataPanelTab: MetadataPanelTab;
 }
 
 const initialState: EditorState = {
-    draftContent: {},
-    hasUnsavedChanges: {},
-    autosave: {
-        lastSaved: {},
-        isSaving: {},
-        error: {},
-    },
     settings: {
         editorMode: 'crepe',
         showMarkdownPreview: true,
@@ -62,6 +53,8 @@ const initialState: EditorState = {
         spellCheck: true,
         toolbarPinned: true,
         titleAlignment: 'left',
+        canvasTitleHidden: false,
+        canvasCursorsMode: 'auto',
     },
     isSidebarOpen: true,
     isMetadataPanelOpen: false,
@@ -73,51 +66,6 @@ export const editorSlice = createSlice({
     name: 'editor',
     initialState,
     reducers: {
-        // Draft content
-        setDraftContent: (state, action: PayloadAction<{ noteId: string; content: string }>) => {
-            const { noteId, content } = action.payload;
-            state.draftContent[noteId] = content;
-            state.hasUnsavedChanges[noteId] = true;
-        },
-
-        clearDraftContent: (state, action: PayloadAction<string>) => {
-            delete state.draftContent[action.payload];
-            delete state.hasUnsavedChanges[action.payload];
-        },
-
-        // Unsaved changes
-        markSaved: (state, action: PayloadAction<string>) => {
-            state.hasUnsavedChanges[action.payload] = false;
-        },
-
-        markUnsaved: (state, action: PayloadAction<string>) => {
-            state.hasUnsavedChanges[action.payload] = true;
-        },
-
-        // Autosave status
-        setAutosaveLastSaved: (state, action: PayloadAction<{ noteId: string; timestamp: number }>) => {
-            const { noteId, timestamp } = action.payload;
-            state.autosave.lastSaved[noteId] = timestamp;
-        },
-
-        setAutosaveSaving: (state, action: PayloadAction<{ noteId: string; isSaving: boolean }>) => {
-            const { noteId, isSaving } = action.payload;
-            state.autosave.isSaving[noteId] = isSaving;
-        },
-
-        setAutosaveError: (state, action: PayloadAction<{ noteId: string; error: string | null }>) => {
-            const { noteId, error } = action.payload;
-            state.autosave.error[noteId] = error;
-        },
-
-        clearAutosaveState: (state, action: PayloadAction<string>) => {
-            const noteId = action.payload;
-            delete state.autosave.lastSaved[noteId];
-            delete state.autosave.isSaving[noteId];
-            delete state.autosave.error[noteId];
-        },
-
-        // Editor settings
         setEditorMode: (state, action: PayloadAction<EditorMode>) => {
             state.settings.editorMode = action.payload;
         },
@@ -162,7 +110,14 @@ export const editorSlice = createSlice({
             state.settings.titleAlignment = action.payload;
         },
 
-        // Sidebar
+        toggleCanvasTitleHidden: (state) => {
+            state.settings.canvasTitleHidden = !state.settings.canvasTitleHidden;
+        },
+
+        setCanvasCursorsMode: (state, action: PayloadAction<CanvasCursorsMode>) => {
+            state.settings.canvasCursorsMode = action.payload;
+        },
+
         toggleSidebar: (state) => {
             state.isSidebarOpen = !state.isSidebarOpen;
         },
@@ -171,7 +126,6 @@ export const editorSlice = createSlice({
             state.isSidebarOpen = action.payload;
         },
 
-        // Metadata panel
         toggleMetadataPanel: (state) => {
             state.isMetadataPanelOpen = !state.isMetadataPanelOpen;
         },
@@ -191,14 +145,6 @@ export const editorSlice = createSlice({
 });
 
 export const {
-    setDraftContent,
-    clearDraftContent,
-    markSaved,
-    markUnsaved,
-    setAutosaveLastSaved,
-    setAutosaveSaving,
-    setAutosaveError,
-    clearAutosaveState,
     setEditorMode,
     toggleMarkdownPreview,
     setShowMarkdownPreview,
@@ -210,6 +156,8 @@ export const {
     toggleToolbarPin,
     setToolbarPinned,
     setTitleAlignment,
+    toggleCanvasTitleHidden,
+    setCanvasCursorsMode,
     toggleSidebar,
     setSidebarOpen,
     toggleMetadataPanel,

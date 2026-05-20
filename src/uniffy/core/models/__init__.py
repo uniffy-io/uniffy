@@ -60,6 +60,7 @@ from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.shared import (
     AccessMode,
@@ -172,4 +173,6 @@ __all__ = [
     # Tags
     "Tag",
     "TagAssignment",
+    # Realtime
+    "RealtimeYjsSnapshot",
 ]

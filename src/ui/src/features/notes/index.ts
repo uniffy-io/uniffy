@@ -72,14 +72,6 @@ export {
 } from '@/features/notes/store/notesTreeSlice';
 
 export {
-    setDraftContent,
-    clearDraftContent,
-    markSaved,
-    markUnsaved,
-    setAutosaveLastSaved,
-    setAutosaveSaving,
-    setAutosaveError,
-    clearAutosaveState,
     setEditorMode,
     toggleMarkdownPreview,
     setShowMarkdownPreview,
@@ -102,7 +94,6 @@ export {
     fetchNote,
     createNote,
     updateNote,
-    autosaveNote,
     deleteNote,
     restoreNote,
     searchNotes,
@@ -117,10 +108,8 @@ export { fetchNotesTree } from '@/features/notes/store/notesTreeSlice';
 
 // Hooks
 export {
-    useAutosave,
     useNoteLoader,
     useCurrentNote,
-    useSaveStatus,
 } from '@/features/notes/hooks/useNotesHooks';
 
 export { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';

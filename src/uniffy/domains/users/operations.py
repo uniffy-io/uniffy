@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.domains.users.avatars import (
     delete_avatar as s3_delete_avatar,
@@ -203,6 +204,8 @@ class UserOperations:
             user.token_version += 1  # Invalidate existing tokens on password change
             user.cache_key_seed = os.urandom(32)  # Invalidate all device caches
 
+        token_revoked = was_deactivated or hashed_password is not None
+
         await self._session.commit()
         await self._session.refresh(user)
 
@@ -217,6 +220,9 @@ class UserOperations:
             await self._session.commit()
 
         await invalidate_user_profile(user_id)
+
+        if token_revoked:
+            await publish_token_revoke(user_id, user.token_version)
 
         return user
 

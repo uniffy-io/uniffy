@@ -29,9 +29,7 @@ from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
 # Hard ceiling for cleanup during shutdown / generator close.
 _CLEANUP_TIMEOUT = 3.0
 
-# Global publisher connection (initialised per-process). Renamed from the
-# legacy ``_publisher`` to make the tier obvious next to ``valkey.ops``
-# and to keep external callers honest about which client they're poking.
+# Per-process publisher connection (initialised at startup).
 _pubsub_client: aioredis.Redis | None = None
 
 # Process-wide shutdown event -- set during lifespan shutdown so every
@@ -129,16 +127,23 @@ async def _ensure_publisher() -> aioredis.Redis | None:
 
 async def publish_notification(user_id: UUID, payload: dict[str, Any]) -> None:
     """Publish a notification to a user's Pub/Sub channel."""
+    await publish_to_channel(_channel_name(user_id), payload)
+
+
+async def publish_to_channel(channel: str, payload: dict[str, Any]) -> None:
+    """Publish a JSON payload to an arbitrary Pub/Sub channel.
+
+    Used by domains that maintain their own channel naming convention
+    (realtime collaboration, perm fanout, token revocation, etc.).
+    """
     publisher = await _ensure_publisher()
     if publisher is None:
         logger.warning("publisher not available, skipping publish")
         return
 
-    channel = _channel_name(user_id)
-    message = json.dumps(payload)
     try:
-        await publisher.publish(channel, message)
-        logger.debug(f"published notification to {channel}", component=LOGGER_COMPONENT)
+        await publisher.publish(channel, json.dumps(payload))
+        logger.debug(f"published to {channel}", component=LOGGER_COMPONENT)
     except Exception:
         logger.warning(f"Failed to publish to channel {channel}", component=LOGGER_COMPONENT)
 
@@ -231,6 +236,83 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
         except (TimeoutError, BaseException):
             logger.warning(f"cleanup timed out for {channel_label}", component=LOGGER_COMPONENT)
         logger.info(f"unsubscribed from {channel_label}", component=LOGGER_COMPONENT)
+
+
+async def subscribe_patterns(
+    *patterns: str,
+) -> AsyncGenerator[tuple[str, dict[str, Any]] | None]:
+    """Subscribe to Valkey pubsub PATTERNS (``PSUBSCRIBE``).
+
+    Yields ``(channel, payload)`` per matched message, or ``None`` on
+    the 1s poll timeout so callers can run cancellation checks. One
+    subscriber connection per call covers any number of matched
+    channels - the realtime router relies on this to keep the total
+    connection count flat regardless of active docs.
+    """
+    PUBSUB_ACTIVE_SUBSCRIBERS.inc()
+
+    url = ValkeyConfig.from_env().to_url()
+    subscriber = _build_client(url)
+    pattern_label = ",".join(patterns)
+    pubsub = subscriber.pubsub()
+
+    try:
+        await pubsub.psubscribe(*patterns)
+        logger.info(f"psubscribed to {pattern_label}", component=LOGGER_COMPONENT)
+
+        while True:
+            if _shutdown_event is not None and _shutdown_event.is_set():
+                logger.info(
+                    f"shutdown, closing psubscribe {pattern_label}",
+                    component=LOGGER_COMPONENT,
+                )
+                break
+
+            message = await pubsub.get_message(
+                ignore_subscribe_messages=True,
+                timeout=1.0,
+            )
+            if message is not None and message["type"] == "pmessage":
+                channel = message["channel"]
+                if isinstance(channel, bytes):
+                    channel = channel.decode("utf-8", errors="replace")
+                try:
+                    data = json.loads(message["data"])
+                    yield channel, data
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning(
+                        f"Invalid pmessage on {channel}", component=LOGGER_COMPONENT
+                    )
+            else:
+                yield None
+    finally:
+        PUBSUB_ACTIVE_SUBSCRIBERS.dec()
+        try:
+            await asyncio.wait_for(
+                _close_psubscriber(pubsub, subscriber, patterns),
+                timeout=_CLEANUP_TIMEOUT,
+            )
+        except (TimeoutError, BaseException):
+            logger.warning(
+                f"cleanup timed out for psubscribe {pattern_label}",
+                component=LOGGER_COMPONENT,
+            )
+        logger.info(f"punsubscribed from {pattern_label}", component=LOGGER_COMPONENT)
+
+
+async def _close_psubscriber(
+    pubsub: aioredis.client.PubSub,
+    subscriber: aioredis.Redis,
+    patterns: tuple[str, ...],
+) -> None:
+    """Close a pattern subscriber's Valkey connections with per-step suppression."""
+    for p in patterns:
+        with contextlib.suppress(BaseException):
+            await pubsub.punsubscribe(p)
+    with contextlib.suppress(BaseException):
+        await pubsub.aclose()
+    with contextlib.suppress(BaseException):
+        await subscriber.aclose()
 
 
 async def _close_subscriber_channels(

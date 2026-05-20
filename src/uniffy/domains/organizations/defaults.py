@@ -1,13 +1,7 @@
-"""Default permission settings for new organizations.
-
-Defines the initial permission defaults that are created for every new
-organization. Each content type gets a row in ``permissions_org_defaults``
-with these values on org creation.
-
-The defaults are templates for new content: when a user creates a note,
-project, etc., the backend reads the matching row from this dict and
-applies it to the new content item's ``access_mode`` and ``baseline_role``
-columns. Users can override per content after creation.
+"""Initial permission defaults seeded into ``permissions_org_defaults``
+on org creation. Each content type's row drives the default
+``access_mode`` / ``baseline_role`` for any new content of that type
+that does not carry an explicit override.
 """
 
 from typing import Any, TypedDict
@@ -31,12 +25,12 @@ DEFAULT_ORG_SETTINGS: dict[str, Any] = {
 
 ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
     ContentType.NOTE: {
-        "default_access_mode": AccessMode.OWNER_ONLY,
-        "default_baseline_role": None,
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.EDITOR,
     },
     ContentType.FILE: {
-        "default_access_mode": AccessMode.OWNER_ONLY,
-        "default_baseline_role": None,
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.VIEWER,
     },
     ContentType.CALENDAR_EVENT: {
         "default_access_mode": AccessMode.OPEN_TO_ORG,

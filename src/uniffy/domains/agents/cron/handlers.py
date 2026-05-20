@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.cron_pb2 import (
     CreateCronTaskRequest,
     CreateCronTaskResponse,
@@ -24,11 +25,15 @@ from uniffy_proto.agents.v1.cron_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.cron.converters import (
     cron_run_log_to_proto,
@@ -36,6 +41,22 @@ from uniffy.domains.agents.cron.converters import (
 )
 from uniffy.domains.agents.cron.operations import CronTaskOperations
 from uniffy.domains.auth.context import get_user_id_from_context
+
+
+async def _resolve_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    task: AgentCronTask,
+    checker: PermissionChecker | None = None,
+):
+    """Return the cron task's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.AGENT_CRON_TASK,
+    )
+    return resolve_effective_policy(
+        task.access_mode, task.baseline_role, default_mode, default_baseline,
+    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -93,7 +114,16 @@ class CronHandlers:
                     baseline_role=baseline_role,
                     description=description,
                 )
-                return CreateCronTaskResponse(task=cron_task_to_proto(task))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, task,
+                )
+                return CreateCronTaskResponse(
+                    task=cron_task_to_proto(
+                        task,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -113,7 +143,16 @@ class CronHandlers:
             async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task = await ops.get_by_id(user_id, org_id, task_id)
-                return GetCronTaskResponse(task=cron_task_to_proto(task))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, task,
+                )
+                return GetCronTaskResponse(
+                    task=cron_task_to_proto(
+                        task,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -149,8 +188,24 @@ class CronHandlers:
                     page_size=page_size,
                 )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    org_id, ContentType.AGENT_CRON_TASK,
+                )
+                proto_tasks = []
+                for t in tasks:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        t.access_mode, t.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_tasks.append(
+                        cron_task_to_proto(
+                            t,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
                 return ListCronTasksResponse(
-                    tasks=[cron_task_to_proto(t) for t in tasks],
+                    tasks=proto_tasks,
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -199,7 +254,16 @@ class CronHandlers:
                     task_id=task_id,
                     **kwargs,
                 )
-                return UpdateCronTaskResponse(task=cron_task_to_proto(task))
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, task,
+                )
+                return UpdateCronTaskResponse(
+                    task=cron_task_to_proto(
+                        task,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -288,9 +352,16 @@ class CronHandlers:
                     organization_id=org_id,
                     task_id=task_id,
                 )
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, task,
+                )
                 return TriggerCronTaskResponse(
                     run_log=cron_run_log_to_proto(run_log),
-                    task=cron_task_to_proto(task),
+                    task=cron_task_to_proto(
+                        task,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    ),
                 )
         except ConnectError:
             raise

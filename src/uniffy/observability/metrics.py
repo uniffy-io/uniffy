@@ -294,6 +294,87 @@ LLM_PROVIDER_LRU_MISS_TOTAL = Counter(
 )
 
 
+REALTIME_ACTIVE_DOCS = Gauge(
+    "uniffy_realtime_active_docs",
+    "Yjs documents currently hydrated in this replica's YDocManager",
+    ["content_type"],
+    multiprocess_mode="livesum",
+)
+
+REALTIME_ACTIVE_CLIENTS = Gauge(
+    "uniffy_realtime_active_clients",
+    "Realtime client handles attached on this replica (one per WS per doc)",
+    ["content_type"],
+    multiprocess_mode="livesum",
+)
+
+REALTIME_HYDRATION_DURATION = Histogram(
+    "uniffy_realtime_hydration_duration_seconds",
+    "Time to hydrate a fresh YDoc on first acquire",
+    ["content_type", "source"],
+)
+
+REALTIME_SNAPSHOT_DURATION = Histogram(
+    "uniffy_realtime_snapshot_duration_seconds",
+    "Time to encode + enqueue a debounced snapshot from the web replica",
+    ["content_type"],
+)
+
+REALTIME_SNAPSHOT_TASK_DURATION = Histogram(
+    "uniffy_realtime_snapshot_task_duration_seconds",
+    "End-to-end time of the save_realtime_snapshot ARQ task (UPSERT + adapter render)",
+    ["content_type"],
+)
+
+REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
+    "uniffy_realtime_snapshot_dropped_total",
+    "Snapshot attempts that did not result in a persisted row",
+    ["content_type", "reason"],
+)
+
+REALTIME_UPDATE_MESSAGES_TOTAL = Counter(
+    "uniffy_realtime_update_messages_total",
+    "Yjs SYNC update frames observed per direction",
+    ["content_type", "direction"],
+)
+
+REALTIME_AWARENESS_MESSAGES_TOTAL = Counter(
+    "uniffy_realtime_awareness_messages_total",
+    "y-protocols AWARENESS frames echoed across realtime sessions",
+    ["content_type"],
+)
+
+REALTIME_PUBSUB_LATENCY = Histogram(
+    "uniffy_realtime_pubsub_latency_seconds",
+    "Latency from publish to in-process router dispatch on this replica",
+    ["channel"],
+)
+
+REALTIME_PUBSUB_RECONNECTS_TOTAL = Counter(
+    "uniffy_realtime_pubsub_reconnects_total",
+    "Router pattern subscribers that crashed and re-attached",
+    ["pattern"],
+)
+
+REALTIME_FRAMES_DROPPED_TOTAL = Counter(
+    "uniffy_realtime_frames_dropped_total",
+    "Realtime frames dropped before reaching their destination",
+    ["kind"],
+)
+
+REALTIME_PERMISSION_REJECTIONS_TOTAL = Counter(
+    "uniffy_realtime_permission_rejections_total",
+    "Realtime sessions / frames rejected by permission checks",
+    ["content_type", "reason"],
+)
+
+REALTIME_AUTH_FAILURES_TOTAL = Counter(
+    "uniffy_realtime_auth_failures_total",
+    "Realtime WebSocket upgrades that failed authentication or origin checks",
+    ["reason"],
+)
+
+
 def _build_multiproc_registry() -> CollectorRegistry:
     """Return a fresh registry attached to a MultiProcessCollector."""
     registry = CollectorRegistry()

@@ -51,8 +51,8 @@ class Folder(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    access_mode: AccessMode = Field(
-        default=AccessMode.OWNER_ONLY,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             SAEnum(
                 AccessMode,
@@ -60,7 +60,7 @@ class Folder(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )
@@ -79,6 +79,7 @@ class Folder(SQLModel, table=True):
     name: str = Field(max_length=255, nullable=False)
     parent_id: UUID | None = Field(default=None, foreign_key="files_folders.id", index=True)
     is_system: bool = Field(default=False, nullable=False)
+    is_org_attachments: bool = Field(default=False, nullable=False)
     is_deleted: bool = Field(default=False, nullable=False)
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(

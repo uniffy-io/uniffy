@@ -27,12 +27,12 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.notes.note import Note
-from uniffy.core.types import ContentRole, NodeType
+from uniffy.core.types import AccessMode, ContentRole, NodeType
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
-# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
-# across every domain so they live in ``core.converters.common_proto``.
+# Domain-local enum maps; ``access_mode`` / ``content_role`` are
+# shared and live in ``core.converters.common_proto``.
 NODE_TYPE_TO_PROTO: dict[NodeType, ProtoNodeType.ValueType] = {
     NodeType.NOTE: ProtoNodeType.NODE_TYPE_NOTE,
     NodeType.FOLDER: ProtoNodeType.NODE_TYPE_FOLDER,
@@ -61,6 +61,8 @@ def note_to_proto(
     owner_info: dict | None = None,
     shared_with: list[dict] | None = None,
     tags: list[Tag] | None = None,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
 ) -> ProtoNote:
     """Convert a :class:`Note` row to its proto representation.
 
@@ -85,11 +87,15 @@ def note_to_proto(
         sources merged). Pass ``None`` to omit; pass ``[]`` for "the
         caller fetched and confirmed there are none".
     """
+    resolved_mode = effective_access_mode if effective_access_mode is not None else note.access_mode
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else note.baseline_role
+    )
     proto_note = ProtoNote(
         id=str(note.id),
         organization_id=str(note.organization_id),
         owner_id=str(note.owner_id),
-        access_mode=access_mode_to_proto(note.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NODE_TYPE_NOTE),
         title=note.title,
         content="" if exclude_content else _serialize_body(note),
@@ -103,8 +109,8 @@ def note_to_proto(
         tags=[tag_to_proto(t) for t in tags] if tags else [],
     )
 
-    if note.baseline_role is not None:
-        proto_note.baseline_role = content_role_to_proto(note.baseline_role)
+    if resolved_baseline is not None:
+        proto_note.baseline_role = content_role_to_proto(resolved_baseline)
     if user_role is not None:
         proto_note.user_role = content_role_to_proto(user_role)
     if note.parent_id:
@@ -132,28 +138,33 @@ def note_to_proto(
     return proto_note
 
 
-def note_to_reference(note: Note) -> NoteReference:
+def note_to_reference(
+    note: Note,
+    effective_access_mode: AccessMode | None = None,
+    effective_baseline_role: ContentRole | None = None,
+) -> NoteReference:
     """Convert a :class:`Note` to a lightweight backlink reference."""
+    resolved_mode = effective_access_mode if effective_access_mode is not None else note.access_mode
+    resolved_baseline = (
+        effective_baseline_role if effective_baseline_role is not None else note.baseline_role
+    )
     ref = NoteReference(
         id=str(note.id),
         title=note.title,
         slug=note.slug,
         owner_id=str(note.owner_id),
         updated_at=datetime_to_timestamp(note.updated_at),
-        access_mode=access_mode_to_proto(note.access_mode),
+        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NODE_TYPE_NOTE),
     )
-    if note.baseline_role is not None:
-        ref.baseline_role = content_role_to_proto(note.baseline_role)
+    if resolved_baseline is not None:
+        ref.baseline_role = content_role_to_proto(resolved_baseline)
     return ref
 
 
 def _serialize_body(note: Note) -> str:
-    """Return the proto ``content`` payload for a note.
-
-    For canvas notes the JSONB ``canvas_content`` is serialized as a
-    JSON string; for everything else the markdown ``content`` is used
-    as-is.
+    """Return the proto ``content`` payload. Canvas notes serialize
+    ``canvas_content`` as JSON; everything else returns ``content``.
     """
     if note.node_type == NodeType.CANVAS and note.canvas_content:
         return json.dumps(note.canvas_content)
@@ -161,11 +172,9 @@ def _serialize_body(note: Note) -> str:
 
 
 def _build_metadata_dict(note: Note) -> dict[str, str]:
-    """Flatten ``note_metadata`` into a string-only dict for the proto map.
-
-    Skips the ``icon`` key (handled separately) and JSON-encodes any
-    non-string values so the proto ``map<string, string>`` field can
-    accept them.
+    """Flatten ``note_metadata`` into a ``map<string, string>``-ready
+    dict. Skips ``icon`` (handled separately) and JSON-encodes any
+    non-string values.
     """
     if not note.note_metadata:
         return {}

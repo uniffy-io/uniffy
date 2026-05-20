@@ -49,6 +49,8 @@ from uniffy.core.llm_providers import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
+from uniffy.core.realtime import realtime_router
+from uniffy.core.realtime.router import router as realtime_pubsub_router
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.core.valkey import (
@@ -103,14 +105,9 @@ from uniffy.observability.otel import instrument_fastapi
 
 
 class HttpVersionMiddleware:
-    """
-    Pure ASGI middleware that sets the HTTP version context variable.
-
-    This MUST be a raw ASGI middleware -- NOT Starlette's BaseHTTPMiddleware.
-    BaseHTTPMiddleware wraps every response in an internal anyio channel,
-    which breaks long-lived server streaming (buffers chunks, deadlocks
-    on the internal pipe, and conflicts with StreamDisconnectMiddleware's
-    receive interception).
+    """Set the HTTP version context variable. Raw ASGI (not
+    BaseHTTPMiddleware) - BaseHTTPMiddleware's anyio channel wrapping
+    breaks long-lived server streaming.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -123,11 +120,9 @@ class HttpVersionMiddleware:
 
 
 class SecurityHeadersMiddleware:
-    """
-    Pure ASGI middleware that adds standard security response headers.
-
-    Raw ASGI (not BaseHTTPMiddleware) so it composes safely with the long-lived
-    streaming responses used by chat / notifications / agents.
+    """Add standard security response headers. Raw ASGI so it composes
+    with the long-lived streaming responses used by chat / notifications
+    / agents.
     """
 
     _STATIC_HEADERS: tuple[tuple[bytes, bytes], ...] = (
@@ -189,12 +184,11 @@ class ConnectRPCDispatcher:
         path = scope.get("path", "")
         root_path = scope.get("root_path", "")
 
-        # Strip the mount prefix from the path
-        # FastAPI's mount() sets root_path but doesn't strip the prefix from path
+        # FastAPI's mount() sets root_path without stripping the
+        # prefix from path; do it ourselves before service dispatch.
         if root_path and path.startswith(root_path):
             path = path[len(root_path) :] or "/"
 
-        # Find matching service by prefix
         for prefix, service_app in self.services:
             if path.startswith(prefix):
                 service_scope = dict(scope)
@@ -202,14 +196,12 @@ class ConnectRPCDispatcher:
                 await service_app(service_scope, receive, send)
                 return
 
-        # Try fallback app
         if self.fallback is not None:
             fallback_scope = dict(scope)
             fallback_scope["path"] = path
             await self.fallback(fallback_scope, receive, send)
             return
 
-        # No match found
         if scope["type"] == "http":
             await send({"type": "http.response.start", "status": 404, "headers": []})
             await send({"type": "http.response.body", "body": b"Not Found"})
@@ -240,11 +232,7 @@ def _get_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Manage application lifespan events.
-
-    Handles startup (database, Meilisearch initialization) and shutdown (cleanup).
-    """
+    """Manage application lifespan events (startup + shutdown)."""
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -288,32 +276,35 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Pub/Sub not available: {e}")
 
-    # Initialize fail-fast ops client used by cache / presence / rate-limit
-    # / mention-state. Non-blocking: a Valkey outage at startup leaves the
-    # cache layer treating every read as a miss; the app still serves.
+    # Fail-fast ops client for cache / presence / rate-limit /
+    # mention-state. Non-blocking: a Valkey outage at boot makes every
+    # cache read a miss; the app still serves.
     try:
         await init_ops_client()
         logger.info("Valkey ops client initialized successfully")
     except Exception as e:
         logger.warning(f"Valkey ops client not available: {e}")
 
-    # Streams client carries blocking XREAD on agent:run:{run_id} streams.
-    # Distinct from the ops client because XREAD's block timeout exceeds
-    # the ops client's 100ms socket timeout. Non-blocking init: a Valkey
-    # outage leaves agent runtime stream subscribers seeing empty rounds
-    # until the client is reachable again.
     try:
         await init_streams_client()
         logger.info("Valkey streams client initialized successfully")
     except Exception as e:
         logger.warning(f"Valkey streams client not available: {e}")
 
-    # Provider-key invalidation listener: drops the in-process LRU when
-    # another pod publishes provider_keys:invalidate:{key_id}.
+    # Provider-key invalidation: drops the in-process LRU on a peer's
+    # provider_keys:invalidate:{key_id} publish.
     try:
         await init_provider_invalidation_subscriber()
     except Exception as e:
         logger.warning(f"Provider invalidation subscriber not available: {e}")
+
+    try:
+        from uniffy.core.realtime import ydoc_manager as _rt_manager  # noqa: F401
+
+        await realtime_pubsub_router.start()
+        logger.info("Realtime router started successfully")
+    except Exception as e:
+        logger.warning(f"Realtime router not available: {e}")
 
     try:
         await seed_initial_data()
@@ -334,6 +325,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
     await close_streams_client()
@@ -519,16 +511,18 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         ),
     )
 
-    # HTTP routes (thumbnails, files, avatars)
+    # HTTP routes (thumbnails, files, avatars) + realtime WebSocket
     http_app = FastAPI()
     setup_request_logging(http_app)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
     http_app.include_router(avatars_router)
     http_app.include_router(agent_avatars_router)
+    http_app.include_router(realtime_router)
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
     dispatcher.add_service("/avatars", http_app)
     dispatcher.add_service("/agents/avatars", http_app)
+    dispatcher.add_service("/realtime", http_app)
 
     return dispatcher

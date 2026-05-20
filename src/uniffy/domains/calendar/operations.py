@@ -1656,7 +1656,16 @@ class EventTemplateOperations:
         if not template:
             raise NotFoundError("EventTemplate", template_id)
 
-        if template.access_mode == AccessMode.OWNER_ONLY and template.created_by != user_id:
+        from uniffy.core.auth.permissions import resolve_effective_policy
+        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
+
+        default_mode, default_baseline = await resolve_content_defaults(
+            self.session, organization_id, ContentType.CALENDAR_EVENT,
+        )
+        effective_mode, _ = resolve_effective_policy(
+            template.access_mode, template.baseline_role, default_mode, default_baseline,
+        )
+        if effective_mode == AccessMode.OWNER_ONLY and template.created_by != user_id:
             raise PermissionDeniedError("read", "event template")
 
         return template
@@ -1709,14 +1718,18 @@ class EventTemplateOperations:
         """
         await self._verify_org_membership(user_id, organization_id)
 
+        access_filter = self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.CALENDAR_EVENT,
+            content_id_column=EventTemplate.id,
+            owner_id_column=EventTemplate.created_by,
+            access_mode_column=EventTemplate.access_mode,
+            baseline_role_column=EventTemplate.baseline_role,
+        )
         query = select(EventTemplate).where(
-            and_(
-                EventTemplate.organization_id == organization_id,
-                or_(
-                    EventTemplate.access_mode != AccessMode.OWNER_ONLY,
-                    EventTemplate.created_by == user_id,
-                ),
-            )
+            EventTemplate.organization_id == organization_id,
+            access_filter,
         )
 
         result = await self.session.execute(query)

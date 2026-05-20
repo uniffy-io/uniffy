@@ -14,7 +14,9 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.cache import invalidate_org_defaults
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
+from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.login.group_member import GroupMember
@@ -26,13 +28,10 @@ from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
 
 
 async def _drop_user_perm_cache(user_id: UUID) -> None:
-    """Bulk-drop every cached perm entry tied to ``user_id``.
-
-    Org-membership mutations change the user's org_admin / domain_admin
-    bits and the OPEN_TO_ORG baseline-role answer for every piece of
-    content in the org. The shared ``user:{user_id}`` cache tag covers
-    all three. Non-fatal: a Valkey hiccup leaves the perm cache to age
-    out via TTL rather than aborting the membership change.
+    """Drop every cached perm entry tied to ``user_id``. Membership
+    mutations change org_admin / domain_admin bits + OPEN_TO_ORG
+    baseline answers; the ``user:{user_id}`` tag covers all three.
+    Non-fatal - failures fall back to TTL expiry.
     """
     try:
         await cache_invalidate_by_tag(f"user:{user_id}")
@@ -61,10 +60,6 @@ class OrganizationOperations:
         from uniffy.domains.users.search import UserSearchIndexer
 
         self._user_indexer = UserSearchIndexer(session)
-
-    # ─────────────────────────────────────────────────────────────
-    # Organization CRUD
-    # ─────────────────────────────────────────────────────────────
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         """
@@ -418,10 +413,6 @@ class OrganizationOperations:
         )
         return [(row[0], row[1]) for row in result.all()]
 
-    # ─────────────────────────────────────────────────────────────
-    # Organization Overview
-    # ─────────────────────────────────────────────────────────────
-
     async def get_overview(self, org_id: UUID) -> dict:
         """
         Get overview of the organization.
@@ -463,10 +454,6 @@ class OrganizationOperations:
             "member_count": member_count,
             "group_count": group_count,
         }
-
-    # ─────────────────────────────────────────────────────────────
-    # Membership Management
-    # ─────────────────────────────────────────────────────────────
 
     async def get_membership(
         self,
@@ -801,10 +788,6 @@ class OrganizationOperations:
 
         return True
 
-    # ─────────────────────────────────────────────────────────────
-    # Permission Defaults
-    # ─────────────────────────────────────────────────────────────
-
     async def get_permission_defaults(
         self,
         org_id: UUID,
@@ -880,6 +863,43 @@ class OrganizationOperations:
 
         await self._session.commit()
         await self._session.refresh(defaults)
+
+        # A defaults flip changes the effective policy for every
+        # inheriting row, so wipe the role + visible-set caches.
+        await invalidate_org_defaults(org_id, content_type)
+        await invalidate_visible_sets_for_org(org_id)
+
+        # Search docs bake the resolved policy at index time;
+        # inheriting rows need rewrite. Fire-and-forget via ARQ with
+        # job-id dedup so burst toggles coalesce.
+        try:
+            from uniffy.core.queue import get_queue
+
+            queue = get_queue()
+            await queue.enqueue_job(
+                "reindex_org_content_for_defaults",
+                str(org_id),
+                content_type.value,
+                _job_id=f"reindex_defaults:{org_id}:{content_type.value}",
+            )
+        except Exception:
+            logger.warning(
+                "Failed to enqueue org-content reindex after defaults change",
+                exc_info=True,
+            )
+
+        # Notify live realtime sessions so inheriting rows re-authorize
+        # against the new effective policy.
+        try:
+            from uniffy.core.realtime.publisher import publish_defaults_changed
+
+            await publish_defaults_changed(org_id, content_type)
+        except Exception:
+            logger.warning(
+                "Failed to publish realtime defaults_changed event",
+                exc_info=True,
+            )
+
         return defaults
 
     async def get_organization_settings(self, org_id: UUID) -> dict[str, Any]:
@@ -893,10 +913,9 @@ class OrganizationOperations:
         org_id: UUID,
         chat_agents_enabled: bool | None = None,
     ) -> dict[str, Any]:
-        """Merge-update the organization's settings blob. Org admin only.
-
-        Only provided sub-values are touched; others are preserved. JSONB is
-        reassigned as a whole new dict so SQLAlchemy picks up the mutation.
+        """Merge-update the org settings JSONB blob. Org admin only.
+        Only provided sub-values are touched; JSONB is reassigned to a
+        new dict so SQLAlchemy detects the mutation.
         """
         await self.require_org_admin(user_id, org_id)
         org = await self.get_by_id(org_id)
@@ -909,10 +928,6 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(org)
         return dict(org.settings or {})
-
-    # ─────────────────────────────────────────────────────────────
-    # Domain Admin Management
-    # ─────────────────────────────────────────────────────────────
 
     async def grant_domain_admin(
         self,

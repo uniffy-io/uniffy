@@ -54,9 +54,6 @@ const (
 	NotesServiceRestoreNoteProcedure = "/notes.v1.NotesService/RestoreNote"
 	// NotesServiceEmptyTrashProcedure is the fully-qualified name of the NotesService's EmptyTrash RPC.
 	NotesServiceEmptyTrashProcedure = "/notes.v1.NotesService/EmptyTrash"
-	// NotesServiceAutosaveNoteProcedure is the fully-qualified name of the NotesService's AutosaveNote
-	// RPC.
-	NotesServiceAutosaveNoteProcedure = "/notes.v1.NotesService/AutosaveNote"
 	// NotesServiceMoveNoteProcedure is the fully-qualified name of the NotesService's MoveNote RPC.
 	NotesServiceMoveNoteProcedure = "/notes.v1.NotesService/MoveNote"
 	// NotesServiceCopyNoteProcedure is the fully-qualified name of the NotesService's CopyNote RPC.
@@ -98,8 +95,6 @@ type NotesServiceClient interface {
 	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
-	// Autosave note content (optimized for frequent updates)
-	AutosaveNote(context.Context, *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error)
 	// Move note between spaces (personal, group, organization)
 	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error)
 	// Copy note to another space
@@ -181,12 +176,6 @@ func NewNotesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(notesServiceMethods.ByName("EmptyTrash")),
 			connect.WithClientOptions(opts...),
 		),
-		autosaveNote: connect.NewClient[v1.AutosaveNoteRequest, v1.AutosaveNoteResponse](
-			httpClient,
-			baseURL+NotesServiceAutosaveNoteProcedure,
-			connect.WithSchema(notesServiceMethods.ByName("AutosaveNote")),
-			connect.WithClientOptions(opts...),
-		),
 		moveNote: connect.NewClient[v1.MoveNoteRequest, v1.MoveNoteResponse](
 			httpClient,
 			baseURL+NotesServiceMoveNoteProcedure,
@@ -243,7 +232,6 @@ type notesServiceClient struct {
 	getBacklinks         *connect.Client[v1.GetBacklinksRequest, v1.GetBacklinksResponse]
 	restoreNote          *connect.Client[v1.RestoreNoteRequest, v1.RestoreNoteResponse]
 	emptyTrash           *connect.Client[v1.EmptyTrashRequest, v1.EmptyTrashResponse]
-	autosaveNote         *connect.Client[v1.AutosaveNoteRequest, v1.AutosaveNoteResponse]
 	moveNote             *connect.Client[v1.MoveNoteRequest, v1.MoveNoteResponse]
 	copyNote             *connect.Client[v1.CopyNoteRequest, v1.CopyNoteResponse]
 	shareNoteWithGroup   *connect.Client[v1.ShareNoteWithGroupRequest, v1.ShareNoteWithGroupResponse]
@@ -296,11 +284,6 @@ func (c *notesServiceClient) RestoreNote(ctx context.Context, req *connect.Reque
 // EmptyTrash calls notes.v1.NotesService.EmptyTrash.
 func (c *notesServiceClient) EmptyTrash(ctx context.Context, req *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error) {
 	return c.emptyTrash.CallUnary(ctx, req)
-}
-
-// AutosaveNote calls notes.v1.NotesService.AutosaveNote.
-func (c *notesServiceClient) AutosaveNote(ctx context.Context, req *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error) {
-	return c.autosaveNote.CallUnary(ctx, req)
 }
 
 // MoveNote calls notes.v1.NotesService.MoveNote.
@@ -358,8 +341,6 @@ type NotesServiceHandler interface {
 	RestoreNote(context.Context, *connect.Request[v1.RestoreNoteRequest]) (*connect.Response[v1.RestoreNoteResponse], error)
 	// Empty trash (permanently delete all soft-deleted notes)
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
-	// Autosave note content (optimized for frequent updates)
-	AutosaveNote(context.Context, *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error)
 	// Move note between spaces (personal, group, organization)
 	MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error)
 	// Copy note to another space
@@ -437,12 +418,6 @@ func NewNotesServiceHandler(svc NotesServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(notesServiceMethods.ByName("EmptyTrash")),
 		connect.WithHandlerOptions(opts...),
 	)
-	notesServiceAutosaveNoteHandler := connect.NewUnaryHandler(
-		NotesServiceAutosaveNoteProcedure,
-		svc.AutosaveNote,
-		connect.WithSchema(notesServiceMethods.ByName("AutosaveNote")),
-		connect.WithHandlerOptions(opts...),
-	)
 	notesServiceMoveNoteHandler := connect.NewUnaryHandler(
 		NotesServiceMoveNoteProcedure,
 		svc.MoveNote,
@@ -505,8 +480,6 @@ func NewNotesServiceHandler(svc NotesServiceHandler, opts ...connect.HandlerOpti
 			notesServiceRestoreNoteHandler.ServeHTTP(w, r)
 		case NotesServiceEmptyTrashProcedure:
 			notesServiceEmptyTrashHandler.ServeHTTP(w, r)
-		case NotesServiceAutosaveNoteProcedure:
-			notesServiceAutosaveNoteHandler.ServeHTTP(w, r)
 		case NotesServiceMoveNoteProcedure:
 			notesServiceMoveNoteHandler.ServeHTTP(w, r)
 		case NotesServiceCopyNoteProcedure:
@@ -564,10 +537,6 @@ func (UnimplementedNotesServiceHandler) RestoreNote(context.Context, *connect.Re
 
 func (UnimplementedNotesServiceHandler) EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.EmptyTrash is not implemented"))
-}
-
-func (UnimplementedNotesServiceHandler) AutosaveNote(context.Context, *connect.Request[v1.AutosaveNoteRequest]) (*connect.Response[v1.AutosaveNoteResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notes.v1.NotesService.AutosaveNote is not implemented"))
 }
 
 func (UnimplementedNotesServiceHandler) MoveNote(context.Context, *connect.Request[v1.MoveNoteRequest]) (*connect.Response[v1.MoveNoteResponse], error) {

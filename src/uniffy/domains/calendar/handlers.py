@@ -50,12 +50,16 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     UpdateEventTemplateResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, RecurrencePattern
 from uniffy.db import open_session
@@ -125,6 +129,38 @@ async def _hydrate_event_tags(
     return await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=urns,
+    )
+
+
+async def _resolve_event_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    event: CalendarEvent,
+    checker: PermissionChecker | None = None,
+):
+    """Return the event's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.CALENDAR_EVENT,
+    )
+    return resolve_effective_policy(
+        event.access_mode, event.baseline_role, default_mode, default_baseline,
+    )
+
+
+async def _resolve_template_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    template: EventTemplate,
+    checker: PermissionChecker | None = None,
+):
+    """Return the template's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.CALENDAR_EVENT,
+    )
+    return resolve_effective_policy(
+        template.access_mode, template.baseline_role, default_mode, default_baseline,
     )
 
 
@@ -254,6 +290,9 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
+                eff_mode, eff_baseline = await _resolve_event_effective_policy(
+                    session, organization_id, event,
+                )
                 return CreateEventResponse(
                     event=event_to_proto(
                         event,
@@ -262,6 +301,8 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                         **room_info,
                     )
                 )
@@ -290,6 +331,9 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
+                eff_mode, eff_baseline = await _resolve_event_effective_policy(
+                    session, organization_id, event,
+                )
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -298,6 +342,8 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                         **room_info,
                     )
                 )
@@ -387,6 +433,9 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
+                eff_mode, eff_baseline = await _resolve_event_effective_policy(
+                    session, organization_id, event,
+                )
                 return UpdateEventResponse(
                     event=event_to_proto(
                         event,
@@ -395,6 +444,8 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                         **room_info,
                     )
                 )
@@ -497,10 +548,20 @@ class CalendarHandlers:
                     session, organization_id, [event.id for event in events]
                 )
 
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.CALENDAR_EVENT,
+                )
                 proto_events = []
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
                     room_info = await self._get_event_room_info(session, event.id)
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        event.access_mode,
+                        event.baseline_role,
+                        default_mode,
+                        default_baseline,
+                    )
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -509,6 +570,8 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
                             **room_info,
                         )
                     )
@@ -563,6 +626,10 @@ class CalendarHandlers:
                     session, organization_id, list(master_ids)
                 )
 
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.CALENDAR_EVENT,
+                )
                 proto_events = []
                 for event in events:
                     real_id = _occurrence_master_id(event.id)
@@ -577,6 +644,12 @@ class CalendarHandlers:
                             session,
                             real_id,
                         )
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        event.access_mode,
+                        event.baseline_role,
+                        default_mode,
+                        default_baseline,
+                    )
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -585,6 +658,8 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, real_id),
                                 [],
                             ),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
                             **room_info_cache[real_id_str],
                         )
                     )
@@ -787,6 +862,9 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
+                eff_mode, eff_baseline = await _resolve_event_effective_policy(
+                    session, organization_id, event,
+                )
                 return AddAttendeesResponse(
                     event=event_to_proto(
                         event,
@@ -795,6 +873,8 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -827,6 +907,9 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id]
                 )
+                eff_mode, eff_baseline = await _resolve_event_effective_policy(
+                    session, organization_id, event,
+                )
                 return RemoveAttendeesResponse(
                     event=event_to_proto(
                         event,
@@ -835,6 +918,8 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
                     )
                 )
         except ConnectError:
@@ -879,7 +964,16 @@ class CalendarHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return CreateEventTemplateResponse(template=template_to_proto(template))
+                eff_mode, eff_baseline = await _resolve_template_effective_policy(
+                    session, organization_id, template,
+                )
+                return CreateEventTemplateResponse(
+                    template=template_to_proto(
+                        template,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -899,7 +993,16 @@ class CalendarHandlers:
             async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 template = await ops.get_by_id(template_id, organization_id, user_id)
-                return GetEventTemplateResponse(template=template_to_proto(template))
+                eff_mode, eff_baseline = await _resolve_template_effective_policy(
+                    session, organization_id, template,
+                )
+                return GetEventTemplateResponse(
+                    template=template_to_proto(
+                        template,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -943,7 +1046,16 @@ class CalendarHandlers:
                     user_id=user_id,
                     **update_data,
                 )
-                return UpdateEventTemplateResponse(template=template_to_proto(template))
+                eff_mode, eff_baseline = await _resolve_template_effective_policy(
+                    session, organization_id, template,
+                )
+                return UpdateEventTemplateResponse(
+                    template=template_to_proto(
+                        template,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -982,9 +1094,26 @@ class CalendarHandlers:
             async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 templates = await ops.list(organization_id, user_id)
-                return ListEventTemplatesResponse(
-                    templates=[template_to_proto(t) for t in templates]
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.CALENDAR_EVENT,
                 )
+                proto_templates = []
+                for template in templates:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        template.access_mode,
+                        template.baseline_role,
+                        default_mode,
+                        default_baseline,
+                    )
+                    proto_templates.append(
+                        template_to_proto(
+                            template,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+                return ListEventTemplatesResponse(templates=proto_templates)
         except ConnectError:
             raise
         except Exception as exc:

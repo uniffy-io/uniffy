@@ -14,6 +14,9 @@ export interface AuthState {
   accessToken: string | null; // Memory only - never persisted
   refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
+  // Persisted so token refresh can re-issue an org-scoped access
+  // token (the refresh RPC keys org context off the slug).
+  currentOrganizationSlug: string | null;
   currentOrganizationRole: string | null; // MEMBER, ADMIN, or OWNER
   domainAdminDomains: number[]; // DomainType enum values where user is domain admin
   currentSessionId: string | null; // Server-side session identifier
@@ -26,6 +29,7 @@ const initialState: AuthState = {
   accessToken: null,
   refreshToken: null,
   currentOrganizationId: null,
+  currentOrganizationSlug: null,
   currentOrganizationRole: null,
   domainAdminDomains: [],
   currentSessionId: null,
@@ -44,6 +48,7 @@ export const authSlice = createSlice({
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationSlug?: string;
         organizationRole?: string;
         sessionId?: string;
         domainAdminDomains?: number[];
@@ -53,6 +58,8 @@ export const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
+      state.currentOrganizationSlug =
+        action.payload.organizationSlug ?? state.currentOrganizationSlug ?? null;
       state.currentOrganizationRole = action.payload.organizationRole || null;
       state.domainAdminDomains = action.payload.domainAdminDomains || [];
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
@@ -75,6 +82,7 @@ export const authSlice = createSlice({
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationSlug?: string;
         organizationRole?: string;
         sessionId?: string;
         domainAdminDomains?: number[];
@@ -84,6 +92,8 @@ export const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
+      state.currentOrganizationSlug =
+        action.payload.organizationSlug ?? state.currentOrganizationSlug ?? null;
       state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
       state.domainAdminDomains = action.payload.domainAdminDomains ?? state.domainAdminDomains;
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
@@ -98,6 +108,7 @@ export const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.currentOrganizationId = null;
+      state.currentOrganizationSlug = null;
       state.currentOrganizationRole = null;
       state.domainAdminDomains = [];
       state.currentSessionId = null;
@@ -123,6 +134,7 @@ export const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.currentOrganizationId = null;
+      state.currentOrganizationSlug = null;
       state.currentOrganizationRole = null;
       state.domainAdminDomains = [];
       state.currentSessionId = null;

@@ -3,10 +3,6 @@
 Revision ID: 022
 Revises: 021
 Create Date: 2026-05-07
-
-Phase 2 of the unified-tags rollout cuts notes over to the central
-``tags`` / ``tag_assignments`` store. The two JSONB columns become
-dead weight after the cut-over; this migration drops them.
 """
 
 from collections.abc import Sequence

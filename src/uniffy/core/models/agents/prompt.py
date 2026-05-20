@@ -87,8 +87,8 @@ class AgentPrompt(SQLModel, table=True):
         default=None,
         sa_column=Column(Uuid(), nullable=True),
     )
-    access_mode: AccessMode = Field(
-        default=AccessMode.OPEN_TO_ORG,
+    access_mode: AccessMode | None = Field(
+        default=None,
         sa_column=Column(
             Enum(
                 AccessMode,
@@ -96,12 +96,12 @@ class AgentPrompt(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
-            nullable=False,
+            nullable=True,
             index=True,
         ),
     )
     baseline_role: ContentRole | None = Field(
-        default=ContentRole.VIEWER,
+        default=None,
         sa_column=Column(
             Enum(
                 ContentRole,

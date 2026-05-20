@@ -8,6 +8,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.rooms.v1.rooms_pb2 import (
     CancelBookingRequest,
     CancelBookingResponse,
@@ -33,6 +34,8 @@ from uniffy_proto.rooms.v1.rooms_pb2 import (
     UpdateRoomResponse,
 )
 
+from uniffy.core.auth.permissions import resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -41,6 +44,7 @@ from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.rooms.converters import (
@@ -52,6 +56,22 @@ from uniffy.domains.rooms.converters import (
     time_slot_to_proto,
 )
 from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
+
+
+async def _resolve_room_effective_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    room: Room,
+    checker: PermissionChecker | None = None,
+):
+    """Return the room's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.ROOM,
+    )
+    return resolve_effective_policy(
+        room.access_mode, room.baseline_role, default_mode, default_baseline,
+    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -128,7 +148,16 @@ class RoomHandlers:
             async with open_session() as session:
                 ops = RoomOperations(session)
                 room = await ops.create_room(**kwargs)
-                return CreateRoomResponse(room=room_to_proto(room))
+                eff_mode, eff_baseline = await _resolve_room_effective_policy(
+                    session, organization_id, room,
+                )
+                return CreateRoomResponse(
+                    room=room_to_proto(
+                        room,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -148,7 +177,16 @@ class RoomHandlers:
             async with open_session() as session:
                 ops = RoomOperations(session)
                 room = await ops.get_by_id(user_id, organization_id, room_id)
-                return GetRoomResponse(room=room_to_proto(room))
+                eff_mode, eff_baseline = await _resolve_room_effective_policy(
+                    session, organization_id, room,
+                )
+                return GetRoomResponse(
+                    room=room_to_proto(
+                        room,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -195,7 +233,16 @@ class RoomHandlers:
                     room_id=room_id,
                     **kwargs,
                 )
-                return UpdateRoomResponse(room=room_to_proto(room))
+                eff_mode, eff_baseline = await _resolve_room_effective_policy(
+                    session, organization_id, room,
+                )
+                return UpdateRoomResponse(
+                    room=room_to_proto(
+                        room,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -269,8 +316,25 @@ class RoomHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.ROOM,
+                )
+                proto_rooms = []
+                for r in rooms:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        r.access_mode, r.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_rooms.append(
+                        room_to_proto(
+                            r,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+
                 return ListRoomsResponse(
-                    rooms=[room_to_proto(r) for r in rooms],
+                    rooms=proto_rooms,
                     total_count=total,
                     page=request.page or 1,
                     page_size=page_size,
@@ -498,7 +562,24 @@ class BookingHandlers:
                     amenities=list(request.amenities) if request.amenities else None,
                     room_type=room_type,
                 )
-                return FindAvailableRoomsResponse(rooms=[room_to_proto(r) for r in rooms])
+
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.ROOM,
+                )
+                proto_rooms = []
+                for r in rooms:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        r.access_mode, r.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_rooms.append(
+                        room_to_proto(
+                            r,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+                return FindAvailableRoomsResponse(rooms=proto_rooms)
         except ConnectError:
             raise
         except Exception as exc:

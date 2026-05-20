@@ -8,14 +8,10 @@ import { buildSync } from 'esbuild'
 
 /**
  * Inject a Content-Security-Policy meta tag scoped to the build mode.
- *
- * Prod: API is on the same origin via reverse proxy, so connect-src 'self' is
- * enough. Dev defaults to /api proxied by Vite (still 'self'); if VITE_API_URL
- * points to a different host, that origin and its ws counterpart are added.
- *
- * 'unsafe-inline' on script/style is required by Vite HMR injection and
- * Tailwind/Milkdown style insertion. Tightening to nonce-based CSP would
- * require a runtime nonce wired through the reverse proxy.
+ * In prod the API shares the origin (connect-src 'self'); in dev,
+ * if VITE_API_URL points elsewhere, that origin + its ws counterpart
+ * are appended. 'unsafe-inline' on script/style is required by Vite
+ * HMR + Tailwind / Milkdown style insertion.
  */
 function cspMetaPlugin(connectExtras: string[]) {
   const connectSrc = ["'self'", ...connectExtras].join(' ')
@@ -186,16 +182,19 @@ export default defineConfig(({ command, mode }) => {
     port: 5173,
     allowedHosts: ["dev.local.uniffy.io", "localhost", "host.docker.internal"],
     proxy: {
+      '/api/realtime': {
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true,
+      },
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
     },
     fs: {
-      // Allow serving files from anywhere in the workspace. searchForWorkspaceRoot
-      // walks up to the pnpm workspace root (repo root) which includes the
-      // hoisted node_modules/.pnpm/ store - needed for fontsource fonts and
-      // any other asset imported from a node_module.
+      // Reach the pnpm workspace root so hoisted node_modules/.pnpm
+      // assets (fontsource fonts etc.) resolve under Vite's fs guard.
       allow: [searchForWorkspaceRoot(__dirname)],
     },
     watch: {

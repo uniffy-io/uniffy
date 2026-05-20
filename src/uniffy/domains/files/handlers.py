@@ -68,7 +68,8 @@ from uniffy_proto.files.v1.files_pb2 import (
     UploadChunksResponse,
 )
 
-from uniffy.core.auth.permissions import resolve_access_policy
+from uniffy.core.auth.permissions import resolve_access_policy, resolve_effective_policy
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.members import ContentMembersOperations
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
@@ -76,10 +77,11 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.files.file import File
+from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import UploadStatus
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
-from uniffy.core.types import ContentType
+from uniffy.core.types import AccessMode, ContentType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.files.converters import (
@@ -122,6 +124,38 @@ async def _hydrate_file_tags(
     return await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=[_file_urn(f.id) for f in files],
+    )
+
+
+async def _resolve_file_effective_policy(
+    session,
+    organization_id: UUID,
+    file: File,
+    checker: PermissionChecker | None = None,
+):
+    """Return the file's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.FILE,
+    )
+    return resolve_effective_policy(
+        file.access_mode, file.baseline_role, default_mode, default_baseline,
+    )
+
+
+async def _resolve_folder_effective_policy(
+    session,
+    organization_id: UUID,
+    folder: Folder,
+    checker: PermissionChecker | None = None,
+):
+    """Return the folder's effective ``(access_mode, baseline_role)`` for proto emission."""
+    permission_checker = checker or PermissionChecker(session)
+    default_mode, default_baseline = await permission_checker.get_org_defaults(
+        organization_id, ContentType.FOLDER,
+    )
+    return resolve_effective_policy(
+        folder.access_mode, folder.baseline_role, default_mode, default_baseline,
     )
 
 
@@ -283,8 +317,16 @@ class FilesHandlers:
                 logger.info(f"[Upload] Completed file id={file.id} folder_id={file.folder_id}")
 
                 tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
+                eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                    session, file.organization_id, file,
+                )
                 return CompleteUploadResponse(
-                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                    file=file_to_proto(
+                        file,
+                        tags=tags_by_urn.get(_file_urn(file.id), []),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
                 )
 
         except NotFoundError:
@@ -362,10 +404,15 @@ class FilesHandlers:
                         tags_by_urn = await _hydrate_file_tags(
                             session, file.organization_id, [file]
                         )
+                        eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                            session, file.organization_id, file,
+                        )
                         return UploadChunksResponse(
                             file=file_to_proto(
                                 file,
                                 tags=tags_by_urn.get(_file_urn(file.id), []),
+                                effective_access_mode=eff_mode,
+                                effective_baseline_role=eff_baseline,
                             )
                         )
 
@@ -598,8 +645,16 @@ class FilesHandlers:
                 ops = FileOperations(session)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                    session, organization_id, file,
+                )
                 return GetFileResponse(
-                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                    file=file_to_proto(
+                        file,
+                        tags=tags_by_urn.get(_file_urn(file.id), []),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
                 )
 
         except NotFoundError:
@@ -673,8 +728,16 @@ class FilesHandlers:
                 )
 
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                    session, organization_id, file,
+                )
                 return UpdateFileResponse(
-                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                    file=file_to_proto(
+                        file,
+                        tags=tags_by_urn.get(_file_urn(file.id), []),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
                 )
 
         except NotFoundError:
@@ -749,8 +812,16 @@ class FilesHandlers:
                     file_id=file_id,
                 )
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                    session, organization_id, file,
+                )
                 return RestoreFileResponse(
-                    file=file_to_proto(file, tags=tags_by_urn.get(_file_urn(file.id), []))
+                    file=file_to_proto(
+                        file,
+                        tags=tags_by_urn.get(_file_urn(file.id), []),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
                 )
 
         except NotFoundError:
@@ -838,15 +909,27 @@ class FilesHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
-                return ListFilesResponse(
-                    files=[
+                checker = PermissionChecker(session)
+                default_mode, default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.FILE,
+                )
+                proto_files = []
+                for f in files:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        f.access_mode, f.baseline_role, default_mode, default_baseline,
+                    )
+                    proto_files.append(
                         file_to_proto(
                             f,
                             owner_info=owner_info_map.get(f.owner_id),
                             tags=tags_by_urn.get(_file_urn(f.id), []),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
                         )
-                        for f in files
-                    ],
+                    )
+
+                return ListFilesResponse(
+                    files=proto_files,
                     total_count=total,
                     page=request.page or 1,
                     page_size=page_size,
@@ -901,7 +984,16 @@ class FilesHandlers:
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                 )
-                return CreateFolderResponse(folder=folder_to_proto(folder))
+                eff_mode, eff_baseline = await _resolve_folder_effective_policy(
+                    session, organization_id, folder,
+                )
+                return CreateFolderResponse(
+                    folder=folder_to_proto(
+                        folder,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -970,7 +1062,16 @@ class FilesHandlers:
                     name=request.name if request.HasField("name") else None,
                     parent_id=parent_id,
                 )
-                return UpdateFolderResponse(folder=folder_to_proto(folder))
+                eff_mode, eff_baseline = await _resolve_folder_effective_policy(
+                    session, organization_id, folder,
+                )
+                return UpdateFolderResponse(
+                    folder=folder_to_proto(
+                        folder,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
@@ -1051,8 +1152,29 @@ class FilesHandlers:
                 folder_ops = FolderOperations(session)
                 file_ops = FileOperations(session)
 
-                # Recursive helper to build tree with nested children
-                # Returns tuple of (nodes, total_size_bytes)
+                checker = PermissionChecker(session)
+                file_default_mode, file_default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.FILE,
+                )
+                folder_default_mode, folder_default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.FOLDER,
+                )
+
+                def _file_eff_mode(f: File) -> AccessMode | None:
+                    mode, _ = resolve_effective_policy(
+                        f.access_mode, f.baseline_role, file_default_mode, file_default_baseline,
+                    )
+                    return mode
+
+                def _folder_eff_mode(fld: Folder) -> AccessMode | None:
+                    mode, _ = resolve_effective_policy(
+                        fld.access_mode,
+                        fld.baseline_role,
+                        folder_default_mode,
+                        folder_default_baseline,
+                    )
+                    return mode
+
                 async def build_folder_tree(
                     parent_id: UUID | None,
                     _folder_ops: FolderOperations = folder_ops,
@@ -1069,10 +1191,8 @@ class FilesHandlers:
                     parent_total_size = 0
 
                     for folder in folders:
-                        # Recursively get children and their size
                         child_nodes, children_size = await build_folder_tree(folder.id)
 
-                        # Get files in this folder
                         child_files, _ = await _file_ops.list_files(
                             user_id=user_id,
                             organization_id=organization_id,
@@ -1080,31 +1200,35 @@ class FilesHandlers:
                             personal_only=request.personal_only,
                         )
 
-                        # Calculate total size: files in this folder + size from subfolders
                         folder_files_size = sum(f.size_bytes for f in child_files)
                         folder_total_size = folder_files_size + children_size
 
-                        # Include files as children if requested
                         if request.include_files:
                             for file in child_files:
-                                child_nodes.append(tree_node_from_file(file))
+                                child_nodes.append(
+                                    tree_node_from_file(
+                                        file,
+                                        effective_access_mode=_file_eff_mode(file),
+                                    )
+                                )
 
-                        # Count subfolders + files (files already in child_nodes when include_files)
                         file_count = 0 if request.include_files else len(child_files)
                         child_count = len(child_nodes) + file_count
-                        node = tree_node_from_folder(folder, child_count, folder_total_size)
+                        node = tree_node_from_folder(
+                            folder,
+                            child_count,
+                            folder_total_size,
+                            effective_access_mode=_folder_eff_mode(folder),
+                        )
                         node.children.extend(child_nodes)
                         nodes.append(node)
 
-                        # Add this folder's total to parent's accumulator
                         parent_total_size += folder_total_size
 
                     return nodes, parent_total_size
 
-                # Build the tree starting from root
                 nodes, _ = await build_folder_tree(root_folder_id)
 
-                # Include files at root level if requested
                 if request.include_files:
                     files, _ = await file_ops.list_files(
                         user_id=user_id,
@@ -1113,7 +1237,12 @@ class FilesHandlers:
                         personal_only=request.personal_only,
                     )
                     for file in files:
-                        nodes.append(tree_node_from_file(file))
+                        nodes.append(
+                            tree_node_from_file(
+                                file,
+                                effective_access_mode=_file_eff_mode(file),
+                            )
+                        )
 
                 return GetFilesTreeResponse(nodes=nodes)
 
@@ -1182,13 +1311,42 @@ class FilesHandlers:
                     organization_id=organization_id,
                 )
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, files)
-                return ListTrashResponse(
-                    files=[
-                        file_to_proto(f, tags=tags_by_urn.get(_file_urn(f.id), []))
-                        for f in files
-                    ],
-                    folders=[folder_to_proto(f) for f in folders],
+                checker = PermissionChecker(session)
+                file_default_mode, file_default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.FILE,
                 )
+                folder_default_mode, folder_default_baseline = await checker.get_org_defaults(
+                    organization_id, ContentType.FOLDER,
+                )
+                proto_files = []
+                for f in files:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        f.access_mode, f.baseline_role, file_default_mode, file_default_baseline,
+                    )
+                    proto_files.append(
+                        file_to_proto(
+                            f,
+                            tags=tags_by_urn.get(_file_urn(f.id), []),
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+                proto_folders = []
+                for fld in folders:
+                    eff_mode, eff_baseline = resolve_effective_policy(
+                        fld.access_mode,
+                        fld.baseline_role,
+                        folder_default_mode,
+                        folder_default_baseline,
+                    )
+                    proto_folders.append(
+                        folder_to_proto(
+                            fld,
+                            effective_access_mode=eff_mode,
+                            effective_baseline_role=eff_baseline,
+                        )
+                    )
+                return ListTrashResponse(files=proto_files, folders=proto_folders)
 
         except ConnectError:
             raise
@@ -1218,7 +1376,16 @@ class FilesHandlers:
                     organization_id=organization_id,
                     folder_id=folder_id,
                 )
-                return RestoreFolderResponse(folder=folder_to_proto(folder))
+                eff_mode, eff_baseline = await _resolve_folder_effective_policy(
+                    session, organization_id, folder,
+                )
+                return RestoreFolderResponse(
+                    folder=folder_to_proto(
+                        folder,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
@@ -1364,7 +1531,16 @@ class FilesHandlers:
                     organization_id=organization_id,
                     name="Recordings",
                 )
-                return EnsureRecordingsFolderResponse(folder=folder_to_proto(folder))
+                eff_mode, eff_baseline = await _resolve_folder_effective_policy(
+                    session, organization_id, folder,
+                )
+                return EnsureRecordingsFolderResponse(
+                    folder=folder_to_proto(
+                        folder,
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
         except ConnectError:
             raise
         except Exception as e:

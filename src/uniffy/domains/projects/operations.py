@@ -14,6 +14,7 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
     ContentMembersOperations,
+    register_attachment_cascade_loader,
     register_content_loader,
 )
 from uniffy.core.errors import NotFoundError, ValidationError
@@ -1846,3 +1847,24 @@ async def _load_task(
 
 register_content_loader(ContentType.PROJECT, _load_project)
 register_content_loader(ContentType.TASK, _load_task)
+
+
+async def _project_attachment_cascade(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_id: UUID,
+) -> list[tuple[ContentType, UUID]]:
+    """Yield every task under a project as a cascade target."""
+    rows = (
+        await session.execute(
+            select(Task.id).where(
+                Task.project_id == project_id,
+                Task.organization_id == organization_id,
+                Task.is_deleted == False,  # noqa: E712
+            )
+        )
+    ).scalars().all()
+    return [(ContentType.TASK, task_id) for task_id in rows]
+
+
+register_attachment_cascade_loader(ContentType.PROJECT, _project_attachment_cascade)
