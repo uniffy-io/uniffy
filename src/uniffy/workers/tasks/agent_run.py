@@ -24,8 +24,11 @@ from loguru import logger
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.core.valkey.streams import (
     get_run_state,
+    is_cancel_requested,
     run_state_key,
     run_stream_key,
+    session_active_run_add,
+    session_active_run_remove,
     set_run_state,
     stream_delete,
 )
@@ -36,6 +39,7 @@ from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,
     RuntimeErrorEvent,
+    RuntimeMessageStoredEvent,
 )
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.observability.metrics import (
@@ -114,6 +118,7 @@ async def run_agent_session(
     content: str,
     files: list[dict[str, Any]] | None,
     user_timezone: str | None,
+    rerun_message_id: str | None = None,
 ) -> dict[str, Any]:
     """Drive a single agent session run, fanning events to a per-run stream.
 
@@ -196,6 +201,7 @@ async def run_agent_session(
     redis = ctx.get("redis")
     run_started = time.monotonic()
     AGENT_RUN_ACTIVE.inc()
+    await session_active_run_add(sid, rid)
 
     try:
         async with open_session() as session:
@@ -209,19 +215,55 @@ async def run_agent_session(
             runtime_ops = RuntimeOperations(session)
             destination = SessionDestination(session_id=sid)
             done_seen = False
-            async for event in runtime_ops.stream_send_message(
-                destination=destination,
-                user_id=uid,
-                organization_id=oid,
-                content=content,
-                files=file_contexts,
-                user_timezone=user_timezone,
-            ):
+            cancelled = False
+            if rerun_message_id:
+                event_stream = runtime_ops.stream_rerun_from_message(
+                    user_id=uid,
+                    organization_id=oid,
+                    message_id=UUID(rerun_message_id),
+                    user_timezone=user_timezone,
+                )
+            else:
+                event_stream = runtime_ops.stream_send_message(
+                    destination=destination,
+                    user_id=uid,
+                    organization_id=oid,
+                    content=content,
+                    files=file_contexts,
+                    user_timezone=user_timezone,
+                )
+            async for event in event_stream:
                 await publisher.publish(event)
                 if isinstance(event, RuntimeDoneEvent):
                     done_seen = True
+                    break
+                # Polling between yielded events keeps the cancel
+                # window tight: the next emitted event triggers the
+                # check, so worst case we deliver one more token /
+                # tool_result before stopping. Cheap (single HGET) so
+                # we run it on every event.
+                if await is_cancel_requested(rid):
+                    cancelled = True
+                    cancelled_msg = await session_ops.add_cancelled_placeholder(
+                        session_id=sid,
+                    )
+                    await publisher.publish(
+                        RuntimeMessageStoredEvent(message=cancelled_msg)
+                    )
+                    await publisher.publish(
+                        RuntimeErrorEvent(error="cancelled")
+                    )
+                    await set_run_state(
+                        run_id=rid,
+                        user_id=uid,
+                        organization_id=oid,
+                        session_id=sid,
+                        status="cancelled",
+                        last_seq=publisher.last_seq,
+                    )
+                    break
 
-        if done_seen and redis is not None:
+        if (done_seen or cancelled) and redis is not None:
             try:
                 await redis.enqueue_job(
                     "delete_run_stream",
@@ -234,6 +276,8 @@ async def run_agent_session(
                     f"for run={run_id}"
                 )
 
+        if cancelled:
+            return {"status": "cancelled", "run_id": run_id}
         return {"status": "success", "run_id": run_id}
 
     except Exception as exc:
@@ -268,6 +312,7 @@ async def run_agent_session(
             AGENT_RUN_ACTIVE.dec()
             await publisher.close()
         finally:
+            await session_active_run_remove(sid, rid)
             await _release_lock(rid)
 
 

@@ -17,10 +17,13 @@ from fastapi.responses import Response
 from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
 from uniffy_proto.agents.v1.agents_connect import AgentsServiceASGIApplication
+from uniffy_proto.agents.v1.budgets_connect import BudgetsServiceASGIApplication
 from uniffy_proto.agents.v1.cron_connect import CronServiceASGIApplication
 from uniffy_proto.agents.v1.memories_connect import MemoriesServiceASGIApplication
+from uniffy_proto.agents.v1.pricing_connect import PricingServiceASGIApplication
 from uniffy_proto.agents.v1.prompts_connect import PromptsServiceASGIApplication
 from uniffy_proto.agents.v1.providers_connect import ProvidersServiceASGIApplication
+from uniffy_proto.agents.v1.rate_limits_connect import RateLimitsServiceASGIApplication
 from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
 from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
 from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
@@ -67,10 +70,13 @@ from uniffy.core.valkey import (
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
+from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
 from uniffy.domains.agents.cron.service import CronServiceImpl
 from uniffy.domains.agents.memories.service import MemoriesServiceImpl
+from uniffy.domains.agents.pricing_service.service import PricingServiceImpl
 from uniffy.domains.agents.prompts.service import PromptsServiceImpl
 from uniffy.domains.agents.providers.service import ProvidersServiceImpl
+from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
@@ -503,6 +509,20 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/agents.v1.CronService",
         CronServiceASGIApplication(CronServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.BudgetsService",
+        BudgetsServiceASGIApplication(BudgetsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.PricingService",
+        PricingServiceASGIApplication(PricingServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.RateLimitsService",
+        RateLimitsServiceASGIApplication(
+            RateLimitsServiceImpl(), interceptors=[logging_interceptor]
+        ),
     )
     dispatcher.add_service(
         "/agents.v1.RuntimeService",

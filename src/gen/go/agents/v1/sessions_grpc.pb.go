@@ -29,6 +29,9 @@ const (
 	SessionsService_GetSessionContext_FullMethodName      = "/agents.v1.SessionsService/GetSessionContext"
 	SessionsService_GetSessionContextStats_FullMethodName = "/agents.v1.SessionsService/GetSessionContextStats"
 	SessionsService_CompactSession_FullMethodName         = "/agents.v1.SessionsService/CompactSession"
+	SessionsService_EditMessage_FullMethodName            = "/agents.v1.SessionsService/EditMessage"
+	SessionsService_DeleteMessage_FullMethodName          = "/agents.v1.SessionsService/DeleteMessage"
+	SessionsService_RetryMessage_FullMethodName           = "/agents.v1.SessionsService/RetryMessage"
 )
 
 // SessionsServiceClient is the client API for SessionsService service.
@@ -57,6 +60,21 @@ type SessionsServiceClient interface {
 	GetSessionContextStats(ctx context.Context, in *GetSessionContextStatsRequest, opts ...grpc.CallOption) (*GetSessionContextStatsResponse, error)
 	// Manually trigger session compaction
 	CompactSession(ctx context.Context, in *CompactSessionRequest, opts ...grpc.CallOption) (*CompactSessionResponse, error)
+	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+	// and `edited_at`, then soft-invalidates every later message in the
+	// session so the client can re-run the conversation from the edit
+	// point. Refused if a run is currently in flight on this session.
+	EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error)
+	// Soft-delete a user message. The message itself and every later
+	// message in the session are marked `is_invalidated=true` so the
+	// context loader skips them. Refused if a run is currently in flight.
+	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error)
+	// Retry from a message. For a user message, returns its content +
+	// file_ids and invalidates every later message so the caller can
+	// re-send. For an assistant message, walks back to the most recent
+	// preceding user message and returns that. Refused if a run is
+	// currently in flight on this session.
+	RetryMessage(ctx context.Context, in *RetryMessageRequest, opts ...grpc.CallOption) (*RetryMessageResponse, error)
 }
 
 type sessionsServiceClient struct {
@@ -167,6 +185,36 @@ func (c *sessionsServiceClient) CompactSession(ctx context.Context, in *CompactS
 	return out, nil
 }
 
+func (c *sessionsServiceClient) EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EditMessageResponse)
+	err := c.cc.Invoke(ctx, SessionsService_EditMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionsServiceClient) DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteMessageResponse)
+	err := c.cc.Invoke(ctx, SessionsService_DeleteMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionsServiceClient) RetryMessage(ctx context.Context, in *RetryMessageRequest, opts ...grpc.CallOption) (*RetryMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RetryMessageResponse)
+	err := c.cc.Invoke(ctx, SessionsService_RetryMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SessionsServiceServer is the server API for SessionsService service.
 // All implementations must embed UnimplementedSessionsServiceServer
 // for forward compatibility.
@@ -193,6 +241,21 @@ type SessionsServiceServer interface {
 	GetSessionContextStats(context.Context, *GetSessionContextStatsRequest) (*GetSessionContextStatsResponse, error)
 	// Manually trigger session compaction
 	CompactSession(context.Context, *CompactSessionRequest) (*CompactSessionResponse, error)
+	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+	// and `edited_at`, then soft-invalidates every later message in the
+	// session so the client can re-run the conversation from the edit
+	// point. Refused if a run is currently in flight on this session.
+	EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error)
+	// Soft-delete a user message. The message itself and every later
+	// message in the session are marked `is_invalidated=true` so the
+	// context loader skips them. Refused if a run is currently in flight.
+	DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error)
+	// Retry from a message. For a user message, returns its content +
+	// file_ids and invalidates every later message so the caller can
+	// re-send. For an assistant message, walks back to the most recent
+	// preceding user message and returns that. Refused if a run is
+	// currently in flight on this session.
+	RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error)
 	mustEmbedUnimplementedSessionsServiceServer()
 }
 
@@ -232,6 +295,15 @@ func (UnimplementedSessionsServiceServer) GetSessionContextStats(context.Context
 }
 func (UnimplementedSessionsServiceServer) CompactSession(context.Context, *CompactSessionRequest) (*CompactSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompactSession not implemented")
+}
+func (UnimplementedSessionsServiceServer) EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EditMessage not implemented")
+}
+func (UnimplementedSessionsServiceServer) DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMessage not implemented")
+}
+func (UnimplementedSessionsServiceServer) RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryMessage not implemented")
 }
 func (UnimplementedSessionsServiceServer) mustEmbedUnimplementedSessionsServiceServer() {}
 func (UnimplementedSessionsServiceServer) testEmbeddedByValue()                         {}
@@ -434,6 +506,60 @@ func _SessionsService_CompactSession_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SessionsService_EditMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionsServiceServer).EditMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionsService_EditMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionsServiceServer).EditMessage(ctx, req.(*EditMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionsService_DeleteMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionsServiceServer).DeleteMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionsService_DeleteMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionsServiceServer).DeleteMessage(ctx, req.(*DeleteMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionsService_RetryMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetryMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionsServiceServer).RetryMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionsService_RetryMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionsServiceServer).RetryMessage(ctx, req.(*RetryMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SessionsService_ServiceDesc is the grpc.ServiceDesc for SessionsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -480,6 +606,18 @@ var SessionsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompactSession",
 			Handler:    _SessionsService_CompactSession_Handler,
+		},
+		{
+			MethodName: "EditMessage",
+			Handler:    _SessionsService_EditMessage_Handler,
+		},
+		{
+			MethodName: "DeleteMessage",
+			Handler:    _SessionsService_DeleteMessage_Handler,
+		},
+		{
+			MethodName: "RetryMessage",
+			Handler:    _SessionsService_RetryMessage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

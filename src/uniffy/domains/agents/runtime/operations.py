@@ -16,19 +16,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import SenderType as ChatSenderType
 from uniffy.core.types import SubjectType
-from uniffy.core.valkey.rate_limit import check_agent_rate_limits
 from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
     fetch_agent_prompt,
     fetch_agent_skills,
 )
 from uniffy.domains.agents.content_policy import check_user_message
+from uniffy.domains.agents.currency import convert as convert_currency
+from uniffy.domains.agents.currency import get_display_currency
+from uniffy.domains.agents.pricing import compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     DoneEvent,
@@ -478,13 +482,7 @@ class RuntimeOperations:
         # 1. Verify org membership
         membership = await self._org_ops.require_org_member(user_id, organization_id)
 
-        # 1b. Check rate limits
-        await check_agent_rate_limits(
-            user_id=str(user_id),
-            organization_id=str(organization_id),
-        )
-
-        # 2. Get session
+        # 2. Get session (rate limits already enforced in the handler preflight)
         agent_session = await self._session_ops.get_session(
             user_id=user_id,
             organization_id=organization_id,
@@ -888,9 +886,10 @@ class RuntimeOperations:
     def _build_llm_messages(
         self,
         context_messages: list[AgentMessage],
-        new_content: str,
+        new_content: str = "",
         *,
         files: list[FileContext] | None = None,
+        append_new: bool = True,
     ) -> list[dict]:
         """Build the LLM messages array from session context.
 
@@ -1010,6 +1009,9 @@ class RuntimeOperations:
                 # Skip system, tool messages not paired with assistant, etc.
                 i += 1
 
+        if not append_new:
+            return messages
+
         # Append the new user message (with optional file attachments)
         if files:
             content_blocks: list[dict] = []
@@ -1030,6 +1032,43 @@ class RuntimeOperations:
 
         return messages
 
+    async def stream_rerun_from_message(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+        user_timezone: str | None = None,
+    ) -> AsyncIterator[RuntimeStreamEvent]:
+        """Re-run the agent from an existing edited user message.
+
+        The anchor must be a non-invalidated user-role row whose
+        downstream has already been invalidated (typically by EditMessage).
+        Streams events in the same shape as ``stream_send_message`` but
+        does not create a new user message - the anchor already lives in
+        DB and is loaded into context via the normal window-function query.
+        """
+        msg, agent_session = await self._session_ops.load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if msg.role != "user":
+            raise ValidationError("role", "rerun is only supported on user messages")
+        if msg.is_invalidated:
+            raise ValidationError("message", "cannot rerun an invalidated message")
+
+        async for event in self.stream_send_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            destination=SessionDestination(session_id=agent_session.id),
+            content="",
+            files=None,
+            user_timezone=user_timezone,
+            rerun_anchor=msg,
+        ):
+            yield event
+
     async def stream_send_message(
         self,
         *,
@@ -1039,6 +1078,7 @@ class RuntimeOperations:
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
+        rerun_anchor: AgentMessage | None = None,
     ) -> AsyncIterator[RuntimeStreamEvent]:
         """Execute the send-message flow with streaming token output.
 
@@ -1104,12 +1144,7 @@ class RuntimeOperations:
         # 1-10: Same setup as send_message
         membership = await self._org_ops.require_org_member(user_id, organization_id)
 
-        # 1b. Check rate limits
-        await check_agent_rate_limits(
-            user_id=str(user_id),
-            organization_id=str(organization_id),
-        )
-
+        # Rate limits enforced by the handler preflight; runtime is a no-op here
         if isinstance(destination, SessionDestination):
             agent_session = await self._session_ops.get_session(
                 user_id=user_id,
@@ -1213,29 +1248,40 @@ class RuntimeOperations:
         context_messages = apply_emergency_truncation(context_messages, token_budget)
 
         # 10b. Content policy check (warn-only, never blocks)
-        injection_flags = check_user_message(content)
-        if injection_flags:
-            logger.warning(
-                "Prompt injection flags in stream_send_message",
-                flags=injection_flags,
-                user_id=str(user_id),
-                session_id=str(session_id),
-            )
+        if rerun_anchor is None:
+            injection_flags = check_user_message(content)
+            if injection_flags:
+                logger.warning(
+                    "Prompt injection flags in stream_send_message",
+                    flags=injection_flags,
+                    user_id=str(user_id),
+                    session_id=str(session_id),
+                )
 
-        llm_messages = self._build_llm_messages(context_messages, content, files=files)
+        llm_messages = self._build_llm_messages(
+            context_messages,
+            content,
+            files=files,
+            append_new=rerun_anchor is None,
+        )
 
         # Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
 
-        # 11. Store user message with enriched content (file text baked in
-        # so the LLM retains file context on subsequent turns).
-        stored_content = _build_stored_content(content, files)
-        user_message = await writer.add_message(
-            role="user",
-            content=stored_content,
-            file_ids=[f.file_id for f in files] if files else None,
-        )
-        yield RuntimeMessageStoredEvent(message=user_message)
+        if rerun_anchor is None:
+            # 11. Store user message with enriched content (file text baked in
+            # so the LLM retains file context on subsequent turns).
+            stored_content = _build_stored_content(content, files)
+            user_message = await writer.add_message(
+                role="user",
+                content=stored_content,
+                file_ids=[f.file_id for f in files] if files else None,
+            )
+            yield RuntimeMessageStoredEvent(message=user_message)
+        else:
+            # Re-run path: the anchor already lives in DB; emit it so the
+            # client can reconcile the optimistic edit state.
+            yield RuntimeMessageStoredEvent(message=rerun_anchor)
 
         # 12. Call LLM with streaming and track timing
         start_time = time.monotonic()
@@ -1964,6 +2010,14 @@ class RuntimeOperations:
         (chat-triggered runs) is set; both populate the same usage
         analytics aggregation. The chat path leaves `session_id` NULL.
         """
+        cost, cost_currency = await self._compute_run_cost(
+            organization_id=organization_id,
+            model=model,
+            provider_key_id=provider_key_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
+        )
         try:
             run_log = AgentRunLog(
                 session_id=session_id,
@@ -1981,11 +2035,86 @@ class RuntimeOperations:
                 duration_ms=duration_ms,
                 status=status,
                 error=error,
+                cost=cost,
+                cost_currency=cost_currency,
             )
             self._session.add(run_log)
             await self._session.commit()
         except Exception:
             logger.warning("Failed to create agent run log", exc_info=True)
+            return
+
+        if cost is not None:
+            await check_and_fire_alerts(
+                self._session,
+                organization_id=organization_id,
+                run_cost=cost,
+                run_image_count=0,
+            )
+
+    async def _compute_run_cost(
+        self,
+        *,
+        organization_id: UUID,
+        model: str,
+        provider_key_id: UUID | None,
+        input_tokens: int,
+        output_tokens: int,
+        cache_read_input_tokens: int,
+    ):
+        """Look up pricing, compute cost, convert to the org's display currency.
+
+        Returns ``(cost, cost_currency)`` on success or ``(None, None)`` when
+        any step (provider lookup, pricing row, currency rate) is missing.
+        Failures are logged but never raise - cost stays null and the run
+        log still gets written for token analytics.
+        """
+        try:
+            provider: str | None = None
+            if provider_key_id is not None:
+                provider = (
+                    await self._session.execute(
+                        select(ProviderKey.provider).where(ProviderKey.id == provider_key_id)
+                    )
+                ).scalar_one_or_none()
+            if provider is None:
+                logger.warning(
+                    "Skipping cost calculation: provider not resolvable",
+                    model=model,
+                    provider_key_id=str(provider_key_id) if provider_key_id else None,
+                )
+                return None, None
+
+            pricing = await get_pricing(self._session, provider=provider, model=model)
+            if pricing is None:
+                logger.warning(
+                    "Skipping cost calculation: no pricing row",
+                    provider=provider,
+                    model=model,
+                )
+                return None, None
+
+            raw_cost = compute_text_cost(
+                pricing,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cache_read_input_tokens=cache_read_input_tokens,
+            )
+            display_currency = await get_display_currency(self._session, organization_id)
+            converted = await convert_currency(
+                raw_cost,
+                pricing.currency,
+                display_currency,
+                self._session,
+                organization_id,
+            )
+            return converted, display_currency
+        except ValidationError as exc:
+            logger.warning(f"Skipping cost calculation: {exc}")
+            return None, None
+        except Exception:
+            logger.warning("Cost calculation failed unexpectedly", exc_info=True)
+            return None, None
 
 
 @dataclass

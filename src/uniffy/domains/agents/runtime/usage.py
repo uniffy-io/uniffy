@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, literal_column, select
+from sqlalchemy import Integer, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.agent import Agent
@@ -12,6 +12,7 @@ from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.domains.agents.currency import get_display_currency
 
 VALID_INTERVALS = {"30m", "1h", "2h", "4h", "1d"}
 
@@ -87,6 +88,7 @@ class UsageOperations:
         tool_usage = await self._get_tool_usage(base_filter)
         provider_key_usage = await self._get_provider_key_usage(base_filter)
         cron_usage = await self._get_cron_usage(organization_id, since, user_id)
+        display_currency = await get_display_currency(self.session, organization_id)
 
         return {
             "totals": totals,
@@ -96,6 +98,7 @@ class UsageOperations:
             "tool_usage": tool_usage,
             "provider_key_usage": provider_key_usage,
             "cron_usage": cron_usage,
+            "display_currency": display_currency,
         }
 
     async def _get_totals(self, base_filter: list) -> dict:
@@ -122,6 +125,18 @@ class UsageOperations:
                 ).label("total_cache_read_input_tokens"),
                 func.count(func.distinct(AgentRunLog.session_id)).label("total_sessions"),
                 func.coalesce(func.avg(AgentRunLog.duration_ms), 0).label("avg_duration_ms"),
+                func.coalesce(func.sum(AgentRunLog.cost), 0).label("total_cost"),
+                func.coalesce(func.sum(AgentRunLog.thinking_tokens), 0).label(
+                    "total_thinking_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.image_count), 0).label("total_image_count"),
+                func.coalesce(func.sum(AgentRunLog.retry_count), 0).label("total_retries"),
+                func.coalesce(
+                    func.sum(func.cast(AgentRunLog.cancelled, Integer)), 0
+                ).label("total_cancelled"),
+                func.coalesce(
+                    func.sum(func.cast(AgentRunLog.deadline_exceeded, Integer)), 0
+                ).label("total_deadline_exceeded"),
             ).where(*base_filter)
         )
         row = result.one()
@@ -132,6 +147,12 @@ class UsageOperations:
             "total_cache_read_input_tokens": row.total_cache_read_input_tokens,
             "total_sessions": row.total_sessions,
             "avg_duration_ms": int(row.avg_duration_ms),
+            "total_cost": str(row.total_cost or 0),
+            "total_thinking_tokens": row.total_thinking_tokens,
+            "total_image_count": row.total_image_count,
+            "total_retries": row.total_retries,
+            "total_cancelled": row.total_cancelled,
+            "total_deadline_exceeded": row.total_deadline_exceeded,
         }
 
     async def _get_time_series_usage(
@@ -174,6 +195,8 @@ class UsageOperations:
                 func.coalesce(
                     func.sum(AgentRunLog.cache_read_input_tokens), 0
                 ).label("cache_read_input_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cost), 0).label("cost"),
+                func.coalesce(func.sum(AgentRunLog.image_count), 0).label("image_count"),
             )
             .where(*base_filter)
             .group_by(bucket)
@@ -188,6 +211,8 @@ class UsageOperations:
                     "input_tokens": row.input_tokens,
                     "output_tokens": row.output_tokens,
                     "cache_read_input_tokens": row.cache_read_input_tokens,
+                    "cost": str(row.cost or 0),
+                    "image_count": row.image_count,
                 }
                 for row in result.all()
             ]
@@ -199,6 +224,8 @@ class UsageOperations:
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
                 "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cost": str(row.cost or 0),
+                "image_count": row.image_count,
             }
             for row in result.all()
         ]
@@ -223,6 +250,8 @@ class UsageOperations:
                 func.count(AgentRunLog.id).label("runs"),
                 func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cost), 0).label("cost"),
+                func.coalesce(func.sum(AgentRunLog.image_count), 0).label("image_count"),
             )
             .where(*base_filter)
             .group_by(AgentRunLog.model)
@@ -236,6 +265,8 @@ class UsageOperations:
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cost": str(row.cost or 0),
+                "image_count": row.image_count,
             }
             for row in result.all()
         ]

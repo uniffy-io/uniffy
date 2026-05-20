@@ -11,6 +11,7 @@ itself - the worker drives that turn.
 """
 
 import asyncio
+import os
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -23,8 +24,13 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.runtime_pb2 import (
+    AgentStreamEvent,
+    CancelStreamRequest,
+    CancelStreamResponse,
     GetUsageStatsRequest,
     GetUsageStatsResponse,
+    RerunFromMessageRequest,
+    RerunFromMessageResponse,
     RespondToConfirmationRequest,
     RespondToConfirmationResponse,
     SendMessageRequest,
@@ -36,6 +42,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
 )
 
 from uniffy.core.errors import (
+    BudgetExceededError,
     NotFoundError,
     PermissionDeniedError,
     RateLimitExceededError,
@@ -45,14 +52,16 @@ from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.core.valkey.queue import get_queue
-from uniffy.core.valkey.rate_limit import check_agent_rate_limits
+from uniffy.core.valkey.rate_limit import check_agent_message_limits
 from uniffy.core.valkey.streams import (
     get_run_state,
+    request_run_cancel,
     run_stream_key,
     set_run_state,
     stream_xread,
 )
 from uniffy.db import open_session
+from uniffy.domains.agents.budgets.operations import BudgetsOperations
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.converters import (
     runtime_stream_event_from_json,
@@ -79,7 +88,11 @@ from uniffy.observability.metrics import (
 )
 
 SUBSCRIBE_WALL_BUDGET_SECONDS = 120.0
-SUBSCRIBE_BLOCK_MS = 5000
+# How long each XREAD round waits for new events before yielding control
+# back to the loop. Each blocking round pins one streams-pool connection
+# for that duration, so smaller values let a pod multiplex more
+# concurrent subscribers at the cost of more empty round-trips.
+SUBSCRIBE_BLOCK_MS = int(os.getenv("AGENT_RUN_SUBSCRIBE_BLOCK_MS", "1000"))
 SUBSCRIBE_BATCH_COUNT = 100
 SUBSCRIBE_TIMEOUT_MESSAGE = "subscribe_timeout"
 
@@ -149,6 +162,7 @@ async def _enqueue_run(
     content: str,
     files_payload: list[dict[str, Any]] | None,
     user_timezone: str | None,
+    rerun_message_id: UUID | None = None,
 ) -> None:
     """Enqueue ``run_agent_session`` on the egress fleet."""
     queue = get_queue("egress")
@@ -161,61 +175,27 @@ async def _enqueue_run(
         content,
         files_payload,
         user_timezone,
+        str(rerun_message_id) if rerun_message_id else None,
     )
 
 
-def _build_run_id_event(run_id: UUID) -> StreamSendMessageResponse:
-    """First proto event yielded - carries ``run_id`` and no oneof payload."""
-    event = StreamSendMessageResponse()
+def _header_event(run_id: UUID) -> AgentStreamEvent:
+    """First event on a new stream: carries ``run_id``, no oneof payload."""
+    return AgentStreamEvent(run_id=str(run_id))
+
+
+def _stamp_run_id(event: AgentStreamEvent, run_id: UUID) -> AgentStreamEvent:
+    """Stamp ``run_id`` onto an AgentStreamEvent and return it."""
     event.run_id = str(run_id)
     return event
 
 
-def _stamp_run_id(
-    proto_event: StreamSendMessageResponse,
-    run_id: UUID,
-) -> StreamSendMessageResponse:
-    """Stamp ``run_id`` on a proto envelope and return it."""
-    proto_event.run_id = str(run_id)
-    return proto_event
-
-
-def _build_synthetic_error_event(
-    run_id: UUID,
-    error_text: str,
-) -> StreamSendMessageResponse:
-    """Build a proto error envelope with ``run_id`` for terminal cases."""
+def _synthetic_error_event(run_id: UUID, error_text: str) -> AgentStreamEvent:
+    """Build an AgentStreamEvent error envelope for terminal cases."""
     return _stamp_run_id(
         runtime_stream_event_to_proto(RuntimeErrorEvent(error=error_text)),
         run_id,
     )
-
-
-def _build_subscribe_run_id_event(run_id: UUID) -> SubscribeToRunResponse:
-    """First proto event yielded for SubscribeToRun - carries ``run_id``."""
-    event = SubscribeToRunResponse()
-    event.run_id = str(run_id)
-    return event
-
-
-def _stamp_subscribe_run_id(
-    proto_event: StreamSendMessageResponse,
-    run_id: UUID,
-) -> SubscribeToRunResponse:
-    """Convert a StreamSendMessageResponse-shaped proto into SubscribeToRunResponse."""
-    converted = SubscribeToRunResponse()
-    converted.MergeFromString(proto_event.SerializeToString())
-    converted.run_id = str(run_id)
-    return converted
-
-
-def _build_subscribe_synthetic_error_event(
-    run_id: UUID,
-    error_text: str,
-) -> SubscribeToRunResponse:
-    """Build a SubscribeToRunResponse error envelope."""
-    base = runtime_stream_event_to_proto(RuntimeErrorEvent(error=error_text))
-    return _stamp_subscribe_run_id(base, run_id)
 
 
 async def _subscribe_runtime_events(
@@ -313,6 +293,8 @@ class RuntimeHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ConnectError:
             raise
         except Exception as exc:
@@ -400,17 +382,21 @@ class RuntimeHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ConnectError:
             raise
         except Exception as exc:
             logger.error(f"stream_send_message preflight failed: {exc}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-        yield _build_run_id_event(run_id)
+        yield StreamSendMessageResponse(event=_header_event(run_id))
 
         try:
             async for event in _subscribe_runtime_events(run_id):
-                yield _stamp_run_id(runtime_stream_event_to_proto(event), run_id)
+                yield StreamSendMessageResponse(
+                    event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
+                )
         except (asyncio.CancelledError, GeneratorExit):
             logger.info(f"stream_send_message cancelled by client (run={run_id})")
             raise
@@ -421,7 +407,117 @@ class RuntimeHandlers:
                 f"Error in stream_send_message subscribe loop (run={run_id}): {exc}",
                 exc_info=True,
             )
-            yield _build_synthetic_error_event(run_id, "Internal server error")
+            yield StreamSendMessageResponse(
+                event=_synthetic_error_event(run_id, "Internal server error"),
+            )
+
+    async def rerun_from_message(
+        self,
+        request: RerunFromMessageRequest,
+        ctx: RequestContext,
+    ) -> AsyncIterator[RerunFromMessageResponse]:
+        """Stream a fresh assistant response anchored on an edited message.
+
+        Validates the anchor (user role, not invalidated, owned by caller),
+        enqueues a run job, then relays per-run events. Mirrors the shape
+        of ``stream_send_message`` so the frontend can reuse its handler.
+        """
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                org_ops = OrganizationOperations(session)
+                await org_ops.require_org_member(user_id, org_id)
+                session_ops = SessionOperations(session)
+                msg, agent_session = await session_ops.load_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                )
+                if msg.role != "user":
+                    raise ConnectError(
+                        Code.INVALID_ARGUMENT,
+                        "rerun is only supported on user messages",
+                    )
+                if msg.is_invalidated:
+                    raise ConnectError(
+                        Code.INVALID_ARGUMENT,
+                        "cannot rerun an invalidated message",
+                    )
+                await check_agent_message_limits(
+                    session,
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_session.agent_id,
+                )
+                await BudgetsOperations(session).check_preflight(
+                    user_id=user_id,
+                    organization_id=org_id,
+                )
+                session_id = agent_session.id
+
+            run_id = generate_id()
+            await set_run_state(
+                run_id=run_id,
+                user_id=user_id,
+                organization_id=org_id,
+                session_id=session_id,
+                status="queued",
+                last_seq=0,
+            )
+
+            await _enqueue_run(
+                run_id=run_id,
+                user_id=user_id,
+                organization_id=org_id,
+                session_id=session_id,
+                content="",
+                files_payload=None,
+                user_timezone=request.user_timezone or None,
+                rerun_message_id=message_id,
+            )
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except BudgetExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except ConnectError:
+            raise
+        except Exception as exc:
+            logger.error(f"rerun_from_message preflight failed: {exc}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+        yield RerunFromMessageResponse(event=_header_event(run_id))
+
+        try:
+            async for event in _subscribe_runtime_events(run_id):
+                yield RerunFromMessageResponse(
+                    event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
+                )
+        except (asyncio.CancelledError, GeneratorExit):
+            logger.info(f"rerun_from_message cancelled by client (run={run_id})")
+            raise
+        except ConnectError:
+            raise
+        except Exception as exc:
+            logger.error(
+                f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}",
+                exc_info=True,
+            )
+            yield RerunFromMessageResponse(
+                event=_synthetic_error_event(run_id, "Internal server error"),
+            )
 
     async def subscribe_to_run(
         self,
@@ -454,12 +550,12 @@ class RuntimeHandlers:
         if state.get("organization_id") != str(org_id):
             raise ConnectError(Code.PERMISSION_DENIED, "not your run")
 
-        yield _build_subscribe_run_id_event(run_id)
+        yield SubscribeToRunResponse(event=_header_event(run_id))
 
         try:
             async for event in _subscribe_runtime_events(run_id):
-                yield _stamp_subscribe_run_id(
-                    runtime_stream_event_to_proto(event), run_id
+                yield SubscribeToRunResponse(
+                    event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
                 )
         except (asyncio.CancelledError, GeneratorExit):
             logger.info(f"subscribe_to_run cancelled by client (run={run_id})")
@@ -471,7 +567,39 @@ class RuntimeHandlers:
                 f"Error in subscribe_to_run loop (run={run_id}): {exc}",
                 exc_info=True,
             )
-            yield _build_subscribe_synthetic_error_event(run_id, "Internal server error")
+            yield SubscribeToRunResponse(
+                event=_synthetic_error_event(run_id, "Internal server error"),
+            )
+
+    async def cancel_stream(
+        self,
+        request: CancelStreamRequest,
+        ctx: RequestContext,
+    ) -> CancelStreamResponse:
+        """Flip the cancel flag on an in-flight run.
+
+        Auth: caller must match the ``user_id`` + ``organization_id``
+        recorded in the run-state hash. Idempotent -- cancelling an
+        already-finished or expired run reports ``cancelled=false``
+        without raising.
+        """
+        user_id = get_user_id_from_context(ctx)
+        try:
+            run_id = UUID(request.run_id)
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        state = await get_run_state(run_id)
+        if state is None:
+            return CancelStreamResponse(cancelled=False)
+        if state.get("user_id") != str(user_id):
+            raise ConnectError(Code.PERMISSION_DENIED, "not your run")
+        if state.get("organization_id") != str(org_id):
+            raise ConnectError(Code.PERMISSION_DENIED, "not your run")
+
+        flagged = await request_run_cancel(run_id)
+        return CancelStreamResponse(cancelled=flagged)
 
     async def _preflight_and_enqueue(
         self,
@@ -492,15 +620,22 @@ class RuntimeHandlers:
             await org_ops.require_org_member(user_id, organization_id)
 
             session_ops = SessionOperations(session)
-            await session_ops.get_session(
+            agent_session = await session_ops.get_session(
                 user_id=user_id,
                 organization_id=organization_id,
                 session_id=session_id,
             )
 
-            await check_agent_rate_limits(
-                user_id=str(user_id),
-                organization_id=str(organization_id),
+            await check_agent_message_limits(
+                session,
+                user_id=user_id,
+                organization_id=organization_id,
+                agent_id=agent_session.agent_id,
+            )
+
+            await BudgetsOperations(session).check_preflight(
+                user_id=user_id,
+                organization_id=organization_id,
             )
 
             files: list[FileContext] | None = None

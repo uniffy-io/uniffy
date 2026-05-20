@@ -43,12 +43,16 @@ _PUBSUB_RETRY_ERRORS = (
 
 _OPS_SOCKET_CONNECT_TIMEOUT = 0.2
 _OPS_SOCKET_TIMEOUT = 0.1
-_OPS_MAX_CONNECTIONS = 10
+_OPS_MAX_CONNECTIONS = int(os.getenv("VALKEY_OPS_MAX_CONNECTIONS", "10"))
 
 _STREAMS_SOCKET_CONNECT_TIMEOUT = 2.0
 _STREAMS_SOCKET_TIMEOUT = 30.0
 _STREAMS_HEALTH_CHECK_INTERVAL = 30
-_STREAMS_MAX_CONNECTIONS = 20
+# Each concurrent agent-run subscriber pins one streams connection for
+# up to SUBSCRIBE_BLOCK_MS. Size for the expected concurrent active runs
+# per pod; the 21st caller otherwise waits up to STREAMS_SOCKET_TIMEOUT
+# on pool acquisition.
+_STREAMS_MAX_CONNECTIONS = int(os.getenv("VALKEY_STREAMS_MAX_CONNECTIONS", "50"))
 
 _ARQ_CONN_TIMEOUT = 10
 _ARQ_CONN_RETRIES = 5

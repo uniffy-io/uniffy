@@ -1,7 +1,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesThunks';
-import { fetchMessages } from '@/features/agents/store/agentMessagesThunks';
+import {
+    deleteAgentMessage,
+    editAgentMessage,
+    fetchMessages,
+    retryAgentMessage,
+} from '@/features/agents/store/agentMessagesThunks';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 
 interface StreamingToolCall {
@@ -136,7 +141,28 @@ export const agentMessagesSlice = createSlice({
                     nanos: 0,
                 },
                 fileIds: fileIds?.length ? fileIds : undefined,
+                isInvalidated: false,
+                editedAt: undefined,
+                previousContent: undefined,
+                wasCancelled: false,
             });
+        },
+        reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {
+            const { sessionId, message } = action.payload;
+            const list = state.messagesBySession[sessionId];
+            if (!list) {
+                state.messagesBySession[sessionId] = [message];
+                return;
+            }
+            if (list.some((m) => m.id === message.id)) return;
+            const idx = list.findIndex(
+                (m) => m.role === message.role && typeof m.id === 'string' && m.id.startsWith('optimistic-'),
+            );
+            if (idx >= 0) {
+                list[idx] = message;
+            } else {
+                list.push(message);
+            }
         },
         cacheFileMetadata: (state, action: PayloadAction<Record<string, FileMetadata>>) => {
             Object.assign(state.fileMetadataCache, action.payload);
@@ -189,6 +215,15 @@ export const agentMessagesSlice = createSlice({
             state.activeRunId = null;
             writePersistedRunId(null);
         },
+        streamCancelled: (state) => {
+            state.isStreaming = false;
+            state.error = null;
+            state.streamingContent = '';
+            state.streamingToolCalls = [];
+            state.pendingConfirmation = null;
+            state.activeRunId = null;
+            writePersistedRunId(null);
+        },
         clearAgentMessages: () => {
             writePersistedRunId(null);
             return { ...initialState, activeRunId: null };
@@ -207,15 +242,56 @@ export const agentMessagesSlice = createSlice({
             .addCase(fetchMessages.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to fetch messages';
+            })
+            .addCase(editAgentMessage.fulfilled, (state, action) => {
+                const { sessionId, updated, anchorCreatedAt } = action.payload;
+                const list = state.messagesBySession[sessionId];
+                if (!list) return;
+                const idx = list.findIndex((m) => m.id === updated.id);
+                if (idx >= 0) {
+                    list[idx] = updated;
+                }
+                invalidateAfter(list, anchorCreatedAt, false);
+            })
+            .addCase(deleteAgentMessage.fulfilled, (state, action) => {
+                const { sessionId, anchorCreatedAt } = action.payload;
+                const list = state.messagesBySession[sessionId];
+                if (!list) return;
+                invalidateAfter(list, anchorCreatedAt, true);
+            })
+            .addCase(retryAgentMessage.fulfilled, (state, action) => {
+                const { sessionId, anchorMessageId } = action.payload;
+                const list = state.messagesBySession[sessionId];
+                if (!list) return;
+                const anchor = list.find((m) => m.id === anchorMessageId);
+                invalidateAfter(list, anchor?.createdAt, false);
             });
     },
 });
+
+function invalidateAfter(
+    list: SerializedMessage[],
+    anchorCreatedAt: { seconds: number; nanos: number } | undefined,
+    includeAnchor: boolean,
+): void {
+    if (!anchorCreatedAt) return;
+    const anchorMs = anchorCreatedAt.seconds * 1000;
+    for (const m of list) {
+        if (!m.createdAt) continue;
+        const ms = m.createdAt.seconds * 1000;
+        const after = includeAnchor ? ms >= anchorMs : ms > anchorMs;
+        if (after) {
+            m.isInvalidated = true;
+        }
+    }
+}
 
 export const {
     streamStarted,
     runIdReceived,
     clearActiveRunId,
     addOptimisticUserMessage,
+    reconcileStoredMessage,
     cacheFileMetadata,
     appendStreamingToken,
     addStreamingToolCall,
@@ -224,8 +300,10 @@ export const {
     clearConfirmation,
     streamCompleted,
     streamError,
+    streamCancelled,
     clearAgentMessages,
 } = agentMessagesSlice.actions;
+
 
 export const selectMessagesForSession = (sessionId: string | null) => (state: RootState) =>
     sessionId ? state.agentMessages.messagesBySession[sessionId] ?? [] : [];

@@ -835,6 +835,119 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
         );
     }
 
+    if (!isTopLevel) {
+        return (
+            <div className="flex h-full flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <div>
+                        <h3 className="text-sm font-semibold text-foreground">Scheduled Tasks</h3>
+                        <p className="text-xs text-muted-foreground">
+                            Recurring runs for this agent on a cron schedule.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => dispatch(fetchCronTasks({ agentId }))}
+                            aria-label="Refresh"
+                        >
+                            <ArrowClockwise size={16} />
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                setShowCreateForm(true);
+                                selectTask(null);
+                            }}
+                        >
+                            <Plus size={14} />
+                            New task
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {showCreateForm ? (
+                        <div className="border border-border rounded-lg bg-card p-4">
+                            {agentOptions.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-8">
+                                    <Robot size={28} className="text-muted-foreground mb-2" />
+                                    <p className="text-sm text-muted-foreground">
+                                        Create an agent first to schedule tasks
+                                    </p>
+                                </div>
+                            ) : (
+                                <CreateTaskForm
+                                    agentOptions={agentOptions}
+                                    onSubmit={() => setShowCreateForm(false)}
+                                    onCancel={() => setShowCreateForm(false)}
+                                />
+                            )}
+                        </div>
+                    ) : selectedTask ? (
+                        <div className="border border-border rounded-lg bg-card">
+                            <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Task detail</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => selectTask(null)}
+                                >
+                                    Back to list
+                                </Button>
+                            </div>
+                            <TaskDetailPanel
+                                task={selectedTask}
+                                onDelete={() => handleDelete(selectedTask.id)}
+                            />
+                        </div>
+                    ) : tasks.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-border rounded-lg bg-muted/30">
+                            <Timer size={32} className="text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">No scheduled tasks yet</p>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="mt-3"
+                                onClick={() => setShowCreateForm(true)}
+                            >
+                                <Plus size={14} />
+                                Create task
+                            </Button>
+                        </div>
+                    ) : (
+                        tasks.map((task) => {
+                            const agentName = agents[task.agentId]?.name;
+                            return (
+                                <button
+                                    key={task.id}
+                                    type="button"
+                                    onClick={() => selectTask(task.id)}
+                                    className="w-full text-left border border-border rounded-lg bg-card hover:bg-muted px-4 py-3 flex items-center gap-3 transition-colors"
+                                >
+                                    <div className="shrink-0">
+                                        <TaskStatusBadge task={task} />
+                                    </div>
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                        <span className="text-sm font-medium truncate text-foreground">
+                                            {task.name}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground truncate">
+                                            {cronToHuman(task.cronExpression)}
+                                            {agentName && ` - ${agentName}`}
+                                        </span>
+                                    </div>
+                                    <CaretRight size={14} className="text-muted-foreground shrink-0" />
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex h-full overflow-hidden">
             <Group

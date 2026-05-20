@@ -1,9 +1,20 @@
 """Agent run log model for recording each agent interaction."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
@@ -62,6 +73,12 @@ class AgentRunLog(SQLModel, table=True):
             "agent_id",
             "created_at",
         ),
+        Index(
+            "ix_agents_run_logs_org_created_kind",
+            "organization_id",
+            "created_at",
+            "kind",
+        ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
@@ -85,9 +102,22 @@ class AgentRunLog(SQLModel, table=True):
             nullable=True,
         ),
     )
+    kind: str = Field(
+        sa_column=Column(String(16), nullable=False, default="chat"),
+    )
+    image_count: int = Field(default=0, nullable=False)
+    cost: Decimal | None = Field(
+        default=None,
+        sa_column=Column(Numeric(12, 6), nullable=True),
+    )
+    cost_currency: str | None = Field(
+        default=None,
+        sa_column=Column(String(3), nullable=True),
+    )
     input_tokens: int = Field(default=0, nullable=False)
     output_tokens: int = Field(default=0, nullable=False)
     cache_read_input_tokens: int = Field(default=0, nullable=False)
+    thinking_tokens: int = Field(default=0, nullable=False)
     tool_calls: list[dict] | None = Field(
         default=None,
         sa_column=Column(JSON, nullable=True),
@@ -100,6 +130,22 @@ class AgentRunLog(SQLModel, table=True):
     error: str | None = Field(
         default=None,
         sa_column=Column(Text, nullable=True),
+    )
+    retry_count: int = Field(
+        default=0,
+        sa_column=Column(Integer, nullable=False, default=0),
+    )
+    failover_provider_key_ids: list[str] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    cancelled: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, default=False),
+    )
+    deadline_exceeded: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, default=False),
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

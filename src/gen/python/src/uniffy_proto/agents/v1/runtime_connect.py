@@ -24,7 +24,13 @@ class RuntimeService(Protocol):
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    def rerun_from_message(self, request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def cancel_stream(self, request: agents_dot_v1_dot_runtime__pb2.CancelStreamRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.CancelStreamResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def respond_to_confirmation(self, request: agents_dot_v1_dot_runtime__pb2.RespondToConfirmationRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RespondToConfirmationResponse:
@@ -59,6 +65,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                     ),
                     function=svc.stream_send_message,
                 ),
+                "/agents.v1.RuntimeService/RerunFromMessage": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="RerunFromMessage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rerun_from_message,
+                ),
                 "/agents.v1.RuntimeService/SubscribeToRun": Endpoint.server_stream(
                     method=MethodInfo(
                         name="SubscribeToRun",
@@ -68,6 +84,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.subscribe_to_run,
+                ),
+                "/agents.v1.RuntimeService/CancelStream": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CancelStream",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.CancelStreamResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.cancel_stream,
                 ),
                 "/agents.v1.RuntimeService/RespondToConfirmation": Endpoint.unary(
                     method=MethodInfo(
@@ -143,6 +169,26 @@ class RuntimeServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    def rerun_from_message(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="RerunFromMessage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def subscribe_to_run(
         self,
         request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
@@ -157,6 +203,26 @@ class RuntimeServiceClient(ConnectClient):
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
                 output=agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def cancel_stream(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.CancelStreamResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CancelStream",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+                output=agents_dot_v1_dot_runtime__pb2.CancelStreamResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -212,7 +278,11 @@ class RuntimeServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stream_send_message(self, request: agents_dot_v1_dot_runtime__pb2.StreamSendMessageRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.StreamSendMessageResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rerun_from_message(self, request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def subscribe_to_run(self, request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest, ctx: RequestContext) -> Iterator[agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def cancel_stream(self, request: agents_dot_v1_dot_runtime__pb2.CancelStreamRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.CancelStreamResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def respond_to_confirmation(self, request: agents_dot_v1_dot_runtime__pb2.RespondToConfirmationRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RespondToConfirmationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -244,6 +314,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.stream_send_message,
                 ),
+                "/agents.v1.RuntimeService/RerunFromMessage": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="RerunFromMessage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rerun_from_message,
+                ),
                 "/agents.v1.RuntimeService/SubscribeToRun": EndpointSync.server_stream(
                     method=MethodInfo(
                         name="SubscribeToRun",
@@ -253,6 +333,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.subscribe_to_run,
+                ),
+                "/agents.v1.RuntimeService/CancelStream": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CancelStream",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.CancelStreamResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.cancel_stream,
                 ),
                 "/agents.v1.RuntimeService/RespondToConfirmation": EndpointSync.unary(
                     method=MethodInfo(
@@ -328,6 +418,26 @@ class RuntimeServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def rerun_from_message(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="RerunFromMessage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RerunFromMessageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RerunFromMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def subscribe_to_run(
         self,
         request: agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
@@ -342,6 +452,26 @@ class RuntimeServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.SubscribeToRunRequest,
                 output=agents_dot_v1_dot_runtime__pb2.SubscribeToRunResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def cancel_stream(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.CancelStreamResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CancelStream",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.CancelStreamRequest,
+                output=agents_dot_v1_dot_runtime__pb2.CancelStreamResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

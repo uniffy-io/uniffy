@@ -24,7 +24,7 @@ const BRAND_ACCENT_RING = 'rgba(9, 9, 11, 0.15)';
 
 // --- Connected network canvas for the auth page ---
 
-const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Workflow', 'Agent'];
+const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Agent', 'Task', 'Event'];
 const MAX_LABELED = 20;
 const AMBIENT_COUNT = 26;
 const CONNECTION_DIST = 320;

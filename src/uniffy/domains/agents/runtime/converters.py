@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from uniffy_proto.agents.v1.runtime_pb2 import (
+    AgentStreamEvent,
     AgentUsageInfo,
     CronTaskUsage,
     DailyUsage,
@@ -15,8 +16,8 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamConfirmationRequiredEvent,
     StreamDoneEvent,
     StreamErrorEvent,
+    StreamFailoverEvent,
     StreamMessageStoredEvent,
-    StreamSendMessageResponse,
     StreamTokenEvent,
     StreamToolCallEvent,
     StreamToolResultEvent,
@@ -28,6 +29,7 @@ from uniffy.domains.agents.runtime.stream_events import (
     RuntimeConfirmationRequiredEvent,
     RuntimeDoneEvent,
     RuntimeErrorEvent,
+    RuntimeFailoverEvent,
     RuntimeMessageStoredEvent,
     RuntimeStreamEvent,
     RuntimeTokenEvent,
@@ -69,7 +71,7 @@ def send_message_response_to_proto(
 
 def runtime_stream_event_to_proto(
     event: RuntimeStreamEvent,
-) -> StreamSendMessageResponse:
+) -> AgentStreamEvent:
     """Convert a domain runtime stream event to proto.
 
     Parameters
@@ -79,8 +81,11 @@ def runtime_stream_event_to_proto(
 
     Returns
     -------
-    StreamSendMessageResponse
-        Proto stream event wrapper.
+    AgentStreamEvent
+        Proto event payload. The handler wraps this in the per-RPC
+        response (StreamSendMessageResponse / RerunFromMessageResponse /
+        SubscribeToRunResponse) and stamps ``run_id`` from the egress
+        run state hash.
 
     Raises
     ------
@@ -89,12 +94,10 @@ def runtime_stream_event_to_proto(
 
     """
     if isinstance(event, RuntimeTokenEvent):
-        return StreamSendMessageResponse(
-            token=StreamTokenEvent(text=event.text),
-        )
+        return AgentStreamEvent(token=StreamTokenEvent(text=event.text))
 
     if isinstance(event, RuntimeToolCallEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             tool_call=StreamToolCallEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -103,7 +106,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeToolResultEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             tool_result=StreamToolResultEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -113,14 +116,14 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeMessageStoredEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             message_stored=StreamMessageStoredEvent(
                 message=message_to_proto(event.message),
             ),
         )
 
     if isinstance(event, RuntimeDoneEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             done=StreamDoneEvent(
                 assistant_message=message_to_proto(event.assistant_message),
                 model_used=event.model_used,
@@ -128,7 +131,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeConfirmationRequiredEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             confirmation_required=StreamConfirmationRequiredEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -137,10 +140,19 @@ def runtime_stream_event_to_proto(
             ),
         )
 
-    if isinstance(event, RuntimeErrorEvent):
-        return StreamSendMessageResponse(
-            error=StreamErrorEvent(message=event.error),
+    if isinstance(event, RuntimeFailoverEvent):
+        return AgentStreamEvent(
+            failover=StreamFailoverEvent(
+                from_provider_key_id=event.from_provider_key_id,
+                to_provider_key_id=event.to_provider_key_id,
+                to_model=event.to_model,
+                reason=event.reason,
+                attempt=event.attempt,
+            ),
         )
+
+    if isinstance(event, RuntimeErrorEvent):
+        return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
 
     raise ValueError(f"Unknown runtime stream event type: {type(event)}")
 
@@ -151,6 +163,7 @@ _EVENT_TYPE_TOOL_RESULT = "tool_result"
 _EVENT_TYPE_MESSAGE_STORED = "message_stored"
 _EVENT_TYPE_DONE = "done"
 _EVENT_TYPE_CONFIRMATION_REQUIRED = "confirmation_required"
+_EVENT_TYPE_FAILOVER = "failover"
 _EVENT_TYPE_ERROR = "error"
 
 
@@ -223,6 +236,16 @@ def runtime_stream_event_to_json(event: RuntimeStreamEvent) -> dict[str, Any]:
             "message_id": str(event.message_id) if event.message_id else None,
         }
 
+    if isinstance(event, RuntimeFailoverEvent):
+        return {
+            "type": _EVENT_TYPE_FAILOVER,
+            "from_provider_key_id": event.from_provider_key_id,
+            "to_provider_key_id": event.to_provider_key_id,
+            "to_model": event.to_model,
+            "reason": event.reason,
+            "attempt": event.attempt,
+        }
+
     if isinstance(event, RuntimeErrorEvent):
         return {"type": _EVENT_TYPE_ERROR, "error": event.error}
 
@@ -288,6 +311,15 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> RuntimeStreamEven
             message_id=UUID(message_id) if message_id else None,
         )
 
+    if event_type == _EVENT_TYPE_FAILOVER:
+        return RuntimeFailoverEvent(
+            from_provider_key_id=payload.get("from_provider_key_id", ""),
+            to_provider_key_id=payload.get("to_provider_key_id", ""),
+            to_model=payload.get("to_model", ""),
+            reason=payload.get("reason", "other"),
+            attempt=int(payload.get("attempt", 1)),
+        )
+
     if event_type == _EVENT_TYPE_ERROR:
         return RuntimeErrorEvent(error=payload.get("error", ""))
 
@@ -316,6 +348,13 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         total_cache_read_input_tokens=totals["total_cache_read_input_tokens"],
         total_sessions=totals["total_sessions"],
         avg_duration_ms=totals["avg_duration_ms"],
+        total_cost=totals.get("total_cost", "0"),
+        total_thinking_tokens=totals.get("total_thinking_tokens", 0),
+        total_image_count=totals.get("total_image_count", 0),
+        total_retries=totals.get("total_retries", 0),
+        total_cancelled=totals.get("total_cancelled", 0),
+        total_deadline_exceeded=totals.get("total_deadline_exceeded", 0),
+        display_currency=stats.get("display_currency", "EUR"),
         daily_usage=[
             DailyUsage(
                 date=d["date"],
@@ -323,6 +362,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 input_tokens=d["input_tokens"],
                 output_tokens=d["output_tokens"],
                 cache_read_input_tokens=d["cache_read_input_tokens"],
+                cost=d.get("cost", "0"),
+                image_count=d.get("image_count", 0),
             )
             for d in stats["daily_usage"]
         ],
@@ -332,6 +373,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 runs=m["runs"],
                 input_tokens=m["input_tokens"],
                 output_tokens=m["output_tokens"],
+                cost=m.get("cost", "0"),
+                image_count=m.get("image_count", 0),
             )
             for m in stats["model_usage"]
         ],

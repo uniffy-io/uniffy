@@ -136,15 +136,38 @@ def _install_session_ops(monkeypatch, factory=_FakeSessionOps) -> list[Any]:
     return instances
 
 
-def _install_rate_limiter(monkeypatch, raises: BaseException | None = None) -> list[dict[str, str]]:
-    calls: list[dict[str, str]] = []
+def _install_rate_limiter(monkeypatch, raises: BaseException | None = None) -> list[dict[str, Any]]:
+    calls: list[dict[str, Any]] = []
 
-    async def fake(user_id: str, organization_id: str) -> None:
-        calls.append({"user_id": user_id, "organization_id": organization_id})
+    async def fake(session, *, user_id, organization_id, agent_id) -> None:
+        calls.append({
+            "user_id": str(user_id),
+            "organization_id": str(organization_id),
+            "agent_id": str(agent_id),
+        })
         if raises is not None:
             raise raises
 
-    monkeypatch.setattr(handlers_mod, "check_agent_rate_limits", fake)
+    monkeypatch.setattr(handlers_mod, "check_agent_message_limits", fake)
+    return calls
+
+
+def _install_budget_preflight(
+    monkeypatch,
+    raises: BaseException | None = None,
+) -> list[dict[str, Any]]:
+    calls: list[dict[str, Any]] = []
+
+    class _Stub:
+        def __init__(self, _session):
+            pass
+
+        async def check_preflight(self, *, user_id, organization_id):
+            calls.append({"user_id": str(user_id), "organization_id": str(organization_id)})
+            if raises is not None:
+                raise raises
+
+    monkeypatch.setattr(handlers_mod, "BudgetsOperations", _Stub)
     return calls
 
 
@@ -309,6 +332,7 @@ class TestStreamSendMessage:
         _install_org_ops(monkeypatch, factory=_FailingOrgOps)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         queue = _install_queue(monkeypatch)
@@ -334,6 +358,7 @@ class TestStreamSendMessage:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch, factory=_FailingSessionOps)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         queue = _install_queue(monkeypatch)
@@ -391,6 +416,7 @@ class TestStreamSendMessage:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(
             monkeypatch,
             files=[
@@ -455,10 +481,10 @@ class TestStreamSendMessage:
         assert captured == [run_id]
 
         # First event is the run_id header (no oneof set).
-        assert collected[0].run_id == str(run_id)
-        assert collected[0].WhichOneof("event") is None
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[0].event.WhichOneof("event") is None
 
-        cases = [ev.WhichOneof("event") for ev in collected[1:]]
+        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
         assert cases == [
             "message_stored",
             "token",
@@ -467,7 +493,7 @@ class TestStreamSendMessage:
         ]
 
         for ev in collected:
-            assert ev.run_id == str(run_id)
+            assert ev.event.run_id == str(run_id)
 
     def test_subscribe_timeout_yields_synthetic_error(self, monkeypatch) -> None:
         user_id = uuid7()
@@ -479,6 +505,7 @@ class TestStreamSendMessage:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         _install_queue(monkeypatch)
@@ -501,10 +528,10 @@ class TestStreamSendMessage:
         collected = asyncio.run(run())
         # run_id header + synthetic error proto envelope
         assert len(collected) == 2
-        assert collected[0].run_id == str(run_id)
-        assert collected[1].WhichOneof("event") == "error"
-        assert collected[1].error.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
-        assert collected[1].run_id == str(run_id)
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[1].event.WhichOneof("event") == "error"
+        assert collected[1].event.error.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
+        assert collected[1].event.run_id == str(run_id)
 
 
 class TestSendMessageUnary:
@@ -536,6 +563,7 @@ class TestSendMessageUnary:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         _install_queue(monkeypatch)
@@ -574,6 +602,7 @@ class TestSendMessageUnary:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         _install_queue(monkeypatch)
@@ -607,6 +636,7 @@ class TestSendMessageUnary:
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
         _install_rate_limiter(monkeypatch)
+        _install_budget_preflight(monkeypatch)
         _install_load_files(monkeypatch)
         _install_state(monkeypatch)
         _install_queue(monkeypatch)
@@ -784,13 +814,13 @@ class TestSubscribeToRun:
 
         assert captured == [run_id]
         # First event is the run_id header (no oneof set).
-        assert collected[0].run_id == str(run_id)
-        assert collected[0].WhichOneof("event") is None
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[0].event.WhichOneof("event") is None
 
-        cases = [ev.WhichOneof("event") for ev in collected[1:]]
+        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
         assert cases == ["token", "done"]
         for ev in collected:
-            assert ev.run_id == str(run_id)
+            assert ev.event.run_id == str(run_id)
 
 
 class TestSubscribeRuntimeEvents:

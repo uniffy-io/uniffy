@@ -48,6 +48,15 @@ class SessionsService(Protocol):
     async def compact_session(self, request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def edit_message(self, request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_message(self, request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
     def __init__(self, service: SessionsService | AsyncGenerator[SessionsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -153,6 +162,36 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.compact_session,
+                ),
+                "/agents.v1.SessionsService/EditMessage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="EditMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.edit_message,
+                ),
+                "/agents.v1.SessionsService/DeleteMessage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_message,
+                ),
+                "/agents.v1.SessionsService/RetryMessage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RetryMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.RetryMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.retry_message,
                 ),
             },
             interceptors=interceptors,
@@ -368,6 +407,66 @@ class SessionsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def edit_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EditMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def retry_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetryMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.RetryMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -392,6 +491,12 @@ class SessionsServiceSync(Protocol):
     def get_session_context_stats(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def compact_session(self, request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def edit_message(self, request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_message(self, request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -498,6 +603,36 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.compact_session,
+                ),
+                "/agents.v1.SessionsService/EditMessage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="EditMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.edit_message,
+                ),
+                "/agents.v1.SessionsService/DeleteMessage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_message,
+                ),
+                "/agents.v1.SessionsService/RetryMessage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RetryMessage",
+                        service_name="agents.v1.SessionsService",
+                        input=agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+                        output=agents_dot_v1_dot_sessions__pb2.RetryMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.retry_message,
                 ),
             },
             interceptors=interceptors,
@@ -707,6 +842,66 @@ class SessionsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
                 output=agents_dot_v1_dot_sessions__pb2.CompactSessionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def edit_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EditMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def retry_message(
+        self,
+        request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetryMessage",
+                service_name="agents.v1.SessionsService",
+                input=agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
+                output=agents_dot_v1_dot_sessions__pb2.RetryMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

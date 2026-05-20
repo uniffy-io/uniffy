@@ -519,6 +519,68 @@ func (DomainType) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
+// RateLimitKind identifies which bucket a rate-limit override applies
+// to in the agents domain. Text messages are tracked independently of
+// image generations. The per-agent bucket prevents a runaway loop on a
+// single agent starving other agents the same user owns.
+type RateLimitKind int32
+
+const (
+	RateLimitKind_RATE_LIMIT_KIND_UNSPECIFIED     RateLimitKind = 0
+	RateLimitKind_RATE_LIMIT_KIND_AGENT_MSG_USER  RateLimitKind = 1
+	RateLimitKind_RATE_LIMIT_KIND_AGENT_MSG_ORG   RateLimitKind = 2
+	RateLimitKind_RATE_LIMIT_KIND_AGENT_MSG_AGENT RateLimitKind = 3
+	RateLimitKind_RATE_LIMIT_KIND_IMAGE_GEN_USER  RateLimitKind = 4
+	RateLimitKind_RATE_LIMIT_KIND_IMAGE_GEN_ORG   RateLimitKind = 5
+)
+
+// Enum value maps for RateLimitKind.
+var (
+	RateLimitKind_name = map[int32]string{
+		0: "RATE_LIMIT_KIND_UNSPECIFIED",
+		1: "RATE_LIMIT_KIND_AGENT_MSG_USER",
+		2: "RATE_LIMIT_KIND_AGENT_MSG_ORG",
+		3: "RATE_LIMIT_KIND_AGENT_MSG_AGENT",
+		4: "RATE_LIMIT_KIND_IMAGE_GEN_USER",
+		5: "RATE_LIMIT_KIND_IMAGE_GEN_ORG",
+	}
+	RateLimitKind_value = map[string]int32{
+		"RATE_LIMIT_KIND_UNSPECIFIED":     0,
+		"RATE_LIMIT_KIND_AGENT_MSG_USER":  1,
+		"RATE_LIMIT_KIND_AGENT_MSG_ORG":   2,
+		"RATE_LIMIT_KIND_AGENT_MSG_AGENT": 3,
+		"RATE_LIMIT_KIND_IMAGE_GEN_USER":  4,
+		"RATE_LIMIT_KIND_IMAGE_GEN_ORG":   5,
+	}
+)
+
+func (x RateLimitKind) Enum() *RateLimitKind {
+	p := new(RateLimitKind)
+	*p = x
+	return p
+}
+
+func (x RateLimitKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RateLimitKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_common_proto_enumTypes[8].Descriptor()
+}
+
+func (RateLimitKind) Type() protoreflect.EnumType {
+	return &file_common_v1_common_proto_enumTypes[8]
+}
+
+func (x RateLimitKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RateLimitKind.Descriptor instead.
+func (RateLimitKind) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_common_proto_rawDescGZIP(), []int{8}
+}
+
 // UserInfo represents basic user information.
 type UserInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1378,7 +1440,14 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x11DOMAIN_TYPE_NOTES\x10\x03\x12\x18\n" +
 	"\x14DOMAIN_TYPE_CALENDAR\x10\x04\x12\x18\n" +
 	"\x14DOMAIN_TYPE_PROJECTS\x10\x05\x12\x16\n" +
-	"\x12DOMAIN_TYPE_AGENTS\x10\x06B;Z9github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
+	"\x12DOMAIN_TYPE_AGENTS\x10\x06*\xe3\x01\n" +
+	"\rRateLimitKind\x12\x1f\n" +
+	"\x1bRATE_LIMIT_KIND_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eRATE_LIMIT_KIND_AGENT_MSG_USER\x10\x01\x12!\n" +
+	"\x1dRATE_LIMIT_KIND_AGENT_MSG_ORG\x10\x02\x12#\n" +
+	"\x1fRATE_LIMIT_KIND_AGENT_MSG_AGENT\x10\x03\x12\"\n" +
+	"\x1eRATE_LIMIT_KIND_IMAGE_GEN_USER\x10\x04\x12!\n" +
+	"\x1dRATE_LIMIT_KIND_IMAGE_GEN_ORG\x10\x05B;Z9github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_common_proto_rawDescOnce sync.Once
@@ -1392,7 +1461,7 @@ func file_common_v1_common_proto_rawDescGZIP() []byte {
 	return file_common_v1_common_proto_rawDescData
 }
 
-var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_common_v1_common_proto_goTypes = []any{
 	(ContentType)(0),              // 0: common.v1.ContentType
@@ -1403,28 +1472,29 @@ var file_common_v1_common_proto_goTypes = []any{
 	(OrganizationRole)(0),         // 5: common.v1.OrganizationRole
 	(GroupRole)(0),                // 6: common.v1.GroupRole
 	(DomainType)(0),               // 7: common.v1.DomainType
-	(*UserInfo)(nil),              // 8: common.v1.UserInfo
-	(*OrganizationInfo)(nil),      // 9: common.v1.OrganizationInfo
-	(*GroupInfo)(nil),             // 10: common.v1.GroupInfo
-	(*MemberInfo)(nil),            // 11: common.v1.MemberInfo
-	(*GroupMemberInfo)(nil),       // 12: common.v1.GroupMemberInfo
-	(*DomainAdminInfo)(nil),       // 13: common.v1.DomainAdminInfo
-	(*PaginationRequest)(nil),     // 14: common.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 15: common.v1.PaginationResponse
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
+	(RateLimitKind)(0),            // 8: common.v1.RateLimitKind
+	(*UserInfo)(nil),              // 9: common.v1.UserInfo
+	(*OrganizationInfo)(nil),      // 10: common.v1.OrganizationInfo
+	(*GroupInfo)(nil),             // 11: common.v1.GroupInfo
+	(*MemberInfo)(nil),            // 12: common.v1.MemberInfo
+	(*GroupMemberInfo)(nil),       // 13: common.v1.GroupMemberInfo
+	(*DomainAdminInfo)(nil),       // 14: common.v1.DomainAdminInfo
+	(*PaginationRequest)(nil),     // 15: common.v1.PaginationRequest
+	(*PaginationResponse)(nil),    // 16: common.v1.PaginationResponse
+	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
 }
 var file_common_v1_common_proto_depIdxs = []int32{
-	16, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	16, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
-	16, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	16, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
 	5,  // 5: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
-	16, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	17, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
 	6,  // 7: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
-	16, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	17, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
 	7,  // 9: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
-	16, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
+	17, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
 	11, // [11:11] is the sub-list for method output_type
 	11, // [11:11] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1448,7 +1518,7 @@ func file_common_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)),
-			NumEnums:      8,
+			NumEnums:      9,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,

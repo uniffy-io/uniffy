@@ -70,6 +70,20 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     image_model = agent.image_model
 
+    from uniffy.core.valkey.rate_limit import check_image_generation_limits
+    from uniffy.domains.agents.budgets.image_quota import check_image_quota
+
+    await check_image_generation_limits(
+        ctx.session,
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    )
+    await check_image_quota(
+        ctx.session,
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    )
+
     # Get the provider - use agent's assigned image key if set, else auto-resolve
     provider_ops = ProviderOperations(ctx.session)
     image_provider_key_id = None
@@ -192,6 +206,40 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         metadata={"mime_type": mime_type, "image_model": image_model},
     )
 
+    from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
+    from uniffy.domains.agents.currency import (
+        convert as convert_currency,
+    )
+    from uniffy.domains.agents.currency import (
+        get_display_currency,
+    )
+    from uniffy.domains.agents.pricing import compute_image_cost, get_pricing
+
+    image_cost = None
+    image_cost_currency = None
+    try:
+        pricing = await get_pricing(
+            ctx.session, provider=provider.name, model=image_model,
+        )
+        if pricing is not None:
+            raw_cost = compute_image_cost(
+                pricing, size=size, quality=quality, count=1,
+            )
+            if raw_cost is not None:
+                display_currency = await get_display_currency(
+                    ctx.session, ctx.organization_id,
+                )
+                image_cost = await convert_currency(
+                    raw_cost,
+                    pricing.currency,
+                    display_currency,
+                    ctx.session,
+                    ctx.organization_id,
+                )
+                image_cost_currency = display_currency
+    except Exception:
+        logger.warning("Image cost calculation failed", exc_info=True)
+
     # Log image model usage so it appears in usage analytics
     if ctx.session_id and ctx.agent_id:
         try:
@@ -202,6 +250,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 organization_id=ctx.organization_id,
                 model=image_model,
                 provider_key_id=image_provider_key_id,
+                kind="image",
                 input_tokens=0,
                 output_tokens=0,
                 tool_calls=None,
@@ -209,6 +258,9 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 duration_ms=gen_duration_ms,
                 status="success",
                 error=None,
+                image_count=1,
+                cost=image_cost,
+                cost_currency=image_cost_currency,
             )
             ctx.session.add(run_log)
         except Exception:
@@ -218,6 +270,16 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             )
 
     await ctx.session.commit()
+
+    try:
+        await check_and_fire_alerts(
+            ctx.session,
+            organization_id=ctx.organization_id,
+            run_cost=image_cost,
+            run_image_count=1,
+        )
+    except Exception:
+        logger.warning("Image alert fan-out failed", exc_info=True)
 
     mention = f"[[[{filename}|{file_urn}]]]"
 

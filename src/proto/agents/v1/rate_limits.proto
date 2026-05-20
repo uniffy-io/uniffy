@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
+
+// RateLimitsService manages per-organization rate-limit overrides for
+// the agents domain. Org admins can override any of the five buckets
+// (text per-user, text per-org, text per-agent, image per-user, image
+// per-org). Absent overrides fall back to the server-side defaults.
+service RateLimitsService {
+  // Get all overrides for an organization, merged with server defaults
+  // so the client sees a complete picture of active limits.
+  rpc GetRateLimits(GetRateLimitsRequest) returns (GetRateLimitsResponse) {}
+
+  // Create or update a single override.
+  rpc UpsertRateLimit(UpsertRateLimitRequest) returns (UpsertRateLimitResponse) {}
+
+  // Delete an override so the bucket falls back to the default.
+  rpc DeleteRateLimit(DeleteRateLimitRequest) returns (DeleteRateLimitResponse) {}
+}
+
+// RateLimit represents one bucket configuration. When ``is_override`` is
+// false the values come from server defaults and there is no backing row
+// in ``agents_rate_limits``. When true, the values were written by an
+// org admin and will persist across restarts.
+message RateLimit {
+  common.v1.RateLimitKind kind = 1;
+  int32 limit = 2;
+  int32 window_seconds = 3;
+  bool is_override = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
+}
+
+message GetRateLimitsRequest {
+  string organization_id = 1;
+}
+
+message GetRateLimitsResponse {
+  repeated RateLimit limits = 1;
+}
+
+message UpsertRateLimitRequest {
+  string organization_id = 1;
+  common.v1.RateLimitKind kind = 2;
+  int32 limit = 3;
+  int32 window_seconds = 4;
+}
+
+message UpsertRateLimitResponse {
+  RateLimit limit = 1;
+}
+
+message DeleteRateLimitRequest {
+  string organization_id = 1;
+  common.v1.RateLimitKind kind = 2;
+}
+
+message DeleteRateLimitResponse {
+  bool success = 1;
+}

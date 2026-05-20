@@ -12,18 +12,26 @@ service RuntimeService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   // Send a user message and stream tokens, tool events, and the final response
   rpc StreamSendMessage(StreamSendMessageRequest) returns (stream StreamSendMessageResponse) {}
+  // Re-run the agent against an existing edited user message. The anchor
+  // message must be a non-invalidated user-role row whose downstream has
+  // already been invalidated (via EditMessage). Streams events in the
+  // same shape as StreamSendMessage; no new user message is created.
+  rpc RerunFromMessage(RerunFromMessageRequest) returns (stream RerunFromMessageResponse) {}
   // Resume an in-flight run by run_id. Replays the full event stream from
   // the start, then tails live until Done/Error or the 120s wall budget.
   // Used by the frontend after a tab reload to reconnect without
   // re-driving the LLM.
   rpc SubscribeToRun(SubscribeToRunRequest) returns (stream SubscribeToRunResponse) {}
+  // Cancel an in-flight run. Flips the run-state hash to "cancelled";
+  // the egress worker observes the flag between tool iterations and
+  // exits with a synthetic Error event. Idempotent: cancelling an
+  // already-finished run is a no-op.
+  rpc CancelStream(CancelStreamRequest) returns (CancelStreamResponse) {}
   // Approve or reject a destructive tool call that requires confirmation
   rpc RespondToConfirmation(RespondToConfirmationRequest) returns (RespondToConfirmationResponse) {}
   // Get usage statistics for an organization
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
 }
-
-// --- Usage Analytics ---
 
 message GetUsageStatsRequest {
   string organization_id = 1;
@@ -68,6 +76,20 @@ message GetUsageStatsResponse {
   // the period. Counted toward total_input_tokens (the prompt was that
   // big from the model's POV) but billed at ~10% of base input price.
   int64 total_cache_read_input_tokens = 17;
+
+  // Cost + usage extensions sourced from the run-log columns. Decimal
+  // money values are encoded as strings so the wire never loses
+  // precision; the org's display currency is carried separately.
+  string total_cost = 18;
+  int64 total_thinking_tokens = 19;
+  int64 total_image_count = 20;
+  int64 total_retries = 21;
+  int64 total_cancelled = 22;
+  int64 total_deadline_exceeded = 23;
+  // ISO 4217 currency for ``total_cost`` and per-bucket ``cost``
+  // values in DailyUsage / ModelUsage. Defaults to "EUR" when no
+  // org row exists.
+  string display_currency = 24;
 }
 
 message DailyUsage {
@@ -77,6 +99,8 @@ message DailyUsage {
   int64 output_tokens = 4;
   // Cache reads in this bucket; subset of input_tokens.
   int64 cache_read_input_tokens = 5;
+  string cost = 6;
+  int64 image_count = 7;
 }
 
 message ModelUsage {
@@ -84,6 +108,8 @@ message ModelUsage {
   int64 runs = 2;
   int64 input_tokens = 3;
   int64 output_tokens = 4;
+  string cost = 5;
+  int64 image_count = 6;
 }
 
 message AgentUsageInfo {
@@ -119,38 +145,46 @@ message CronTaskUsage {
   int64 output_tokens = 8;
 }
 
-// --- Requests and Responses ---
-
 message SendMessageRequest {
   string organization_id = 1;
-  // Legacy: addresses an isolated AgentSession. Used by the builder Test
-  // tab and historical playgrounds.
+  // Addresses an isolated AgentSession (used by the builder Test tab and
+  // playground surfaces). Mutually exclusive with chat_context.
   string session_id = 2;
   string content = 3;
   // IDs of uploaded files to include (uploaded via FilesService)
   repeated string file_ids = 4;
   // IANA timezone of the user's browser (e.g. "America/New_York")
   string user_timezone = 5;
-  // New: invokes the agent inside a chat channel. When set, the runtime
-  // reads context from chat_messages (scoped per the channel binding) and
-  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // Invokes the agent inside a chat channel. When set, the runtime reads
+  // context from chat_messages (scoped per the channel binding) and writes
+  // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
 }
 
+message RerunFromMessageRequest {
+  string organization_id = 1;
+  // The user-role message to re-run from. Must already have its downstream
+  // invalidated (typically via EditMessage). The runtime treats it as the
+  // last message in context and streams a fresh assistant response.
+  string message_id = 2;
+  // IANA timezone of the user's browser (e.g. "America/New_York")
+  string user_timezone = 3;
+}
+
 message StreamSendMessageRequest {
   string organization_id = 1;
-  // Legacy: addresses an isolated AgentSession. Used by the builder Test
-  // tab and historical playgrounds.
+  // Addresses an isolated AgentSession (used by the builder Test tab and
+  // playground surfaces). Mutually exclusive with chat_context.
   string session_id = 2;
   string content = 3;
   // IDs of uploaded files to include (uploaded via FilesService)
   repeated string file_ids = 4;
   // IANA timezone of the user's browser (e.g. "America/New_York")
   string user_timezone = 5;
-  // New: invokes the agent inside a chat channel. When set, the runtime
-  // reads context from chat_messages (scoped per the channel binding) and
-  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // Invokes the agent inside a chat channel. When set, the runtime reads
+  // context from chat_messages (scoped per the channel binding) and writes
+  // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
 }
@@ -189,13 +223,25 @@ message SubscribeToRunRequest {
   string organization_id = 2;
 }
 
+message CancelStreamRequest {
+  string run_id = 1;
+  string organization_id = 2;
+}
+
+message CancelStreamResponse {
+  // True if the run was active and a cancel flag was set; false if the
+  // run had already finished or no longer exists.
+  bool cancelled = 1;
+}
+
 message RespondToConfirmationResponse {
   bool accepted = 1;
 }
 
-// --- Streaming event types ---
-
-message StreamSendMessageResponse {
+// AgentStreamEvent carries one event in the agent-runtime stream. The
+// run_id is stamped by the handler from the run state hash so a tab
+// reload mid-stream can call SubscribeToRun(run_id) to resume.
+message AgentStreamEvent {
   oneof event {
     StreamTokenEvent token = 1;
     StreamToolCallEvent tool_call = 2;
@@ -204,31 +250,21 @@ message StreamSendMessageResponse {
     StreamDoneEvent done = 5;
     StreamErrorEvent error = 6;
     StreamConfirmationRequiredEvent confirmation_required = 7;
+    StreamFailoverEvent failover = 9;
   }
-  // The egress run id this event belongs to. Populated on every event
-  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
-  // resume from the start of the stream. Set by the handler from the
-  // run state hash; the worker does not embed it inside the oneof
-  // payload itself.
   string run_id = 8;
 }
 
+message StreamSendMessageResponse {
+  AgentStreamEvent event = 1;
+}
+
+message RerunFromMessageResponse {
+  AgentStreamEvent event = 1;
+}
+
 message SubscribeToRunResponse {
-  oneof event {
-    StreamTokenEvent token = 1;
-    StreamToolCallEvent tool_call = 2;
-    StreamToolResultEvent tool_result = 3;
-    StreamMessageStoredEvent message_stored = 4;
-    StreamDoneEvent done = 5;
-    StreamErrorEvent error = 6;
-    StreamConfirmationRequiredEvent confirmation_required = 7;
-  }
-  // The egress run id this event belongs to. Populated on every event
-  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
-  // resume from the start of the stream. Set by the handler from the
-  // run state hash; the worker does not embed it inside the oneof
-  // payload itself.
-  string run_id = 8;
+  AgentStreamEvent event = 1;
 }
 
 message StreamTokenEvent {
@@ -266,4 +302,21 @@ message StreamConfirmationRequiredEvent {
   string tool_name = 2;
   string tool_args_json = 3;
   string description = 4;
+}
+
+// Emitted once when the runtime swaps to a different provider key or
+// model after a retryable failure on the previous candidate. Purely
+// informational; clients use it to surface "switched to X" notices.
+message StreamFailoverEvent {
+  // Provider key id we just moved off (the one that failed).
+  string from_provider_key_id = 1;
+  // Provider key id we moved onto.
+  string to_provider_key_id = 2;
+  // Model now in use (may be the same model on a different key, or a
+  // different fallback model entirely).
+  string to_model = 3;
+  // Short reason classifier: "timeout", "5xx", "connection", "other".
+  string reason = 4;
+  // 1-based attempt counter for the swap (first failover = 1).
+  int32 attempt = 5;
 }

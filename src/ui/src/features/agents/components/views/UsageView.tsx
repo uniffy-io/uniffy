@@ -15,6 +15,10 @@ import {
     Timer,
     CheckCircle,
     Database,
+    CurrencyDollar,
+    Image as ImageIcon,
+    ArrowsClockwise,
+    Stop as StopIcon,
 } from "@phosphor-icons/react";
 import {
     AreaChart,
@@ -29,6 +33,7 @@ import {
 } from "recharts";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { formatCurrency } from "@/shared/utils/currencyFormatting";
 import { useAdminAccess } from "@/features/admin";
 import {
     selectUsageStats,
@@ -94,6 +99,49 @@ function formatDuration(ms: number): string {
     return `${ms}ms`;
 }
 
+// Cost formatting flows through the shared currency helper so we never
+// hardcode a symbol. The org's display currency comes in via the stats
+// response.
+
+const SECONDARY_TONES = {
+    emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+    amber: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
+    red: 'text-red-600 dark:text-red-400 bg-red-500/10',
+} as const;
+
+function SecondaryStat({
+    label,
+    value,
+    subtitle,
+    icon: Icon,
+    tone,
+}: {
+    label: string;
+    value: string;
+    subtitle?: string;
+    icon: React.ComponentType<{ size: number; className?: string }>;
+    tone: keyof typeof SECONDARY_TONES;
+}) {
+    return (
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+            <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${SECONDARY_TONES[tone]}`}
+            >
+                <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {label}
+                </p>
+                <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
+                {subtitle && (
+                    <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // Custom Tooltip
 
 interface TooltipPayloadEntry {
@@ -154,10 +202,11 @@ function StatCard({
     return (
         <div className="bg-card border border-border rounded-xl p-4 relative overflow-hidden group hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div
-                className="absolute top-0 left-0 w-1 h-full rounded-l-xl"
+                aria-hidden
+                className="pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full blur-2xl opacity-25 group-hover:opacity-40 transition-opacity duration-300"
                 style={{ backgroundColor: accentColor }}
             />
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-3 relative">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {label}
                 </span>
@@ -172,11 +221,11 @@ function StatCard({
                     />
                 </div>
             </div>
-            <p className="text-2xl font-bold text-foreground tracking-tight">
+            <p className="relative text-2xl font-bold text-foreground tracking-tight">
                 {value}
             </p>
             {subtitle && (
-                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+                <p className="relative text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}
         </div>
     );
@@ -861,6 +910,7 @@ export function UsageView() {
         inputTokens: m.inputTokens,
         outputTokens: m.outputTokens,
         totalTokens: m.inputTokens + m.outputTokens,
+        cost: parseFloat(m.cost) || 0,
     }));
 
     const agentRows: TableRow[] = stats.agentUsage.map((a) => ({
@@ -931,10 +981,14 @@ export function UsageView() {
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
-                        label="Total Runs"
-                        value={formatNumber(stats.totalRuns)}
-                        icon={Lightning}
-                        subtitle={`${formatNumber(avgTokensPerRun)} tokens/run avg`}
+                        label="Total Cost"
+                        value={formatCurrency(stats.totalCost, stats.displayCurrency)}
+                        icon={CurrencyDollar}
+                        subtitle={
+                            stats.totalImageCount > 0
+                                ? `${formatNumber(stats.totalImageCount)} images`
+                                : `${formatNumber(stats.totalRuns)} runs`
+                        }
                         accentColor={CHART_PALETTE[0]}
                     />
                     <StatCard
@@ -949,8 +1003,8 @@ export function UsageView() {
                         value={formatNumber(stats.totalCacheReadInputTokens)}
                         icon={Database}
                         subtitle={
-                            stats.totalInputTokens > 0
-                                ? `${Math.round((stats.totalCacheReadInputTokens / stats.totalInputTokens) * 100)}% of input cached`
+                            stats.totalCacheReadInputTokens + stats.totalInputTokens > 0
+                                ? `${Math.round((stats.totalCacheReadInputTokens / (stats.totalCacheReadInputTokens + stats.totalInputTokens)) * 100)}% of prompt from cache`
                                 : "no input yet"
                         }
                         accentColor="#10b981"
@@ -959,7 +1013,7 @@ export function UsageView() {
                         label="Avg Duration"
                         value={formatDuration(stats.avgDurationMs)}
                         icon={Clock}
-                        subtitle="per run"
+                        subtitle={`${formatNumber(avgTokensPerRun)} tokens/run avg`}
                         accentColor={CHART_PALETTE[2]}
                     />
                     <StatCard
@@ -970,6 +1024,42 @@ export function UsageView() {
                         accentColor={CHART_PALETTE[3]}
                     />
                 </div>
+
+                {/* Robustness signals: only render the row when something actually fired */}
+                {(stats.totalRetries > 0 ||
+                    stats.totalCancelled > 0 ||
+                    stats.totalDeadlineExceeded > 0 ||
+                    stats.totalImageCount > 0) && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <SecondaryStat
+                            label="Images generated"
+                            value={formatNumber(stats.totalImageCount)}
+                            icon={ImageIcon}
+                            tone="emerald"
+                        />
+                        <SecondaryStat
+                            label="Retries"
+                            value={formatNumber(stats.totalRetries)}
+                            icon={ArrowsClockwise}
+                            tone="amber"
+                            subtitle="provider failovers"
+                        />
+                        <SecondaryStat
+                            label="Cancelled"
+                            value={formatNumber(stats.totalCancelled)}
+                            icon={StopIcon}
+                            tone="red"
+                            subtitle="user-initiated stops"
+                        />
+                        <SecondaryStat
+                            label="Deadline hits"
+                            value={formatNumber(stats.totalDeadlineExceeded)}
+                            icon={Timer}
+                            tone="red"
+                            subtitle="runtime limit exceeded"
+                        />
+                    </div>
+                )}
 
                 {/* Token Usage Chart */}
                 <div className="bg-card border border-border rounded-xl p-5">
@@ -1184,6 +1274,15 @@ export function UsageView() {
                                 label: "Total",
                                 align: "right",
                                 format: fmtNum,
+                            },
+                            {
+                                key: "cost",
+                                label: "Cost",
+                                align: "right",
+                                format: (v: unknown) =>
+                                    typeof v === "number"
+                                        ? formatCurrency(v, stats.displayCurrency)
+                                        : "—",
                             },
                         ]}
                         rows={modelRows}

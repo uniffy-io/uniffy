@@ -177,6 +177,51 @@ class AuthenticationError(UNIFFYError):
         super().__init__(f"Authentication failed: {reason}")
 
 
+class BudgetExceededError(UNIFFYError):
+    """
+    Budget or quota exceeded exception.
+
+    Raised only when a governing budget or user-quota row has
+    ``hard_limit=True`` and the current-period usage exceeds the
+    configured cap. Soft overages log a warning and let the request
+    proceed; this exception is the hard-enforcement path.
+    """
+
+    def __init__(
+        self,
+        scope: str,
+        limit_kind: str,
+        current: str,
+        limit: str,
+    ) -> None:
+        """Initialize BudgetExceededError."""
+        self.scope = scope
+        self.limit_kind = limit_kind
+        self.current = current
+        self.limit = limit
+        super().__init__(
+            f"Budget exceeded ({scope}/{limit_kind}): {current} >= {limit}"
+        )
+
+
+class RuntimeDeadlineExceededError(UNIFFYError):
+    """
+    Runtime deadline exceeded exception.
+
+    Raised when an agent ``send_message`` / ``stream_send_message`` call
+    runs longer than the configured per-org deadline. Maps to
+    ConnectRPC ``Code.DEADLINE_EXCEEDED``.
+    """
+
+    def __init__(self, deadline_seconds: int, elapsed_seconds: float) -> None:
+        """Initialize RuntimeDeadlineExceededError."""
+        self.deadline_seconds = deadline_seconds
+        self.elapsed_seconds = elapsed_seconds
+        super().__init__(
+            f"Runtime deadline exceeded: {elapsed_seconds:.1f}s >= {deadline_seconds}s"
+        )
+
+
 class RateLimitExceededError(UNIFFYError):
     """
     Rate limit exceeded exception.

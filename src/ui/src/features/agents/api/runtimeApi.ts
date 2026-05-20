@@ -1,9 +1,11 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import {
-    RuntimeService,
-    RespondToConfirmationRequestSchema,
+    CancelStreamRequestSchema,
     GetUsageStatsRequestSchema,
+    RerunFromMessageRequestSchema,
+    RespondToConfirmationRequestSchema,
+    RuntimeService,
     SendMessageRequestSchema,
     StreamSendMessageRequestSchema,
     SubscribeToRunRequestSchema,
@@ -19,8 +21,17 @@ export const runtimeApi = {
     streamSendMessage: (request: MessageInitShape<typeof StreamSendMessageRequestSchema>) => {
         return client.streamSendMessage(request);
     },
-    subscribeToRun: (request: MessageInitShape<typeof SubscribeToRunRequestSchema>, options?: { signal?: AbortSignal }) => {
+    rerunFromMessage: (request: MessageInitShape<typeof RerunFromMessageRequestSchema>) => {
+        return client.rerunFromMessage(request);
+    },
+    subscribeToRun: (
+        request: MessageInitShape<typeof SubscribeToRunRequestSchema>,
+        options?: { signal?: AbortSignal },
+    ) => {
         return client.subscribeToRun(request, options);
+    },
+    cancelStream: async (request: MessageInitShape<typeof CancelStreamRequestSchema>) => {
+        return client.cancelStream(request);
     },
     respondToConfirmation: async (request: MessageInitShape<typeof RespondToConfirmationRequestSchema>) => {
         return client.respondToConfirmation(request);

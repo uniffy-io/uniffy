@@ -38,6 +38,24 @@ service SessionsService {
 
   // Manually trigger session compaction
   rpc CompactSession(CompactSessionRequest) returns (CompactSessionResponse) {}
+
+  // Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+  // and `edited_at`, then soft-invalidates every later message in the
+  // session so the client can re-run the conversation from the edit
+  // point. Refused if a run is currently in flight on this session.
+  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse) {}
+
+  // Soft-delete a user message. The message itself and every later
+  // message in the session are marked `is_invalidated=true` so the
+  // context loader skips them. Refused if a run is currently in flight.
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
+
+  // Retry from a message. For a user message, returns its content +
+  // file_ids and invalidates every later message so the caller can
+  // re-send. For an assistant message, walks back to the most recent
+  // preceding user message and returns that. Refused if a run is
+  // currently in flight on this session.
+  rpc RetryMessage(RetryMessageRequest) returns (RetryMessageResponse) {}
 }
 
 // Kind of session
@@ -94,9 +112,18 @@ message MessageInfo {
   google.protobuf.Timestamp created_at = 14;
   // File IDs attached to this message (for displaying file references in history)
   repeated string file_ids = 15;
+  // True if the message has been soft-invalidated by an edit, delete,
+  // or retry on this or an earlier message. The context loader skips
+  // these; the UI may still show them as struck-through history.
+  bool is_invalidated = 16;
+  // Set when a user message has been edited. Null otherwise.
+  optional google.protobuf.Timestamp edited_at = 17;
+  // Pre-edit content. Populated only for messages with edited_at set.
+  optional string previous_content = 18;
+  // True if this assistant turn was cancelled by the user before
+  // completion. The UI renders it as a "cancelled" placeholder.
+  bool was_cancelled = 19;
 }
-
-// --- Requests and Responses ---
 
 message CreateSessionRequest {
   string organization_id = 1;
@@ -244,4 +271,39 @@ message CompactSessionResponse {
   int32 tokens_after = 5;
   int32 tokens_saved = 6;
   int32 summary_tokens = 7;
+}
+
+message EditMessageRequest {
+  string organization_id = 1;
+  string message_id = 2;
+  string new_content = 3;
+}
+
+message EditMessageResponse {
+  MessageInfo message = 1;
+  // Number of later messages marked invalidated as a result.
+  int32 downstream_invalidated = 2;
+}
+
+message DeleteMessageRequest {
+  string organization_id = 1;
+  string message_id = 2;
+}
+
+message DeleteMessageResponse {
+  // Total rows marked invalidated (the deleted message + every later
+  // message in the session).
+  int32 invalidated_count = 1;
+}
+
+message RetryMessageRequest {
+  string organization_id = 1;
+  string message_id = 2;
+}
+
+message RetryMessageResponse {
+  // Content of the user message the caller should re-send.
+  string content = 1;
+  // File ids that were attached to the original user message.
+  repeated string file_ids = 2;
 }

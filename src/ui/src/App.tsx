@@ -41,6 +41,7 @@ const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'),
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
 const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSettingsPage'), 'OrgSettingsPage');
+const AgentsBudgetsPage = lazyImport(() => import('@/features/admin/pages/AgentsBudgetsPage'), 'AgentsBudgetsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
 const UsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
 const ServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
@@ -235,6 +236,7 @@ export function App() {
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
+                            <Route path="agents-budgets" element={<LazyRoute><AgentsBudgetsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
 
                             {/* Storage Management */}

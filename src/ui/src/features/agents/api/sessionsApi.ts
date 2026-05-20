@@ -1,16 +1,19 @@
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
 import {
-    SessionsService,
-    CreateSessionRequestSchema,
-    GetSessionRequestSchema,
-    ListSessionsRequestSchema,
-    UpdateSessionRequestSchema,
-    ArchiveSessionRequestSchema,
     AddMessageRequestSchema,
-    ListMessagesRequestSchema,
-    GetSessionContextStatsRequestSchema,
+    ArchiveSessionRequestSchema,
     CompactSessionRequestSchema,
+    CreateSessionRequestSchema,
+    DeleteMessageRequestSchema,
+    EditMessageRequestSchema,
+    GetSessionContextStatsRequestSchema,
+    GetSessionRequestSchema,
+    ListMessagesRequestSchema,
+    ListSessionsRequestSchema,
+    RetryMessageRequestSchema,
+    SessionsService,
+    UpdateSessionRequestSchema,
 } from '@uniffy/proto/agents/v1/sessions_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -43,5 +46,14 @@ export const sessionsApi = {
     },
     compactSession: async (request: MessageInitShape<typeof CompactSessionRequestSchema>) => {
         return client.compactSession(request);
+    },
+    editMessage: async (request: MessageInitShape<typeof EditMessageRequestSchema>) => {
+        return client.editMessage(request);
+    },
+    deleteMessage: async (request: MessageInitShape<typeof DeleteMessageRequestSchema>) => {
+        return client.deleteMessage(request);
+    },
+    retryMessage: async (request: MessageInitShape<typeof RetryMessageRequestSchema>) => {
+        return client.retryMessage(request);
     },
 };

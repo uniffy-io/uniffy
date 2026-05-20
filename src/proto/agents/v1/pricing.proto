@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
+
+// PricingService manages the global model pricing table. Reads are
+// available to any org member (prices are not sensitive). Writes are
+// restricted to system admins because prices are global across tenants.
+service PricingService {
+  // List pricing rows, optionally filtered by provider / kind / active-at.
+  rpc ListModelPricing(ListModelPricingRequest) returns (ListModelPricingResponse) {}
+
+  // Create a new pricing row or update an existing one. When a row with
+  // the same (provider, model, effective_from) tuple exists, it is
+  // overwritten; otherwise a new row is inserted. Callers rolling over
+  // prices should insert a new row and set the old row's effective_to.
+  rpc UpsertModelPricing(UpsertModelPricingRequest) returns (UpsertModelPricingResponse) {}
+
+  // Delete a pricing row by id. Historical run logs that referenced this
+  // row's pricing retain their cost_usd values.
+  rpc DeleteModelPricing(DeleteModelPricingRequest) returns (DeleteModelPricingResponse) {}
+}
+
+// Decimal rates are carried as strings to avoid float precision loss.
+// Clients should use a Decimal type (Python decimal.Decimal, JS BigNumber)
+// and format to the wire as the plain string representation, e.g. "3.00".
+message ModelPricing {
+  string id = 1;
+  string provider = 2;
+  string model = 3;
+  string kind = 4; // "text" or "image"
+  optional string input_per_1m = 5;
+  optional string output_per_1m = 6;
+  optional string cached_input_per_1m = 7;
+  optional string thinking_per_1m = 8;
+  // Flattened image prices: one entry per (size, quality). Empty for
+  // text rows. This is clearer on the wire than a nested map and
+  // maps cleanly to the JSONB column on the server.
+  repeated ImagePrice image_prices = 9;
+  google.protobuf.Timestamp effective_from = 10;
+  optional google.protobuf.Timestamp effective_to = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  // ISO 4217 currency for the per-1M-token rates and image_prices on
+  // this row. Defaults to ``"USD"``.
+  string currency = 14;
+}
+
+message ImagePrice {
+  string size = 1;
+  string quality = 2;
+  // Price per generation in the parent ModelPricing.currency.
+  string price = 3;
+}
+
+message ListModelPricingRequest {
+  optional string provider = 1;
+  optional string kind = 2;
+  optional google.protobuf.Timestamp as_of = 3;
+}
+
+message ListModelPricingResponse {
+  repeated ModelPricing rows = 1;
+}
+
+message UpsertModelPricingRequest {
+  string provider = 1;
+  string model = 2;
+  string kind = 3;
+  optional string input_per_1m = 4;
+  optional string output_per_1m = 5;
+  optional string cached_input_per_1m = 6;
+  optional string thinking_per_1m = 7;
+  repeated ImagePrice image_prices = 8;
+  google.protobuf.Timestamp effective_from = 9;
+  optional google.protobuf.Timestamp effective_to = 10;
+  // ISO 4217. Defaults to "USD" when empty.
+  string currency = 11;
+}
+
+message UpsertModelPricingResponse {
+  ModelPricing row = 1;
+}
+
+message DeleteModelPricingRequest {
+  string id = 1;
+}
+
+message DeleteModelPricingResponse {
+  bool success = 1;
+}

@@ -23,8 +23,6 @@ from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.session import AgentSession
 
-# --- Session Kind mappings ---
-
 SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
     "direct": SESSION_KIND_DIRECT,
     "group": SESSION_KIND_GROUP,
@@ -71,8 +69,6 @@ def session_kind_from_proto(proto_kind: SessionKind) -> str:
     """
     return SESSION_KIND_FROM_PROTO.get(proto_kind, "direct")
 
-
-# --- Message Role mappings ---
 
 MESSAGE_ROLE_TO_PROTO: dict[str, MessageRole] = {
     "user": MESSAGE_ROLE_USER,
@@ -123,9 +119,6 @@ def message_role_from_proto(proto_role: MessageRole) -> str:
 
     """
     return MESSAGE_ROLE_FROM_PROTO.get(proto_role, "user")
-
-
-# --- Model converters ---
 
 
 def session_to_proto(session: AgentSession) -> SessionInfo:
@@ -213,5 +206,12 @@ def message_to_proto(message: AgentMessage) -> MessageInfo:
 
     if message.file_ids:
         info.file_ids.extend(message.file_ids)
+
+    info.is_invalidated = bool(message.is_invalidated)
+    info.was_cancelled = bool(message.was_cancelled)
+    if message.edited_at is not None:
+        info.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
+    if message.previous_content is not None:
+        info.previous_content = message.previous_content
 
     return info
