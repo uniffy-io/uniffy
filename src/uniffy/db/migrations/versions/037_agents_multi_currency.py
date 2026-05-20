@@ -138,7 +138,6 @@ def upgrade() -> None:
     )
 
 
-
 def downgrade() -> None:
     """Reverse multi-currency schema."""
     op.alter_column(
