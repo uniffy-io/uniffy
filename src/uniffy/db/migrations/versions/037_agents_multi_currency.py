@@ -26,6 +26,10 @@ Renames:
 - ``agents_user_quotas.daily_limit_usd`` -> ``daily_limit``
 - ``agents_user_quotas.monthly_limit_usd`` -> ``monthly_limit``
 
+``agents_model_pricing`` columns were already currency-neutral
+(``input_per_1m`` etc.) when introduced in migration 035, so no rename
+is needed here -- only the companion ``currency`` column is added.
+
 The branch is pre-launch with no production data, so renames happen
 directly without a copy-and-drop dance.
 """
@@ -133,50 +137,10 @@ def upgrade() -> None:
         new_column_name="monthly_limit",
     )
 
-    op.alter_column(
-        "agents_model_pricing",
-        "input_per_1m_usd",
-        new_column_name="input_per_1m",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "output_per_1m_usd",
-        new_column_name="output_per_1m",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "cached_input_per_1m_usd",
-        new_column_name="cached_input_per_1m",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "thinking_per_1m_usd",
-        new_column_name="thinking_per_1m",
-    )
 
 
 def downgrade() -> None:
     """Reverse multi-currency schema."""
-    op.alter_column(
-        "agents_model_pricing",
-        "thinking_per_1m",
-        new_column_name="thinking_per_1m_usd",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "cached_input_per_1m",
-        new_column_name="cached_input_per_1m_usd",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "output_per_1m",
-        new_column_name="output_per_1m_usd",
-    )
-    op.alter_column(
-        "agents_model_pricing",
-        "input_per_1m",
-        new_column_name="input_per_1m_usd",
-    )
     op.alter_column(
         "agents_user_quotas",
         "monthly_limit",
