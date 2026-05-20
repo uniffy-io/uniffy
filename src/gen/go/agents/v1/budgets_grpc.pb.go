@@ -51,14 +51,14 @@ type BudgetsServiceClient interface {
 	// when no budget row exists.
 	GetOrgBudget(ctx context.Context, in *GetOrgBudgetRequest, opts ...grpc.CallOption) (*GetOrgBudgetResponse, error)
 	// Create or update the organization's budget row. Org admin only.
-	UpdateOrgBudget(ctx context.Context, in *UpdateOrgBudgetRequest, opts ...grpc.CallOption) (*OrgBudgetResponse, error)
+	UpdateOrgBudget(ctx context.Context, in *UpdateOrgBudgetRequest, opts ...grpc.CallOption) (*UpdateOrgBudgetResponse, error)
 	// Delete the organization's budget row. Caps revert to defaults.
 	DeleteOrgBudget(ctx context.Context, in *DeleteOrgBudgetRequest, opts ...grpc.CallOption) (*DeleteOrgBudgetResponse, error)
 	// Get a single user's quota within an organization. Self-access
 	// allowed; editing another user's quota requires org admin.
 	GetUserQuota(ctx context.Context, in *GetUserQuotaRequest, opts ...grpc.CallOption) (*GetUserQuotaResponse, error)
 	// Create or update a per-user quota row. Org admin only.
-	UpdateUserQuota(ctx context.Context, in *UpdateUserQuotaRequest, opts ...grpc.CallOption) (*UserQuotaResponse, error)
+	UpdateUserQuota(ctx context.Context, in *UpdateUserQuotaRequest, opts ...grpc.CallOption) (*UpdateUserQuotaResponse, error)
 	// Delete a per-user quota row. Org admin only.
 	DeleteUserQuota(ctx context.Context, in *DeleteUserQuotaRequest, opts ...grpc.CallOption) (*DeleteUserQuotaResponse, error)
 	// List all per-user quota rows for an organization. Org admin only.
@@ -69,7 +69,7 @@ type BudgetsServiceClient interface {
 	// List the org's manual exchange rates. Org admin only.
 	ListCurrencyRates(ctx context.Context, in *ListCurrencyRatesRequest, opts ...grpc.CallOption) (*ListCurrencyRatesResponse, error)
 	// Create or update a single (from -> to) rate. Org admin only.
-	UpsertCurrencyRate(ctx context.Context, in *UpsertCurrencyRateRequest, opts ...grpc.CallOption) (*CurrencyRateResponse, error)
+	UpsertCurrencyRate(ctx context.Context, in *UpsertCurrencyRateRequest, opts ...grpc.CallOption) (*UpsertCurrencyRateResponse, error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(ctx context.Context, in *DeleteCurrencyRateRequest, opts ...grpc.CallOption) (*DeleteCurrencyRateResponse, error)
 	// Set the org's display currency (writes to AgentRuntimeSettings).
@@ -98,9 +98,9 @@ func (c *budgetsServiceClient) GetOrgBudget(ctx context.Context, in *GetOrgBudge
 	return out, nil
 }
 
-func (c *budgetsServiceClient) UpdateOrgBudget(ctx context.Context, in *UpdateOrgBudgetRequest, opts ...grpc.CallOption) (*OrgBudgetResponse, error) {
+func (c *budgetsServiceClient) UpdateOrgBudget(ctx context.Context, in *UpdateOrgBudgetRequest, opts ...grpc.CallOption) (*UpdateOrgBudgetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrgBudgetResponse)
+	out := new(UpdateOrgBudgetResponse)
 	err := c.cc.Invoke(ctx, BudgetsService_UpdateOrgBudget_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -128,9 +128,9 @@ func (c *budgetsServiceClient) GetUserQuota(ctx context.Context, in *GetUserQuot
 	return out, nil
 }
 
-func (c *budgetsServiceClient) UpdateUserQuota(ctx context.Context, in *UpdateUserQuotaRequest, opts ...grpc.CallOption) (*UserQuotaResponse, error) {
+func (c *budgetsServiceClient) UpdateUserQuota(ctx context.Context, in *UpdateUserQuotaRequest, opts ...grpc.CallOption) (*UpdateUserQuotaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserQuotaResponse)
+	out := new(UpdateUserQuotaResponse)
 	err := c.cc.Invoke(ctx, BudgetsService_UpdateUserQuota_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -178,9 +178,9 @@ func (c *budgetsServiceClient) ListCurrencyRates(ctx context.Context, in *ListCu
 	return out, nil
 }
 
-func (c *budgetsServiceClient) UpsertCurrencyRate(ctx context.Context, in *UpsertCurrencyRateRequest, opts ...grpc.CallOption) (*CurrencyRateResponse, error) {
+func (c *budgetsServiceClient) UpsertCurrencyRate(ctx context.Context, in *UpsertCurrencyRateRequest, opts ...grpc.CallOption) (*UpsertCurrencyRateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CurrencyRateResponse)
+	out := new(UpsertCurrencyRateResponse)
 	err := c.cc.Invoke(ctx, BudgetsService_UpsertCurrencyRate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -235,14 +235,14 @@ type BudgetsServiceServer interface {
 	// when no budget row exists.
 	GetOrgBudget(context.Context, *GetOrgBudgetRequest) (*GetOrgBudgetResponse, error)
 	// Create or update the organization's budget row. Org admin only.
-	UpdateOrgBudget(context.Context, *UpdateOrgBudgetRequest) (*OrgBudgetResponse, error)
+	UpdateOrgBudget(context.Context, *UpdateOrgBudgetRequest) (*UpdateOrgBudgetResponse, error)
 	// Delete the organization's budget row. Caps revert to defaults.
 	DeleteOrgBudget(context.Context, *DeleteOrgBudgetRequest) (*DeleteOrgBudgetResponse, error)
 	// Get a single user's quota within an organization. Self-access
 	// allowed; editing another user's quota requires org admin.
 	GetUserQuota(context.Context, *GetUserQuotaRequest) (*GetUserQuotaResponse, error)
 	// Create or update a per-user quota row. Org admin only.
-	UpdateUserQuota(context.Context, *UpdateUserQuotaRequest) (*UserQuotaResponse, error)
+	UpdateUserQuota(context.Context, *UpdateUserQuotaRequest) (*UpdateUserQuotaResponse, error)
 	// Delete a per-user quota row. Org admin only.
 	DeleteUserQuota(context.Context, *DeleteUserQuotaRequest) (*DeleteUserQuotaResponse, error)
 	// List all per-user quota rows for an organization. Org admin only.
@@ -253,7 +253,7 @@ type BudgetsServiceServer interface {
 	// List the org's manual exchange rates. Org admin only.
 	ListCurrencyRates(context.Context, *ListCurrencyRatesRequest) (*ListCurrencyRatesResponse, error)
 	// Create or update a single (from -> to) rate. Org admin only.
-	UpsertCurrencyRate(context.Context, *UpsertCurrencyRateRequest) (*CurrencyRateResponse, error)
+	UpsertCurrencyRate(context.Context, *UpsertCurrencyRateRequest) (*UpsertCurrencyRateResponse, error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *DeleteCurrencyRateRequest) (*DeleteCurrencyRateResponse, error)
 	// Set the org's display currency (writes to AgentRuntimeSettings).
@@ -275,7 +275,7 @@ type UnimplementedBudgetsServiceServer struct{}
 func (UnimplementedBudgetsServiceServer) GetOrgBudget(context.Context, *GetOrgBudgetRequest) (*GetOrgBudgetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrgBudget not implemented")
 }
-func (UnimplementedBudgetsServiceServer) UpdateOrgBudget(context.Context, *UpdateOrgBudgetRequest) (*OrgBudgetResponse, error) {
+func (UnimplementedBudgetsServiceServer) UpdateOrgBudget(context.Context, *UpdateOrgBudgetRequest) (*UpdateOrgBudgetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrgBudget not implemented")
 }
 func (UnimplementedBudgetsServiceServer) DeleteOrgBudget(context.Context, *DeleteOrgBudgetRequest) (*DeleteOrgBudgetResponse, error) {
@@ -284,7 +284,7 @@ func (UnimplementedBudgetsServiceServer) DeleteOrgBudget(context.Context, *Delet
 func (UnimplementedBudgetsServiceServer) GetUserQuota(context.Context, *GetUserQuotaRequest) (*GetUserQuotaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserQuota not implemented")
 }
-func (UnimplementedBudgetsServiceServer) UpdateUserQuota(context.Context, *UpdateUserQuotaRequest) (*UserQuotaResponse, error) {
+func (UnimplementedBudgetsServiceServer) UpdateUserQuota(context.Context, *UpdateUserQuotaRequest) (*UpdateUserQuotaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserQuota not implemented")
 }
 func (UnimplementedBudgetsServiceServer) DeleteUserQuota(context.Context, *DeleteUserQuotaRequest) (*DeleteUserQuotaResponse, error) {
@@ -299,7 +299,7 @@ func (UnimplementedBudgetsServiceServer) GetCurrentSpend(context.Context, *GetCu
 func (UnimplementedBudgetsServiceServer) ListCurrencyRates(context.Context, *ListCurrencyRatesRequest) (*ListCurrencyRatesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCurrencyRates not implemented")
 }
-func (UnimplementedBudgetsServiceServer) UpsertCurrencyRate(context.Context, *UpsertCurrencyRateRequest) (*CurrencyRateResponse, error) {
+func (UnimplementedBudgetsServiceServer) UpsertCurrencyRate(context.Context, *UpsertCurrencyRateRequest) (*UpsertCurrencyRateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpsertCurrencyRate not implemented")
 }
 func (UnimplementedBudgetsServiceServer) DeleteCurrencyRate(context.Context, *DeleteCurrencyRateRequest) (*DeleteCurrencyRateResponse, error) {

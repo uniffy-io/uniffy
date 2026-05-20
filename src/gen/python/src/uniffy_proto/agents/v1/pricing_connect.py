@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -19,7 +21,7 @@ class PricingService(Protocol):
     async def list_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.ListModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.ListModelPricingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upsert_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.ModelPricingResponse:
+    async def upsert_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.DeleteModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.DeleteModelPricingResponse:
@@ -27,7 +29,7 @@ class PricingService(Protocol):
 
 
 class PricingServiceASGIApplication(ConnectASGIApplication[PricingService]):
-    def __init__(self, service: PricingService | AsyncGenerator[PricingService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PricingService | AsyncGenerator[PricingService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -46,7 +48,7 @@ class PricingServiceASGIApplication(ConnectASGIApplication[PricingService]):
                         name="UpsertModelPricing",
                         service_name="agents.v1.PricingService",
                         input=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest,
-                        output=agents_dot_v1_dot_pricing__pb2.ModelPricingResponse,
+                        output=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.upsert_model_pricing,
@@ -64,6 +66,8 @@ class PricingServiceASGIApplication(ConnectASGIApplication[PricingService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -99,14 +103,14 @@ class PricingServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_pricing__pb2.ModelPricingResponse:
+    ) -> agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertModelPricing",
                 service_name="agents.v1.PricingService",
                 input=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest,
-                output=agents_dot_v1_dot_pricing__pb2.ModelPricingResponse,
+                output=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -134,17 +138,20 @@ class PricingServiceClient(ConnectClient):
         )
 
 
+
+
+
 class PricingServiceSync(Protocol):
     def list_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.ListModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.ListModelPricingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upsert_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.ModelPricingResponse:
+    def upsert_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_model_pricing(self, request: agents_dot_v1_dot_pricing__pb2.DeleteModelPricingRequest, ctx: RequestContext) -> agents_dot_v1_dot_pricing__pb2.DeleteModelPricingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
 class PricingServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: PricingServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: PricingServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.PricingService/ListModelPricing": EndpointSync.unary(
@@ -162,7 +169,7 @@ class PricingServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpsertModelPricing",
                         service_name="agents.v1.PricingService",
                         input=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest,
-                        output=agents_dot_v1_dot_pricing__pb2.ModelPricingResponse,
+                        output=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.upsert_model_pricing,
@@ -180,6 +187,8 @@ class PricingServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -215,14 +224,14 @@ class PricingServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_pricing__pb2.ModelPricingResponse:
+    ) -> agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertModelPricing",
                 service_name="agents.v1.PricingService",
                 input=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingRequest,
-                output=agents_dot_v1_dot_pricing__pb2.ModelPricingResponse,
+                output=agents_dot_v1_dot_pricing__pb2.UpsertModelPricingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -248,3 +257,5 @@ class PricingServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

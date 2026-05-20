@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from uniffy_proto.agents.v1.runtime_pb2 import (
+    AgentStreamEvent,
     AgentUsageInfo,
     CronTaskUsage,
     DailyUsage,
@@ -17,7 +18,6 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamErrorEvent,
     StreamFailoverEvent,
     StreamMessageStoredEvent,
-    StreamSendMessageResponse,
     StreamTokenEvent,
     StreamToolCallEvent,
     StreamToolResultEvent,
@@ -71,7 +71,7 @@ def send_message_response_to_proto(
 
 def runtime_stream_event_to_proto(
     event: RuntimeStreamEvent,
-) -> StreamSendMessageResponse:
+) -> AgentStreamEvent:
     """Convert a domain runtime stream event to proto.
 
     Parameters
@@ -81,8 +81,11 @@ def runtime_stream_event_to_proto(
 
     Returns
     -------
-    StreamSendMessageResponse
-        Proto stream event wrapper.
+    AgentStreamEvent
+        Proto event payload. The handler wraps this in the per-RPC
+        response (StreamSendMessageResponse / RerunFromMessageResponse /
+        SubscribeToRunResponse) and stamps ``run_id`` from the egress
+        run state hash.
 
     Raises
     ------
@@ -91,12 +94,10 @@ def runtime_stream_event_to_proto(
 
     """
     if isinstance(event, RuntimeTokenEvent):
-        return StreamSendMessageResponse(
-            token=StreamTokenEvent(text=event.text),
-        )
+        return AgentStreamEvent(token=StreamTokenEvent(text=event.text))
 
     if isinstance(event, RuntimeToolCallEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             tool_call=StreamToolCallEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -105,7 +106,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeToolResultEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             tool_result=StreamToolResultEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -115,14 +116,14 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeMessageStoredEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             message_stored=StreamMessageStoredEvent(
                 message=message_to_proto(event.message),
             ),
         )
 
     if isinstance(event, RuntimeDoneEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             done=StreamDoneEvent(
                 assistant_message=message_to_proto(event.assistant_message),
                 model_used=event.model_used,
@@ -130,7 +131,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeConfirmationRequiredEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             confirmation_required=StreamConfirmationRequiredEvent(
                 tool_call_id=event.tool_call_id,
                 tool_name=event.tool_name,
@@ -140,7 +141,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeFailoverEvent):
-        return StreamSendMessageResponse(
+        return AgentStreamEvent(
             failover=StreamFailoverEvent(
                 from_provider_key_id=event.from_provider_key_id,
                 to_provider_key_id=event.to_provider_key_id,
@@ -151,9 +152,7 @@ def runtime_stream_event_to_proto(
         )
 
     if isinstance(event, RuntimeErrorEvent):
-        return StreamSendMessageResponse(
-            error=StreamErrorEvent(message=event.error),
-        )
+        return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
 
     raise ValueError(f"Unknown runtime stream event type: {type(event)}")
 

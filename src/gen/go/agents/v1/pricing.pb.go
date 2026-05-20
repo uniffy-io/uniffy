@@ -468,27 +468,27 @@ func (x *UpsertModelPricingRequest) GetCurrency() string {
 	return ""
 }
 
-type ModelPricingResponse struct {
+type UpsertModelPricingResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Row           *ModelPricing          `protobuf:"bytes,1,opt,name=row,proto3" json:"row,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ModelPricingResponse) Reset() {
-	*x = ModelPricingResponse{}
+func (x *UpsertModelPricingResponse) Reset() {
+	*x = UpsertModelPricingResponse{}
 	mi := &file_agents_v1_pricing_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ModelPricingResponse) String() string {
+func (x *UpsertModelPricingResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ModelPricingResponse) ProtoMessage() {}
+func (*UpsertModelPricingResponse) ProtoMessage() {}
 
-func (x *ModelPricingResponse) ProtoReflect() protoreflect.Message {
+func (x *UpsertModelPricingResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_pricing_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -500,12 +500,12 @@ func (x *ModelPricingResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ModelPricingResponse.ProtoReflect.Descriptor instead.
-func (*ModelPricingResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpsertModelPricingResponse.ProtoReflect.Descriptor instead.
+func (*UpsertModelPricingResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_pricing_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ModelPricingResponse) GetRow() *ModelPricing {
+func (x *UpsertModelPricingResponse) GetRow() *ModelPricing {
 	if x != nil {
 		return x.Row
 	}
@@ -661,16 +661,16 @@ const file_agents_v1_pricing_proto_rawDesc = "" +
 	"\x0e_output_per_1mB\x16\n" +
 	"\x14_cached_input_per_1mB\x12\n" +
 	"\x10_thinking_per_1mB\x0f\n" +
-	"\r_effective_to\"A\n" +
-	"\x14ModelPricingResponse\x12)\n" +
+	"\r_effective_to\"G\n" +
+	"\x1aUpsertModelPricingResponse\x12)\n" +
 	"\x03row\x18\x01 \x01(\v2\x17.agents.v1.ModelPricingR\x03row\"+\n" +
 	"\x19DeleteModelPricingRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"6\n" +
 	"\x1aDeleteModelPricingResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb3\x02\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb9\x02\n" +
 	"\x0ePricingService\x12]\n" +
-	"\x10ListModelPricing\x12\".agents.v1.ListModelPricingRequest\x1a#.agents.v1.ListModelPricingResponse\"\x00\x12]\n" +
-	"\x12UpsertModelPricing\x12$.agents.v1.UpsertModelPricingRequest\x1a\x1f.agents.v1.ModelPricingResponse\"\x00\x12c\n" +
+	"\x10ListModelPricing\x12\".agents.v1.ListModelPricingRequest\x1a#.agents.v1.ListModelPricingResponse\"\x00\x12c\n" +
+	"\x12UpsertModelPricing\x12$.agents.v1.UpsertModelPricingRequest\x1a%.agents.v1.UpsertModelPricingResponse\"\x00\x12c\n" +
 	"\x12DeleteModelPricing\x12$.agents.v1.DeleteModelPricingRequest\x1a%.agents.v1.DeleteModelPricingResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
@@ -692,7 +692,7 @@ var file_agents_v1_pricing_proto_goTypes = []any{
 	(*ListModelPricingRequest)(nil),    // 2: agents.v1.ListModelPricingRequest
 	(*ListModelPricingResponse)(nil),   // 3: agents.v1.ListModelPricingResponse
 	(*UpsertModelPricingRequest)(nil),  // 4: agents.v1.UpsertModelPricingRequest
-	(*ModelPricingResponse)(nil),       // 5: agents.v1.ModelPricingResponse
+	(*UpsertModelPricingResponse)(nil), // 5: agents.v1.UpsertModelPricingResponse
 	(*DeleteModelPricingRequest)(nil),  // 6: agents.v1.DeleteModelPricingRequest
 	(*DeleteModelPricingResponse)(nil), // 7: agents.v1.DeleteModelPricingResponse
 	(*timestamppb.Timestamp)(nil),      // 8: google.protobuf.Timestamp
@@ -708,12 +708,12 @@ var file_agents_v1_pricing_proto_depIdxs = []int32{
 	1,  // 7: agents.v1.UpsertModelPricingRequest.image_prices:type_name -> agents.v1.ImagePrice
 	8,  // 8: agents.v1.UpsertModelPricingRequest.effective_from:type_name -> google.protobuf.Timestamp
 	8,  // 9: agents.v1.UpsertModelPricingRequest.effective_to:type_name -> google.protobuf.Timestamp
-	0,  // 10: agents.v1.ModelPricingResponse.row:type_name -> agents.v1.ModelPricing
+	0,  // 10: agents.v1.UpsertModelPricingResponse.row:type_name -> agents.v1.ModelPricing
 	2,  // 11: agents.v1.PricingService.ListModelPricing:input_type -> agents.v1.ListModelPricingRequest
 	4,  // 12: agents.v1.PricingService.UpsertModelPricing:input_type -> agents.v1.UpsertModelPricingRequest
 	6,  // 13: agents.v1.PricingService.DeleteModelPricing:input_type -> agents.v1.DeleteModelPricingRequest
 	3,  // 14: agents.v1.PricingService.ListModelPricing:output_type -> agents.v1.ListModelPricingResponse
-	5,  // 15: agents.v1.PricingService.UpsertModelPricing:output_type -> agents.v1.ModelPricingResponse
+	5,  // 15: agents.v1.PricingService.UpsertModelPricing:output_type -> agents.v1.UpsertModelPricingResponse
 	7,  // 16: agents.v1.PricingService.DeleteModelPricing:output_type -> agents.v1.DeleteModelPricingResponse
 	14, // [14:17] is the sub-list for method output_type
 	11, // [11:14] is the sub-list for method input_type

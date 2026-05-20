@@ -66,7 +66,7 @@ type RuntimeServiceClient interface {
 	// message must be a non-invalidated user-role row whose downstream has
 	// already been invalidated (via EditMessage). Streams events in the
 	// same shape as StreamSendMessage; no new user message is created.
-	RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageResponse], error)
+	RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest]) (*connect.ServerStreamForClient[v1.RerunFromMessageResponse], error)
 	// Resume an in-flight run by run_id. Replays the full event stream from
 	// the start, then tails live until Done/Error or the 120s wall budget.
 	// Used by the frontend after a tab reload to reconnect without
@@ -106,7 +106,7 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(runtimeServiceMethods.ByName("StreamSendMessage")),
 			connect.WithClientOptions(opts...),
 		),
-		rerunFromMessage: connect.NewClient[v1.RerunFromMessageRequest, v1.StreamSendMessageResponse](
+		rerunFromMessage: connect.NewClient[v1.RerunFromMessageRequest, v1.RerunFromMessageResponse](
 			httpClient,
 			baseURL+RuntimeServiceRerunFromMessageProcedure,
 			connect.WithSchema(runtimeServiceMethods.ByName("RerunFromMessage")),
@@ -143,7 +143,7 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type runtimeServiceClient struct {
 	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	streamSendMessage     *connect.Client[v1.StreamSendMessageRequest, v1.StreamSendMessageResponse]
-	rerunFromMessage      *connect.Client[v1.RerunFromMessageRequest, v1.StreamSendMessageResponse]
+	rerunFromMessage      *connect.Client[v1.RerunFromMessageRequest, v1.RerunFromMessageResponse]
 	subscribeToRun        *connect.Client[v1.SubscribeToRunRequest, v1.SubscribeToRunResponse]
 	cancelStream          *connect.Client[v1.CancelStreamRequest, v1.CancelStreamResponse]
 	respondToConfirmation *connect.Client[v1.RespondToConfirmationRequest, v1.RespondToConfirmationResponse]
@@ -161,7 +161,7 @@ func (c *runtimeServiceClient) StreamSendMessage(ctx context.Context, req *conne
 }
 
 // RerunFromMessage calls agents.v1.RuntimeService.RerunFromMessage.
-func (c *runtimeServiceClient) RerunFromMessage(ctx context.Context, req *connect.Request[v1.RerunFromMessageRequest]) (*connect.ServerStreamForClient[v1.StreamSendMessageResponse], error) {
+func (c *runtimeServiceClient) RerunFromMessage(ctx context.Context, req *connect.Request[v1.RerunFromMessageRequest]) (*connect.ServerStreamForClient[v1.RerunFromMessageResponse], error) {
 	return c.rerunFromMessage.CallServerStream(ctx, req)
 }
 
@@ -195,7 +195,7 @@ type RuntimeServiceHandler interface {
 	// message must be a non-invalidated user-role row whose downstream has
 	// already been invalidated (via EditMessage). Streams events in the
 	// same shape as StreamSendMessage; no new user message is created.
-	RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest], *connect.ServerStream[v1.StreamSendMessageResponse]) error
+	RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest], *connect.ServerStream[v1.RerunFromMessageResponse]) error
 	// Resume an in-flight run by run_id. Replays the full event stream from
 	// the start, then tails live until Done/Error or the 120s wall budget.
 	// Used by the frontend after a tab reload to reconnect without
@@ -294,7 +294,7 @@ func (UnimplementedRuntimeServiceHandler) StreamSendMessage(context.Context, *co
 	return connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.StreamSendMessage is not implemented"))
 }
 
-func (UnimplementedRuntimeServiceHandler) RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest], *connect.ServerStream[v1.StreamSendMessageResponse]) error {
+func (UnimplementedRuntimeServiceHandler) RerunFromMessage(context.Context, *connect.Request[v1.RerunFromMessageRequest], *connect.ServerStream[v1.RerunFromMessageResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.RerunFromMessage is not implemented"))
 }
 

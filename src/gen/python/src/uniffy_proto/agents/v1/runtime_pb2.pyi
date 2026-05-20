@@ -265,7 +265,7 @@ class RespondToConfirmationResponse(_message.Message):
     accepted: bool
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
-class StreamSendMessageResponse(_message.Message):
+class AgentStreamEvent(_message.Message):
     __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
@@ -287,27 +287,23 @@ class StreamSendMessageResponse(_message.Message):
     run_id: str
     def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
+class StreamSendMessageResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: AgentStreamEvent
+    def __init__(self, event: _Optional[_Union[AgentStreamEvent, _Mapping]] = ...) -> None: ...
+
+class RerunFromMessageResponse(_message.Message):
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: AgentStreamEvent
+    def __init__(self, event: _Optional[_Union[AgentStreamEvent, _Mapping]] = ...) -> None: ...
+
 class SubscribeToRunResponse(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")
-    TOKEN_FIELD_NUMBER: _ClassVar[int]
-    TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
-    TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_STORED_FIELD_NUMBER: _ClassVar[int]
-    DONE_FIELD_NUMBER: _ClassVar[int]
-    ERROR_FIELD_NUMBER: _ClassVar[int]
-    CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
-    FAILOVER_FIELD_NUMBER: _ClassVar[int]
-    RUN_ID_FIELD_NUMBER: _ClassVar[int]
-    token: StreamTokenEvent
-    tool_call: StreamToolCallEvent
-    tool_result: StreamToolResultEvent
-    message_stored: StreamMessageStoredEvent
-    done: StreamDoneEvent
-    error: StreamErrorEvent
-    confirmation_required: StreamConfirmationRequiredEvent
-    failover: StreamFailoverEvent
-    run_id: str
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    __slots__ = ("event",)
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    event: AgentStreamEvent
+    def __init__(self, event: _Optional[_Union[AgentStreamEvent, _Mapping]] = ...) -> None: ...
 
 class StreamTokenEvent(_message.Message):
     __slots__ = ("text",)

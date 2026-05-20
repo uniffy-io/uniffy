@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -19,7 +21,7 @@ class BudgetsService(Protocol):
     async def get_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.GetOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetOrgBudgetResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse:
+    async def update_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.DeleteOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteOrgBudgetResponse:
@@ -28,7 +30,7 @@ class BudgetsService(Protocol):
     async def get_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.GetUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetUserQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UserQuotaResponse:
+    async def update_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.DeleteUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteUserQuotaResponse:
@@ -43,7 +45,7 @@ class BudgetsService(Protocol):
     async def list_currency_rates(self, request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+    async def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
@@ -57,7 +59,7 @@ class BudgetsService(Protocol):
 
 
 class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
-    def __init__(self, service: BudgetsService | AsyncGenerator[BudgetsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: BudgetsService | AsyncGenerator[BudgetsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -76,7 +78,7 @@ class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
                         name="UpdateOrgBudget",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_org_budget,
@@ -106,7 +108,7 @@ class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
                         name="UpdateUserQuota",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.UserQuotaResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_user_quota,
@@ -156,7 +158,7 @@ class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
                         name="UpsertCurrencyRate",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.upsert_currency_rate,
@@ -194,6 +196,8 @@ class BudgetsServiceASGIApplication(ConnectASGIApplication[BudgetsService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -229,14 +233,14 @@ class BudgetsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrgBudget",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest,
-                output=agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -289,14 +293,14 @@ class BudgetsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.UserQuotaResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateUserQuota",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest,
-                output=agents_dot_v1_dot_budgets__pb2.UserQuotaResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -389,14 +393,14 @@ class BudgetsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertCurrencyRate",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
-                output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -464,16 +468,19 @@ class BudgetsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class BudgetsServiceSync(Protocol):
     def get_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.GetOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetOrgBudgetResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse:
+    def update_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_org_budget(self, request: agents_dot_v1_dot_budgets__pb2.DeleteOrgBudgetRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteOrgBudgetResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.GetUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.GetUserQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UserQuotaResponse:
+    def update_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_user_quota(self, request: agents_dot_v1_dot_budgets__pb2.DeleteUserQuotaRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteUserQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -483,7 +490,7 @@ class BudgetsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_currency_rates(self, request: agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.ListCurrencyRatesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+    def upsert_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_currency_rate(self, request: agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateRequest, ctx: RequestContext) -> agents_dot_v1_dot_budgets__pb2.DeleteCurrencyRateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -494,7 +501,7 @@ class BudgetsServiceSync(Protocol):
 
 
 class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: BudgetsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: BudgetsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.BudgetsService/GetOrgBudget": EndpointSync.unary(
@@ -512,7 +519,7 @@ class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateOrgBudget",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_org_budget,
@@ -542,7 +549,7 @@ class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateUserQuota",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.UserQuotaResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_user_quota,
@@ -592,7 +599,7 @@ class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpsertCurrencyRate",
                         service_name="agents.v1.BudgetsService",
                         input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
-                        output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                        output=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.upsert_currency_rate,
@@ -630,6 +637,8 @@ class BudgetsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -665,14 +674,14 @@ class BudgetsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrgBudget",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetRequest,
-                output=agents_dot_v1_dot_budgets__pb2.OrgBudgetResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpdateOrgBudgetResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -725,14 +734,14 @@ class BudgetsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.UserQuotaResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateUserQuota",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaRequest,
-                output=agents_dot_v1_dot_budgets__pb2.UserQuotaResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpdateUserQuotaResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -825,14 +834,14 @@ class BudgetsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse:
+    ) -> agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertCurrencyRate",
                 service_name="agents.v1.BudgetsService",
                 input=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateRequest,
-                output=agents_dot_v1_dot_budgets__pb2.CurrencyRateResponse,
+                output=agents_dot_v1_dot_budgets__pb2.UpsertCurrencyRateResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -898,3 +907,5 @@ class BudgetsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

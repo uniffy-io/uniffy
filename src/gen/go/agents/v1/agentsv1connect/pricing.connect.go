@@ -52,7 +52,7 @@ type PricingServiceClient interface {
 	// the same (provider, model, effective_from) tuple exists, it is
 	// overwritten; otherwise a new row is inserted. Callers rolling over
 	// prices should insert a new row and set the old row's effective_to.
-	UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.ModelPricingResponse], error)
+	UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.UpsertModelPricingResponse], error)
 	// Delete a pricing row by id. Historical run logs that referenced this
 	// row's pricing retain their cost_usd values.
 	DeleteModelPricing(context.Context, *connect.Request[v1.DeleteModelPricingRequest]) (*connect.Response[v1.DeleteModelPricingResponse], error)
@@ -75,7 +75,7 @@ func NewPricingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(pricingServiceMethods.ByName("ListModelPricing")),
 			connect.WithClientOptions(opts...),
 		),
-		upsertModelPricing: connect.NewClient[v1.UpsertModelPricingRequest, v1.ModelPricingResponse](
+		upsertModelPricing: connect.NewClient[v1.UpsertModelPricingRequest, v1.UpsertModelPricingResponse](
 			httpClient,
 			baseURL+PricingServiceUpsertModelPricingProcedure,
 			connect.WithSchema(pricingServiceMethods.ByName("UpsertModelPricing")),
@@ -93,7 +93,7 @@ func NewPricingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 // pricingServiceClient implements PricingServiceClient.
 type pricingServiceClient struct {
 	listModelPricing   *connect.Client[v1.ListModelPricingRequest, v1.ListModelPricingResponse]
-	upsertModelPricing *connect.Client[v1.UpsertModelPricingRequest, v1.ModelPricingResponse]
+	upsertModelPricing *connect.Client[v1.UpsertModelPricingRequest, v1.UpsertModelPricingResponse]
 	deleteModelPricing *connect.Client[v1.DeleteModelPricingRequest, v1.DeleteModelPricingResponse]
 }
 
@@ -103,7 +103,7 @@ func (c *pricingServiceClient) ListModelPricing(ctx context.Context, req *connec
 }
 
 // UpsertModelPricing calls agents.v1.PricingService.UpsertModelPricing.
-func (c *pricingServiceClient) UpsertModelPricing(ctx context.Context, req *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.ModelPricingResponse], error) {
+func (c *pricingServiceClient) UpsertModelPricing(ctx context.Context, req *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.UpsertModelPricingResponse], error) {
 	return c.upsertModelPricing.CallUnary(ctx, req)
 }
 
@@ -120,7 +120,7 @@ type PricingServiceHandler interface {
 	// the same (provider, model, effective_from) tuple exists, it is
 	// overwritten; otherwise a new row is inserted. Callers rolling over
 	// prices should insert a new row and set the old row's effective_to.
-	UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.ModelPricingResponse], error)
+	UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.UpsertModelPricingResponse], error)
 	// Delete a pricing row by id. Historical run logs that referenced this
 	// row's pricing retain their cost_usd values.
 	DeleteModelPricing(context.Context, *connect.Request[v1.DeleteModelPricingRequest]) (*connect.Response[v1.DeleteModelPricingResponse], error)
@@ -172,7 +172,7 @@ func (UnimplementedPricingServiceHandler) ListModelPricing(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PricingService.ListModelPricing is not implemented"))
 }
 
-func (UnimplementedPricingServiceHandler) UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.ModelPricingResponse], error) {
+func (UnimplementedPricingServiceHandler) UpsertModelPricing(context.Context, *connect.Request[v1.UpsertModelPricingRequest]) (*connect.Response[v1.UpsertModelPricingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.PricingService.UpsertModelPricing is not implemented"))
 }
 

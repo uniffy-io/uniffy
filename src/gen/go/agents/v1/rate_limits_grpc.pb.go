@@ -37,7 +37,7 @@ type RateLimitsServiceClient interface {
 	// so the client sees a complete picture of active limits.
 	GetRateLimits(ctx context.Context, in *GetRateLimitsRequest, opts ...grpc.CallOption) (*GetRateLimitsResponse, error)
 	// Create or update a single override.
-	UpsertRateLimit(ctx context.Context, in *UpsertRateLimitRequest, opts ...grpc.CallOption) (*RateLimitResponse, error)
+	UpsertRateLimit(ctx context.Context, in *UpsertRateLimitRequest, opts ...grpc.CallOption) (*UpsertRateLimitResponse, error)
 	// Delete an override so the bucket falls back to the default.
 	DeleteRateLimit(ctx context.Context, in *DeleteRateLimitRequest, opts ...grpc.CallOption) (*DeleteRateLimitResponse, error)
 }
@@ -60,9 +60,9 @@ func (c *rateLimitsServiceClient) GetRateLimits(ctx context.Context, in *GetRate
 	return out, nil
 }
 
-func (c *rateLimitsServiceClient) UpsertRateLimit(ctx context.Context, in *UpsertRateLimitRequest, opts ...grpc.CallOption) (*RateLimitResponse, error) {
+func (c *rateLimitsServiceClient) UpsertRateLimit(ctx context.Context, in *UpsertRateLimitRequest, opts ...grpc.CallOption) (*UpsertRateLimitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RateLimitResponse)
+	out := new(UpsertRateLimitResponse)
 	err := c.cc.Invoke(ctx, RateLimitsService_UpsertRateLimit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ type RateLimitsServiceServer interface {
 	// so the client sees a complete picture of active limits.
 	GetRateLimits(context.Context, *GetRateLimitsRequest) (*GetRateLimitsResponse, error)
 	// Create or update a single override.
-	UpsertRateLimit(context.Context, *UpsertRateLimitRequest) (*RateLimitResponse, error)
+	UpsertRateLimit(context.Context, *UpsertRateLimitRequest) (*UpsertRateLimitResponse, error)
 	// Delete an override so the bucket falls back to the default.
 	DeleteRateLimit(context.Context, *DeleteRateLimitRequest) (*DeleteRateLimitResponse, error)
 	mustEmbedUnimplementedRateLimitsServiceServer()
@@ -109,7 +109,7 @@ type UnimplementedRateLimitsServiceServer struct{}
 func (UnimplementedRateLimitsServiceServer) GetRateLimits(context.Context, *GetRateLimitsRequest) (*GetRateLimitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRateLimits not implemented")
 }
-func (UnimplementedRateLimitsServiceServer) UpsertRateLimit(context.Context, *UpsertRateLimitRequest) (*RateLimitResponse, error) {
+func (UnimplementedRateLimitsServiceServer) UpsertRateLimit(context.Context, *UpsertRateLimitRequest) (*UpsertRateLimitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpsertRateLimit not implemented")
 }
 func (UnimplementedRateLimitsServiceServer) DeleteRateLimit(context.Context, *DeleteRateLimitRequest) (*DeleteRateLimitResponse, error) {

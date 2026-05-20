@@ -11,8 +11,8 @@ from uniffy_proto.agents.v1.rate_limits_pb2 import (
     DeleteRateLimitResponse,
     GetRateLimitsRequest,
     GetRateLimitsResponse,
-    RateLimitResponse,
     UpsertRateLimitRequest,
+    UpsertRateLimitResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -64,7 +64,7 @@ class RateLimitsHandlers:
         self,
         request: UpsertRateLimitRequest,
         ctx: RequestContext,
-    ) -> RateLimitResponse:
+    ) -> UpsertRateLimitResponse:
         """Create or update a rate-limit override for the organization."""
         user_id = get_user_id_from_context(ctx)
 
@@ -87,7 +87,7 @@ class RateLimitsHandlers:
                     limit=request.limit,
                     window_seconds=request.window_seconds,
                 )
-                return RateLimitResponse(limit=rate_limit_row_to_proto(row))
+                return UpsertRateLimitResponse(limit=rate_limit_row_to_proto(row))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))

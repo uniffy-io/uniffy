@@ -267,27 +267,27 @@ func (x *UpsertRateLimitRequest) GetWindowSeconds() int32 {
 	return 0
 }
 
-type RateLimitResponse struct {
+type UpsertRateLimitResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         *RateLimit             `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RateLimitResponse) Reset() {
-	*x = RateLimitResponse{}
+func (x *UpsertRateLimitResponse) Reset() {
+	*x = UpsertRateLimitResponse{}
 	mi := &file_agents_v1_rate_limits_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RateLimitResponse) String() string {
+func (x *UpsertRateLimitResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RateLimitResponse) ProtoMessage() {}
+func (*UpsertRateLimitResponse) ProtoMessage() {}
 
-func (x *RateLimitResponse) ProtoReflect() protoreflect.Message {
+func (x *UpsertRateLimitResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_rate_limits_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -299,12 +299,12 @@ func (x *RateLimitResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RateLimitResponse.ProtoReflect.Descriptor instead.
-func (*RateLimitResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpsertRateLimitResponse.ProtoReflect.Descriptor instead.
+func (*UpsertRateLimitResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_rate_limits_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *RateLimitResponse) GetLimit() *RateLimit {
+func (x *UpsertRateLimitResponse) GetLimit() *RateLimit {
 	if x != nil {
 		return x.Limit
 	}
@@ -411,7 +411,7 @@ var File_agents_v1_rate_limits_proto protoreflect.FileDescriptor
 
 const file_agents_v1_rate_limits_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagents/v1/rate_limits.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xb5\x02\n" +
+	"\x1bagents/v1/rate_limits.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x02\n" +
 	"\tRateLimit\x12,\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x18.common.v1.RateLimitKindR\x04kind\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12%\n" +
@@ -432,17 +432,17 @@ const file_agents_v1_rate_limits_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12,\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x18.common.v1.RateLimitKindR\x04kind\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12%\n" +
-	"\x0ewindow_seconds\x18\x04 \x01(\x05R\rwindowSeconds\"?\n" +
-	"\x11RateLimitResponse\x12*\n" +
+	"\x0ewindow_seconds\x18\x04 \x01(\x05R\rwindowSeconds\"E\n" +
+	"\x17UpsertRateLimitResponse\x12*\n" +
 	"\x05limit\x18\x01 \x01(\v2\x14.agents.v1.RateLimitR\x05limit\"o\n" +
 	"\x16DeleteRateLimitRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12,\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x18.common.v1.RateLimitKindR\x04kind\"3\n" +
 	"\x17DeleteRateLimitResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\x9b\x02\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xa1\x02\n" +
 	"\x11RateLimitsService\x12T\n" +
-	"\rGetRateLimits\x12\x1f.agents.v1.GetRateLimitsRequest\x1a .agents.v1.GetRateLimitsResponse\"\x00\x12T\n" +
-	"\x0fUpsertRateLimit\x12!.agents.v1.UpsertRateLimitRequest\x1a\x1c.agents.v1.RateLimitResponse\"\x00\x12Z\n" +
+	"\rGetRateLimits\x12\x1f.agents.v1.GetRateLimitsRequest\x1a .agents.v1.GetRateLimitsResponse\"\x00\x12Z\n" +
+	"\x0fUpsertRateLimit\x12!.agents.v1.UpsertRateLimitRequest\x1a\".agents.v1.UpsertRateLimitResponse\"\x00\x12Z\n" +
 	"\x0fDeleteRateLimit\x12!.agents.v1.DeleteRateLimitRequest\x1a\".agents.v1.DeleteRateLimitResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
@@ -463,7 +463,7 @@ var file_agents_v1_rate_limits_proto_goTypes = []any{
 	(*GetRateLimitsRequest)(nil),    // 1: agents.v1.GetRateLimitsRequest
 	(*GetRateLimitsResponse)(nil),   // 2: agents.v1.GetRateLimitsResponse
 	(*UpsertRateLimitRequest)(nil),  // 3: agents.v1.UpsertRateLimitRequest
-	(*RateLimitResponse)(nil),       // 4: agents.v1.RateLimitResponse
+	(*UpsertRateLimitResponse)(nil), // 4: agents.v1.UpsertRateLimitResponse
 	(*DeleteRateLimitRequest)(nil),  // 5: agents.v1.DeleteRateLimitRequest
 	(*DeleteRateLimitResponse)(nil), // 6: agents.v1.DeleteRateLimitResponse
 	(v1.RateLimitKind)(0),           // 7: common.v1.RateLimitKind
@@ -475,13 +475,13 @@ var file_agents_v1_rate_limits_proto_depIdxs = []int32{
 	8,  // 2: agents.v1.RateLimit.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: agents.v1.GetRateLimitsResponse.limits:type_name -> agents.v1.RateLimit
 	7,  // 4: agents.v1.UpsertRateLimitRequest.kind:type_name -> common.v1.RateLimitKind
-	0,  // 5: agents.v1.RateLimitResponse.limit:type_name -> agents.v1.RateLimit
+	0,  // 5: agents.v1.UpsertRateLimitResponse.limit:type_name -> agents.v1.RateLimit
 	7,  // 6: agents.v1.DeleteRateLimitRequest.kind:type_name -> common.v1.RateLimitKind
 	1,  // 7: agents.v1.RateLimitsService.GetRateLimits:input_type -> agents.v1.GetRateLimitsRequest
 	3,  // 8: agents.v1.RateLimitsService.UpsertRateLimit:input_type -> agents.v1.UpsertRateLimitRequest
 	5,  // 9: agents.v1.RateLimitsService.DeleteRateLimit:input_type -> agents.v1.DeleteRateLimitRequest
 	2,  // 10: agents.v1.RateLimitsService.GetRateLimits:output_type -> agents.v1.GetRateLimitsResponse
-	4,  // 11: agents.v1.RateLimitsService.UpsertRateLimit:output_type -> agents.v1.RateLimitResponse
+	4,  // 11: agents.v1.RateLimitsService.UpsertRateLimit:output_type -> agents.v1.UpsertRateLimitResponse
 	6,  // 12: agents.v1.RateLimitsService.DeleteRateLimit:output_type -> agents.v1.DeleteRateLimitResponse
 	10, // [10:13] is the sub-list for method output_type
 	7,  // [7:10] is the sub-list for method input_type

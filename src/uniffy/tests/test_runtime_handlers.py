@@ -481,10 +481,10 @@ class TestStreamSendMessage:
         assert captured == [run_id]
 
         # First event is the run_id header (no oneof set).
-        assert collected[0].run_id == str(run_id)
-        assert collected[0].WhichOneof("event") is None
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[0].event.WhichOneof("event") is None
 
-        cases = [ev.WhichOneof("event") for ev in collected[1:]]
+        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
         assert cases == [
             "message_stored",
             "token",
@@ -493,7 +493,7 @@ class TestStreamSendMessage:
         ]
 
         for ev in collected:
-            assert ev.run_id == str(run_id)
+            assert ev.event.run_id == str(run_id)
 
     def test_subscribe_timeout_yields_synthetic_error(self, monkeypatch) -> None:
         user_id = uuid7()
@@ -528,10 +528,10 @@ class TestStreamSendMessage:
         collected = asyncio.run(run())
         # run_id header + synthetic error proto envelope
         assert len(collected) == 2
-        assert collected[0].run_id == str(run_id)
-        assert collected[1].WhichOneof("event") == "error"
-        assert collected[1].error.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
-        assert collected[1].run_id == str(run_id)
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[1].event.WhichOneof("event") == "error"
+        assert collected[1].event.error.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
+        assert collected[1].event.run_id == str(run_id)
 
 
 class TestSendMessageUnary:
@@ -814,13 +814,13 @@ class TestSubscribeToRun:
 
         assert captured == [run_id]
         # First event is the run_id header (no oneof set).
-        assert collected[0].run_id == str(run_id)
-        assert collected[0].WhichOneof("event") is None
+        assert collected[0].event.run_id == str(run_id)
+        assert collected[0].event.WhichOneof("event") is None
 
-        cases = [ev.WhichOneof("event") for ev in collected[1:]]
+        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
         assert cases == ["token", "done"]
         for ev in collected:
-            assert ev.run_id == str(run_id)
+            assert ev.event.run_id == str(run_id)
 
 
 class TestSubscribeRuntimeEvents:

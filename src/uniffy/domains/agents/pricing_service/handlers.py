@@ -12,8 +12,8 @@ from uniffy_proto.agents.v1.pricing_pb2 import (
     DeleteModelPricingResponse,
     ListModelPricingRequest,
     ListModelPricingResponse,
-    ModelPricingResponse,
     UpsertModelPricingRequest,
+    UpsertModelPricingResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -69,7 +69,7 @@ class PricingHandlers:
         self,
         request: UpsertModelPricingRequest,
         ctx: RequestContext,
-    ) -> ModelPricingResponse:
+    ) -> UpsertModelPricingResponse:
         """Create or overwrite a pricing row (system-admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -116,7 +116,7 @@ class PricingHandlers:
                     effective_from=effective_from,
                     effective_to=effective_to,
                 )
-                return ModelPricingResponse(row=model_pricing_to_proto(row))
+                return UpsertModelPricingResponse(row=model_pricing_to_proto(row))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))

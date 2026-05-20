@@ -80,14 +80,14 @@ type BudgetsServiceClient interface {
 	// when no budget row exists.
 	GetOrgBudget(context.Context, *connect.Request[v1.GetOrgBudgetRequest]) (*connect.Response[v1.GetOrgBudgetResponse], error)
 	// Create or update the organization's budget row. Org admin only.
-	UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.OrgBudgetResponse], error)
+	UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.UpdateOrgBudgetResponse], error)
 	// Delete the organization's budget row. Caps revert to defaults.
 	DeleteOrgBudget(context.Context, *connect.Request[v1.DeleteOrgBudgetRequest]) (*connect.Response[v1.DeleteOrgBudgetResponse], error)
 	// Get a single user's quota within an organization. Self-access
 	// allowed; editing another user's quota requires org admin.
 	GetUserQuota(context.Context, *connect.Request[v1.GetUserQuotaRequest]) (*connect.Response[v1.GetUserQuotaResponse], error)
 	// Create or update a per-user quota row. Org admin only.
-	UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UserQuotaResponse], error)
+	UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UpdateUserQuotaResponse], error)
 	// Delete a per-user quota row. Org admin only.
 	DeleteUserQuota(context.Context, *connect.Request[v1.DeleteUserQuotaRequest]) (*connect.Response[v1.DeleteUserQuotaResponse], error)
 	// List all per-user quota rows for an organization. Org admin only.
@@ -98,7 +98,7 @@ type BudgetsServiceClient interface {
 	// List the org's manual exchange rates. Org admin only.
 	ListCurrencyRates(context.Context, *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error)
 	// Create or update a single (from -> to) rate. Org admin only.
-	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error)
+	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
 	// Set the org's display currency (writes to AgentRuntimeSettings).
@@ -126,7 +126,7 @@ func NewBudgetsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(budgetsServiceMethods.ByName("GetOrgBudget")),
 			connect.WithClientOptions(opts...),
 		),
-		updateOrgBudget: connect.NewClient[v1.UpdateOrgBudgetRequest, v1.OrgBudgetResponse](
+		updateOrgBudget: connect.NewClient[v1.UpdateOrgBudgetRequest, v1.UpdateOrgBudgetResponse](
 			httpClient,
 			baseURL+BudgetsServiceUpdateOrgBudgetProcedure,
 			connect.WithSchema(budgetsServiceMethods.ByName("UpdateOrgBudget")),
@@ -144,7 +144,7 @@ func NewBudgetsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(budgetsServiceMethods.ByName("GetUserQuota")),
 			connect.WithClientOptions(opts...),
 		),
-		updateUserQuota: connect.NewClient[v1.UpdateUserQuotaRequest, v1.UserQuotaResponse](
+		updateUserQuota: connect.NewClient[v1.UpdateUserQuotaRequest, v1.UpdateUserQuotaResponse](
 			httpClient,
 			baseURL+BudgetsServiceUpdateUserQuotaProcedure,
 			connect.WithSchema(budgetsServiceMethods.ByName("UpdateUserQuota")),
@@ -174,7 +174,7 @@ func NewBudgetsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(budgetsServiceMethods.ByName("ListCurrencyRates")),
 			connect.WithClientOptions(opts...),
 		),
-		upsertCurrencyRate: connect.NewClient[v1.UpsertCurrencyRateRequest, v1.CurrencyRateResponse](
+		upsertCurrencyRate: connect.NewClient[v1.UpsertCurrencyRateRequest, v1.UpsertCurrencyRateResponse](
 			httpClient,
 			baseURL+BudgetsServiceUpsertCurrencyRateProcedure,
 			connect.WithSchema(budgetsServiceMethods.ByName("UpsertCurrencyRate")),
@@ -204,15 +204,15 @@ func NewBudgetsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 // budgetsServiceClient implements BudgetsServiceClient.
 type budgetsServiceClient struct {
 	getOrgBudget       *connect.Client[v1.GetOrgBudgetRequest, v1.GetOrgBudgetResponse]
-	updateOrgBudget    *connect.Client[v1.UpdateOrgBudgetRequest, v1.OrgBudgetResponse]
+	updateOrgBudget    *connect.Client[v1.UpdateOrgBudgetRequest, v1.UpdateOrgBudgetResponse]
 	deleteOrgBudget    *connect.Client[v1.DeleteOrgBudgetRequest, v1.DeleteOrgBudgetResponse]
 	getUserQuota       *connect.Client[v1.GetUserQuotaRequest, v1.GetUserQuotaResponse]
-	updateUserQuota    *connect.Client[v1.UpdateUserQuotaRequest, v1.UserQuotaResponse]
+	updateUserQuota    *connect.Client[v1.UpdateUserQuotaRequest, v1.UpdateUserQuotaResponse]
 	deleteUserQuota    *connect.Client[v1.DeleteUserQuotaRequest, v1.DeleteUserQuotaResponse]
 	listUserQuotas     *connect.Client[v1.ListUserQuotasRequest, v1.ListUserQuotasResponse]
 	getCurrentSpend    *connect.Client[v1.GetCurrentSpendRequest, v1.GetCurrentSpendResponse]
 	listCurrencyRates  *connect.Client[v1.ListCurrencyRatesRequest, v1.ListCurrencyRatesResponse]
-	upsertCurrencyRate *connect.Client[v1.UpsertCurrencyRateRequest, v1.CurrencyRateResponse]
+	upsertCurrencyRate *connect.Client[v1.UpsertCurrencyRateRequest, v1.UpsertCurrencyRateResponse]
 	deleteCurrencyRate *connect.Client[v1.DeleteCurrencyRateRequest, v1.DeleteCurrencyRateResponse]
 	setDisplayCurrency *connect.Client[v1.SetDisplayCurrencyRequest, v1.SetDisplayCurrencyResponse]
 	getDisplayCurrency *connect.Client[v1.GetDisplayCurrencyRequest, v1.GetDisplayCurrencyResponse]
@@ -224,7 +224,7 @@ func (c *budgetsServiceClient) GetOrgBudget(ctx context.Context, req *connect.Re
 }
 
 // UpdateOrgBudget calls agents.v1.BudgetsService.UpdateOrgBudget.
-func (c *budgetsServiceClient) UpdateOrgBudget(ctx context.Context, req *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.OrgBudgetResponse], error) {
+func (c *budgetsServiceClient) UpdateOrgBudget(ctx context.Context, req *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.UpdateOrgBudgetResponse], error) {
 	return c.updateOrgBudget.CallUnary(ctx, req)
 }
 
@@ -239,7 +239,7 @@ func (c *budgetsServiceClient) GetUserQuota(ctx context.Context, req *connect.Re
 }
 
 // UpdateUserQuota calls agents.v1.BudgetsService.UpdateUserQuota.
-func (c *budgetsServiceClient) UpdateUserQuota(ctx context.Context, req *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UserQuotaResponse], error) {
+func (c *budgetsServiceClient) UpdateUserQuota(ctx context.Context, req *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UpdateUserQuotaResponse], error) {
 	return c.updateUserQuota.CallUnary(ctx, req)
 }
 
@@ -264,7 +264,7 @@ func (c *budgetsServiceClient) ListCurrencyRates(ctx context.Context, req *conne
 }
 
 // UpsertCurrencyRate calls agents.v1.BudgetsService.UpsertCurrencyRate.
-func (c *budgetsServiceClient) UpsertCurrencyRate(ctx context.Context, req *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error) {
+func (c *budgetsServiceClient) UpsertCurrencyRate(ctx context.Context, req *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error) {
 	return c.upsertCurrencyRate.CallUnary(ctx, req)
 }
 
@@ -289,14 +289,14 @@ type BudgetsServiceHandler interface {
 	// when no budget row exists.
 	GetOrgBudget(context.Context, *connect.Request[v1.GetOrgBudgetRequest]) (*connect.Response[v1.GetOrgBudgetResponse], error)
 	// Create or update the organization's budget row. Org admin only.
-	UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.OrgBudgetResponse], error)
+	UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.UpdateOrgBudgetResponse], error)
 	// Delete the organization's budget row. Caps revert to defaults.
 	DeleteOrgBudget(context.Context, *connect.Request[v1.DeleteOrgBudgetRequest]) (*connect.Response[v1.DeleteOrgBudgetResponse], error)
 	// Get a single user's quota within an organization. Self-access
 	// allowed; editing another user's quota requires org admin.
 	GetUserQuota(context.Context, *connect.Request[v1.GetUserQuotaRequest]) (*connect.Response[v1.GetUserQuotaResponse], error)
 	// Create or update a per-user quota row. Org admin only.
-	UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UserQuotaResponse], error)
+	UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UpdateUserQuotaResponse], error)
 	// Delete a per-user quota row. Org admin only.
 	DeleteUserQuota(context.Context, *connect.Request[v1.DeleteUserQuotaRequest]) (*connect.Response[v1.DeleteUserQuotaResponse], error)
 	// List all per-user quota rows for an organization. Org admin only.
@@ -307,7 +307,7 @@ type BudgetsServiceHandler interface {
 	// List the org's manual exchange rates. Org admin only.
 	ListCurrencyRates(context.Context, *connect.Request[v1.ListCurrencyRatesRequest]) (*connect.Response[v1.ListCurrencyRatesResponse], error)
 	// Create or update a single (from -> to) rate. Org admin only.
-	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error)
+	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
 	// Set the org's display currency (writes to AgentRuntimeSettings).
@@ -444,7 +444,7 @@ func (UnimplementedBudgetsServiceHandler) GetOrgBudget(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.GetOrgBudget is not implemented"))
 }
 
-func (UnimplementedBudgetsServiceHandler) UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.OrgBudgetResponse], error) {
+func (UnimplementedBudgetsServiceHandler) UpdateOrgBudget(context.Context, *connect.Request[v1.UpdateOrgBudgetRequest]) (*connect.Response[v1.UpdateOrgBudgetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.UpdateOrgBudget is not implemented"))
 }
 
@@ -456,7 +456,7 @@ func (UnimplementedBudgetsServiceHandler) GetUserQuota(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.GetUserQuota is not implemented"))
 }
 
-func (UnimplementedBudgetsServiceHandler) UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UserQuotaResponse], error) {
+func (UnimplementedBudgetsServiceHandler) UpdateUserQuota(context.Context, *connect.Request[v1.UpdateUserQuotaRequest]) (*connect.Response[v1.UpdateUserQuotaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.UpdateUserQuota is not implemented"))
 }
 
@@ -476,7 +476,7 @@ func (UnimplementedBudgetsServiceHandler) ListCurrencyRates(context.Context, *co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.ListCurrencyRates is not implemented"))
 }
 
-func (UnimplementedBudgetsServiceHandler) UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.CurrencyRateResponse], error) {
+func (UnimplementedBudgetsServiceHandler) UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.BudgetsService.UpsertCurrencyRate is not implemented"))
 }
 

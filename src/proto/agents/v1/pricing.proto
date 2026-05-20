@@ -17,7 +17,7 @@ service PricingService {
   // the same (provider, model, effective_from) tuple exists, it is
   // overwritten; otherwise a new row is inserted. Callers rolling over
   // prices should insert a new row and set the old row's effective_to.
-  rpc UpsertModelPricing(UpsertModelPricingRequest) returns (ModelPricingResponse) {}
+  rpc UpsertModelPricing(UpsertModelPricingRequest) returns (UpsertModelPricingResponse) {}
 
   // Delete a pricing row by id. Historical run logs that referenced this
   // row's pricing retain their cost_usd values.
@@ -81,7 +81,7 @@ message UpsertModelPricingRequest {
   string currency = 11;
 }
 
-message ModelPricingResponse {
+message UpsertModelPricingResponse {
   ModelPricing row = 1;
 }
 

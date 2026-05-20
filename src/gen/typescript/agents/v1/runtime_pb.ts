@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/runtime.proto.
  */
 export const file_agents_v1_runtime: GenFile = /*@__PURE__*/
-  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIuwEChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMidgoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMiVgoKTW9kZWxVc2FnZRINCgVtb2RlbBgBIAEoCRIMCgRydW5zGAIgASgDEhQKDGlucHV0X3Rva2VucxgDIAEoAxIVCg1vdXRwdXRfdG9rZW5zGAQgASgDInEKDkFnZW50VXNhZ2VJbmZvEhAKCGFnZW50X2lkGAEgASgJEhIKCmFnZW50X25hbWUYAiABKAkSDAoEcnVucxgDIAEoAxIUCgxpbnB1dF90b2tlbnMYBCABKAMSFQoNb3V0cHV0X3Rva2VucxgFIAEoAyIyCglUb29sVXNhZ2USEQoJdG9vbF9uYW1lGAEgASgJEhIKCmNhbGxfY291bnQYAiABKAMiiwEKEFByb3ZpZGVyS2V5VXNhZ2USFwoPcHJvdmlkZXJfa2V5X2lkGAEgASgJEhEKCWtleV9sYWJlbBgCIAEoCRIQCghwcm92aWRlchgDIAEoCRIMCgRydW5zGAQgASgDEhQKDGlucHV0X3Rva2VucxgFIAEoAxIVCg1vdXRwdXRfdG9rZW5zGAYgASgDIrIBCg1Dcm9uVGFza1VzYWdlEhQKDGNyb25fdGFza19pZBgBIAEoCRIRCgl0YXNrX25hbWUYAiABKAkSEgoKYWdlbnRfbmFtZRgDIAEoCRISCgp0b3RhbF9ydW5zGAQgASgDEhEKCXN1Y2Nlc3NlcxgFIAEoAxIQCghmYWlsdXJlcxgGIAEoAxIUCgxpbnB1dF90b2tlbnMYByABKAMSFQoNb3V0cHV0X3Rva2VucxgIIAEoAyLGAQoSU2VuZE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB2NvbnRlbnQYAyABKAkSEAoIZmlsZV9pZHMYBCADKAkSFQoNdXNlcl90aW1lem9uZRgFIAEoCRI4CgxjaGF0X2NvbnRleHQYBiABKAsyHS5hZ2VudHMudjEuQ2hhdENoYW5uZWxDb250ZXh0SACIAQFCDwoNX2NoYXRfY29udGV4dCLMAQoYU3RyZWFtU2VuZE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB2NvbnRlbnQYAyABKAkSEAoIZmlsZV9pZHMYBCADKAkSFQoNdXNlcl90aW1lem9uZRgFIAEoCRI4CgxjaGF0X2NvbnRleHQYBiABKAsyHS5hZ2VudHMudjEuQ2hhdENoYW5uZWxDb250ZXh0SACIAQFCDwoNX2NoYXRfY29udGV4dCKAAQoSQ2hhdENoYW5uZWxDb250ZXh0EhIKCmNoYW5uZWxfaWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSGgoSdHJpZ2dlcl9tZXNzYWdlX2lkGAMgASgJEhgKC2NvbnRleHRfdXJuGAQgASgJSACIAQFCDgoMX2NvbnRleHRfdXJuIooBChNTZW5kTWVzc2FnZVJlc3BvbnNlEiwKDHVzZXJfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxIxChFhc3Npc3RhbnRfbWVzc2FnZRgCIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAMgASgJInMKHFJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSFAoMdG9vbF9jYWxsX2lkGAMgASgJEhAKCGFwcHJvdmVkGAQgASgIIkAKFVN1YnNjcmliZVRvUnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIjEKHVJlc3BvbmRUb0NvbmZpcm1hdGlvblJlc3BvbnNlEhAKCGFjY2VwdGVkGAEgASgIIrYDChlTdHJlYW1TZW5kTWVzc2FnZVJlc3BvbnNlEiwKBXRva2VuGAEgASgLMhsuYWdlbnRzLnYxLlN0cmVhbVRva2VuRXZlbnRIABIzCgl0b29sX2NhbGwYAiABKAsyHi5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxFdmVudEgAEjcKC3Rvb2xfcmVzdWx0GAMgASgLMiAuYWdlbnRzLnYxLlN0cmVhbVRvb2xSZXN1bHRFdmVudEgAEj0KDm1lc3NhZ2Vfc3RvcmVkGAQgASgLMiMuYWdlbnRzLnYxLlN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudEgAEioKBGRvbmUYBSABKAsyGi5hZ2VudHMudjEuU3RyZWFtRG9uZUV2ZW50SAASLAoFZXJyb3IYBiABKAsyGy5hZ2VudHMudjEuU3RyZWFtRXJyb3JFdmVudEgAEksKFWNvbmZpcm1hdGlvbl9yZXF1aXJlZBgHIAEoCzIqLmFnZW50cy52MS5TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50SAASDgoGcnVuX2lkGAggASgJQgcKBWV2ZW50IrMDChZTdWJzY3JpYmVUb1J1blJlc3BvbnNlEiwKBXRva2VuGAEgASgLMhsuYWdlbnRzLnYxLlN0cmVhbVRva2VuRXZlbnRIABIzCgl0b29sX2NhbGwYAiABKAsyHi5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxFdmVudEgAEjcKC3Rvb2xfcmVzdWx0GAMgASgLMiAuYWdlbnRzLnYxLlN0cmVhbVRvb2xSZXN1bHRFdmVudEgAEj0KDm1lc3NhZ2Vfc3RvcmVkGAQgASgLMiMuYWdlbnRzLnYxLlN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudEgAEioKBGRvbmUYBSABKAsyGi5hZ2VudHMudjEuU3RyZWFtRG9uZUV2ZW50SAASLAoFZXJyb3IYBiABKAsyGy5hZ2VudHMudjEuU3RyZWFtRXJyb3JFdmVudEgAEksKFWNvbmZpcm1hdGlvbl9yZXF1aXJlZBgHIAEoCzIqLmFnZW50cy52MS5TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50SAASDgoGcnVuX2lkGAggASgJQgcKBWV2ZW50IiAKEFN0cmVhbVRva2VuRXZlbnQSDAoEdGV4dBgBIAEoCSJWChNTdHJlYW1Ub29sQ2FsbEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSFgoOdG9vbF9hcmdzX2pzb24YAyABKAkiYQoVU3RyZWFtVG9vbFJlc3VsdEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZyZXN1bHQYBCABKAkiQwoYU3RyZWFtTWVzc2FnZVN0b3JlZEV2ZW50EicKB21lc3NhZ2UYASABKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8iWAoPU3RyZWFtRG9uZUV2ZW50EjEKEWFzc2lzdGFudF9tZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhIKCm1vZGVsX3VzZWQYAiABKAkiIwoQU3RyZWFtRXJyb3JFdmVudBIPCgdtZXNzYWdlGAEgASgJIncKH1N0cmVhbUNvbmZpcm1hdGlvblJlcXVpcmVkRXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEhEKCXRvb2xfbmFtZRgCIAEoCRIWCg50b29sX2FyZ3NfanNvbhgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCTLjAwoOUnVudGltZVNlcnZpY2USTgoLU2VuZE1lc3NhZ2USHS5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UiABJiChFTdHJlYW1TZW5kTWVzc2FnZRIjLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlcXVlc3QaJC5hZ2VudHMudjEuU3RyZWFtU2VuZE1lc3NhZ2VSZXNwb25zZSIAMAESWQoOU3Vic2NyaWJlVG9SdW4SIC5hZ2VudHMudjEuU3Vic2NyaWJlVG9SdW5SZXF1ZXN0GiEuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVzcG9uc2UiADABEmwKFVJlc3BvbmRUb0NvbmZpcm1hdGlvbhInLmFnZW50cy52MS5SZXNwb25kVG9Db25maXJtYXRpb25SZXF1ZXN0GiguYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlc3BvbnNlIgASVAoNR2V0VXNhZ2VTdGF0cxIfLmFnZW50cy52MS5HZXRVc2FnZVN0YXRzUmVxdWVzdBogLmFnZW50cy52MS5HZXRVc2FnZVN0YXRzUmVzcG9uc2UiAEI7WjlnaXRodWIuY29tL0F0aGVubmFNaW5kL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_agents_v1_sessions]);
+  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIqUGChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMSEgoKdG90YWxfY29zdBgSIAEoCRIdChV0b3RhbF90aGlua2luZ190b2tlbnMYEyABKAMSGQoRdG90YWxfaW1hZ2VfY291bnQYFCABKAMSFQoNdG90YWxfcmV0cmllcxgVIAEoAxIXCg90b3RhbF9jYW5jZWxsZWQYFiABKAMSHwoXdG90YWxfZGVhZGxpbmVfZXhjZWVkZWQYFyABKAMSGAoQZGlzcGxheV9jdXJyZW5jeRgYIAEoCSKZAQoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMSDAoEY29zdBgGIAEoCRITCgtpbWFnZV9jb3VudBgHIAEoAyJ5CgpNb2RlbFVzYWdlEg0KBW1vZGVsGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSDAoEY29zdBgFIAEoCRITCgtpbWFnZV9jb3VudBgGIAEoAyJxCg5BZ2VudFVzYWdlSW5mbxIQCghhZ2VudF9pZBgBIAEoCRISCgphZ2VudF9uYW1lGAIgASgJEgwKBHJ1bnMYAyABKAMSFAoMaW5wdXRfdG9rZW5zGAQgASgDEhUKDW91dHB1dF90b2tlbnMYBSABKAMiMgoJVG9vbFVzYWdlEhEKCXRvb2xfbmFtZRgBIAEoCRISCgpjYWxsX2NvdW50GAIgASgDIosBChBQcm92aWRlcktleVVzYWdlEhcKD3Byb3ZpZGVyX2tleV9pZBgBIAEoCRIRCglrZXlfbGFiZWwYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSDAoEcnVucxgEIAEoAxIUCgxpbnB1dF90b2tlbnMYBSABKAMSFQoNb3V0cHV0X3Rva2VucxgGIAEoAyKyAQoNQ3JvblRhc2tVc2FnZRIUCgxjcm9uX3Rhc2tfaWQYASABKAkSEQoJdGFza19uYW1lGAIgASgJEhIKCmFnZW50X25hbWUYAyABKAkSEgoKdG90YWxfcnVucxgEIAEoAxIRCglzdWNjZXNzZXMYBSABKAMSEAoIZmFpbHVyZXMYBiABKAMSFAoMaW5wdXRfdG9rZW5zGAcgASgDEhUKDW91dHB1dF90b2tlbnMYCCABKAMixgEKElNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBQg8KDV9jaGF0X2NvbnRleHQiXQoXUmVydW5Gcm9tTWVzc2FnZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSFQoNdXNlcl90aW1lem9uZRgDIAEoCSLMAQoYU3RyZWFtU2VuZE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB2NvbnRlbnQYAyABKAkSEAoIZmlsZV9pZHMYBCADKAkSFQoNdXNlcl90aW1lem9uZRgFIAEoCRI4CgxjaGF0X2NvbnRleHQYBiABKAsyHS5hZ2VudHMudjEuQ2hhdENoYW5uZWxDb250ZXh0SACIAQFCDwoNX2NoYXRfY29udGV4dCKAAQoSQ2hhdENoYW5uZWxDb250ZXh0EhIKCmNoYW5uZWxfaWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSGgoSdHJpZ2dlcl9tZXNzYWdlX2lkGAMgASgJEhgKC2NvbnRleHRfdXJuGAQgASgJSACIAQFCDgoMX2NvbnRleHRfdXJuIooBChNTZW5kTWVzc2FnZVJlc3BvbnNlEiwKDHVzZXJfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxIxChFhc3Npc3RhbnRfbWVzc2FnZRgCIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAMgASgJInMKHFJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSFAoMdG9vbF9jYWxsX2lkGAMgASgJEhAKCGFwcHJvdmVkGAQgASgIIkAKFVN1YnNjcmliZVRvUnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIj4KE0NhbmNlbFN0cmVhbVJlcXVlc3QSDgoGcnVuX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCSIpChRDYW5jZWxTdHJlYW1SZXNwb25zZRIRCgljYW5jZWxsZWQYASABKAgiMQodUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKAgi4QMKEEFnZW50U3RyZWFtRXZlbnQSLAoFdG9rZW4YASABKAsyGy5hZ2VudHMudjEuU3RyZWFtVG9rZW5FdmVudEgAEjMKCXRvb2xfY2FsbBgCIAEoCzIeLmFnZW50cy52MS5TdHJlYW1Ub29sQ2FsbEV2ZW50SAASNwoLdG9vbF9yZXN1bHQYAyABKAsyIC5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdEV2ZW50SAASPQoObWVzc2FnZV9zdG9yZWQYBCABKAsyIy5hZ2VudHMudjEuU3RyZWFtTWVzc2FnZVN0b3JlZEV2ZW50SAASKgoEZG9uZRgFIAEoCzIaLmFnZW50cy52MS5TdHJlYW1Eb25lRXZlbnRIABIsCgVlcnJvchgGIAEoCzIbLmFnZW50cy52MS5TdHJlYW1FcnJvckV2ZW50SAASSwoVY29uZmlybWF0aW9uX3JlcXVpcmVkGAcgASgLMiouYWdlbnRzLnYxLlN0cmVhbUNvbmZpcm1hdGlvblJlcXVpcmVkRXZlbnRIABIyCghmYWlsb3ZlchgJIAEoCzIeLmFnZW50cy52MS5TdHJlYW1GYWlsb3ZlckV2ZW50SAASDgoGcnVuX2lkGAggASgJQgcKBWV2ZW50IkcKGVN0cmVhbVNlbmRNZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJGChhSZXJ1bkZyb21NZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJEChZTdWJzY3JpYmVUb1J1blJlc3BvbnNlEioKBWV2ZW50GAEgASgLMhsuYWdlbnRzLnYxLkFnZW50U3RyZWFtRXZlbnQiIAoQU3RyZWFtVG9rZW5FdmVudBIMCgR0ZXh0GAEgASgJIlYKE1N0cmVhbVRvb2xDYWxsRXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEhEKCXRvb2xfbmFtZRgCIAEoCRIWCg50b29sX2FyZ3NfanNvbhgDIAEoCSJhChVTdHJlYW1Ub29sUmVzdWx0RXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEhEKCXRvb2xfbmFtZRgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg4KBnJlc3VsdBgEIAEoCSJDChhTdHJlYW1NZXNzYWdlU3RvcmVkRXZlbnQSJwoHbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbyJYCg9TdHJlYW1Eb25lRXZlbnQSMQoRYXNzaXN0YW50X21lc3NhZ2UYASABKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SEgoKbW9kZWxfdXNlZBgCIAEoCSIjChBTdHJlYW1FcnJvckV2ZW50Eg8KB21lc3NhZ2UYASABKAkidwofU3RyZWFtQ29uZmlybWF0aW9uUmVxdWlyZWRFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEhYKDnRvb2xfYXJnc19qc29uGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJIoIBChNTdHJlYW1GYWlsb3ZlckV2ZW50EhwKFGZyb21fcHJvdmlkZXJfa2V5X2lkGAEgASgJEhoKEnRvX3Byb3ZpZGVyX2tleV9pZBgCIAEoCRIQCgh0b19tb2RlbBgDIAEoCRIOCgZyZWFzb24YBCABKAkSDwoHYXR0ZW1wdBgFIAEoBTKXBQoOUnVudGltZVNlcnZpY2USTgoLU2VuZE1lc3NhZ2USHS5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UiABJiChFTdHJlYW1TZW5kTWVzc2FnZRIjLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlcXVlc3QaJC5hZ2VudHMudjEuU3RyZWFtU2VuZE1lc3NhZ2VSZXNwb25zZSIAMAESXwoQUmVydW5Gcm9tTWVzc2FnZRIiLmFnZW50cy52MS5SZXJ1bkZyb21NZXNzYWdlUmVxdWVzdBojLmFnZW50cy52MS5SZXJ1bkZyb21NZXNzYWdlUmVzcG9uc2UiADABElkKDlN1YnNjcmliZVRvUnVuEiAuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVxdWVzdBohLmFnZW50cy52MS5TdWJzY3JpYmVUb1J1blJlc3BvbnNlIgAwARJRCgxDYW5jZWxTdHJlYW0SHi5hZ2VudHMudjEuQ2FuY2VsU3RyZWFtUmVxdWVzdBofLmFnZW50cy52MS5DYW5jZWxTdHJlYW1SZXNwb25zZSIAEmwKFVJlc3BvbmRUb0NvbmZpcm1hdGlvbhInLmFnZW50cy52MS5SZXNwb25kVG9Db25maXJtYXRpb25SZXF1ZXN0GiguYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlc3BvbnNlIgASVAoNR2V0VXNhZ2VTdGF0cxIfLmFnZW50cy52MS5HZXRVc2FnZVN0YXRzUmVxdWVzdBogLmFnZW50cy52MS5HZXRVc2FnZVN0YXRzUmVzcG9uc2UiAEI7WjlnaXRodWIuY29tL0F0aGVubmFNaW5kL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_agents_v1_sessions]);
 
 /**
  * @generated from message agents.v1.GetUsageStatsRequest
@@ -153,7 +153,6 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
    * @generated from field: int64 total_cache_read_input_tokens = 17;
    */
   totalCacheReadInputTokens: bigint;
-};
 
   /**
    * Cost + usage extensions sourced from the run-log columns. Decimal
@@ -162,32 +161,32 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
    *
    * @generated from field: string total_cost = 18;
    */
-  totalCost = "";
+  totalCost: string;
 
   /**
    * @generated from field: int64 total_thinking_tokens = 19;
    */
-  totalThinkingTokens = protoInt64.zero;
+  totalThinkingTokens: bigint;
 
   /**
    * @generated from field: int64 total_image_count = 20;
    */
-  totalImageCount = protoInt64.zero;
+  totalImageCount: bigint;
 
   /**
    * @generated from field: int64 total_retries = 21;
    */
-  totalRetries = protoInt64.zero;
+  totalRetries: bigint;
 
   /**
    * @generated from field: int64 total_cancelled = 22;
    */
-  totalCancelled = protoInt64.zero;
+  totalCancelled: bigint;
 
   /**
    * @generated from field: int64 total_deadline_exceeded = 23;
    */
-  totalDeadlineExceeded = protoInt64.zero;
+  totalDeadlineExceeded: bigint;
 
   /**
    * ISO 4217 currency for ``total_cost`` and per-bucket ``cost``
@@ -196,58 +195,15 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
    *
    * @generated from field: string display_currency = 24;
    */
-  displayCurrency = "";
+  displayCurrency: string;
+};
 
-  constructor(data?: PartialMessage<GetUsageStatsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.GetUsageStatsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "total_runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 4, name: "total_sessions", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 5, name: "avg_duration_ms", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 6, name: "daily_usage", kind: "message", T: DailyUsage, repeated: true },
-    { no: 7, name: "model_usage", kind: "message", T: ModelUsage, repeated: true },
-    { no: 8, name: "agent_usage", kind: "message", T: AgentUsageInfo, repeated: true },
-    { no: 9, name: "tool_usage", kind: "message", T: ToolUsage, repeated: true },
-    { no: 10, name: "provider_key_usage", kind: "message", T: ProviderKeyUsage, repeated: true },
-    { no: 11, name: "cron_usage", kind: "message", T: CronTaskUsage, repeated: true },
-    { no: 12, name: "cron_total_runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 13, name: "cron_total_successes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 14, name: "cron_total_failures", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 15, name: "cron_total_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 16, name: "cron_total_output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 17, name: "total_cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 18, name: "total_cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 19, name: "total_thinking_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 20, name: "total_image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 21, name: "total_retries", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 22, name: "total_cancelled", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 23, name: "total_deadline_exceeded", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 24, name: "display_currency", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUsageStatsResponse {
-    return new GetUsageStatsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUsageStatsResponse {
-    return new GetUsageStatsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUsageStatsResponse {
-    return new GetUsageStatsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetUsageStatsResponse | PlainMessage<GetUsageStatsResponse> | undefined, b: GetUsageStatsResponse | PlainMessage<GetUsageStatsResponse> | undefined): boolean {
-    return proto3.util.equals(GetUsageStatsResponse, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.GetUsageStatsResponse.
+ * Use `create(GetUsageStatsResponseSchema)` to create a new message.
+ */
+export const GetUsageStatsResponseSchema: GenMessage<GetUsageStatsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 1);
 
 /**
  * @generated from message agents.v1.DailyUsage
@@ -281,51 +237,24 @@ export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
    * @generated from field: int64 cache_read_input_tokens = 5;
    */
   cacheReadInputTokens: bigint;
-};
 
   /**
    * @generated from field: string cost = 6;
    */
-  cost = "";
+  cost: string;
 
   /**
    * @generated from field: int64 image_count = 7;
    */
-  imageCount = protoInt64.zero;
+  imageCount: bigint;
+};
 
-  constructor(data?: PartialMessage<DailyUsage>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.DailyUsage";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "date", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 5, name: "cache_read_input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 6, name: "cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DailyUsage {
-    return new DailyUsage().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DailyUsage {
-    return new DailyUsage().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DailyUsage {
-    return new DailyUsage().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DailyUsage | PlainMessage<DailyUsage> | undefined, b: DailyUsage | PlainMessage<DailyUsage> | undefined): boolean {
-    return proto3.util.equals(DailyUsage, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.DailyUsage.
+ * Use `create(DailyUsageSchema)` to create a new message.
+ */
+export const DailyUsageSchema: GenMessage<DailyUsage> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 2);
 
 /**
  * @generated from message agents.v1.ModelUsage
@@ -350,50 +279,24 @@ export type ModelUsage = Message<"agents.v1.ModelUsage"> & {
    * @generated from field: int64 output_tokens = 4;
    */
   outputTokens: bigint;
-};
 
   /**
    * @generated from field: string cost = 5;
    */
-  cost = "";
+  cost: string;
 
   /**
    * @generated from field: int64 image_count = 6;
    */
-  imageCount = protoInt64.zero;
+  imageCount: bigint;
+};
 
-  constructor(data?: PartialMessage<ModelUsage>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.ModelUsage";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "runs", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "input_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 4, name: "output_tokens", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 5, name: "cost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "image_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModelUsage {
-    return new ModelUsage().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModelUsage {
-    return new ModelUsage().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModelUsage {
-    return new ModelUsage().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ModelUsage | PlainMessage<ModelUsage> | undefined, b: ModelUsage | PlainMessage<ModelUsage> | undefined): boolean {
-    return proto3.util.equals(ModelUsage, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.ModelUsage.
+ * Use `create(ModelUsageSchema)` to create a new message.
+ */
+export const ModelUsageSchema: GenMessage<ModelUsage> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 3);
 
 /**
  * @generated from message agents.v1.AgentUsageInfo
@@ -605,11 +508,11 @@ export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PUR
 /**
  * @generated from message agents.v1.RerunFromMessageRequest
  */
-export class RerunFromMessageRequest extends Message<RerunFromMessageRequest> {
+export type RerunFromMessageRequest = Message<"agents.v1.RerunFromMessageRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
-  organizationId = "";
+  organizationId: string;
 
   /**
    * The user-role message to re-run from. Must already have its downstream
@@ -618,44 +521,22 @@ export class RerunFromMessageRequest extends Message<RerunFromMessageRequest> {
    *
    * @generated from field: string message_id = 2;
    */
-  messageId = "";
+  messageId: string;
 
   /**
    * IANA timezone of the user's browser (e.g. "America/New_York")
    *
    * @generated from field: string user_timezone = 3;
    */
-  userTimezone = "";
+  userTimezone: string;
+};
 
-  constructor(data?: PartialMessage<RerunFromMessageRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.RerunFromMessageRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_timezone", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RerunFromMessageRequest {
-    return new RerunFromMessageRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RerunFromMessageRequest {
-    return new RerunFromMessageRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RerunFromMessageRequest {
-    return new RerunFromMessageRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RerunFromMessageRequest | PlainMessage<RerunFromMessageRequest> | undefined, b: RerunFromMessageRequest | PlainMessage<RerunFromMessageRequest> | undefined): boolean {
-    return proto3.util.equals(RerunFromMessageRequest, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.RerunFromMessageRequest.
+ * Use `create(RerunFromMessageRequestSchema)` to create a new message.
+ */
+export const RerunFromMessageRequestSchema: GenMessage<RerunFromMessageRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 9);
 
 /**
  * @generated from message agents.v1.StreamSendMessageRequest
@@ -709,7 +590,7 @@ export type StreamSendMessageRequest = Message<"agents.v1.StreamSendMessageReque
  * Use `create(StreamSendMessageRequestSchema)` to create a new message.
  */
 export const StreamSendMessageRequestSchema: GenMessage<StreamSendMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 9);
+  messageDesc(file_agents_v1_runtime, 10);
 
 /**
  * ChatChannelContext binds an agent invocation to a chat channel and
@@ -753,7 +634,7 @@ export type ChatChannelContext = Message<"agents.v1.ChatChannelContext"> & {
  * Use `create(ChatChannelContextSchema)` to create a new message.
  */
 export const ChatChannelContextSchema: GenMessage<ChatChannelContext> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 10);
+  messageDesc(file_agents_v1_runtime, 11);
 
 /**
  * @generated from message agents.v1.SendMessageResponse
@@ -780,7 +661,7 @@ export type SendMessageResponse = Message<"agents.v1.SendMessageResponse"> & {
  * Use `create(SendMessageResponseSchema)` to create a new message.
  */
 export const SendMessageResponseSchema: GenMessage<SendMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 11);
+  messageDesc(file_agents_v1_runtime, 12);
 
 /**
  * @generated from message agents.v1.RespondToConfirmationRequest
@@ -812,7 +693,7 @@ export type RespondToConfirmationRequest = Message<"agents.v1.RespondToConfirmat
  * Use `create(RespondToConfirmationRequestSchema)` to create a new message.
  */
 export const RespondToConfirmationRequestSchema: GenMessage<RespondToConfirmationRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 12);
+  messageDesc(file_agents_v1_runtime, 13);
 
 /**
  * @generated from message agents.v1.SubscribeToRunRequest
@@ -834,90 +715,49 @@ export type SubscribeToRunRequest = Message<"agents.v1.SubscribeToRunRequest"> &
  * Use `create(SubscribeToRunRequestSchema)` to create a new message.
  */
 export const SubscribeToRunRequestSchema: GenMessage<SubscribeToRunRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 13);
+  messageDesc(file_agents_v1_runtime, 14);
 
 /**
  * @generated from message agents.v1.CancelStreamRequest
  */
-export class CancelStreamRequest extends Message<CancelStreamRequest> {
+export type CancelStreamRequest = Message<"agents.v1.CancelStreamRequest"> & {
   /**
    * @generated from field: string run_id = 1;
    */
-  runId = "";
+  runId: string;
 
   /**
    * @generated from field: string organization_id = 2;
    */
-  organizationId = "";
+  organizationId: string;
+};
 
-  constructor(data?: PartialMessage<CancelStreamRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.CancelStreamRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CancelStreamRequest {
-    return new CancelStreamRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CancelStreamRequest {
-    return new CancelStreamRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CancelStreamRequest {
-    return new CancelStreamRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CancelStreamRequest | PlainMessage<CancelStreamRequest> | undefined, b: CancelStreamRequest | PlainMessage<CancelStreamRequest> | undefined): boolean {
-    return proto3.util.equals(CancelStreamRequest, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.CancelStreamRequest.
+ * Use `create(CancelStreamRequestSchema)` to create a new message.
+ */
+export const CancelStreamRequestSchema: GenMessage<CancelStreamRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 15);
 
 /**
  * @generated from message agents.v1.CancelStreamResponse
  */
-export class CancelStreamResponse extends Message<CancelStreamResponse> {
+export type CancelStreamResponse = Message<"agents.v1.CancelStreamResponse"> & {
   /**
    * True if the run was active and a cancel flag was set; false if the
    * run had already finished or no longer exists.
    *
    * @generated from field: bool cancelled = 1;
    */
-  cancelled = false;
+  cancelled: boolean;
+};
 
-  constructor(data?: PartialMessage<CancelStreamResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.CancelStreamResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "cancelled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CancelStreamResponse {
-    return new CancelStreamResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CancelStreamResponse {
-    return new CancelStreamResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CancelStreamResponse {
-    return new CancelStreamResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CancelStreamResponse | PlainMessage<CancelStreamResponse> | undefined, b: CancelStreamResponse | PlainMessage<CancelStreamResponse> | undefined): boolean {
-    return proto3.util.equals(CancelStreamResponse, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.CancelStreamResponse.
+ * Use `create(CancelStreamResponseSchema)` to create a new message.
+ */
+export const CancelStreamResponseSchema: GenMessage<CancelStreamResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 16);
 
 /**
  * @generated from message agents.v1.RespondToConfirmationResponse
@@ -934,217 +774,132 @@ export type RespondToConfirmationResponse = Message<"agents.v1.RespondToConfirma
  * Use `create(RespondToConfirmationResponseSchema)` to create a new message.
  */
 export const RespondToConfirmationResponseSchema: GenMessage<RespondToConfirmationResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 14);
+  messageDesc(file_agents_v1_runtime, 17);
+
+/**
+ * AgentStreamEvent carries one event in the agent-runtime stream. The
+ * run_id is stamped by the handler from the run state hash so a tab
+ * reload mid-stream can call SubscribeToRun(run_id) to resume.
+ *
+ * @generated from message agents.v1.AgentStreamEvent
+ */
+export type AgentStreamEvent = Message<"agents.v1.AgentStreamEvent"> & {
+  /**
+   * @generated from oneof agents.v1.AgentStreamEvent.event
+   */
+  event: {
+    /**
+     * @generated from field: agents.v1.StreamTokenEvent token = 1;
+     */
+    value: StreamTokenEvent;
+    case: "token";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolCallEvent tool_call = 2;
+     */
+    value: StreamToolCallEvent;
+    case: "toolCall";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolResultEvent tool_result = 3;
+     */
+    value: StreamToolResultEvent;
+    case: "toolResult";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 4;
+     */
+    value: StreamMessageStoredEvent;
+    case: "messageStored";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamDoneEvent done = 5;
+     */
+    value: StreamDoneEvent;
+    case: "done";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamErrorEvent error = 6;
+     */
+    value: StreamErrorEvent;
+    case: "error";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 7;
+     */
+    value: StreamConfirmationRequiredEvent;
+    case: "confirmationRequired";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
+     */
+    value: StreamFailoverEvent;
+    case: "failover";
+  } | { case: undefined; value?: undefined };
+
+  /**
+   * @generated from field: string run_id = 8;
+   */
+  runId: string;
+};
+
+/**
+ * Describes the message agents.v1.AgentStreamEvent.
+ * Use `create(AgentStreamEventSchema)` to create a new message.
+ */
+export const AgentStreamEventSchema: GenMessage<AgentStreamEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 18);
 
 /**
  * @generated from message agents.v1.StreamSendMessageResponse
  */
 export type StreamSendMessageResponse = Message<"agents.v1.StreamSendMessageResponse"> & {
   /**
-   * @generated from oneof agents.v1.StreamSendMessageResponse.event
+   * @generated from field: agents.v1.AgentStreamEvent event = 1;
    */
-  event: {
-    /**
-     * @generated from field: agents.v1.StreamTokenEvent token = 1;
-     */
-    value: StreamTokenEvent;
-    case: "token";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamToolCallEvent tool_call = 2;
-     */
-    value: StreamToolCallEvent;
-    case: "toolCall";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamToolResultEvent tool_result = 3;
-     */
-    value: StreamToolResultEvent;
-    case: "toolResult";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 4;
-     */
-    value: StreamMessageStoredEvent;
-    case: "messageStored";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamDoneEvent done = 5;
-     */
-    value: StreamDoneEvent;
-    case: "done";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamErrorEvent error = 6;
-     */
-    value: StreamErrorEvent;
-    case: "error";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 7;
-     */
-    value: StreamConfirmationRequiredEvent;
-    case: "confirmationRequired";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
-     */
-    value: StreamFailoverEvent;
-    case: "failover";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  /**
-   * The egress run id this event belongs to. Populated on every event
-   * so a tab reload mid-stream can call SubscribeToRun(run_id) to
-   * resume from the start of the stream. Set by the handler from the
-   * run state hash; the worker does not embed it inside the oneof
-   * payload itself.
-   *
-   * @generated from field: string run_id = 8;
-   */
-  runId: string;
+  event?: AgentStreamEvent | undefined;
 };
 
-  constructor(data?: PartialMessage<StreamSendMessageResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
+/**
+ * Describes the message agents.v1.StreamSendMessageResponse.
+ * Use `create(StreamSendMessageResponseSchema)` to create a new message.
+ */
+export const StreamSendMessageResponseSchema: GenMessage<StreamSendMessageResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 19);
 
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.StreamSendMessageResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
-    { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
-    { no: 3, name: "tool_result", kind: "message", T: StreamToolResultEvent, oneof: "event" },
-    { no: 4, name: "message_stored", kind: "message", T: StreamMessageStoredEvent, oneof: "event" },
-    { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
-    { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
-    { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
-    { no: 9, name: "failover", kind: "message", T: StreamFailoverEvent, oneof: "event" },
-    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
+/**
+ * @generated from message agents.v1.RerunFromMessageResponse
+ */
+export type RerunFromMessageResponse = Message<"agents.v1.RerunFromMessageResponse"> & {
+  /**
+   * @generated from field: agents.v1.AgentStreamEvent event = 1;
+   */
+  event?: AgentStreamEvent | undefined;
+};
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamSendMessageResponse {
-    return new StreamSendMessageResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
-    return new StreamSendMessageResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamSendMessageResponse {
-    return new StreamSendMessageResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined, b: StreamSendMessageResponse | PlainMessage<StreamSendMessageResponse> | undefined): boolean {
-    return proto3.util.equals(StreamSendMessageResponse, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.RerunFromMessageResponse.
+ * Use `create(RerunFromMessageResponseSchema)` to create a new message.
+ */
+export const RerunFromMessageResponseSchema: GenMessage<RerunFromMessageResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 20);
 
 /**
  * @generated from message agents.v1.SubscribeToRunResponse
  */
 export type SubscribeToRunResponse = Message<"agents.v1.SubscribeToRunResponse"> & {
   /**
-   * @generated from oneof agents.v1.SubscribeToRunResponse.event
+   * @generated from field: agents.v1.AgentStreamEvent event = 1;
    */
-  event: {
-    /**
-     * @generated from field: agents.v1.StreamTokenEvent token = 1;
-     */
-    value: StreamTokenEvent;
-    case: "token";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamToolCallEvent tool_call = 2;
-     */
-    value: StreamToolCallEvent;
-    case: "toolCall";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamToolResultEvent tool_result = 3;
-     */
-    value: StreamToolResultEvent;
-    case: "toolResult";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 4;
-     */
-    value: StreamMessageStoredEvent;
-    case: "messageStored";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamDoneEvent done = 5;
-     */
-    value: StreamDoneEvent;
-    case: "done";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamErrorEvent error = 6;
-     */
-    value: StreamErrorEvent;
-    case: "error";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 7;
-     */
-    value: StreamConfirmationRequiredEvent;
-    case: "confirmationRequired";
-  } | {
-    /**
-     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
-     */
-    value: StreamFailoverEvent;
-    case: "failover";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  /**
-   * The egress run id this event belongs to. Populated on every event
-   * so a tab reload mid-stream can call SubscribeToRun(run_id) to
-   * resume from the start of the stream. Set by the handler from the
-   * run state hash; the worker does not embed it inside the oneof
-   * payload itself.
-   *
-   * @generated from field: string run_id = 8;
-   */
-  runId: string;
+  event?: AgentStreamEvent | undefined;
 };
 
-  constructor(data?: PartialMessage<SubscribeToRunResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.SubscribeToRunResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "token", kind: "message", T: StreamTokenEvent, oneof: "event" },
-    { no: 2, name: "tool_call", kind: "message", T: StreamToolCallEvent, oneof: "event" },
-    { no: 3, name: "tool_result", kind: "message", T: StreamToolResultEvent, oneof: "event" },
-    { no: 4, name: "message_stored", kind: "message", T: StreamMessageStoredEvent, oneof: "event" },
-    { no: 5, name: "done", kind: "message", T: StreamDoneEvent, oneof: "event" },
-    { no: 6, name: "error", kind: "message", T: StreamErrorEvent, oneof: "event" },
-    { no: 7, name: "confirmation_required", kind: "message", T: StreamConfirmationRequiredEvent, oneof: "event" },
-    { no: 9, name: "failover", kind: "message", T: StreamFailoverEvent, oneof: "event" },
-    { no: 8, name: "run_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscribeToRunResponse {
-    return new SubscribeToRunResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
-    return new SubscribeToRunResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscribeToRunResponse {
-    return new SubscribeToRunResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined, b: SubscribeToRunResponse | PlainMessage<SubscribeToRunResponse> | undefined): boolean {
-    return proto3.util.equals(SubscribeToRunResponse, a, b);
-  }
-}
+/**
+ * Describes the message agents.v1.SubscribeToRunResponse.
+ * Use `create(SubscribeToRunResponseSchema)` to create a new message.
+ */
+export const SubscribeToRunResponseSchema: GenMessage<SubscribeToRunResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 21);
 
 /**
  * @generated from message agents.v1.StreamTokenEvent
@@ -1161,7 +916,7 @@ export type StreamTokenEvent = Message<"agents.v1.StreamTokenEvent"> & {
  * Use `create(StreamTokenEventSchema)` to create a new message.
  */
 export const StreamTokenEventSchema: GenMessage<StreamTokenEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 17);
+  messageDesc(file_agents_v1_runtime, 22);
 
 /**
  * @generated from message agents.v1.StreamToolCallEvent
@@ -1188,7 +943,7 @@ export type StreamToolCallEvent = Message<"agents.v1.StreamToolCallEvent"> & {
  * Use `create(StreamToolCallEventSchema)` to create a new message.
  */
 export const StreamToolCallEventSchema: GenMessage<StreamToolCallEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 18);
+  messageDesc(file_agents_v1_runtime, 23);
 
 /**
  * @generated from message agents.v1.StreamToolResultEvent
@@ -1220,7 +975,7 @@ export type StreamToolResultEvent = Message<"agents.v1.StreamToolResultEvent"> &
  * Use `create(StreamToolResultEventSchema)` to create a new message.
  */
 export const StreamToolResultEventSchema: GenMessage<StreamToolResultEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 19);
+  messageDesc(file_agents_v1_runtime, 24);
 
 /**
  * @generated from message agents.v1.StreamMessageStoredEvent
@@ -1237,7 +992,7 @@ export type StreamMessageStoredEvent = Message<"agents.v1.StreamMessageStoredEve
  * Use `create(StreamMessageStoredEventSchema)` to create a new message.
  */
 export const StreamMessageStoredEventSchema: GenMessage<StreamMessageStoredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 20);
+  messageDesc(file_agents_v1_runtime, 25);
 
 /**
  * @generated from message agents.v1.StreamDoneEvent
@@ -1259,7 +1014,7 @@ export type StreamDoneEvent = Message<"agents.v1.StreamDoneEvent"> & {
  * Use `create(StreamDoneEventSchema)` to create a new message.
  */
 export const StreamDoneEventSchema: GenMessage<StreamDoneEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 21);
+  messageDesc(file_agents_v1_runtime, 26);
 
 /**
  * @generated from message agents.v1.StreamErrorEvent
@@ -1276,7 +1031,7 @@ export type StreamErrorEvent = Message<"agents.v1.StreamErrorEvent"> & {
  * Use `create(StreamErrorEventSchema)` to create a new message.
  */
 export const StreamErrorEventSchema: GenMessage<StreamErrorEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 22);
+  messageDesc(file_agents_v1_runtime, 27);
 
 /**
  * @generated from message agents.v1.StreamConfirmationRequiredEvent
@@ -1308,7 +1063,59 @@ export type StreamConfirmationRequiredEvent = Message<"agents.v1.StreamConfirmat
  * Use `create(StreamConfirmationRequiredEventSchema)` to create a new message.
  */
 export const StreamConfirmationRequiredEventSchema: GenMessage<StreamConfirmationRequiredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 23);
+  messageDesc(file_agents_v1_runtime, 28);
+
+/**
+ * Emitted once when the runtime swaps to a different provider key or
+ * model after a retryable failure on the previous candidate. Purely
+ * informational; clients use it to surface "switched to X" notices.
+ *
+ * @generated from message agents.v1.StreamFailoverEvent
+ */
+export type StreamFailoverEvent = Message<"agents.v1.StreamFailoverEvent"> & {
+  /**
+   * Provider key id we just moved off (the one that failed).
+   *
+   * @generated from field: string from_provider_key_id = 1;
+   */
+  fromProviderKeyId: string;
+
+  /**
+   * Provider key id we moved onto.
+   *
+   * @generated from field: string to_provider_key_id = 2;
+   */
+  toProviderKeyId: string;
+
+  /**
+   * Model now in use (may be the same model on a different key, or a
+   * different fallback model entirely).
+   *
+   * @generated from field: string to_model = 3;
+   */
+  toModel: string;
+
+  /**
+   * Short reason classifier: "timeout", "5xx", "connection", "other".
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
+  /**
+   * 1-based attempt counter for the swap (first failover = 1).
+   *
+   * @generated from field: int32 attempt = 5;
+   */
+  attempt: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamFailoverEvent.
+ * Use `create(StreamFailoverEventSchema)` to create a new message.
+ */
+export const StreamFailoverEventSchema: GenMessage<StreamFailoverEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 29);
 
 /**
  * RuntimeService handles message execution (send to LLM and store response).
@@ -1337,6 +1144,19 @@ export const RuntimeService: GenService<{
     output: typeof StreamSendMessageResponseSchema;
   },
   /**
+   * Re-run the agent against an existing edited user message. The anchor
+   * message must be a non-invalidated user-role row whose downstream has
+   * already been invalidated (via EditMessage). Streams events in the
+   * same shape as StreamSendMessage; no new user message is created.
+   *
+   * @generated from rpc agents.v1.RuntimeService.RerunFromMessage
+   */
+  rerunFromMessage: {
+    methodKind: "server_streaming";
+    input: typeof RerunFromMessageRequestSchema;
+    output: typeof RerunFromMessageResponseSchema;
+  },
+  /**
    * Resume an in-flight run by run_id. Replays the full event stream from
    * the start, then tails live until Done/Error or the 120s wall budget.
    * Used by the frontend after a tab reload to reconnect without
@@ -1348,6 +1168,19 @@ export const RuntimeService: GenService<{
     methodKind: "server_streaming";
     input: typeof SubscribeToRunRequestSchema;
     output: typeof SubscribeToRunResponseSchema;
+  },
+  /**
+   * Cancel an in-flight run. Flips the run-state hash to "cancelled";
+   * the egress worker observes the flag between tool iterations and
+   * exits with a synthetic Error event. Idempotent: cancelling an
+   * already-finished run is a no-op.
+   *
+   * @generated from rpc agents.v1.RuntimeService.CancelStream
+   */
+  cancelStream: {
+    methodKind: "unary";
+    input: typeof CancelStreamRequestSchema;
+    output: typeof CancelStreamResponseSchema;
   },
   /**
    * Approve or reject a destructive tool call that requires confirmation
@@ -1371,80 +1204,4 @@ export const RuntimeService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_runtime, 0);
-
-/**
- * Emitted once when the runtime swaps to a different provider key or
- * model after a retryable failure on the previous candidate. Purely
- * informational; clients use it to surface "switched to X" notices.
- *
- * @generated from message agents.v1.StreamFailoverEvent
- */
-export class StreamFailoverEvent extends Message<StreamFailoverEvent> {
-  /**
-   * Provider key id we just moved off (the one that failed).
-   *
-   * @generated from field: string from_provider_key_id = 1;
-   */
-  fromProviderKeyId = "";
-
-  /**
-   * Provider key id we moved onto.
-   *
-   * @generated from field: string to_provider_key_id = 2;
-   */
-  toProviderKeyId = "";
-
-  /**
-   * Model now in use (may be the same model on a different key, or a
-   * different fallback model entirely).
-   *
-   * @generated from field: string to_model = 3;
-   */
-  toModel = "";
-
-  /**
-   * Short reason classifier: "timeout", "5xx", "connection", "other".
-   *
-   * @generated from field: string reason = 4;
-   */
-  reason = "";
-
-  /**
-   * 1-based attempt counter for the swap (first failover = 1).
-   *
-   * @generated from field: int32 attempt = 5;
-   */
-  attempt = 0;
-
-  constructor(data?: PartialMessage<StreamFailoverEvent>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.StreamFailoverEvent";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "from_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "to_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "to_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "attempt", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamFailoverEvent {
-    return new StreamFailoverEvent().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamFailoverEvent {
-    return new StreamFailoverEvent().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamFailoverEvent {
-    return new StreamFailoverEvent().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StreamFailoverEvent | PlainMessage<StreamFailoverEvent> | undefined, b: StreamFailoverEvent | PlainMessage<StreamFailoverEvent> | undefined): boolean {
-    return proto3.util.equals(StreamFailoverEvent, a, b);
-  }
-}
 

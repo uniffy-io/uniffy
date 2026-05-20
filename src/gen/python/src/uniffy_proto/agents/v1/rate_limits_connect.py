@@ -7,6 +7,8 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.codec import Codec
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -19,7 +21,7 @@ class RateLimitsService(Protocol):
     async def get_rate_limits(self, request: agents_dot_v1_dot_rate__limits__pb2.GetRateLimitsRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.GetRateLimitsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def upsert_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse:
+    async def upsert_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def delete_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.DeleteRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.DeleteRateLimitResponse:
@@ -27,7 +29,7 @@ class RateLimitsService(Protocol):
 
 
 class RateLimitsServiceASGIApplication(ConnectASGIApplication[RateLimitsService]):
-    def __init__(self, service: RateLimitsService | AsyncGenerator[RateLimitsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: RateLimitsService | AsyncGenerator[RateLimitsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -46,7 +48,7 @@ class RateLimitsServiceASGIApplication(ConnectASGIApplication[RateLimitsService]
                         name="UpsertRateLimit",
                         service_name="agents.v1.RateLimitsService",
                         input=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest,
-                        output=agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse,
+                        output=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.upsert_rate_limit,
@@ -64,6 +66,8 @@ class RateLimitsServiceASGIApplication(ConnectASGIApplication[RateLimitsService]
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -99,14 +103,14 @@ class RateLimitsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse:
+    ) -> agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertRateLimit",
                 service_name="agents.v1.RateLimitsService",
                 input=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest,
-                output=agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse,
+                output=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -134,17 +138,20 @@ class RateLimitsServiceClient(ConnectClient):
         )
 
 
+
+
+
 class RateLimitsServiceSync(Protocol):
     def get_rate_limits(self, request: agents_dot_v1_dot_rate__limits__pb2.GetRateLimitsRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.GetRateLimitsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def upsert_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse:
+    def upsert_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_rate_limit(self, request: agents_dot_v1_dot_rate__limits__pb2.DeleteRateLimitRequest, ctx: RequestContext) -> agents_dot_v1_dot_rate__limits__pb2.DeleteRateLimitResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
 class RateLimitsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: RateLimitsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: RateLimitsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/agents.v1.RateLimitsService/GetRateLimits": EndpointSync.unary(
@@ -162,7 +169,7 @@ class RateLimitsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpsertRateLimit",
                         service_name="agents.v1.RateLimitsService",
                         input=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest,
-                        output=agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse,
+                        output=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.upsert_rate_limit,
@@ -180,6 +187,8 @@ class RateLimitsServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
         )
 
     @property
@@ -215,14 +224,14 @@ class RateLimitsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse:
+    ) -> agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpsertRateLimit",
                 service_name="agents.v1.RateLimitsService",
                 input=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitRequest,
-                output=agents_dot_v1_dot_rate__limits__pb2.RateLimitResponse,
+                output=agents_dot_v1_dot_rate__limits__pb2.UpsertRateLimitResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -248,3 +257,5 @@ class RateLimitsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/sessions.proto.
  */
 export const file_agents_v1_sessions: GenFile = /*@__PURE__*/
-  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSLOAwoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fbW9kZWxfb3ZlcnJpZGVCEgoQX2xhc3RfbW9kZWxfdXNlZCLZAwoLTWVzc2FnZUluZm8SCgoCaWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIkCgRyb2xlGAMgASgOMhYuYWdlbnRzLnYxLk1lc3NhZ2VSb2xlEhQKB2NvbnRlbnQYBCABKAlIAIgBARIUCgxpbnB1dF90b2tlbnMYBSABKAUSFQoNb3V0cHV0X3Rva2VucxgGIAEoBRISCgVtb2RlbBgHIAEoCUgBiAEBEhYKCXRvb2xfbmFtZRgIIAEoCUgCiAEBEhkKDHRvb2xfY2FsbF9pZBgJIAEoCUgDiAEBEhsKDnRvb2xfYXJnc19qc29uGAogASgJSASIAQESGAoLdG9vbF9yZXN1bHQYCyABKAlIBYgBARITCgtpc190aGlua2luZxgMIAEoCBIUCgxpc19jb21wYWN0ZWQYDSABKAgSLgoKY3JlYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIZmlsZV9pZHMYDyADKAlCCgoIX2NvbnRlbnRCCAoGX21vZGVsQgwKCl90b29sX25hbWVCDwoNX3Rvb2xfY2FsbF9pZEIRCg9fdG9vbF9hcmdzX2pzb25CDgoMX3Rvb2xfcmVzdWx0IsMBChRDcmVhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSJAoEa2luZBgDIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBCABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgFIAEoCUgBiAEBQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlIkAKFUNyZWF0ZVNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIj0KEkdldFNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIkAKFVVwZGF0ZVNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIkAKEUdldFNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIvYBChNMaXN0U2Vzc2lvbnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI1CgpwYWdpbmF0aW9uGAIgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESFQoIYWdlbnRfaWQYAyABKAlIAYgBARIpCgRraW5kGAQgASgOMhYuYWdlbnRzLnYxLlNlc3Npb25LaW5kSAKIAQESGAoLaXNfYXJjaGl2ZWQYBSABKAhIA4gBAUINCgtfcGFnaW5hdGlvbkILCglfYWdlbnRfaWRCBwoFX2tpbmRCDgoMX2lzX2FyY2hpdmVkInMKFExpc3RTZXNzaW9uc1Jlc3BvbnNlEigKCHNlc3Npb25zGAEgAygLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIp8BChRVcGRhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIZCgxkaXNwbGF5X25hbWUYAyABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgEIAEoCUgBiAEBQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlIkQKFUFyY2hpdmVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSIpChZBcmNoaXZlU2Vzc2lvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgilAMKEUFkZE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdCI9ChJBZGRNZXNzYWdlUmVzcG9uc2USJwoHbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbyK+AQoTTGlzdE1lc3NhZ2VzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESHgoRaW5jbHVkZV9jb21wYWN0ZWQYBCABKAhIAYgBAUINCgtfcGFnaW5hdGlvbkIUChJfaW5jbHVkZV9jb21wYWN0ZWQicwoUTGlzdE1lc3NhZ2VzUmVzcG9uc2USKAoIbWVzc2FnZXMYASADKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UiRwoYR2V0U2Vzc2lvbkNvbnRleHRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIl0KGUdldFNlc3Npb25Db250ZXh0UmVzcG9uc2USKAoIbWVzc2FnZXMYASADKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SFgoOdG90YWxfbWVzc2FnZXMYAiABKAUiTAodR2V0U2Vzc2lvbkNvbnRleHRTdGF0c1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiyAIKHkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZRIWCg50b3RhbF9tZXNzYWdlcxgBIAEoBRIXCg9hY3RpdmVfbWVzc2FnZXMYAiABKAUSGgoSY29tcGFjdGVkX21lc3NhZ2VzGAMgASgFEhUKDXN1bW1hcnlfY291bnQYBCABKAUSFQoNYWN0aXZlX3Rva2VucxgFIAEoBRIUCgx0b2tlbl9idWRnZXQYBiABKAUSHwoXdG9rZW5zX3VudGlsX2NvbXBhY3Rpb24YByABKAUSHQoVY29udGV4dF93aW5kb3dfdG9rZW5zGAggASgFEhkKEWxhc3RfaW5wdXRfdG9rZW5zGAkgASgFEhoKEmxhc3Rfb3V0cHV0X3Rva2VucxgKIAEoBRIeChZsYXN0X2NhY2hlX3JlYWRfdG9rZW5zGAsgASgFIkQKFUNvbXBhY3RTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSLcAQoWQ29tcGFjdFNlc3Npb25SZXNwb25zZRIRCgljb21wYWN0ZWQYASABKAgSOAoFc3RhdHMYAiABKAsyKS5hZ2VudHMudjEuR2V0U2Vzc2lvbkNvbnRleHRTdGF0c1Jlc3BvbnNlEhoKEm1lc3NhZ2VzX2NvbXBhY3RlZBgDIAEoBRIVCg10b2tlbnNfYmVmb3JlGAQgASgFEhQKDHRva2Vuc19hZnRlchgFIAEoBRIUCgx0b2tlbnNfc2F2ZWQYBiABKAUSFgoOc3VtbWFyeV90b2tlbnMYByABKAUqdQoLU2Vzc2lvbktpbmQSHAoYU0VTU0lPTl9LSU5EX1VOU1BFQ0lGSUVEEAASFwoTU0VTU0lPTl9LSU5EX0RJUkVDVBABEhYKElNFU1NJT05fS0lORF9HUk9VUBACEhcKE1NFU1NJT05fS0lORF9HTE9CQUwQAyqoAQoLTWVzc2FnZVJvbGUSHAoYTUVTU0FHRV9ST0xFX1VOU1BFQ0lGSUVEEAASFQoRTUVTU0FHRV9ST0xFX1VTRVIQARIaChZNRVNTQUdFX1JPTEVfQVNTSVNUQU5UEAISFQoRTUVTU0FHRV9ST0xFX1RPT0wQAxIXChNNRVNTQUdFX1JPTEVfU1lTVEVNEAQSGAoUTUVTU0FHRV9ST0xFX1NVTU1BUlkQBTKCBwoPU2Vzc2lvbnNTZXJ2aWNlElQKDUNyZWF0ZVNlc3Npb24SHy5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlc3BvbnNlIgASSwoKR2V0U2Vzc2lvbhIcLmFnZW50cy52MS5HZXRTZXNzaW9uUmVxdWVzdBodLmFnZW50cy52MS5HZXRTZXNzaW9uUmVzcG9uc2UiABJRCgxMaXN0U2Vzc2lvbnMSHi5hZ2VudHMudjEuTGlzdFNlc3Npb25zUmVxdWVzdBofLmFnZW50cy52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZSIAElQKDVVwZGF0ZVNlc3Npb24SHy5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlc3BvbnNlIgASVwoOQXJjaGl2ZVNlc3Npb24SIC5hZ2VudHMudjEuQXJjaGl2ZVNlc3Npb25SZXF1ZXN0GiEuYWdlbnRzLnYxLkFyY2hpdmVTZXNzaW9uUmVzcG9uc2UiABJLCgpBZGRNZXNzYWdlEhwuYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXF1ZXN0Gh0uYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXNwb25zZSIAElEKDExpc3RNZXNzYWdlcxIeLmFnZW50cy52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1Jlc3BvbnNlIgASYAoRR2V0U2Vzc2lvbkNvbnRleHQSIy5hZ2VudHMudjEuR2V0U2Vzc2lvbkNvbnRleHRSZXF1ZXN0GiQuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0UmVzcG9uc2UiABJvChZHZXRTZXNzaW9uQ29udGV4dFN0YXRzEiguYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXF1ZXN0GikuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZSIAElcKDkNvbXBhY3RTZXNzaW9uEiAuYWdlbnRzLnYxLkNvbXBhY3RTZXNzaW9uUmVxdWVzdBohLmFnZW50cy52MS5Db21wYWN0U2Vzc2lvblJlc3BvbnNlIgBCO1o5Z2l0aHViLmNvbS9BdGhlbm5hTWluZC91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSLOAwoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fbW9kZWxfb3ZlcnJpZGVCEgoQX2xhc3RfbW9kZWxfdXNlZCL+BAoLTWVzc2FnZUluZm8SCgoCaWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIkCgRyb2xlGAMgASgOMhYuYWdlbnRzLnYxLk1lc3NhZ2VSb2xlEhQKB2NvbnRlbnQYBCABKAlIAIgBARIUCgxpbnB1dF90b2tlbnMYBSABKAUSFQoNb3V0cHV0X3Rva2VucxgGIAEoBRISCgVtb2RlbBgHIAEoCUgBiAEBEhYKCXRvb2xfbmFtZRgIIAEoCUgCiAEBEhkKDHRvb2xfY2FsbF9pZBgJIAEoCUgDiAEBEhsKDnRvb2xfYXJnc19qc29uGAogASgJSASIAQESGAoLdG9vbF9yZXN1bHQYCyABKAlIBYgBARITCgtpc190aGlua2luZxgMIAEoCBIUCgxpc19jb21wYWN0ZWQYDSABKAgSLgoKY3JlYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIZmlsZV9pZHMYDyADKAkSFgoOaXNfaW52YWxpZGF0ZWQYECABKAgSMgoJZWRpdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgGiAEBEh0KEHByZXZpb3VzX2NvbnRlbnQYEiABKAlIB4gBARIVCg13YXNfY2FuY2VsbGVkGBMgASgIQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdEIMCgpfZWRpdGVkX2F0QhMKEV9wcmV2aW91c19jb250ZW50IsMBChRDcmVhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSJAoEa2luZBgDIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBCABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgFIAEoCUgBiAEBQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlIkAKFUNyZWF0ZVNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIj0KEkdldFNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIkAKFVVwZGF0ZVNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIkAKEUdldFNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIvYBChNMaXN0U2Vzc2lvbnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI1CgpwYWdpbmF0aW9uGAIgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESFQoIYWdlbnRfaWQYAyABKAlIAYgBARIpCgRraW5kGAQgASgOMhYuYWdlbnRzLnYxLlNlc3Npb25LaW5kSAKIAQESGAoLaXNfYXJjaGl2ZWQYBSABKAhIA4gBAUINCgtfcGFnaW5hdGlvbkILCglfYWdlbnRfaWRCBwoFX2tpbmRCDgoMX2lzX2FyY2hpdmVkInMKFExpc3RTZXNzaW9uc1Jlc3BvbnNlEigKCHNlc3Npb25zGAEgAygLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIp8BChRVcGRhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIZCgxkaXNwbGF5X25hbWUYAyABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgEIAEoCUgBiAEBQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlIkQKFUFyY2hpdmVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSIpChZBcmNoaXZlU2Vzc2lvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgilAMKEUFkZE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdCI9ChJBZGRNZXNzYWdlUmVzcG9uc2USJwoHbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbyK+AQoTTGlzdE1lc3NhZ2VzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESHgoRaW5jbHVkZV9jb21wYWN0ZWQYBCABKAhIAYgBAUINCgtfcGFnaW5hdGlvbkIUChJfaW5jbHVkZV9jb21wYWN0ZWQicwoUTGlzdE1lc3NhZ2VzUmVzcG9uc2USKAoIbWVzc2FnZXMYASADKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UiRwoYR2V0U2Vzc2lvbkNvbnRleHRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIl0KGUdldFNlc3Npb25Db250ZXh0UmVzcG9uc2USKAoIbWVzc2FnZXMYASADKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SFgoOdG90YWxfbWVzc2FnZXMYAiABKAUiTAodR2V0U2Vzc2lvbkNvbnRleHRTdGF0c1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiyAIKHkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZRIWCg50b3RhbF9tZXNzYWdlcxgBIAEoBRIXCg9hY3RpdmVfbWVzc2FnZXMYAiABKAUSGgoSY29tcGFjdGVkX21lc3NhZ2VzGAMgASgFEhUKDXN1bW1hcnlfY291bnQYBCABKAUSFQoNYWN0aXZlX3Rva2VucxgFIAEoBRIUCgx0b2tlbl9idWRnZXQYBiABKAUSHwoXdG9rZW5zX3VudGlsX2NvbXBhY3Rpb24YByABKAUSHQoVY29udGV4dF93aW5kb3dfdG9rZW5zGAggASgFEhkKEWxhc3RfaW5wdXRfdG9rZW5zGAkgASgFEhoKEmxhc3Rfb3V0cHV0X3Rva2VucxgKIAEoBRIeChZsYXN0X2NhY2hlX3JlYWRfdG9rZW5zGAsgASgFIkQKFUNvbXBhY3RTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSLcAQoWQ29tcGFjdFNlc3Npb25SZXNwb25zZRIRCgljb21wYWN0ZWQYASABKAgSOAoFc3RhdHMYAiABKAsyKS5hZ2VudHMudjEuR2V0U2Vzc2lvbkNvbnRleHRTdGF0c1Jlc3BvbnNlEhoKEm1lc3NhZ2VzX2NvbXBhY3RlZBgDIAEoBRIVCg10b2tlbnNfYmVmb3JlGAQgASgFEhQKDHRva2Vuc19hZnRlchgFIAEoBRIUCgx0b2tlbnNfc2F2ZWQYBiABKAUSFgoOc3VtbWFyeV90b2tlbnMYByABKAUiVgoSRWRpdE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhMKC25ld19jb250ZW50GAMgASgJIl4KE0VkaXRNZXNzYWdlUmVzcG9uc2USJwoHbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxIeChZkb3duc3RyZWFtX2ludmFsaWRhdGVkGAIgASgFIkMKFERlbGV0ZU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJIjIKFURlbGV0ZU1lc3NhZ2VSZXNwb25zZRIZChFpbnZhbGlkYXRlZF9jb3VudBgBIAEoBSJCChNSZXRyeU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJIjkKFFJldHJ5TWVzc2FnZVJlc3BvbnNlEg8KB2NvbnRlbnQYASABKAkSEAoIZmlsZV9pZHMYAiADKAkqdQoLU2Vzc2lvbktpbmQSHAoYU0VTU0lPTl9LSU5EX1VOU1BFQ0lGSUVEEAASFwoTU0VTU0lPTl9LSU5EX0RJUkVDVBABEhYKElNFU1NJT05fS0lORF9HUk9VUBACEhcKE1NFU1NJT05fS0lORF9HTE9CQUwQAyqoAQoLTWVzc2FnZVJvbGUSHAoYTUVTU0FHRV9ST0xFX1VOU1BFQ0lGSUVEEAASFQoRTUVTU0FHRV9ST0xFX1VTRVIQARIaChZNRVNTQUdFX1JPTEVfQVNTSVNUQU5UEAISFQoRTUVTU0FHRV9ST0xFX1RPT0wQAxIXChNNRVNTQUdFX1JPTEVfU1lTVEVNEAQSGAoUTUVTU0FHRV9ST0xFX1NVTU1BUlkQBTL7CAoPU2Vzc2lvbnNTZXJ2aWNlElQKDUNyZWF0ZVNlc3Npb24SHy5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlc3BvbnNlIgASSwoKR2V0U2Vzc2lvbhIcLmFnZW50cy52MS5HZXRTZXNzaW9uUmVxdWVzdBodLmFnZW50cy52MS5HZXRTZXNzaW9uUmVzcG9uc2UiABJRCgxMaXN0U2Vzc2lvbnMSHi5hZ2VudHMudjEuTGlzdFNlc3Npb25zUmVxdWVzdBofLmFnZW50cy52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZSIAElQKDVVwZGF0ZVNlc3Npb24SHy5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlc3BvbnNlIgASVwoOQXJjaGl2ZVNlc3Npb24SIC5hZ2VudHMudjEuQXJjaGl2ZVNlc3Npb25SZXF1ZXN0GiEuYWdlbnRzLnYxLkFyY2hpdmVTZXNzaW9uUmVzcG9uc2UiABJLCgpBZGRNZXNzYWdlEhwuYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXF1ZXN0Gh0uYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXNwb25zZSIAElEKDExpc3RNZXNzYWdlcxIeLmFnZW50cy52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1Jlc3BvbnNlIgASYAoRR2V0U2Vzc2lvbkNvbnRleHQSIy5hZ2VudHMudjEuR2V0U2Vzc2lvbkNvbnRleHRSZXF1ZXN0GiQuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0UmVzcG9uc2UiABJvChZHZXRTZXNzaW9uQ29udGV4dFN0YXRzEiguYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXF1ZXN0GikuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZSIAElcKDkNvbXBhY3RTZXNzaW9uEiAuYWdlbnRzLnYxLkNvbXBhY3RTZXNzaW9uUmVxdWVzdBohLmFnZW50cy52MS5Db21wYWN0U2Vzc2lvblJlc3BvbnNlIgASTgoLRWRpdE1lc3NhZ2USHS5hZ2VudHMudjEuRWRpdE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLkVkaXRNZXNzYWdlUmVzcG9uc2UiABJUCg1EZWxldGVNZXNzYWdlEh8uYWdlbnRzLnYxLkRlbGV0ZU1lc3NhZ2VSZXF1ZXN0GiAuYWdlbnRzLnYxLkRlbGV0ZU1lc3NhZ2VSZXNwb25zZSIAElEKDFJldHJ5TWVzc2FnZRIeLmFnZW50cy52MS5SZXRyeU1lc3NhZ2VSZXF1ZXN0Gh8uYWdlbnRzLnYxLlJldHJ5TWVzc2FnZVJlc3BvbnNlIgBCO1o5Z2l0aHViLmNvbS9BdGhlbm5hTWluZC91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Session info returned to clients
@@ -182,6 +182,37 @@ export type MessageInfo = Message<"agents.v1.MessageInfo"> & {
    * @generated from field: repeated string file_ids = 15;
    */
   fileIds: string[];
+
+  /**
+   * True if the message has been soft-invalidated by an edit, delete,
+   * or retry on this or an earlier message. The context loader skips
+   * these; the UI may still show them as struck-through history.
+   *
+   * @generated from field: bool is_invalidated = 16;
+   */
+  isInvalidated: boolean;
+
+  /**
+   * Set when a user message has been edited. Null otherwise.
+   *
+   * @generated from field: optional google.protobuf.Timestamp edited_at = 17;
+   */
+  editedAt?: Timestamp | undefined;
+
+  /**
+   * Pre-edit content. Populated only for messages with edited_at set.
+   *
+   * @generated from field: optional string previous_content = 18;
+   */
+  previousContent?: string | undefined;
+
+  /**
+   * True if this assistant turn was cancelled by the user before
+   * completion. The UI renders it as a "cancelled" placeholder.
+   *
+   * @generated from field: bool was_cancelled = 19;
+   */
+  wasCancelled: boolean;
 };
 
 /**
@@ -809,6 +840,147 @@ export const CompactSessionResponseSchema: GenMessage<CompactSessionResponse> = 
   messageDesc(file_agents_v1_sessions, 21);
 
 /**
+ * @generated from message agents.v1.EditMessageRequest
+ */
+export type EditMessageRequest = Message<"agents.v1.EditMessageRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: string new_content = 3;
+   */
+  newContent: string;
+};
+
+/**
+ * Describes the message agents.v1.EditMessageRequest.
+ * Use `create(EditMessageRequestSchema)` to create a new message.
+ */
+export const EditMessageRequestSchema: GenMessage<EditMessageRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 22);
+
+/**
+ * @generated from message agents.v1.EditMessageResponse
+ */
+export type EditMessageResponse = Message<"agents.v1.EditMessageResponse"> & {
+  /**
+   * @generated from field: agents.v1.MessageInfo message = 1;
+   */
+  message?: MessageInfo | undefined;
+
+  /**
+   * Number of later messages marked invalidated as a result.
+   *
+   * @generated from field: int32 downstream_invalidated = 2;
+   */
+  downstreamInvalidated: number;
+};
+
+/**
+ * Describes the message agents.v1.EditMessageResponse.
+ * Use `create(EditMessageResponseSchema)` to create a new message.
+ */
+export const EditMessageResponseSchema: GenMessage<EditMessageResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 23);
+
+/**
+ * @generated from message agents.v1.DeleteMessageRequest
+ */
+export type DeleteMessageRequest = Message<"agents.v1.DeleteMessageRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+};
+
+/**
+ * Describes the message agents.v1.DeleteMessageRequest.
+ * Use `create(DeleteMessageRequestSchema)` to create a new message.
+ */
+export const DeleteMessageRequestSchema: GenMessage<DeleteMessageRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 24);
+
+/**
+ * @generated from message agents.v1.DeleteMessageResponse
+ */
+export type DeleteMessageResponse = Message<"agents.v1.DeleteMessageResponse"> & {
+  /**
+   * Total rows marked invalidated (the deleted message + every later
+   * message in the session).
+   *
+   * @generated from field: int32 invalidated_count = 1;
+   */
+  invalidatedCount: number;
+};
+
+/**
+ * Describes the message agents.v1.DeleteMessageResponse.
+ * Use `create(DeleteMessageResponseSchema)` to create a new message.
+ */
+export const DeleteMessageResponseSchema: GenMessage<DeleteMessageResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 25);
+
+/**
+ * @generated from message agents.v1.RetryMessageRequest
+ */
+export type RetryMessageRequest = Message<"agents.v1.RetryMessageRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+};
+
+/**
+ * Describes the message agents.v1.RetryMessageRequest.
+ * Use `create(RetryMessageRequestSchema)` to create a new message.
+ */
+export const RetryMessageRequestSchema: GenMessage<RetryMessageRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 26);
+
+/**
+ * @generated from message agents.v1.RetryMessageResponse
+ */
+export type RetryMessageResponse = Message<"agents.v1.RetryMessageResponse"> & {
+  /**
+   * Content of the user message the caller should re-send.
+   *
+   * @generated from field: string content = 1;
+   */
+  content: string;
+
+  /**
+   * File ids that were attached to the original user message.
+   *
+   * @generated from field: repeated string file_ids = 2;
+   */
+  fileIds: string[];
+};
+
+/**
+ * Describes the message agents.v1.RetryMessageResponse.
+ * Use `create(RetryMessageResponseSchema)` to create a new message.
+ */
+export const RetryMessageResponseSchema: GenMessage<RetryMessageResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_sessions, 27);
+
+/**
  * Kind of session
  *
  * @generated from enum agents.v1.SessionKind
@@ -903,89 +1075,11 @@ export const SessionsService: GenService<{
    *
    * @generated from rpc agents.v1.SessionsService.CreateSession
    */
-  fileIds: string[] = [];
-
-  /**
-   * True if the message has been soft-invalidated by an edit, delete,
-   * or retry on this or an earlier message. The context loader skips
-   * these; the UI may still show them as struck-through history.
-   *
-   * @generated from field: bool is_invalidated = 16;
-   */
-  isInvalidated = false;
-
-  /**
-   * Set when a user message has been edited. Null otherwise.
-   *
-   * @generated from field: optional google.protobuf.Timestamp edited_at = 17;
-   */
-  editedAt?: Timestamp;
-
-  /**
-   * Pre-edit content. Populated only for messages with edited_at set.
-   *
-   * @generated from field: optional string previous_content = 18;
-   */
-  previousContent?: string;
-
-  /**
-   * True if this assistant turn was cancelled by the user before
-   * completion. The UI renders it as a "cancelled" placeholder.
-   *
-   * @generated from field: bool was_cancelled = 19;
-   */
-  wasCancelled = false;
-
-  constructor(data?: PartialMessage<MessageInfo>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.MessageInfo";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "role", kind: "enum", T: proto3.getEnumType(MessageRole) },
-    { no: 4, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "input_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 6, name: "output_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 7, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "tool_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 9, name: "tool_call_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 10, name: "tool_args_json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 11, name: "tool_result", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 12, name: "is_thinking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 13, name: "is_compacted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 14, name: "created_at", kind: "message", T: Timestamp },
-    { no: 15, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 16, name: "is_invalidated", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 17, name: "edited_at", kind: "message", T: Timestamp, opt: true },
-    { no: 18, name: "previous_content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 19, name: "was_cancelled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MessageInfo {
-    return new MessageInfo().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MessageInfo {
-    return new MessageInfo().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MessageInfo {
-    return new MessageInfo().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: MessageInfo | PlainMessage<MessageInfo> | undefined, b: MessageInfo | PlainMessage<MessageInfo> | undefined): boolean {
-    return proto3.util.equals(MessageInfo, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.CreateSessionRequest
- */
-export class CreateSessionRequest extends Message<CreateSessionRequest> {
+  createSession: {
+    methodKind: "unary";
+    input: typeof CreateSessionRequestSchema;
+    output: typeof CreateSessionResponseSchema;
+  },
   /**
    * Get a session by ID
    *
@@ -1076,273 +1170,45 @@ export class CreateSessionRequest extends Message<CreateSessionRequest> {
     input: typeof CompactSessionRequestSchema;
     output: typeof CompactSessionResponseSchema;
   },
+  /**
+   * Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
+   * and `edited_at`, then soft-invalidates every later message in the
+   * session so the client can re-run the conversation from the edit
+   * point. Refused if a run is currently in flight on this session.
+   *
+   * @generated from rpc agents.v1.SessionsService.EditMessage
+   */
+  editMessage: {
+    methodKind: "unary";
+    input: typeof EditMessageRequestSchema;
+    output: typeof EditMessageResponseSchema;
+  },
+  /**
+   * Soft-delete a user message. The message itself and every later
+   * message in the session are marked `is_invalidated=true` so the
+   * context loader skips them. Refused if a run is currently in flight.
+   *
+   * @generated from rpc agents.v1.SessionsService.DeleteMessage
+   */
+  deleteMessage: {
+    methodKind: "unary";
+    input: typeof DeleteMessageRequestSchema;
+    output: typeof DeleteMessageResponseSchema;
+  },
+  /**
+   * Retry from a message. For a user message, returns its content +
+   * file_ids and invalidates every later message so the caller can
+   * re-send. For an assistant message, walks back to the most recent
+   * preceding user message and returns that. Refused if a run is
+   * currently in flight on this session.
+   *
+   * @generated from rpc agents.v1.SessionsService.RetryMessage
+   */
+  retryMessage: {
+    methodKind: "unary";
+    input: typeof RetryMessageRequestSchema;
+    output: typeof RetryMessageResponseSchema;
+  },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_sessions, 0);
-
-/**
- * @generated from message agents.v1.EditMessageRequest
- */
-export class EditMessageRequest extends Message<EditMessageRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string message_id = 2;
-   */
-  messageId = "";
-
-  /**
-   * @generated from field: string new_content = 3;
-   */
-  newContent = "";
-
-  constructor(data?: PartialMessage<EditMessageRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.EditMessageRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "new_content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EditMessageRequest {
-    return new EditMessageRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EditMessageRequest {
-    return new EditMessageRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EditMessageRequest {
-    return new EditMessageRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EditMessageRequest | PlainMessage<EditMessageRequest> | undefined, b: EditMessageRequest | PlainMessage<EditMessageRequest> | undefined): boolean {
-    return proto3.util.equals(EditMessageRequest, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.EditMessageResponse
- */
-export class EditMessageResponse extends Message<EditMessageResponse> {
-  /**
-   * @generated from field: agents.v1.MessageInfo message = 1;
-   */
-  message?: MessageInfo;
-
-  /**
-   * Number of later messages marked invalidated as a result.
-   *
-   * @generated from field: int32 downstream_invalidated = 2;
-   */
-  downstreamInvalidated = 0;
-
-  constructor(data?: PartialMessage<EditMessageResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.EditMessageResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "message", kind: "message", T: MessageInfo },
-    { no: 2, name: "downstream_invalidated", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EditMessageResponse {
-    return new EditMessageResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EditMessageResponse {
-    return new EditMessageResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EditMessageResponse {
-    return new EditMessageResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EditMessageResponse | PlainMessage<EditMessageResponse> | undefined, b: EditMessageResponse | PlainMessage<EditMessageResponse> | undefined): boolean {
-    return proto3.util.equals(EditMessageResponse, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.DeleteMessageRequest
- */
-export class DeleteMessageRequest extends Message<DeleteMessageRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string message_id = 2;
-   */
-  messageId = "";
-
-  constructor(data?: PartialMessage<DeleteMessageRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.DeleteMessageRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteMessageRequest {
-    return new DeleteMessageRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteMessageRequest {
-    return new DeleteMessageRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteMessageRequest {
-    return new DeleteMessageRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DeleteMessageRequest | PlainMessage<DeleteMessageRequest> | undefined, b: DeleteMessageRequest | PlainMessage<DeleteMessageRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteMessageRequest, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.DeleteMessageResponse
- */
-export class DeleteMessageResponse extends Message<DeleteMessageResponse> {
-  /**
-   * Total rows marked invalidated (the deleted message + every later
-   * message in the session).
-   *
-   * @generated from field: int32 invalidated_count = 1;
-   */
-  invalidatedCount = 0;
-
-  constructor(data?: PartialMessage<DeleteMessageResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.DeleteMessageResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "invalidated_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteMessageResponse {
-    return new DeleteMessageResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteMessageResponse {
-    return new DeleteMessageResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteMessageResponse {
-    return new DeleteMessageResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DeleteMessageResponse | PlainMessage<DeleteMessageResponse> | undefined, b: DeleteMessageResponse | PlainMessage<DeleteMessageResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteMessageResponse, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.RetryMessageRequest
- */
-export class RetryMessageRequest extends Message<RetryMessageRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string message_id = 2;
-   */
-  messageId = "";
-
-  constructor(data?: PartialMessage<RetryMessageRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.RetryMessageRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetryMessageRequest {
-    return new RetryMessageRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetryMessageRequest {
-    return new RetryMessageRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetryMessageRequest {
-    return new RetryMessageRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RetryMessageRequest | PlainMessage<RetryMessageRequest> | undefined, b: RetryMessageRequest | PlainMessage<RetryMessageRequest> | undefined): boolean {
-    return proto3.util.equals(RetryMessageRequest, a, b);
-  }
-}
-
-/**
- * @generated from message agents.v1.RetryMessageResponse
- */
-export class RetryMessageResponse extends Message<RetryMessageResponse> {
-  /**
-   * Content of the user message the caller should re-send.
-   *
-   * @generated from field: string content = 1;
-   */
-  content = "";
-
-  /**
-   * File ids that were attached to the original user message.
-   *
-   * @generated from field: repeated string file_ids = 2;
-   */
-  fileIds: string[] = [];
-
-  constructor(data?: PartialMessage<RetryMessageResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "agents.v1.RetryMessageResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetryMessageResponse {
-    return new RetryMessageResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetryMessageResponse {
-    return new RetryMessageResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetryMessageResponse {
-    return new RetryMessageResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RetryMessageResponse | PlainMessage<RetryMessageResponse> | undefined, b: RetryMessageResponse | PlainMessage<RetryMessageResponse> | undefined): boolean {
-    return proto3.util.equals(RetryMessageResponse, a, b);
-  }
-}
 

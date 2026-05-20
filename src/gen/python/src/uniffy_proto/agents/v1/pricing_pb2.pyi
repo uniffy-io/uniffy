@@ -93,7 +93,7 @@ class UpsertModelPricingRequest(_message.Message):
     currency: str
     def __init__(self, provider: _Optional[str] = ..., model: _Optional[str] = ..., kind: _Optional[str] = ..., input_per_1m: _Optional[str] = ..., output_per_1m: _Optional[str] = ..., cached_input_per_1m: _Optional[str] = ..., thinking_per_1m: _Optional[str] = ..., image_prices: _Optional[_Iterable[_Union[ImagePrice, _Mapping]]] = ..., effective_from: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., effective_to: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., currency: _Optional[str] = ...) -> None: ...
 
-class ModelPricingResponse(_message.Message):
+class UpsertModelPricingResponse(_message.Message):
     __slots__ = ("row",)
     ROW_FIELD_NUMBER: _ClassVar[int]
     row: ModelPricing

@@ -7,7 +7,6 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.budgets_pb2 import (
-    CurrencyRateResponse,
     DeleteCurrencyRateRequest,
     DeleteCurrencyRateResponse,
     DeleteOrgBudgetRequest,
@@ -26,13 +25,14 @@ from uniffy_proto.agents.v1.budgets_pb2 import (
     ListCurrencyRatesResponse,
     ListUserQuotasRequest,
     ListUserQuotasResponse,
-    OrgBudgetResponse,
     SetDisplayCurrencyRequest,
     SetDisplayCurrencyResponse,
     UpdateOrgBudgetRequest,
+    UpdateOrgBudgetResponse,
     UpdateUserQuotaRequest,
+    UpdateUserQuotaResponse,
     UpsertCurrencyRateRequest,
-    UserQuotaResponse,
+    UpsertCurrencyRateResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
@@ -87,7 +87,7 @@ class BudgetsHandlers:
         self,
         request: UpdateOrgBudgetRequest,
         ctx: RequestContext,
-    ) -> OrgBudgetResponse:
+    ) -> UpdateOrgBudgetResponse:
         """Create or update the org budget row (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
@@ -120,7 +120,7 @@ class BudgetsHandlers:
                     reset_day=int(request.reset_day) or 1,
                     currency=request.currency or None,
                 )
-                return OrgBudgetResponse(budget=org_budget_to_proto(row))
+                return UpdateOrgBudgetResponse(budget=org_budget_to_proto(row))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -202,7 +202,7 @@ class BudgetsHandlers:
         self,
         request: UpdateUserQuotaRequest,
         ctx: RequestContext,
-    ) -> UserQuotaResponse:
+    ) -> UpdateUserQuotaResponse:
         """Create or update a per-user quota row (org admin only)."""
         actor_id = get_user_id_from_context(ctx)
 
@@ -245,7 +245,7 @@ class BudgetsHandlers:
                     hard_limit=bool(request.hard_limit),
                     currency=request.currency or None,
                 )
-                return UserQuotaResponse(quota=user_quota_to_proto(row))
+                return UpdateUserQuotaResponse(quota=user_quota_to_proto(row))
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -418,7 +418,7 @@ class BudgetsHandlers:
         self,
         request: UpsertCurrencyRateRequest,
         ctx: RequestContext,
-    ) -> CurrencyRateResponse:
+    ) -> UpsertCurrencyRateResponse:
         """Create or update a single exchange rate row."""
         user_id = get_user_id_from_context(ctx)
         try:
@@ -436,7 +436,7 @@ class BudgetsHandlers:
                     to_currency=request.to_currency,
                     rate=request.rate,
                 )
-                return CurrencyRateResponse(rate=currency_rate_to_proto(row))
+                return UpsertCurrencyRateResponse(rate=currency_rate_to_proto(row))
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:

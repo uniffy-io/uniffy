@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -126,7 +126,7 @@ class UpdateOrgBudgetRequest(_message.Message):
     currency: str
     def __init__(self, organization_id: _Optional[str] = ..., monthly_limit: _Optional[str] = ..., image_monthly_limit: _Optional[int] = ..., hard_limit: _Optional[bool] = ..., alert_thresholds: _Optional[_Iterable[int]] = ..., reset_day: _Optional[int] = ..., currency: _Optional[str] = ...) -> None: ...
 
-class OrgBudgetResponse(_message.Message):
+class UpdateOrgBudgetResponse(_message.Message):
     __slots__ = ("budget",)
     BUDGET_FIELD_NUMBER: _ClassVar[int]
     budget: OrgBudget
@@ -178,7 +178,7 @@ class UpdateUserQuotaRequest(_message.Message):
     currency: str
     def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., daily_limit: _Optional[str] = ..., monthly_limit: _Optional[str] = ..., daily_image_limit: _Optional[int] = ..., monthly_image_limit: _Optional[int] = ..., hard_limit: _Optional[bool] = ..., currency: _Optional[str] = ...) -> None: ...
 
-class UserQuotaResponse(_message.Message):
+class UpdateUserQuotaResponse(_message.Message):
     __slots__ = ("quota",)
     QUOTA_FIELD_NUMBER: _ClassVar[int]
     quota: UserQuota
@@ -252,7 +252,7 @@ class UpsertCurrencyRateRequest(_message.Message):
     rate: str
     def __init__(self, organization_id: _Optional[str] = ..., from_currency: _Optional[str] = ..., to_currency: _Optional[str] = ..., rate: _Optional[str] = ...) -> None: ...
 
-class CurrencyRateResponse(_message.Message):
+class UpsertCurrencyRateResponse(_message.Message):
     __slots__ = ("rate",)
     RATE_FIELD_NUMBER: _ClassVar[int]
     rate: CurrencyRate

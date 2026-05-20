@@ -21,7 +21,7 @@ service BudgetsService {
   rpc GetOrgBudget(GetOrgBudgetRequest) returns (GetOrgBudgetResponse) {}
 
   // Create or update the organization's budget row. Org admin only.
-  rpc UpdateOrgBudget(UpdateOrgBudgetRequest) returns (OrgBudgetResponse) {}
+  rpc UpdateOrgBudget(UpdateOrgBudgetRequest) returns (UpdateOrgBudgetResponse) {}
 
   // Delete the organization's budget row. Caps revert to defaults.
   rpc DeleteOrgBudget(DeleteOrgBudgetRequest) returns (DeleteOrgBudgetResponse) {}
@@ -31,7 +31,7 @@ service BudgetsService {
   rpc GetUserQuota(GetUserQuotaRequest) returns (GetUserQuotaResponse) {}
 
   // Create or update a per-user quota row. Org admin only.
-  rpc UpdateUserQuota(UpdateUserQuotaRequest) returns (UserQuotaResponse) {}
+  rpc UpdateUserQuota(UpdateUserQuotaRequest) returns (UpdateUserQuotaResponse) {}
 
   // Delete a per-user quota row. Org admin only.
   rpc DeleteUserQuota(DeleteUserQuotaRequest) returns (DeleteUserQuotaResponse) {}
@@ -47,7 +47,7 @@ service BudgetsService {
   rpc ListCurrencyRates(ListCurrencyRatesRequest) returns (ListCurrencyRatesResponse) {}
 
   // Create or update a single (from -> to) rate. Org admin only.
-  rpc UpsertCurrencyRate(UpsertCurrencyRateRequest) returns (CurrencyRateResponse) {}
+  rpc UpsertCurrencyRate(UpsertCurrencyRateRequest) returns (UpsertCurrencyRateResponse) {}
 
   // Delete a single (from -> to) rate. Org admin only.
   rpc DeleteCurrencyRate(DeleteCurrencyRateRequest) returns (DeleteCurrencyRateResponse) {}
@@ -147,7 +147,7 @@ message UpdateOrgBudgetRequest {
   string currency = 7;
 }
 
-message OrgBudgetResponse {
+message UpdateOrgBudgetResponse {
   OrgBudget budget = 1;
 }
 
@@ -180,7 +180,7 @@ message UpdateUserQuotaRequest {
   string currency = 8;
 }
 
-message UserQuotaResponse {
+message UpdateUserQuotaResponse {
   UserQuota quota = 1;
 }
 
@@ -230,7 +230,7 @@ message UpsertCurrencyRateRequest {
   string rate = 4;
 }
 
-message CurrencyRateResponse {
+message UpsertCurrencyRateResponse {
   CurrencyRate rate = 1;
 }
 

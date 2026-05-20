@@ -1,7 +1,7 @@
 import datetime
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -50,7 +50,7 @@ class UpsertRateLimitRequest(_message.Message):
     window_seconds: int
     def __init__(self, organization_id: _Optional[str] = ..., kind: _Optional[_Union[_common_pb2.RateLimitKind, str]] = ..., limit: _Optional[int] = ..., window_seconds: _Optional[int] = ...) -> None: ...
 
-class RateLimitResponse(_message.Message):
+class UpsertRateLimitResponse(_message.Message):
     __slots__ = ("limit",)
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     limit: RateLimit

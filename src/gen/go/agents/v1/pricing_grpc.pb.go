@@ -38,7 +38,7 @@ type PricingServiceClient interface {
 	// the same (provider, model, effective_from) tuple exists, it is
 	// overwritten; otherwise a new row is inserted. Callers rolling over
 	// prices should insert a new row and set the old row's effective_to.
-	UpsertModelPricing(ctx context.Context, in *UpsertModelPricingRequest, opts ...grpc.CallOption) (*ModelPricingResponse, error)
+	UpsertModelPricing(ctx context.Context, in *UpsertModelPricingRequest, opts ...grpc.CallOption) (*UpsertModelPricingResponse, error)
 	// Delete a pricing row by id. Historical run logs that referenced this
 	// row's pricing retain their cost_usd values.
 	DeleteModelPricing(ctx context.Context, in *DeleteModelPricingRequest, opts ...grpc.CallOption) (*DeleteModelPricingResponse, error)
@@ -62,9 +62,9 @@ func (c *pricingServiceClient) ListModelPricing(ctx context.Context, in *ListMod
 	return out, nil
 }
 
-func (c *pricingServiceClient) UpsertModelPricing(ctx context.Context, in *UpsertModelPricingRequest, opts ...grpc.CallOption) (*ModelPricingResponse, error) {
+func (c *pricingServiceClient) UpsertModelPricing(ctx context.Context, in *UpsertModelPricingRequest, opts ...grpc.CallOption) (*UpsertModelPricingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ModelPricingResponse)
+	out := new(UpsertModelPricingResponse)
 	err := c.cc.Invoke(ctx, PricingService_UpsertModelPricing_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ type PricingServiceServer interface {
 	// the same (provider, model, effective_from) tuple exists, it is
 	// overwritten; otherwise a new row is inserted. Callers rolling over
 	// prices should insert a new row and set the old row's effective_to.
-	UpsertModelPricing(context.Context, *UpsertModelPricingRequest) (*ModelPricingResponse, error)
+	UpsertModelPricing(context.Context, *UpsertModelPricingRequest) (*UpsertModelPricingResponse, error)
 	// Delete a pricing row by id. Historical run logs that referenced this
 	// row's pricing retain their cost_usd values.
 	DeleteModelPricing(context.Context, *DeleteModelPricingRequest) (*DeleteModelPricingResponse, error)
@@ -113,7 +113,7 @@ type UnimplementedPricingServiceServer struct{}
 func (UnimplementedPricingServiceServer) ListModelPricing(context.Context, *ListModelPricingRequest) (*ListModelPricingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListModelPricing not implemented")
 }
-func (UnimplementedPricingServiceServer) UpsertModelPricing(context.Context, *UpsertModelPricingRequest) (*ModelPricingResponse, error) {
+func (UnimplementedPricingServiceServer) UpsertModelPricing(context.Context, *UpsertModelPricingRequest) (*UpsertModelPricingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpsertModelPricing not implemented")
 }
 func (UnimplementedPricingServiceServer) DeleteModelPricing(context.Context, *DeleteModelPricingRequest) (*DeleteModelPricingResponse, error) {

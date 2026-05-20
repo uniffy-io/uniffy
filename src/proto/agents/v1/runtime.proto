@@ -16,7 +16,7 @@ service RuntimeService {
   // message must be a non-invalidated user-role row whose downstream has
   // already been invalidated (via EditMessage). Streams events in the
   // same shape as StreamSendMessage; no new user message is created.
-  rpc RerunFromMessage(RerunFromMessageRequest) returns (stream StreamSendMessageResponse) {}
+  rpc RerunFromMessage(RerunFromMessageRequest) returns (stream RerunFromMessageResponse) {}
   // Resume an in-flight run by run_id. Replays the full event stream from
   // the start, then tails live until Done/Error or the 120s wall budget.
   // Used by the frontend after a tab reload to reconnect without
@@ -242,9 +242,10 @@ message RespondToConfirmationResponse {
   bool accepted = 1;
 }
 
-// --- Streaming event types ---
-
-message StreamSendMessageResponse {
+// AgentStreamEvent carries one event in the agent-runtime stream. The
+// run_id is stamped by the handler from the run state hash so a tab
+// reload mid-stream can call SubscribeToRun(run_id) to resume.
+message AgentStreamEvent {
   oneof event {
     StreamTokenEvent token = 1;
     StreamToolCallEvent tool_call = 2;
@@ -255,31 +256,19 @@ message StreamSendMessageResponse {
     StreamConfirmationRequiredEvent confirmation_required = 7;
     StreamFailoverEvent failover = 9;
   }
-  // The egress run id this event belongs to. Populated on every event
-  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
-  // resume from the start of the stream. Set by the handler from the
-  // run state hash; the worker does not embed it inside the oneof
-  // payload itself.
   string run_id = 8;
 }
 
+message StreamSendMessageResponse {
+  AgentStreamEvent event = 1;
+}
+
+message RerunFromMessageResponse {
+  AgentStreamEvent event = 1;
+}
+
 message SubscribeToRunResponse {
-  oneof event {
-    StreamTokenEvent token = 1;
-    StreamToolCallEvent tool_call = 2;
-    StreamToolResultEvent tool_result = 3;
-    StreamMessageStoredEvent message_stored = 4;
-    StreamDoneEvent done = 5;
-    StreamErrorEvent error = 6;
-    StreamConfirmationRequiredEvent confirmation_required = 7;
-    StreamFailoverEvent failover = 9;
-  }
-  // The egress run id this event belongs to. Populated on every event
-  // so a tab reload mid-stream can call SubscribeToRun(run_id) to
-  // resume from the start of the stream. Set by the handler from the
-  // run state hash; the worker does not embed it inside the oneof
-  // payload itself.
-  string run_id = 8;
+  AgentStreamEvent event = 1;
 }
 
 message StreamTokenEvent {

@@ -17,7 +17,7 @@ service RateLimitsService {
   rpc GetRateLimits(GetRateLimitsRequest) returns (GetRateLimitsResponse) {}
 
   // Create or update a single override.
-  rpc UpsertRateLimit(UpsertRateLimitRequest) returns (RateLimitResponse) {}
+  rpc UpsertRateLimit(UpsertRateLimitRequest) returns (UpsertRateLimitResponse) {}
 
   // Delete an override so the bucket falls back to the default.
   rpc DeleteRateLimit(DeleteRateLimitRequest) returns (DeleteRateLimitResponse) {}
@@ -51,7 +51,7 @@ message UpsertRateLimitRequest {
   int32 window_seconds = 4;
 }
 
-message RateLimitResponse {
+message UpsertRateLimitResponse {
   RateLimit limit = 1;
 }
 

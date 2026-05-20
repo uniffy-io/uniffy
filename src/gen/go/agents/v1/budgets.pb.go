@@ -648,27 +648,27 @@ func (x *UpdateOrgBudgetRequest) GetCurrency() string {
 	return ""
 }
 
-type OrgBudgetResponse struct {
+type UpdateOrgBudgetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Budget        *OrgBudget             `protobuf:"bytes,1,opt,name=budget,proto3" json:"budget,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *OrgBudgetResponse) Reset() {
-	*x = OrgBudgetResponse{}
+func (x *UpdateOrgBudgetResponse) Reset() {
+	*x = UpdateOrgBudgetResponse{}
 	mi := &file_agents_v1_budgets_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *OrgBudgetResponse) String() string {
+func (x *UpdateOrgBudgetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*OrgBudgetResponse) ProtoMessage() {}
+func (*UpdateOrgBudgetResponse) ProtoMessage() {}
 
-func (x *OrgBudgetResponse) ProtoReflect() protoreflect.Message {
+func (x *UpdateOrgBudgetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_budgets_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -680,12 +680,12 @@ func (x *OrgBudgetResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use OrgBudgetResponse.ProtoReflect.Descriptor instead.
-func (*OrgBudgetResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateOrgBudgetResponse.ProtoReflect.Descriptor instead.
+func (*UpdateOrgBudgetResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *OrgBudgetResponse) GetBudget() *OrgBudget {
+func (x *UpdateOrgBudgetResponse) GetBudget() *OrgBudget {
 	if x != nil {
 		return x.Budget
 	}
@@ -977,27 +977,27 @@ func (x *UpdateUserQuotaRequest) GetCurrency() string {
 	return ""
 }
 
-type UserQuotaResponse struct {
+type UpdateUserQuotaResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Quota         *UserQuota             `protobuf:"bytes,1,opt,name=quota,proto3" json:"quota,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UserQuotaResponse) Reset() {
-	*x = UserQuotaResponse{}
+func (x *UpdateUserQuotaResponse) Reset() {
+	*x = UpdateUserQuotaResponse{}
 	mi := &file_agents_v1_budgets_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UserQuotaResponse) String() string {
+func (x *UpdateUserQuotaResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UserQuotaResponse) ProtoMessage() {}
+func (*UpdateUserQuotaResponse) ProtoMessage() {}
 
-func (x *UserQuotaResponse) ProtoReflect() protoreflect.Message {
+func (x *UpdateUserQuotaResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_budgets_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1009,12 +1009,12 @@ func (x *UserQuotaResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UserQuotaResponse.ProtoReflect.Descriptor instead.
-func (*UserQuotaResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateUserQuotaResponse.ProtoReflect.Descriptor instead.
+func (*UpdateUserQuotaResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *UserQuotaResponse) GetQuota() *UserQuota {
+func (x *UpdateUserQuotaResponse) GetQuota() *UserQuota {
 	if x != nil {
 		return x.Quota
 	}
@@ -1476,27 +1476,27 @@ func (x *UpsertCurrencyRateRequest) GetRate() string {
 	return ""
 }
 
-type CurrencyRateResponse struct {
+type UpsertCurrencyRateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rate          *CurrencyRate          `protobuf:"bytes,1,opt,name=rate,proto3" json:"rate,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CurrencyRateResponse) Reset() {
-	*x = CurrencyRateResponse{}
+func (x *UpsertCurrencyRateResponse) Reset() {
+	*x = UpsertCurrencyRateResponse{}
 	mi := &file_agents_v1_budgets_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CurrencyRateResponse) String() string {
+func (x *UpsertCurrencyRateResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CurrencyRateResponse) ProtoMessage() {}
+func (*UpsertCurrencyRateResponse) ProtoMessage() {}
 
-func (x *CurrencyRateResponse) ProtoReflect() protoreflect.Message {
+func (x *UpsertCurrencyRateResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_budgets_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1508,12 +1508,12 @@ func (x *CurrencyRateResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CurrencyRateResponse.ProtoReflect.Descriptor instead.
-func (*CurrencyRateResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpsertCurrencyRateResponse.ProtoReflect.Descriptor instead.
+func (*UpsertCurrencyRateResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_budgets_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *CurrencyRateResponse) GetRate() *CurrencyRate {
+func (x *UpsertCurrencyRateResponse) GetRate() *CurrencyRate {
 	if x != nil {
 		return x.Rate
 	}
@@ -1813,7 +1813,7 @@ var File_agents_v1_budgets_proto protoreflect.FileDescriptor
 
 const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/budgets.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xc6\x03\n" +
+	"\x17agents/v1/budgets.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x03\n" +
 	"\tOrgBudget\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12(\n" +
@@ -1891,8 +1891,8 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\treset_day\x18\x06 \x01(\x05R\bresetDay\x12\x1a\n" +
 	"\bcurrency\x18\a \x01(\tR\bcurrencyB\x10\n" +
 	"\x0e_monthly_limitB\x16\n" +
-	"\x14_image_monthly_limit\"A\n" +
-	"\x11OrgBudgetResponse\x12,\n" +
+	"\x14_image_monthly_limit\"G\n" +
+	"\x17UpdateOrgBudgetResponse\x12,\n" +
 	"\x06budget\x18\x01 \x01(\v2\x14.agents.v1.OrgBudgetR\x06budget\"A\n" +
 	"\x16DeleteOrgBudgetRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"3\n" +
@@ -1918,8 +1918,8 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\f_daily_limitB\x10\n" +
 	"\x0e_monthly_limitB\x14\n" +
 	"\x12_daily_image_limitB\x16\n" +
-	"\x14_monthly_image_limit\"?\n" +
-	"\x11UserQuotaResponse\x12*\n" +
+	"\x14_monthly_image_limit\"E\n" +
+	"\x17UpdateUserQuotaResponse\x12*\n" +
 	"\x05quota\x18\x01 \x01(\v2\x14.agents.v1.UserQuotaR\x05quota\"Z\n" +
 	"\x16DeleteUserQuotaRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
@@ -1953,8 +1953,8 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\rfrom_currency\x18\x02 \x01(\tR\ffromCurrency\x12\x1f\n" +
 	"\vto_currency\x18\x03 \x01(\tR\n" +
 	"toCurrency\x12\x12\n" +
-	"\x04rate\x18\x04 \x01(\tR\x04rate\"C\n" +
-	"\x14CurrencyRateResponse\x12+\n" +
+	"\x04rate\x18\x04 \x01(\tR\x04rate\"I\n" +
+	"\x1aUpsertCurrencyRateResponse\x12+\n" +
 	"\x04rate\x18\x01 \x01(\v2\x17.agents.v1.CurrencyRateR\x04rate\"\x8a\x01\n" +
 	"\x19DeleteCurrencyRateRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
@@ -1971,18 +1971,18 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\x19GetDisplayCurrencyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"G\n" +
 	"\x1aGetDisplayCurrencyResponse\x12)\n" +
-	"\x10display_currency\x18\x01 \x01(\tR\x0fdisplayCurrency2\xbf\t\n" +
+	"\x10display_currency\x18\x01 \x01(\tR\x0fdisplayCurrency2\xd1\t\n" +
 	"\x0eBudgetsService\x12Q\n" +
-	"\fGetOrgBudget\x12\x1e.agents.v1.GetOrgBudgetRequest\x1a\x1f.agents.v1.GetOrgBudgetResponse\"\x00\x12T\n" +
-	"\x0fUpdateOrgBudget\x12!.agents.v1.UpdateOrgBudgetRequest\x1a\x1c.agents.v1.OrgBudgetResponse\"\x00\x12Z\n" +
+	"\fGetOrgBudget\x12\x1e.agents.v1.GetOrgBudgetRequest\x1a\x1f.agents.v1.GetOrgBudgetResponse\"\x00\x12Z\n" +
+	"\x0fUpdateOrgBudget\x12!.agents.v1.UpdateOrgBudgetRequest\x1a\".agents.v1.UpdateOrgBudgetResponse\"\x00\x12Z\n" +
 	"\x0fDeleteOrgBudget\x12!.agents.v1.DeleteOrgBudgetRequest\x1a\".agents.v1.DeleteOrgBudgetResponse\"\x00\x12Q\n" +
-	"\fGetUserQuota\x12\x1e.agents.v1.GetUserQuotaRequest\x1a\x1f.agents.v1.GetUserQuotaResponse\"\x00\x12T\n" +
-	"\x0fUpdateUserQuota\x12!.agents.v1.UpdateUserQuotaRequest\x1a\x1c.agents.v1.UserQuotaResponse\"\x00\x12Z\n" +
+	"\fGetUserQuota\x12\x1e.agents.v1.GetUserQuotaRequest\x1a\x1f.agents.v1.GetUserQuotaResponse\"\x00\x12Z\n" +
+	"\x0fUpdateUserQuota\x12!.agents.v1.UpdateUserQuotaRequest\x1a\".agents.v1.UpdateUserQuotaResponse\"\x00\x12Z\n" +
 	"\x0fDeleteUserQuota\x12!.agents.v1.DeleteUserQuotaRequest\x1a\".agents.v1.DeleteUserQuotaResponse\"\x00\x12W\n" +
 	"\x0eListUserQuotas\x12 .agents.v1.ListUserQuotasRequest\x1a!.agents.v1.ListUserQuotasResponse\"\x00\x12Z\n" +
 	"\x0fGetCurrentSpend\x12!.agents.v1.GetCurrentSpendRequest\x1a\".agents.v1.GetCurrentSpendResponse\"\x00\x12`\n" +
-	"\x11ListCurrencyRates\x12#.agents.v1.ListCurrencyRatesRequest\x1a$.agents.v1.ListCurrencyRatesResponse\"\x00\x12]\n" +
-	"\x12UpsertCurrencyRate\x12$.agents.v1.UpsertCurrencyRateRequest\x1a\x1f.agents.v1.CurrencyRateResponse\"\x00\x12c\n" +
+	"\x11ListCurrencyRates\x12#.agents.v1.ListCurrencyRatesRequest\x1a$.agents.v1.ListCurrencyRatesResponse\"\x00\x12c\n" +
+	"\x12UpsertCurrencyRate\x12$.agents.v1.UpsertCurrencyRateRequest\x1a%.agents.v1.UpsertCurrencyRateResponse\"\x00\x12c\n" +
 	"\x12DeleteCurrencyRate\x12$.agents.v1.DeleteCurrencyRateRequest\x1a%.agents.v1.DeleteCurrencyRateResponse\"\x00\x12c\n" +
 	"\x12SetDisplayCurrency\x12$.agents.v1.SetDisplayCurrencyRequest\x1a%.agents.v1.SetDisplayCurrencyResponse\"\x00\x12c\n" +
 	"\x12GetDisplayCurrency\x12$.agents.v1.GetDisplayCurrencyRequest\x1a%.agents.v1.GetDisplayCurrencyResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
@@ -2008,13 +2008,13 @@ var file_agents_v1_budgets_proto_goTypes = []any{
 	(*GetOrgBudgetRequest)(nil),        // 4: agents.v1.GetOrgBudgetRequest
 	(*GetOrgBudgetResponse)(nil),       // 5: agents.v1.GetOrgBudgetResponse
 	(*UpdateOrgBudgetRequest)(nil),     // 6: agents.v1.UpdateOrgBudgetRequest
-	(*OrgBudgetResponse)(nil),          // 7: agents.v1.OrgBudgetResponse
+	(*UpdateOrgBudgetResponse)(nil),    // 7: agents.v1.UpdateOrgBudgetResponse
 	(*DeleteOrgBudgetRequest)(nil),     // 8: agents.v1.DeleteOrgBudgetRequest
 	(*DeleteOrgBudgetResponse)(nil),    // 9: agents.v1.DeleteOrgBudgetResponse
 	(*GetUserQuotaRequest)(nil),        // 10: agents.v1.GetUserQuotaRequest
 	(*GetUserQuotaResponse)(nil),       // 11: agents.v1.GetUserQuotaResponse
 	(*UpdateUserQuotaRequest)(nil),     // 12: agents.v1.UpdateUserQuotaRequest
-	(*UserQuotaResponse)(nil),          // 13: agents.v1.UserQuotaResponse
+	(*UpdateUserQuotaResponse)(nil),    // 13: agents.v1.UpdateUserQuotaResponse
 	(*DeleteUserQuotaRequest)(nil),     // 14: agents.v1.DeleteUserQuotaRequest
 	(*DeleteUserQuotaResponse)(nil),    // 15: agents.v1.DeleteUserQuotaResponse
 	(*ListUserQuotasRequest)(nil),      // 16: agents.v1.ListUserQuotasRequest
@@ -2024,7 +2024,7 @@ var file_agents_v1_budgets_proto_goTypes = []any{
 	(*ListCurrencyRatesRequest)(nil),   // 20: agents.v1.ListCurrencyRatesRequest
 	(*ListCurrencyRatesResponse)(nil),  // 21: agents.v1.ListCurrencyRatesResponse
 	(*UpsertCurrencyRateRequest)(nil),  // 22: agents.v1.UpsertCurrencyRateRequest
-	(*CurrencyRateResponse)(nil),       // 23: agents.v1.CurrencyRateResponse
+	(*UpsertCurrencyRateResponse)(nil), // 23: agents.v1.UpsertCurrencyRateResponse
 	(*DeleteCurrencyRateRequest)(nil),  // 24: agents.v1.DeleteCurrencyRateRequest
 	(*DeleteCurrencyRateResponse)(nil), // 25: agents.v1.DeleteCurrencyRateResponse
 	(*SetDisplayCurrencyRequest)(nil),  // 26: agents.v1.SetDisplayCurrencyRequest
@@ -2044,15 +2044,15 @@ var file_agents_v1_budgets_proto_depIdxs = []int32{
 	30, // 5: agents.v1.SpendSummary.period_end:type_name -> google.protobuf.Timestamp
 	30, // 6: agents.v1.CurrencyRate.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 7: agents.v1.GetOrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
-	0,  // 8: agents.v1.OrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
+	0,  // 8: agents.v1.UpdateOrgBudgetResponse.budget:type_name -> agents.v1.OrgBudget
 	1,  // 9: agents.v1.GetUserQuotaResponse.quota:type_name -> agents.v1.UserQuota
-	1,  // 10: agents.v1.UserQuotaResponse.quota:type_name -> agents.v1.UserQuota
+	1,  // 10: agents.v1.UpdateUserQuotaResponse.quota:type_name -> agents.v1.UserQuota
 	31, // 11: agents.v1.ListUserQuotasRequest.pagination:type_name -> common.v1.PaginationRequest
 	1,  // 12: agents.v1.ListUserQuotasResponse.quotas:type_name -> agents.v1.UserQuota
 	32, // 13: agents.v1.ListUserQuotasResponse.pagination:type_name -> common.v1.PaginationResponse
 	2,  // 14: agents.v1.GetCurrentSpendResponse.summary:type_name -> agents.v1.SpendSummary
 	3,  // 15: agents.v1.ListCurrencyRatesResponse.rates:type_name -> agents.v1.CurrencyRate
-	3,  // 16: agents.v1.CurrencyRateResponse.rate:type_name -> agents.v1.CurrencyRate
+	3,  // 16: agents.v1.UpsertCurrencyRateResponse.rate:type_name -> agents.v1.CurrencyRate
 	4,  // 17: agents.v1.BudgetsService.GetOrgBudget:input_type -> agents.v1.GetOrgBudgetRequest
 	6,  // 18: agents.v1.BudgetsService.UpdateOrgBudget:input_type -> agents.v1.UpdateOrgBudgetRequest
 	8,  // 19: agents.v1.BudgetsService.DeleteOrgBudget:input_type -> agents.v1.DeleteOrgBudgetRequest
@@ -2067,15 +2067,15 @@ var file_agents_v1_budgets_proto_depIdxs = []int32{
 	26, // 28: agents.v1.BudgetsService.SetDisplayCurrency:input_type -> agents.v1.SetDisplayCurrencyRequest
 	28, // 29: agents.v1.BudgetsService.GetDisplayCurrency:input_type -> agents.v1.GetDisplayCurrencyRequest
 	5,  // 30: agents.v1.BudgetsService.GetOrgBudget:output_type -> agents.v1.GetOrgBudgetResponse
-	7,  // 31: agents.v1.BudgetsService.UpdateOrgBudget:output_type -> agents.v1.OrgBudgetResponse
+	7,  // 31: agents.v1.BudgetsService.UpdateOrgBudget:output_type -> agents.v1.UpdateOrgBudgetResponse
 	9,  // 32: agents.v1.BudgetsService.DeleteOrgBudget:output_type -> agents.v1.DeleteOrgBudgetResponse
 	11, // 33: agents.v1.BudgetsService.GetUserQuota:output_type -> agents.v1.GetUserQuotaResponse
-	13, // 34: agents.v1.BudgetsService.UpdateUserQuota:output_type -> agents.v1.UserQuotaResponse
+	13, // 34: agents.v1.BudgetsService.UpdateUserQuota:output_type -> agents.v1.UpdateUserQuotaResponse
 	15, // 35: agents.v1.BudgetsService.DeleteUserQuota:output_type -> agents.v1.DeleteUserQuotaResponse
 	17, // 36: agents.v1.BudgetsService.ListUserQuotas:output_type -> agents.v1.ListUserQuotasResponse
 	19, // 37: agents.v1.BudgetsService.GetCurrentSpend:output_type -> agents.v1.GetCurrentSpendResponse
 	21, // 38: agents.v1.BudgetsService.ListCurrencyRates:output_type -> agents.v1.ListCurrencyRatesResponse
-	23, // 39: agents.v1.BudgetsService.UpsertCurrencyRate:output_type -> agents.v1.CurrencyRateResponse
+	23, // 39: agents.v1.BudgetsService.UpsertCurrencyRate:output_type -> agents.v1.UpsertCurrencyRateResponse
 	25, // 40: agents.v1.BudgetsService.DeleteCurrencyRate:output_type -> agents.v1.DeleteCurrencyRateResponse
 	27, // 41: agents.v1.BudgetsService.SetDisplayCurrency:output_type -> agents.v1.SetDisplayCurrencyResponse
 	29, // 42: agents.v1.BudgetsService.GetDisplayCurrency:output_type -> agents.v1.GetDisplayCurrencyResponse

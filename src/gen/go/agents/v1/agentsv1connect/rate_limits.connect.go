@@ -50,7 +50,7 @@ type RateLimitsServiceClient interface {
 	// so the client sees a complete picture of active limits.
 	GetRateLimits(context.Context, *connect.Request[v1.GetRateLimitsRequest]) (*connect.Response[v1.GetRateLimitsResponse], error)
 	// Create or update a single override.
-	UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.RateLimitResponse], error)
+	UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.UpsertRateLimitResponse], error)
 	// Delete an override so the bucket falls back to the default.
 	DeleteRateLimit(context.Context, *connect.Request[v1.DeleteRateLimitRequest]) (*connect.Response[v1.DeleteRateLimitResponse], error)
 }
@@ -72,7 +72,7 @@ func NewRateLimitsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(rateLimitsServiceMethods.ByName("GetRateLimits")),
 			connect.WithClientOptions(opts...),
 		),
-		upsertRateLimit: connect.NewClient[v1.UpsertRateLimitRequest, v1.RateLimitResponse](
+		upsertRateLimit: connect.NewClient[v1.UpsertRateLimitRequest, v1.UpsertRateLimitResponse](
 			httpClient,
 			baseURL+RateLimitsServiceUpsertRateLimitProcedure,
 			connect.WithSchema(rateLimitsServiceMethods.ByName("UpsertRateLimit")),
@@ -90,7 +90,7 @@ func NewRateLimitsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 // rateLimitsServiceClient implements RateLimitsServiceClient.
 type rateLimitsServiceClient struct {
 	getRateLimits   *connect.Client[v1.GetRateLimitsRequest, v1.GetRateLimitsResponse]
-	upsertRateLimit *connect.Client[v1.UpsertRateLimitRequest, v1.RateLimitResponse]
+	upsertRateLimit *connect.Client[v1.UpsertRateLimitRequest, v1.UpsertRateLimitResponse]
 	deleteRateLimit *connect.Client[v1.DeleteRateLimitRequest, v1.DeleteRateLimitResponse]
 }
 
@@ -100,7 +100,7 @@ func (c *rateLimitsServiceClient) GetRateLimits(ctx context.Context, req *connec
 }
 
 // UpsertRateLimit calls agents.v1.RateLimitsService.UpsertRateLimit.
-func (c *rateLimitsServiceClient) UpsertRateLimit(ctx context.Context, req *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.RateLimitResponse], error) {
+func (c *rateLimitsServiceClient) UpsertRateLimit(ctx context.Context, req *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.UpsertRateLimitResponse], error) {
 	return c.upsertRateLimit.CallUnary(ctx, req)
 }
 
@@ -115,7 +115,7 @@ type RateLimitsServiceHandler interface {
 	// so the client sees a complete picture of active limits.
 	GetRateLimits(context.Context, *connect.Request[v1.GetRateLimitsRequest]) (*connect.Response[v1.GetRateLimitsResponse], error)
 	// Create or update a single override.
-	UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.RateLimitResponse], error)
+	UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.UpsertRateLimitResponse], error)
 	// Delete an override so the bucket falls back to the default.
 	DeleteRateLimit(context.Context, *connect.Request[v1.DeleteRateLimitRequest]) (*connect.Response[v1.DeleteRateLimitResponse], error)
 }
@@ -166,7 +166,7 @@ func (UnimplementedRateLimitsServiceHandler) GetRateLimits(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RateLimitsService.GetRateLimits is not implemented"))
 }
 
-func (UnimplementedRateLimitsServiceHandler) UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.RateLimitResponse], error) {
+func (UnimplementedRateLimitsServiceHandler) UpsertRateLimit(context.Context, *connect.Request[v1.UpsertRateLimitRequest]) (*connect.Response[v1.UpsertRateLimitResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RateLimitsService.UpsertRateLimit is not implemented"))
 }
 
