@@ -549,19 +549,51 @@ class RuntimeHandlers:
         request: RespondToConfirmationRequest,
         ctx: RequestContext,
     ) -> RespondToConfirmationResponse:
-        """Resolve a pending destructive-tool approval."""
-        get_user_id_from_context(ctx)
+        """Resolve a pending destructive-tool approval.
+
+        Only the user who triggered the run (recorded on the approval as
+        ``actor_user_id``) may approve or deny. Anyone else - including
+        org admins - gets PERMISSION_DENIED. The approval row must exist
+        in the durable Valkey store; if it is absent or unreadable we
+        refuse rather than fall through to the in-process event, since
+        the local event carries no identity.
+        """
+        user_id = get_user_id_from_context(ctx)
 
         try:
+            organization_id = UUID(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid session_id format")
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         if not request.tool_call_id:
             raise ConnectError(Code.INVALID_ARGUMENT, "tool_call_id is required")
 
+        try:
+            async with open_session() as session:
+                await OrganizationOperations(session).require_org_member(
+                    user_id, organization_id
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+
         store = get_approval_store()
-        accepted = await store.respond(session_id, request.tool_call_id, request.approved)
+        state = await store.get_state(session_id, request.tool_call_id)
+        if state is None:
+            raise ConnectError(Code.NOT_FOUND, "approval not found or expired")
+
+        actor = state.get("actor_user_id")
+        if actor != str(user_id):
+            raise ConnectError(
+                Code.PERMISSION_DENIED, "only the run's initiator can respond"
+            )
+
+        accepted = await store.respond(
+            session_id,
+            request.tool_call_id,
+            request.approved,
+            decided_by=user_id,
+        )
 
         return RespondToConfirmationResponse(accepted=accepted)
 

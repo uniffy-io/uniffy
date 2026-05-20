@@ -19,6 +19,7 @@ import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from uniffy_proto.agents.v1.runtime_pb2 import (
+    RespondToConfirmationRequest,
     SendMessageRequest,
     StreamSendMessageRequest,
     SubscribeToRunRequest,
@@ -855,3 +856,146 @@ class TestSubscribeRuntimeEvents:
         collected = asyncio.run(drive())
         types = [type(ev).__name__ for ev in collected]
         assert types == ["RuntimeTokenEvent", "RuntimeDoneEvent"]
+
+
+class _FakeApprovalStore:
+    def __init__(self, state: dict[str, Any] | None) -> None:
+        self._state = state
+        self.respond_calls: list[dict[str, Any]] = []
+
+    async def get_state(self, scope_id: UUID, request_id: str) -> dict[str, Any] | None:
+        return self._state
+
+    async def respond(
+        self,
+        scope_id: UUID,
+        request_id: str,
+        approved: bool,
+        *,
+        decided_by: UUID | None = None,
+    ) -> bool:
+        self.respond_calls.append(
+            {
+                "scope_id": scope_id,
+                "request_id": request_id,
+                "approved": approved,
+                "decided_by": decided_by,
+            }
+        )
+        return True
+
+
+def _install_approval_store(monkeypatch, store: _FakeApprovalStore) -> None:
+    monkeypatch.setattr(handlers_mod, "get_approval_store", lambda: store)
+
+
+def _build_confirmation_request(
+    *,
+    organization_id: UUID,
+    session_id: UUID,
+    tool_call_id: str = "tc-123",
+    approved: bool = True,
+) -> RespondToConfirmationRequest:
+    req = RespondToConfirmationRequest()
+    req.organization_id = str(organization_id)
+    req.session_id = str(session_id)
+    req.tool_call_id = tool_call_id
+    req.approved = approved
+    return req
+
+
+class TestRespondToConfirmation:
+    def test_actor_match_approves(self, monkeypatch) -> None:
+        user_id = uuid7()
+        org_id = uuid7()
+        session_id = uuid7()
+        _install_user_id(monkeypatch, user_id)
+        _install_open_session(monkeypatch)
+        _install_org_ops(monkeypatch)
+        store = _FakeApprovalStore(state={"actor_user_id": str(user_id), "status": "pending"})
+        _install_approval_store(monkeypatch, store)
+
+        request = _build_confirmation_request(
+            organization_id=org_id, session_id=session_id, approved=True
+        )
+
+        async def drive() -> Any:
+            return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
+
+        resp = asyncio.run(drive())
+        assert resp.accepted is True
+        assert store.respond_calls == [
+            {
+                "scope_id": session_id,
+                "request_id": "tc-123",
+                "approved": True,
+                "decided_by": user_id,
+            }
+        ]
+
+    def test_foreign_caller_rejected(self, monkeypatch) -> None:
+        caller = uuid7()
+        owner = uuid7()
+        org_id = uuid7()
+        session_id = uuid7()
+        _install_user_id(monkeypatch, caller)
+        _install_open_session(monkeypatch)
+        _install_org_ops(monkeypatch)
+        store = _FakeApprovalStore(state={"actor_user_id": str(owner), "status": "pending"})
+        _install_approval_store(monkeypatch, store)
+
+        request = _build_confirmation_request(
+            organization_id=org_id, session_id=session_id
+        )
+
+        async def drive() -> Any:
+            return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
+
+        with pytest.raises(ConnectError) as exc:
+            asyncio.run(drive())
+        assert exc.value.code == Code.PERMISSION_DENIED
+        assert store.respond_calls == []
+
+    def test_missing_approval_returns_not_found(self, monkeypatch) -> None:
+        user_id = uuid7()
+        org_id = uuid7()
+        session_id = uuid7()
+        _install_user_id(monkeypatch, user_id)
+        _install_open_session(monkeypatch)
+        _install_org_ops(monkeypatch)
+        store = _FakeApprovalStore(state=None)
+        _install_approval_store(monkeypatch, store)
+
+        request = _build_confirmation_request(
+            organization_id=org_id, session_id=session_id
+        )
+
+        async def drive() -> Any:
+            return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
+
+        with pytest.raises(ConnectError) as exc:
+            asyncio.run(drive())
+        assert exc.value.code == Code.NOT_FOUND
+        assert store.respond_calls == []
+
+    def test_non_member_rejected(self, monkeypatch) -> None:
+        user_id = uuid7()
+        org_id = uuid7()
+        session_id = uuid7()
+        _install_user_id(monkeypatch, user_id)
+        _install_open_session(monkeypatch)
+        _install_org_ops(monkeypatch, factory=_FailingOrgOps)
+        store = _FakeApprovalStore(state={"actor_user_id": str(user_id), "status": "pending"})
+        _install_approval_store(monkeypatch, store)
+
+        request = _build_confirmation_request(
+            organization_id=org_id, session_id=session_id
+        )
+
+        async def drive() -> Any:
+            return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
+
+        with pytest.raises(ConnectError) as exc:
+            asyncio.run(drive())
+        assert exc.value.code == Code.PERMISSION_DENIED
+        assert store.respond_calls == []
