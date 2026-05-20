@@ -23,8 +23,6 @@ from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.session import AgentSession
 
-# --- Session Kind mappings ---
-
 SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
     "direct": SESSION_KIND_DIRECT,
     "group": SESSION_KIND_GROUP,
@@ -71,8 +69,6 @@ def session_kind_from_proto(proto_kind: SessionKind) -> str:
     """
     return SESSION_KIND_FROM_PROTO.get(proto_kind, "direct")
 
-
-# --- Message Role mappings ---
 
 MESSAGE_ROLE_TO_PROTO: dict[str, MessageRole] = {
     "user": MESSAGE_ROLE_USER,
@@ -123,9 +119,6 @@ def message_role_from_proto(proto_role: MessageRole) -> str:
 
     """
     return MESSAGE_ROLE_FROM_PROTO.get(proto_role, "user")
-
-
-# --- Model converters ---
 
 
 def session_to_proto(session: AgentSession) -> SessionInfo:

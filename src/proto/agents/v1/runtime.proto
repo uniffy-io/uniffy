@@ -33,8 +33,6 @@ service RuntimeService {
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
 }
 
-// --- Usage Analytics ---
-
 message GetUsageStatsRequest {
   string organization_id = 1;
   // Number of days to look back (default 30)
@@ -147,21 +145,19 @@ message CronTaskUsage {
   int64 output_tokens = 8;
 }
 
-// --- Requests and Responses ---
-
 message SendMessageRequest {
   string organization_id = 1;
-  // Legacy: addresses an isolated AgentSession. Used by the builder Test
-  // tab and historical playgrounds.
+  // Addresses an isolated AgentSession (used by the builder Test tab and
+  // playground surfaces). Mutually exclusive with chat_context.
   string session_id = 2;
   string content = 3;
   // IDs of uploaded files to include (uploaded via FilesService)
   repeated string file_ids = 4;
   // IANA timezone of the user's browser (e.g. "America/New_York")
   string user_timezone = 5;
-  // New: invokes the agent inside a chat channel. When set, the runtime
-  // reads context from chat_messages (scoped per the channel binding) and
-  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // Invokes the agent inside a chat channel. When set, the runtime reads
+  // context from chat_messages (scoped per the channel binding) and writes
+  // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
 }
@@ -178,17 +174,17 @@ message RerunFromMessageRequest {
 
 message StreamSendMessageRequest {
   string organization_id = 1;
-  // Legacy: addresses an isolated AgentSession. Used by the builder Test
-  // tab and historical playgrounds.
+  // Addresses an isolated AgentSession (used by the builder Test tab and
+  // playground surfaces). Mutually exclusive with chat_context.
   string session_id = 2;
   string content = 3;
   // IDs of uploaded files to include (uploaded via FilesService)
   repeated string file_ids = 4;
   // IANA timezone of the user's browser (e.g. "America/New_York")
   string user_timezone = 5;
-  // New: invokes the agent inside a chat channel. When set, the runtime
-  // reads context from chat_messages (scoped per the channel binding) and
-  // writes outputs back as chat messages via the AgentChatBridge. Mutually
+  // Invokes the agent inside a chat channel. When set, the runtime reads
+  // context from chat_messages (scoped per the channel binding) and writes
+  // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
 }

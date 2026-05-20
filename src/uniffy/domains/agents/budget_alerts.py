@@ -251,7 +251,6 @@ async def check_and_fire_alerts(
 
         thresholds = sorted(set((budget.alert_thresholds or []) + [100]))
 
-        # --- Dollar-spend crossings
         if (
             budget.monthly_limit is not None
             and budget.monthly_limit > 0
@@ -302,7 +301,6 @@ async def check_and_fire_alerts(
                     },
                 )
 
-        # --- Image-count crossings
         if (
             budget.image_monthly_limit is not None
             and budget.image_monthly_limit > 0

@@ -461,8 +461,8 @@ export type SendMessageRequest = Message<"agents.v1.SendMessageRequest"> & {
   organizationId: string;
 
   /**
-   * Legacy: addresses an isolated AgentSession. Used by the builder Test
-   * tab and historical playgrounds.
+   * Addresses an isolated AgentSession (used by the builder Test tab and
+   * playground surfaces). Mutually exclusive with chat_context.
    *
    * @generated from field: string session_id = 2;
    */
@@ -488,9 +488,9 @@ export type SendMessageRequest = Message<"agents.v1.SendMessageRequest"> & {
   userTimezone: string;
 
   /**
-   * New: invokes the agent inside a chat channel. When set, the runtime
-   * reads context from chat_messages (scoped per the channel binding) and
-   * writes outputs back as chat messages via the AgentChatBridge. Mutually
+   * Invokes the agent inside a chat channel. When set, the runtime reads
+   * context from chat_messages (scoped per the channel binding) and writes
+   * outputs back as chat messages via the AgentChatBridge. Mutually
    * exclusive with session_id at the handler boundary.
    *
    * @generated from field: optional agents.v1.ChatChannelContext chat_context = 6;
@@ -548,8 +548,8 @@ export type StreamSendMessageRequest = Message<"agents.v1.StreamSendMessageReque
   organizationId: string;
 
   /**
-   * Legacy: addresses an isolated AgentSession. Used by the builder Test
-   * tab and historical playgrounds.
+   * Addresses an isolated AgentSession (used by the builder Test tab and
+   * playground surfaces). Mutually exclusive with chat_context.
    *
    * @generated from field: string session_id = 2;
    */
@@ -575,9 +575,9 @@ export type StreamSendMessageRequest = Message<"agents.v1.StreamSendMessageReque
   userTimezone: string;
 
   /**
-   * New: invokes the agent inside a chat channel. When set, the runtime
-   * reads context from chat_messages (scoped per the channel binding) and
-   * writes outputs back as chat messages via the AgentChatBridge. Mutually
+   * Invokes the agent inside a chat channel. When set, the runtime reads
+   * context from chat_messages (scoped per the channel binding) and writes
+   * outputs back as chat messages via the AgentChatBridge. Mutually
    * exclusive with session_id at the handler boundary.
    *
    * @generated from field: optional agents.v1.ChatChannelContext chat_context = 6;

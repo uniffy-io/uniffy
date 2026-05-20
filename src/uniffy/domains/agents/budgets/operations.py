@@ -464,7 +464,6 @@ class BudgetsOperations:
         )
         quota = quota_result.scalar_one_or_none()
 
-        # --- User daily
         if quota is not None and quota.daily_limit is not None:
             day_start, day_end = day_window(now)
             spent_today = await self._sum_cost(
@@ -489,7 +488,6 @@ class BudgetsOperations:
                     limit=str(quota.daily_limit),
                 )
 
-        # --- User monthly (if column set)
         reset_day = budget.reset_day if budget else 1
         period_start, period_end = month_window(reset_day, now)
         if quota is not None and quota.monthly_limit is not None:
@@ -515,7 +513,6 @@ class BudgetsOperations:
                     limit=str(quota.monthly_limit),
                 )
 
-        # --- Org monthly
         if budget is not None and budget.monthly_limit is not None:
             spent_org = await self._sum_cost(
                 organization_id=organization_id,

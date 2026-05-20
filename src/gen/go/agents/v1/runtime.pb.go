@@ -820,17 +820,17 @@ func (x *CronTaskUsage) GetOutputTokens() int64 {
 type SendMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Legacy: addresses an isolated AgentSession. Used by the builder Test
-	// tab and historical playgrounds.
+	// Addresses an isolated AgentSession (used by the builder Test tab and
+	// playground surfaces). Mutually exclusive with chat_context.
 	SessionId string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Content   string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	// IDs of uploaded files to include (uploaded via FilesService)
 	FileIds []string `protobuf:"bytes,4,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
 	// IANA timezone of the user's browser (e.g. "America/New_York")
 	UserTimezone string `protobuf:"bytes,5,opt,name=user_timezone,json=userTimezone,proto3" json:"user_timezone,omitempty"`
-	// New: invokes the agent inside a chat channel. When set, the runtime
-	// reads context from chat_messages (scoped per the channel binding) and
-	// writes outputs back as chat messages via the AgentChatBridge. Mutually
+	// Invokes the agent inside a chat channel. When set, the runtime reads
+	// context from chat_messages (scoped per the channel binding) and writes
+	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
 	ChatContext   *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -976,17 +976,17 @@ func (x *RerunFromMessageRequest) GetUserTimezone() string {
 type StreamSendMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Legacy: addresses an isolated AgentSession. Used by the builder Test
-	// tab and historical playgrounds.
+	// Addresses an isolated AgentSession (used by the builder Test tab and
+	// playground surfaces). Mutually exclusive with chat_context.
 	SessionId string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Content   string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	// IDs of uploaded files to include (uploaded via FilesService)
 	FileIds []string `protobuf:"bytes,4,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
 	// IANA timezone of the user's browser (e.g. "America/New_York")
 	UserTimezone string `protobuf:"bytes,5,opt,name=user_timezone,json=userTimezone,proto3" json:"user_timezone,omitempty"`
-	// New: invokes the agent inside a chat channel. When set, the runtime
-	// reads context from chat_messages (scoped per the channel binding) and
-	// writes outputs back as chat messages via the AgentChatBridge. Mutually
+	// Invokes the agent inside a chat channel. When set, the runtime reads
+	// context from chat_messages (scoped per the channel binding) and writes
+	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
 	ChatContext   *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
 	unknownFields protoimpl.UnknownFields

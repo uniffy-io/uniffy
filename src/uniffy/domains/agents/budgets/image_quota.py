@@ -116,7 +116,6 @@ async def check_image_quota(
     )
     budget = budget_result.scalar_one_or_none()
 
-    # --- Per-user daily check
     daily_cap_from_row = quota.daily_image_limit if quota else None
     daily_cap = (
         daily_cap_from_row
@@ -154,7 +153,6 @@ async def check_image_quota(
             default=daily_cap_from_row is None,
         )
 
-    # --- Per-org monthly check
     monthly_cap_from_budget = budget.image_monthly_limit if budget else None
     monthly_cap = (
         monthly_cap_from_budget

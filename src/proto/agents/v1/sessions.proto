@@ -125,8 +125,6 @@ message MessageInfo {
   bool was_cancelled = 19;
 }
 
-// --- Requests and Responses ---
-
 message CreateSessionRequest {
   string organization_id = 1;
   string agent_id = 2;
