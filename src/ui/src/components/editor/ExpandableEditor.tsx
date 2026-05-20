@@ -26,6 +26,20 @@ interface ExpandableEditorProps {
   onFileUploaded?: (fileId: string) => void;
   /** Show full content preview without truncation, with a separate edit button */
   fullPreview?: boolean;
+  /**
+   * In `fullPreview` mode, cap the read-only preview at this height so a long
+   * description does not stretch its host (e.g. the task detail modal). The
+   * preview becomes scrollable so the reader can still see the whole content;
+   * click-to-expand opens the full editor in the overlay.
+   */
+  previewMaxHeight?: string;
+  /**
+   * When true, render the label as an uppercase header row above the preview
+   * with the Edit button aligned to the right of the label. Hosts that opt in
+   * should drop their own external heading. When false (default), the host
+   * owns the heading and the Edit button floats at the top-right of the preview.
+   */
+  showHeader?: boolean;
 }
 
 export function ExpandableEditor({
@@ -39,6 +53,8 @@ export function ExpandableEditor({
   label = 'Description',
   onFileUploaded,
   fullPreview = false,
+  previewMaxHeight,
+  showHeader = false,
 }: ExpandableEditorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
@@ -99,11 +115,34 @@ export function ExpandableEditor({
 
   return (
     <>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {label}
+          </h3>
+          {!readonly && hasContent && (
+            <button
+              type="button"
+              onClick={handleOpen}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <PencilSimple size={12} />
+              Edit
+            </button>
+          )}
+        </div>
+      )}
       {/* Collapsed preview - clickable area with rendered content */}
       {fullPreview ? (
         <div className="relative group">
           {hasContent ? (
-            <div className="expandable-editor-preview [&_.ProseMirror]:pointer-events-none [&_.mention-wrapper]:pointer-events-auto">
+            <div
+              className={cn(
+                'expandable-editor-preview [&_.ProseMirror]:pointer-events-none [&_.mention-wrapper]:pointer-events-auto',
+                previewMaxHeight && 'overflow-y-auto',
+              )}
+              style={previewMaxHeight ? { maxHeight: previewMaxHeight } : undefined}
+            >
               <CrepeEditor
                 contentType={contentType}
                 contentId={contentId}
@@ -126,8 +165,8 @@ export function ExpandableEditor({
             </div>
           )}
 
-          {/* Edit button */}
-          {!readonly && hasContent && (
+          {/* Edit button - floats at top-right only when the host did not opt into showHeader; otherwise the header renders it next to the label so it never sits over the preview scrollbar */}
+          {!showHeader && !readonly && hasContent && (
             <button
               type="button"
               onClick={handleOpen}

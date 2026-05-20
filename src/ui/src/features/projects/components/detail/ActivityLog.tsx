@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle,
   PencilSimple,
@@ -18,11 +18,18 @@ import type { TaskActivity, ActivityAction } from "@/features/projects/types/act
 
 interface ActivityLogProps {
   taskId: string;
+  /**
+   * When set, render at most this many of the most recent entries and reveal
+   * the rest behind a "Show N earlier" toggle. Used in dense surfaces like
+   * the task detail modal's metadata column to keep the log scannable.
+   */
+  maxInitialItems?: number;
 }
 
-export function ActivityLog({ taskId }: ActivityLogProps) {
+export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
   const dispatch = useAppDispatch();
   const activities = useAppSelector(selectActivitiesForTask(taskId));
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     dispatch(fetchActivities(taskId));
@@ -35,10 +42,16 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
     [activities]
   );
 
-  // Collect all unique actor IDs to resolve in one batch
+  const visible = useMemo(() => {
+    if (maxInitialItems == null || isExpanded) return sorted;
+    return sorted.slice(0, maxInitialItems);
+  }, [sorted, maxInitialItems, isExpanded]);
+
+  const hiddenCount = sorted.length - visible.length;
+
   const actorIds = useMemo(
-    () => [...new Set(sorted.map((a) => a.actorId))],
-    [sorted]
+    () => [...new Set(visible.map((a) => a.actorId))],
+    [visible]
   );
   const { subjects } = useSubjectResolver(actorIds);
   const actorMap = useMemo(() => {
@@ -56,12 +69,12 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
       </h3>
 
       <div className="space-y-3 pl-2">
-        {sorted.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="text-sm text-muted-foreground italic">
             No recent activity
           </div>
         ) : (
-          sorted.map((activity) => (
+          visible.map((activity) => (
             <ActivityItem
               key={activity.id}
               activity={activity}
@@ -69,6 +82,24 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
               actorSubject={actorMap[activity.actorId]}
             />
           ))
+        )}
+        {hiddenCount > 0 && !isExpanded && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Show {hiddenCount} earlier {hiddenCount === 1 ? "entry" : "entries"}
+          </button>
+        )}
+        {isExpanded && maxInitialItems != null && sorted.length > maxInitialItems && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(false)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Show less
+          </button>
         )}
       </div>
     </div>

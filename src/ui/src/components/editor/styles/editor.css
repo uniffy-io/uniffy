@@ -91,6 +91,18 @@
   --tw-prose-invert-td-borders: hsl(var(--border));
 }
 
+/*
+ * Tailwind `prose` applies `margin-left: auto; margin-right: auto` to center
+ * its 65ch column. `max-w-none` removes the width clamp but leaves the auto
+ * margins, so on a wide container the editor still drifts toward center.
+ * The editor is never a "centered article" surface - clear the auto margins
+ * so the content tracks the left edge of the wrapper consistently.
+ */
+.crepe-editor.prose.max-w-none {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 /* Scope Crepe styles to only affect the editor */
 .crepe-editor {
   background: transparent !important;

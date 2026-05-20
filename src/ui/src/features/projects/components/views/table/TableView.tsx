@@ -78,7 +78,9 @@ import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
-import { SubjectPicker, SubjectAvatarStack } from "@/components/subject";
+import { SubjectAvatar, SubjectAvatarStack, SubjectPicker } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import type { Subject } from "@/components/subject/types";
 import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
@@ -89,13 +91,18 @@ import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice"
 
 const MAX_SUBTASK_DEPTH = 5;
 
-// ===== Grouping Types =====
+const UNASSIGNED_GROUP_KEY = "__unassigned__";
 
 interface TaskGroup {
   key: string;
   label: string;
   color?: string;
   tasks: Task[];
+  /**
+   * Optional discriminator so the header can render type-specific chrome
+   * (e.g. avatar + name for `person`-field groups instead of the raw key).
+   */
+  kind?: "person";
 }
 
 export function TableView() {
@@ -255,6 +262,51 @@ export function TableView() {
     const field = project.fieldDefinitions.find((f) => f.id === groupByFieldId);
     if (!field) return null;
 
+    // Person field (Assignee and any custom person-typed field, e.g. Reporter).
+    // Each task appears in every assignee's bucket so grouping by John shows
+    // every task John is on, mirroring Linear/Jira/ClickUp. Tasks with no
+    // assignees fall into a single Unassigned bucket rendered last.
+    if (field.type === "person") {
+      const buckets = new Map<string, Task[]>();
+      const unassigned: Task[] = [];
+      for (const task of filteredTasks) {
+        const val = getFieldValue(task, groupByFieldId);
+        const ids = Array.isArray(val)
+          ? (val as unknown[]).filter((v): v is string => typeof v === "string" && v.length > 0)
+          : typeof val === "string" && val.length > 0
+            ? [val]
+            : [];
+        if (ids.length === 0) {
+          unassigned.push(task);
+          continue;
+        }
+        for (const id of ids) {
+          const existing = buckets.get(id);
+          if (existing) {
+            existing.push(task);
+          } else {
+            buckets.set(id, [task]);
+          }
+        }
+      }
+      const personGroups: TaskGroup[] = Array.from(buckets.entries())
+        .map(([key, tasks]) => ({ key, label: key, kind: "person" as const, tasks }))
+        .sort((a, b) => {
+          const countDiff = b.tasks.length - a.tasks.length;
+          if (countDiff !== 0) return countDiff;
+          return a.key.localeCompare(b.key);
+        });
+      if (unassigned.length > 0) {
+        personGroups.push({
+          key: UNASSIGNED_GROUP_KEY,
+          label: "Unassigned",
+          kind: "person",
+          tasks: unassigned,
+        });
+      }
+      return personGroups;
+    }
+
     // For select fields, use option order
     if (field.type === "single_select") {
       const options = field.config.options ?? [];
@@ -313,6 +365,21 @@ export function TableView() {
 
     return result;
   }, [groupByFieldId, project, filteredTasks, sprints, tagsById]);
+
+  const personGroupIds = useMemo(() => {
+    if (!groups) return [];
+    return groups
+      .filter((g) => g.kind === "person" && g.key !== UNASSIGNED_GROUP_KEY)
+      .map((g) => g.key);
+  }, [groups]);
+  const { subjects: resolvedPersonGroupSubjects } = useSubjectResolver(personGroupIds);
+  const personGroupSubjectMap = useMemo(() => {
+    const map = new Map<string, Subject>();
+    for (const s of resolvedPersonGroupSubjects) {
+      map.set(s.id, s);
+    }
+    return map;
+  }, [resolvedPersonGroupSubjects]);
 
   // All tasks for select-all (respects grouping collapsed state)
   const allVisibleTaskIds = useMemo(() => {
@@ -965,9 +1032,20 @@ export function TableView() {
                           style={{ backgroundColor: group.color }}
                         />
                       )}
-                      <span className="text-sm font-medium text-foreground">
-                        {group.label}
-                      </span>
+                      {group.kind === "person" && group.key !== UNASSIGNED_GROUP_KEY ? (
+                        <PersonGroupHeader
+                          subject={personGroupSubjectMap.get(group.key)}
+                          fallbackKey={group.key}
+                        />
+                      ) : group.kind === "person" && group.key === UNASSIGNED_GROUP_KEY ? (
+                        <span className="text-sm font-medium italic text-muted-foreground">
+                          Unassigned
+                        </span>
+                      ) : (
+                        <span className="text-sm font-medium text-foreground">
+                          {group.label}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {group.tasks.length}
                       </span>
@@ -2023,7 +2101,28 @@ function AvatarStack({ ids }: { ids: string[] }) {
   return <SubjectAvatarStack subjectIds={ids} maxDisplay={3} size="sm" />;
 }
 
-// ===== Utilities =====
+interface PersonGroupHeaderProps {
+  subject: Subject | undefined;
+  fallbackKey: string;
+}
+
+function PersonGroupHeader({ subject, fallbackKey }: PersonGroupHeaderProps) {
+  if (!subject) {
+    return (
+      <span className="text-sm font-medium text-muted-foreground truncate">
+        {fallbackKey.slice(-6)}
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2 min-w-0">
+      <SubjectAvatar subject={subject} size="xs" />
+      <span className="text-sm font-medium text-foreground truncate">
+        {subject.name}
+      </span>
+    </span>
+  );
+}
 
 function getFieldValue(task: Task, fieldId: string): unknown {
   switch (fieldId) {

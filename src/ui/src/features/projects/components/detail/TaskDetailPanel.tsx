@@ -1,14 +1,3 @@
-/**
- * TaskDetailPanel - Right sidebar for task details
- *
- * Contains:
- * - Header with task number and close button
- * - Editable task title
- * - Status badge
- * - Fields section
- * - Description with markdown and @ mentions
- */
-
 import { useState, useRef, useEffect, useMemo } from "react";
 import { X, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -21,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
-import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { MentionChipCompact } from "@/components/mention";
 import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
@@ -181,10 +169,10 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
       )}
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className={cn("p-4", variant === "modal" ? "flex gap-6 items-start" : "space-y-6")}>
+        <div className={cn("p-4", variant === "modal" ? "flex flex-col lg:flex-row gap-6 items-start" : "space-y-6")}>
 
-        {/* Left column (or single column in sidebar mode) */}
-        <div className={cn(variant === "modal" ? "flex-1 min-w-0 space-y-6" : "space-y-6")}>
+        {/* Left column - primary content in modal (title, description, comments); top of single column in sidebar */}
+        <div className={cn(variant === "modal" ? "flex-1 min-w-0 w-full space-y-6" : "space-y-6")}>
 
           {/* Task Title (editable when permitted) */}
           <EditableTitle
@@ -196,12 +184,18 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             }}
           />
 
-          {/* Status Badge */}
-          {statusOption && (
+          {/* Status (sidebar variant only - modal places status at the top of the metadata column) */}
+          {variant !== "modal" && statusOption && statusField && (
             <div className="flex items-center justify-between">
-              <StatusBadge option={statusOption} />
-
-              {/* Feature 15: Milestone Badge */}
+              <StatusPicker
+                currentOption={statusOption}
+                options={(statusField.config.options ?? []) as SelectOption[]}
+                onSelect={(newStatus) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                  dispatch(updateTask({ id: task.id, status: newStatus }));
+                }}
+                disabled={!canEdit}
+              />
               {task.isMilestone && (
                  <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
                     <Diamond weight="fill" />
@@ -211,70 +205,94 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             </div>
           )}
 
-          {/* Tags - autosave on selection (Jira behavior) */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Tags
-            </h3>
-            <TagPicker
-              selectedTagIds={task.tagIds}
-              onChange={(nextTagIds) => {
-                dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
-                dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
-              }}
-              disabled={!canEdit}
-              placeholder="Add a tag"
-            />
-          </div>
+          {/* Tags (sidebar variant only - modal places tags in the metadata column) */}
+          {variant !== "modal" && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tags
+              </h3>
+              <TagPicker
+                selectedTagIds={task.tagIds}
+                onChange={(nextTagIds) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                  dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+                }}
+                disabled={!canEdit}
+                placeholder="Add a tag"
+              />
+            </div>
+          )}
 
-          {/* Description (in modal mode, edited inline - no secondary modal) */}
+          {/* Description - same click-to-open expandable widget the sidebar uses: chip placeholder when empty, full CrepeEditor in an overlay on click. Capped + scrollable preview keeps the modal compact regardless of description length; the Edit button rides the header row so it never overlaps the scrollbar. */}
           {variant === "modal" && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
-              <div className="rounded-lg border border-border overflow-hidden bg-background">
-                <CrepeEditor
-                  contentType={ContentType.TASK}
-                  contentId={task.id}
-                  value={task.description}
-                  onChange={(newDesc) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                    dispatch(updateTask({ id: task.id, description: newDesc }));
-                  }}
-                  placeholder="Click to add a description... (type @ to mention)"
-                  enableUpload
-                  readonly={!canEdit}
-                  minHeight="160px"
-                  className="border-none bg-transparent"
-                />
-              </div>
-            </div>
+            <ExpandableEditor
+              contentType={ContentType.TASK}
+              contentId={task.id}
+              value={task.description}
+              onChange={(newDesc) => {
+                dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                dispatch(updateTask({ id: task.id, description: newDesc }));
+              }}
+              placeholder="Click to add a description... (type @ to mention)"
+              label="Description"
+              enableUpload
+              fullPreview
+              previewMaxHeight="400px"
+              showHeader
+              readonly={!canEdit}
+            />
           )}
 
-          {/* References (in modal mode, in left column) */}
-          {variant === "modal" && task.outgoingReferences.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
-              <div className="flex flex-wrap gap-2">
-                {task.outgoingReferences.map((urn) => {
-                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
-                  return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Comments + Activity (in modal mode, in left column) */}
+          {/* Comments (in modal mode, in left column) */}
           {variant === "modal" && (
             <div className="rounded-md border border-border [&>div]:h-auto">
               <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
             </div>
           )}
-          {variant === "modal" && <ActivityLog taskId={task.id} />}
 
           </div>{/* end left column */}
 
-          {/* Right column (or continues in single column for sidebar) */}
-          <div className={cn(variant === "modal" ? "w-80 shrink-0 space-y-6" : "space-y-6")}>
+          {/* Right column - metadata in modal (status, tags, fields, relationships, activity); continues in single column for sidebar */}
+          <div className={cn(variant === "modal" ? "w-full lg:w-80 shrink-0 space-y-6" : "space-y-6")}>
+
+          {/* Status (modal only - sidebar shows it in the left block) */}
+          {variant === "modal" && statusOption && statusField && (
+            <div className="flex items-center justify-between">
+              <StatusPicker
+                currentOption={statusOption}
+                options={(statusField.config.options ?? []) as SelectOption[]}
+                onSelect={(newStatus) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                  dispatch(updateTask({ id: task.id, status: newStatus }));
+                }}
+                disabled={!canEdit}
+              />
+              {task.isMilestone && (
+                 <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
+                    <Diamond weight="fill" />
+                    Milestone
+                 </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Tags (modal only - sidebar shows them in the left block) */}
+          {variant === "modal" && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tags
+              </h3>
+              <TagPicker
+                selectedTagIds={task.tagIds}
+                onChange={(nextTagIds) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                  dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+                }}
+                disabled={!canEdit}
+                placeholder="Add a tag"
+              />
+            </div>
+          )}
 
           {/* Fields Section */}
           <div className="space-y-4">
@@ -284,19 +302,18 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
 
             <div className="space-y-3">
               {/* Priority */}
-              {priorityOption && (
+              {priorityOption && priorityField && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground w-20">Priority</span>
-                  <Badge
-                    variant="outline"
-                    style={{
-                      backgroundColor: `${priorityOption.color}15`,
-                      borderColor: `${priorityOption.color}30`,
-                      color: priorityOption.color,
+                  <PriorityPicker
+                    currentOption={priorityOption}
+                    options={(priorityField.config.options ?? []) as SelectOption[]}
+                    onSelect={(newPriority) => {
+                      dispatch(optimisticUpdateTask({ id: task.id, priority: newPriority }));
+                      dispatch(updateTask({ id: task.id, priority: newPriority }));
                     }}
-                  >
-                    {priorityOption.label}
-                  </Badge>
+                    disabled={!canEdit}
+                  />
                 </div>
               )}
 
@@ -451,39 +468,54 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             </div>
           </div>
           
-          {/* Feature 6: Dependencies */}
+          {/* Dependencies (Blocked By + Blocks) */}
           <DependenciesList
             taskId={task.id}
             blockedByTaskIds={task.blockedByTaskIds}
             blocksTaskIds={blocksTaskIds}
           />
 
-          {/* Feature 7: Subtasks */}
+          {/* Subtasks */}
           <SubtasksList taskId={task.id} parentCompleted={!!task.completedAt} />
+
+          {/* References (modal only - sidebar shows them in the sidebar-only block below) */}
+          {variant === "modal" && task.outgoingReferences.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+              <div className="flex flex-wrap gap-2">
+                {task.outgoingReferences.map((urn) => {
+                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                  return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Activity log (modal only - collapses to the most recent entries with a "Show more" toggle to keep the metadata column scannable) */}
+          {variant === "modal" && <ActivityLog taskId={task.id} maxInitialItems={5} />}
 
           </div>{/* end right column (or contents for sidebar) */}
 
           {/* The following sections are shown in sidebar mode only - in modal mode they're in the left column */}
           {variant === "sidebar" && (
             <>
-              {/* Description Section */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
-                <ExpandableEditor
-                  contentType={ContentType.TASK}
-                  contentId={task.id}
-                  value={task.description}
-                  onChange={(newDesc) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                    dispatch(updateTask({ id: task.id, description: newDesc }));
-                  }}
-                  placeholder="Click to add a description... (type @ to mention)"
-                  label="Description"
-                  enableUpload
-                  fullPreview
-                  readonly={!canEdit}
-                />
-              </div>
+              {/* Description - same expandable widget the modal uses: capped, scrollable preview with the Edit button on the header row, full CrepeEditor on click. */}
+              <ExpandableEditor
+                contentType={ContentType.TASK}
+                contentId={task.id}
+                value={task.description}
+                onChange={(newDesc) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                  dispatch(updateTask({ id: task.id, description: newDesc }));
+                }}
+                placeholder="Click to add a description... (type @ to mention)"
+                label="Description"
+                enableUpload
+                fullPreview
+                previewMaxHeight="400px"
+                showHeader
+                readonly={!canEdit}
+              />
 
               {/* References Section */}
               {task.outgoingReferences.length > 0 && (
@@ -502,7 +534,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
 
               {/* Activity Log */}
-              <ActivityLog taskId={task.id} />
+              <ActivityLog taskId={task.id} maxInitialItems={5} />
             </>
           )}
 
@@ -587,24 +619,132 @@ function EditableTitle({ title, onSave, readOnly }: { title: string; onSave: (ne
 }
 
 
-interface StatusBadgeProps {
-  option: SelectOption;
+interface OptionDropdownProps {
+  options: SelectOption[];
+  currentId: string;
+  onSelect: (optionId: string) => void;
+  onClose: () => void;
 }
 
-function StatusBadge({ option }: StatusBadgeProps) {
+function OptionDropdown({ options, currentId, onSelect, onClose }: OptionDropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
   return (
     <div
-      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium"
-      style={{
-        backgroundColor: `${option.color}15`,
-        border: `1px solid ${option.color}30`,
-      }}
+      ref={dropdownRef}
+      className="absolute top-full left-0 z-50 mt-1 min-w-40 rounded-md border border-border bg-card shadow-lg py-1 max-h-60 overflow-y-auto"
     >
-      <div
-        className="w-2 h-2 rounded-full"
-        style={{ backgroundColor: option.color }}
-      />
-      <span style={{ color: option.color }}>{option.label}</span>
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => {
+            onSelect(option.id);
+            onClose();
+          }}
+          className={cn(
+            "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+            option.id === currentId
+              ? "bg-primary/10 text-primary"
+              : "text-foreground hover:bg-muted"
+          )}
+        >
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: option.color }}
+          />
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface StatusPickerProps {
+  currentOption: SelectOption;
+  options: SelectOption[];
+  onSelect: (optionId: string) => void;
+  disabled?: boolean;
+}
+
+function StatusPicker({ currentOption, options, onSelect, disabled }: StatusPickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen((v) => !v)}
+        disabled={disabled}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+        style={{
+          backgroundColor: `${currentOption.color}15`,
+          border: `1px solid ${currentOption.color}30`,
+        }}
+      >
+        <div
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: currentOption.color }}
+        />
+        <span style={{ color: currentOption.color }}>{currentOption.label}</span>
+      </button>
+      {isOpen && (
+        <OptionDropdown
+          options={options}
+          currentId={currentOption.id}
+          onSelect={onSelect}
+          onClose={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PriorityPickerProps {
+  currentOption: SelectOption;
+  options: SelectOption[];
+  onSelect: (optionId: string) => void;
+  disabled?: boolean;
+}
+
+function PriorityPicker({ currentOption, options, onSelect, disabled }: PriorityPickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen((v) => !v)}
+        disabled={disabled}
+        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+        style={{
+          backgroundColor: `${currentOption.color}15`,
+          borderColor: `${currentOption.color}30`,
+          color: currentOption.color,
+        }}
+      >
+        {currentOption.label}
+      </button>
+      {isOpen && (
+        <OptionDropdown
+          options={options}
+          currentId={currentOption.id}
+          onSelect={onSelect}
+          onClose={() => setIsOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -710,8 +850,6 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
   );
 }
 
-// ===== Time Field =====
-
 interface TimeFieldProps {
   label: string;
   minutes: number | null;
@@ -768,8 +906,6 @@ function TimeField({ label, minutes, onSave }: TimeFieldProps) {
     </div>
   );
 }
-
-// ===== Watch Button =====
 
 function WatchButton({ taskId }: { taskId: string }) {
   const [isWatching, setIsWatching] = useState(false);
