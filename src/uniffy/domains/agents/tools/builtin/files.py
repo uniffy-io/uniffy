@@ -127,14 +127,10 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
             "tags": file_tag_slugs,
             "description": file.description,
             "access_mode": (
-                file.access_mode.value
-                if hasattr(file.access_mode, "value")
-                else str(file.access_mode)
+                file.access_mode.value if file.access_mode is not None else None
             ),
             "baseline_role": (
-                file.baseline_role.value
-                if file.baseline_role and hasattr(file.baseline_role, "value")
-                else (str(file.baseline_role) if file.baseline_role else None)
+                file.baseline_role.value if file.baseline_role is not None else None
             ),
             "urn": file.urn,
             "created_at": file.created_at.isoformat() if file.created_at else None,

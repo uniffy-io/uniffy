@@ -8,6 +8,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { useShortcutHandler } from '@/features/settings';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
@@ -22,6 +23,7 @@ import { UnreadsView } from '@/features/chat/components/unreads/UnreadsView';
 import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleSidebar,
+  collapseSidebar,
   deactivateSplit,
   setFocusedPane,
   jumpToMessage,
@@ -45,6 +47,7 @@ export function ChatPage() {
   const { channelId } = useParams<{ channelId: string }>();
   const location = useLocation();
   const initializedRef = useRef(false);
+  const { isMobile } = useBreakpoint();
 
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.channels.find(c => c.id === state.chatChannels.activeChannelId)
@@ -89,7 +92,12 @@ export function ChatPage() {
     if (initializedRef.current) return;
     initializedRef.current = true;
     dispatch(initializeChat({ channelId, messageId: hashMessageId }));
-  }, [dispatch, channelId, hashMessageId]);
+    // On mobile, when landing inside a channel, keep the channel view visible
+    // instead of the sidebar drawer covering it.
+    if (isMobile && channelId) {
+      dispatch(collapseSidebar());
+    }
+  }, [dispatch, channelId, hashMessageId, isMobile]);
 
   // Handle channel selection from URL changes (after initial load)
   const prevChannelIdRef = useRef<string | undefined>(channelId);

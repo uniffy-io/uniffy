@@ -10,6 +10,10 @@ from sqlalchemy import String, and_, cast, delete, func, not_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
@@ -716,6 +720,13 @@ class TaskOperations(BaseContentOperations[Task]):
                     else:
                         shared_group_ids.append(subject_id)
 
+        default_mode, default_baseline = await resolve_content_defaults(
+            self.session, model.organization_id, ContentType.PROJECT,
+        )
+        effective_mode, effective_baseline = resolve_effective_policy(
+            project.access_mode, project.baseline_role, default_mode, default_baseline,
+        )
+
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
             organization_id=model.organization_id,
@@ -723,9 +734,9 @@ class TaskOperations(BaseContentOperations[Task]):
             entity_type=self.content_type.value,
             url_path=self._get_url_path(model),
             owner_id=model.owner_id,
-            access_mode=project.access_mode.value,
+            access_mode=effective_mode.value,
             baseline_role=(
-                project.baseline_role.value if project.baseline_role is not None else None
+                effective_baseline.value if effective_baseline is not None else None
             ),
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),

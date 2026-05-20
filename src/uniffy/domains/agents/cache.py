@@ -127,7 +127,9 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         "avatar_key": agent.avatar_key,
         "theme_color": agent.theme_color,
         "is_default": agent.is_default,
-        "access_mode": agent.access_mode.value,
+        "access_mode": (
+            agent.access_mode.value if agent.access_mode is not None else None
+        ),
         "baseline_role": (
             agent.baseline_role.value if agent.baseline_role is not None else None
         ),
@@ -179,7 +181,11 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         avatar_key=payload.get("avatar_key"),
         theme_color=payload.get("theme_color", ""),
         is_default=payload.get("is_default", False),
-        access_mode=AccessMode(payload["access_mode"]),
+        access_mode=(
+            AccessMode(payload["access_mode"])
+            if payload.get("access_mode") is not None
+            else None
+        ),
         baseline_role=(
             ContentRole(payload["baseline_role"])
             if payload.get("baseline_role") is not None

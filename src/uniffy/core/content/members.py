@@ -34,6 +34,10 @@ from uniffy.core.auth.permissions.audit import (
     record_ownership_transferred,
 )
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.auth.permissions.roles import (
     role_can_manage,
     role_can_transfer,
@@ -644,8 +648,6 @@ class ContentMembersOperations:
         """Materialise the effective access mode for a single row."""
         if raw_access_mode is not None:
             return raw_access_mode
-        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
-
         mode, _ = await resolve_content_defaults(self.session, organization_id, content_type)
         return mode
 
@@ -1199,16 +1201,30 @@ class ContentMembersOperations:
         content_type: ContentType,
         content_id: UUID,
         owner_id: UUID,
-        access_mode: AccessMode,
+        access_mode: AccessMode | None,
         baseline_role: ContentRole | None,
     ) -> None:
-        """Sync access policy fields in the search index."""
+        """Sync access policy fields in the search index.
+
+        Raw NULL columns inherit from the org's defaults; the index must
+        carry the effective values so the Meilisearch permission filter
+        (which matches ``access_mode = "OPEN_TO_ORG"`` literally) keeps
+        surfacing inheriting rows.
+        """
         try:
+            default_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, content_type,
+            )
+            effective_mode, effective_baseline = resolve_effective_policy(
+                access_mode, baseline_role, default_mode, default_baseline,
+            )
             await self.search_indexer.update_access_policy(
                 urn=build_content_urn(content_type, content_id),
                 organization_id=organization_id,
-                access_mode=access_mode.value,
-                baseline_role=baseline_role.value if baseline_role is not None else None,
+                access_mode=effective_mode.value,
+                baseline_role=(
+                    effective_baseline.value if effective_baseline is not None else None
+                ),
                 owner_id=owner_id,
             )
         except Exception:

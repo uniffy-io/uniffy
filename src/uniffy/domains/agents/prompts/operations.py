@@ -7,6 +7,10 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import resolve_access_policy
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -310,14 +314,23 @@ class PromptOperations:
         if prompt.content:
             keywords_parts.append(prompt.content[:500])
 
+        default_mode, default_baseline = await resolve_content_defaults(
+            self._session, prompt.organization_id, ContentType.PROMPT,
+        )
+        effective_mode, effective_baseline = resolve_effective_policy(
+            prompt.access_mode, prompt.baseline_role, default_mode, default_baseline,
+        )
+
         await self._search.index(
             urn=build_content_urn(ContentType.PROMPT, prompt.id),
             organization_id=prompt.organization_id,
             title=prompt.display_name,
             entity_type=ContentType.PROMPT.value,
             url_path=f"/agents/prompts/{prompt.id}",
-            access_mode=prompt.access_mode.value,
-            baseline_role=(prompt.baseline_role.value if prompt.baseline_role is not None else None),
+            access_mode=effective_mode.value,
+            baseline_role=(
+                effective_baseline.value if effective_baseline is not None else None
+            ),
             owner_id=prompt.owner_id or prompt.created_by,
             keywords=" ".join(keywords_parts),
             description=prompt.description or None,

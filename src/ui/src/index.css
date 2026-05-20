@@ -222,6 +222,18 @@
   .invisible-scrollbar {
     scrollbar-color: transparent transparent;
   }
+
+  /* iOS Safari (incl. PWA / Add-to-Home-Screen) auto-zooms when focusing a form
+     control whose computed font-size is below 16px. Force 16px on touch viewports
+     so the keyboard never triggers a zoom-in; sizing is restored on >=md. */
+  @media (max-width: 767px) {
+    input,
+    textarea,
+    select,
+    [contenteditable="true"] {
+      font-size: 16px;
+    }
+  }
 }
 
 /* Toast notification theme overrides */

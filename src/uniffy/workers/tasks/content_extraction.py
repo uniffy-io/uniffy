@@ -13,6 +13,10 @@ from loguru import logger
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.extraction import UnsupportedFormatError, extract_text
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -211,6 +215,13 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
         # paragraph of a doc, etc) without opening the viewer.
         description = file.description or (extracted_text[:300].strip() if extracted_text else None)
 
+        default_mode, default_baseline = await resolve_content_defaults(
+            session, file.organization_id, ContentType.FILE,
+        )
+        effective_mode, effective_baseline = resolve_effective_policy(
+            file.access_mode, file.baseline_role, default_mode, default_baseline,
+        )
+
         indexer = SearchIndexer()
         await indexer.index(
             urn=urn,
@@ -218,8 +229,10 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
             title=file.filename,
             entity_type=ContentType.FILE.value,
             url_path=f"/files/{file.id}",
-            access_mode=file.access_mode.value,
-            baseline_role=(file.baseline_role.value if file.baseline_role is not None else None),
+            access_mode=effective_mode.value,
+            baseline_role=(
+                effective_baseline.value if effective_baseline is not None else None
+            ),
             owner_id=file.owner_id,
             keywords=keywords,
             description=description,

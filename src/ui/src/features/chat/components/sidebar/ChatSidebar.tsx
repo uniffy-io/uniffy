@@ -214,7 +214,10 @@ export function ChatSidebar() {
     }
     // Navigate only - the URL effect in ChatPage handles setActiveChannel + fetchMessages
     navigate(`/chat/${channelId}`);
-  }, [dispatch, navigate, splitActive, focusedPane]);
+    if (isMobile) {
+      dispatch(collapseSidebar());
+    }
+  }, [dispatch, navigate, splitActive, focusedPane, isMobile]);
 
   // Category drag-and-drop reordering
   const sensors = useSensors(
@@ -409,7 +412,7 @@ export function ChatSidebar() {
               type="button"
               onClick={() => dispatch(openAgentChatPicker())}
               aria-label="New agent chat"
-              className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
+              className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
               data-testid="chat-sidebar-new-agent-chat-button"
             >
               <Plus size={14} />
@@ -460,7 +463,7 @@ export function ChatSidebar() {
               type="button"
               onClick={() => dispatch(openNewDmModal())}
               aria-label="New direct message"
-              className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
+              className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
               data-testid="chat-sidebar-new-dm-button"
             >
               <Plus size={14} />

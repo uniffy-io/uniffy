@@ -14,6 +14,10 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
@@ -261,9 +265,16 @@ class SearchOperations:
             content_urns=[urn_for(n) for n in notes],
         )
 
+        default_mode, default_baseline = await resolve_content_defaults(
+            self.session, organization_id, ContentType.NOTE,
+        )
+
         search_results: list[SearchResult] = []
         for note in notes:
             note_tags = [t.slug for t in tags_by_urn.get(urn_for(note), [])]
+            effective_mode, effective_baseline = resolve_effective_policy(
+                note.access_mode, note.baseline_role, default_mode, default_baseline,
+            )
             search_results.append(
                 SearchResult(
                     urn=urn_for(note),
@@ -272,9 +283,9 @@ class SearchOperations:
                     description=note.content[:200] if note.content else None,
                     entity_type="note",
                     url_path=f"/notes/{note.id}",
-                    access_mode=note.access_mode.value,
+                    access_mode=effective_mode.value,
                     baseline_role=(
-                        note.baseline_role.value if note.baseline_role is not None else None
+                        effective_baseline.value if effective_baseline is not None else None
                     ),
                     owner_id=note.owner_id,
                     tags=note_tags or None,

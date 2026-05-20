@@ -205,7 +205,7 @@ export function CategorySection({
             <>
               <PencilSimple
                 size={12}
-                className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-foreground cursor-pointer"
+                className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150 hover:text-foreground cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStartEdit();
@@ -214,7 +214,7 @@ export function CategorySection({
               />
               <Trash
                 size={12}
-                className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-400 cursor-pointer"
+                className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150 hover:text-red-400 cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowDeleteConfirm(true);
@@ -229,7 +229,7 @@ export function CategorySection({
               size={14}
               className={cn(
                 'text-muted-foreground transition-opacity duration-150 hover:text-foreground cursor-pointer',
-                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-0 group-hover:opacity-100',
+                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100',
               )}
               onClick={(e) => {
                 e.stopPropagation();

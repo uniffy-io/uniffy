@@ -17,6 +17,7 @@ import {
   CaretDown,
   CaretUp,
   SquareSplitHorizontal,
+  SidebarSimple,
   X,
   LinkSimple,
   Gauge,
@@ -31,6 +32,8 @@ import {
   selectChannelHeaderExpanded,
   selectSplitActive,
   deactivateSplit,
+  expandSidebar,
+  selectSidebarOpen,
 } from '@/features/chat/store/chatUiSlice';
 import { ChatSearchPanel } from '@/features/chat/components/search/ChatSearchPanel';
 import {
@@ -88,7 +91,8 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
   const isExpanded = useAppSelector(selectChannelHeaderExpanded);
   const splitActive = useAppSelector(selectSplitActive);
-  const { isMobileOrTablet } = useBreakpoint();
+  const sidebarOpen = useAppSelector(selectSidebarOpen);
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
 
   const resourcePanelOpen = useAppSelector(selectResourcePanelOpen);
   const [showPicker, setShowPicker] = useState(false);
@@ -243,6 +247,18 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     >
       {/* Compact header row */}
       <div className="flex items-center gap-3 px-4 py-2">
+        {/* Mobile sidebar toggle - opens chat nav drawer */}
+        {isMobile && !sidebarOpen && !showCloseButton && (
+          <button
+            type="button"
+            onClick={() => dispatch(expandSidebar())}
+            className={cn(headerButtonClass, 'shrink-0')}
+            aria-label="Open chat navigation"
+            data-testid="chat-channel-mobile-sidebar-toggle"
+          >
+            <SidebarSimple size={16} />
+          </button>
+        )}
         {/* Channel name + chevron (clickable to expand) */}
         {!isDm && (
           <ChannelIcon size={16} className="text-muted-foreground shrink-0" />
