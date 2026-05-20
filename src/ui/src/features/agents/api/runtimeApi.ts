@@ -1,15 +1,16 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { RuntimeService } from '@uniffy/proto/agents/v1/runtime_connect';
-import type { PartialMessage } from '@bufbuild/protobuf';
-import type {
-    CancelStreamRequest,
-    GetUsageStatsRequest,
-    RerunFromMessageRequest,
-    RespondToConfirmationRequest,
-    SendMessageRequest,
-    SubscribeToRunRequest,
+import {
+    CancelStreamRequestSchema,
+    GetUsageStatsRequestSchema,
+    RerunFromMessageRequestSchema,
+    RespondToConfirmationRequestSchema,
+    RuntimeService,
+    SendMessageRequestSchema,
+    StreamSendMessageRequestSchema,
+    SubscribeToRunRequestSchema,
 } from '@uniffy/proto/agents/v1/runtime_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 const client = createClient(RuntimeService, transport);
 
@@ -20,16 +21,19 @@ export const runtimeApi = {
     streamSendMessage: (request: MessageInitShape<typeof StreamSendMessageRequestSchema>) => {
         return client.streamSendMessage(request);
     },
-    rerunFromMessage: (request: PartialMessage<RerunFromMessageRequest>) => {
+    rerunFromMessage: (request: MessageInitShape<typeof RerunFromMessageRequestSchema>) => {
         return client.rerunFromMessage(request);
     },
-    subscribeToRun: (request: PartialMessage<SubscribeToRunRequest>, options?: { signal?: AbortSignal }) => {
+    subscribeToRun: (
+        request: MessageInitShape<typeof SubscribeToRunRequestSchema>,
+        options?: { signal?: AbortSignal },
+    ) => {
         return client.subscribeToRun(request, options);
     },
-    cancelStream: async (request: PartialMessage<CancelStreamRequest>) => {
+    cancelStream: async (request: MessageInitShape<typeof CancelStreamRequestSchema>) => {
         return client.cancelStream(request);
     },
-    respondToConfirmation: async (request: PartialMessage<RespondToConfirmationRequest>) => {
+    respondToConfirmation: async (request: MessageInitShape<typeof RespondToConfirmationRequestSchema>) => {
         return client.respondToConfirmation(request);
     },
     getUsageStats: async (request: MessageInitShape<typeof GetUsageStatsRequestSchema>) => {

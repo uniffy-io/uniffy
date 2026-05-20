@@ -143,7 +143,9 @@ export const streamSendMessage = createAsyncThunk<
             }
         };
 
-        for await (const event of stream) {
+        for await (const envelope of stream) {
+            const event = envelope.event;
+            if (!event) continue;
             if (event.runId) {
                 dispatch(runIdReceived(event.runId));
             }
@@ -241,7 +243,9 @@ export const rerunFromMessage = createAsyncThunk<
             }
         };
 
-        for await (const event of stream) {
+        for await (const envelope of stream) {
+            const event = envelope.event;
+            if (!event) continue;
             if (event.runId) {
                 dispatch(runIdReceived(event.runId));
             }

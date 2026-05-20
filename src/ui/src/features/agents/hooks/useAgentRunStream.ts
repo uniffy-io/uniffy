@@ -68,8 +68,10 @@ export function useAgentRunStream(
                     { signal: controller.signal },
                 );
 
-                for await (const event of stream) {
+                for await (const envelope of stream) {
                     if (cancelled) break;
+                    const event = envelope.event;
+                    if (!event) continue;
                     if (event.runId) {
                         dispatch(runIdReceived(event.runId));
                     }

@@ -8,84 +8,80 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { BudgetsService } from '@uniffy/proto/agents/v1/budgets_connect';
-import { PricingService } from '@uniffy/proto/agents/v1/pricing_connect';
-import { RateLimitsService } from '@uniffy/proto/agents/v1/rate_limits_connect';
-import type {
-    GetOrgBudgetRequest,
-    UpdateOrgBudgetRequest,
-    DeleteOrgBudgetRequest,
-    GetUserQuotaRequest,
-    UpdateUserQuotaRequest,
-    DeleteUserQuotaRequest,
-    ListUserQuotasRequest,
-    GetCurrentSpendRequest,
-    ListCurrencyRatesRequest,
-    UpsertCurrencyRateRequest,
-    DeleteCurrencyRateRequest,
-    GetDisplayCurrencyRequest,
-    SetDisplayCurrencyRequest,
+import {
+    BudgetsService,
+    DeleteCurrencyRateRequestSchema,
+    DeleteOrgBudgetRequestSchema,
+    DeleteUserQuotaRequestSchema,
+    GetCurrentSpendRequestSchema,
+    GetDisplayCurrencyRequestSchema,
+    GetOrgBudgetRequestSchema,
+    GetUserQuotaRequestSchema,
+    ListCurrencyRatesRequestSchema,
+    ListUserQuotasRequestSchema,
+    SetDisplayCurrencyRequestSchema,
+    UpdateOrgBudgetRequestSchema,
+    UpdateUserQuotaRequestSchema,
+    UpsertCurrencyRateRequestSchema,
 } from '@uniffy/proto/agents/v1/budgets_pb';
-import type {
-    ListModelPricingRequest,
-    UpsertModelPricingRequest,
-    DeleteModelPricingRequest,
+import {
+    DeleteModelPricingRequestSchema,
+    ListModelPricingRequestSchema,
+    PricingService,
+    UpsertModelPricingRequestSchema,
 } from '@uniffy/proto/agents/v1/pricing_pb';
-import type {
-    GetRateLimitsRequest,
-    UpsertRateLimitRequest,
-    DeleteRateLimitRequest,
+import {
+    DeleteRateLimitRequestSchema,
+    GetRateLimitsRequestSchema,
+    RateLimitsService,
+    UpsertRateLimitRequestSchema,
 } from '@uniffy/proto/agents/v1/rate_limits_pb';
-import type { PartialMessage } from '@bufbuild/protobuf';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 
 const budgetsClient = createClient(BudgetsService, transport);
 const pricingClient = createClient(PricingService, transport);
 const rateLimitsClient = createClient(RateLimitsService, transport);
 
 export const agentsGovernanceApi = {
-    // Budgets / quotas
-    getOrgBudget: (req: PartialMessage<GetOrgBudgetRequest>) =>
+    getOrgBudget: (req: MessageInitShape<typeof GetOrgBudgetRequestSchema>) =>
         budgetsClient.getOrgBudget(req),
-    updateOrgBudget: (req: PartialMessage<UpdateOrgBudgetRequest>) =>
+    updateOrgBudget: (req: MessageInitShape<typeof UpdateOrgBudgetRequestSchema>) =>
         budgetsClient.updateOrgBudget(req),
-    deleteOrgBudget: (req: PartialMessage<DeleteOrgBudgetRequest>) =>
+    deleteOrgBudget: (req: MessageInitShape<typeof DeleteOrgBudgetRequestSchema>) =>
         budgetsClient.deleteOrgBudget(req),
-    getUserQuota: (req: PartialMessage<GetUserQuotaRequest>) =>
+    getUserQuota: (req: MessageInitShape<typeof GetUserQuotaRequestSchema>) =>
         budgetsClient.getUserQuota(req),
-    updateUserQuota: (req: PartialMessage<UpdateUserQuotaRequest>) =>
+    updateUserQuota: (req: MessageInitShape<typeof UpdateUserQuotaRequestSchema>) =>
         budgetsClient.updateUserQuota(req),
-    deleteUserQuota: (req: PartialMessage<DeleteUserQuotaRequest>) =>
+    deleteUserQuota: (req: MessageInitShape<typeof DeleteUserQuotaRequestSchema>) =>
         budgetsClient.deleteUserQuota(req),
-    listUserQuotas: (req: PartialMessage<ListUserQuotasRequest>) =>
+    listUserQuotas: (req: MessageInitShape<typeof ListUserQuotasRequestSchema>) =>
         budgetsClient.listUserQuotas(req),
-    getCurrentSpend: (req: PartialMessage<GetCurrentSpendRequest>) =>
+    getCurrentSpend: (req: MessageInitShape<typeof GetCurrentSpendRequestSchema>) =>
         budgetsClient.getCurrentSpend(req),
 
-    // Pricing
-    listModelPricing: (req: PartialMessage<ListModelPricingRequest>) =>
+    listModelPricing: (req: MessageInitShape<typeof ListModelPricingRequestSchema>) =>
         pricingClient.listModelPricing(req),
-    upsertModelPricing: (req: PartialMessage<UpsertModelPricingRequest>) =>
+    upsertModelPricing: (req: MessageInitShape<typeof UpsertModelPricingRequestSchema>) =>
         pricingClient.upsertModelPricing(req),
-    deleteModelPricing: (req: PartialMessage<DeleteModelPricingRequest>) =>
+    deleteModelPricing: (req: MessageInitShape<typeof DeleteModelPricingRequestSchema>) =>
         pricingClient.deleteModelPricing(req),
 
-    // Rate limits
-    getRateLimits: (req: PartialMessage<GetRateLimitsRequest>) =>
+    getRateLimits: (req: MessageInitShape<typeof GetRateLimitsRequestSchema>) =>
         rateLimitsClient.getRateLimits(req),
-    upsertRateLimit: (req: PartialMessage<UpsertRateLimitRequest>) =>
+    upsertRateLimit: (req: MessageInitShape<typeof UpsertRateLimitRequestSchema>) =>
         rateLimitsClient.upsertRateLimit(req),
-    deleteRateLimit: (req: PartialMessage<DeleteRateLimitRequest>) =>
+    deleteRateLimit: (req: MessageInitShape<typeof DeleteRateLimitRequestSchema>) =>
         rateLimitsClient.deleteRateLimit(req),
 
-    // Currencies
-    listCurrencyRates: (req: PartialMessage<ListCurrencyRatesRequest>) =>
+    listCurrencyRates: (req: MessageInitShape<typeof ListCurrencyRatesRequestSchema>) =>
         budgetsClient.listCurrencyRates(req),
-    upsertCurrencyRate: (req: PartialMessage<UpsertCurrencyRateRequest>) =>
+    upsertCurrencyRate: (req: MessageInitShape<typeof UpsertCurrencyRateRequestSchema>) =>
         budgetsClient.upsertCurrencyRate(req),
-    deleteCurrencyRate: (req: PartialMessage<DeleteCurrencyRateRequest>) =>
+    deleteCurrencyRate: (req: MessageInitShape<typeof DeleteCurrencyRateRequestSchema>) =>
         budgetsClient.deleteCurrencyRate(req),
-    getDisplayCurrency: (req: PartialMessage<GetDisplayCurrencyRequest>) =>
+    getDisplayCurrency: (req: MessageInitShape<typeof GetDisplayCurrencyRequestSchema>) =>
         budgetsClient.getDisplayCurrency(req),
-    setDisplayCurrency: (req: PartialMessage<SetDisplayCurrencyRequest>) =>
+    setDisplayCurrency: (req: MessageInitShape<typeof SetDisplayCurrencyRequestSchema>) =>
         budgetsClient.setDisplayCurrency(req),
 };
