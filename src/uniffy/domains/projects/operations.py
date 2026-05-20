@@ -778,6 +778,12 @@ class TaskOperations(BaseContentOperations[Task]):
             project_id, kwargs.get("field_values"), task_type=task_type
         )
 
+        parent_id = kwargs.get("parent_id")
+        if parent_id is not None:
+            if isinstance(parent_id, str):
+                parent_id = UUID(parent_id)
+            await self._validate_no_circular_parent(None, parent_id)
+
         description = kwargs.get("description", "")
         outgoing_references = queries.extract_urns_from_content(description) if description else []
 
@@ -804,7 +810,7 @@ class TaskOperations(BaseContentOperations[Task]):
             assignee_ids=kwargs.get("assignee_ids"),
             start_date=kwargs.get("start_date"),
             due_date=kwargs.get("due_date"),
-            parent_id=kwargs.get("parent_id"),
+            parent_id=parent_id,
             blocked_by_task_ids=kwargs.get("blocked_by_task_ids"),
             is_milestone=kwargs.get("is_milestone", False),
             recurrence_rule=kwargs.get("recurrence_rule"),
@@ -860,6 +866,14 @@ class TaskOperations(BaseContentOperations[Task]):
 
         if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
             await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
+
+        if "parent_id" in kwargs and kwargs["parent_id"] is not None:
+            proposed_parent = kwargs["parent_id"]
+            if isinstance(proposed_parent, str):
+                proposed_parent = UUID(proposed_parent)
+            if proposed_parent != task.parent_id:
+                await self._validate_no_circular_parent(task_id, proposed_parent)
+                kwargs["parent_id"] = proposed_parent
 
         if kwargs.get("field_values") or kwargs.get("task_type"):
             effective_type = kwargs.get("task_type", task.task_type)
@@ -1357,6 +1371,60 @@ class TaskOperations(BaseContentOperations[Task]):
                             )
                         if upstream_id not in visited:
                             queue.append(upstream_id)
+
+    async def _validate_no_circular_parent(
+        self,
+        task_id: UUID | None,
+        proposed_parent_id: UUID,
+    ) -> None:
+        """Reject self-parent, parent cycles, and chains deeper than 5.
+
+        Walks up the proposed parent's ancestor chain. On the update path the
+        caller supplies ``task_id`` so we can detect cycles; on the create path
+        the task is not yet persisted, ``task_id`` is None, and only the depth
+        limit and chain-internal cycles are checked.
+        """
+        if task_id is not None and task_id == proposed_parent_id:
+            raise ValidationError("parent_id", "A task cannot be its own parent")
+
+        max_depth = 5
+        depth = 1
+        current: UUID | None = proposed_parent_id
+        visited: set[UUID] = set()
+
+        while current is not None:
+            if current in visited:
+                raise ValidationError(
+                    "parent_id", "Parent chain already contains a cycle"
+                )
+            visited.add(current)
+
+            if depth > max_depth:
+                raise ValidationError(
+                    "parent_id", f"Maximum nesting depth is {max_depth}"
+                )
+
+            result = await self.session.execute(
+                select(Task.parent_id).where(
+                    and_(
+                        Task.id == current,
+                        Task.is_deleted == False,  # noqa: E712
+                    )
+                )
+            )
+            next_parent = result.scalar_one_or_none()
+            if next_parent is None:
+                return
+
+            if task_id is not None and next_parent == task_id:
+                raise ValidationError(
+                    "parent_id",
+                    "These tasks already depend on each other. "
+                    "Adding this parent would create a loop",
+                )
+
+            current = next_parent
+            depth += 1
 
     async def _validate_field_values(
         self,

@@ -29,6 +29,7 @@ import { SubtasksList } from "./SubtasksList";
 import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
+import { ParentPicker } from "./ParentPicker";
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -343,6 +344,24 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Parent */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-20 shrink-0">Parent</span>
+                <div className="flex-1 min-w-0">
+                  <ParentPicker
+                    task={task}
+                    project={project}
+                    allTasks={allProjectTasks}
+                    onSelect={(parentId) => {
+                      dispatch(optimisticUpdateTask({ id: task.id, parentId }));
+                      dispatch(updateTask({ id: task.id, parentId }));
+                    }}
+                    onNavigate={(id) => dispatch(selectTask(id))}
+                    disabled={!canEdit}
+                  />
                 </div>
               </div>
 

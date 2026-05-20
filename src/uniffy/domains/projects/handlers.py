@@ -482,7 +482,9 @@ class ProjectsHandlers:
         if request.HasField("due_date"):
             kwargs["due_date"] = request.due_date
         if request.HasField("parent_id"):
-            kwargs["parent_id"] = _parse_uuid(request.parent_id, "parent_id")
+            kwargs["parent_id"] = (
+                _parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
+            )
         if request.blocked_by_task_ids:
             kwargs["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
         if request.HasField("is_milestone"):
@@ -606,7 +608,9 @@ class ProjectsHandlers:
         if request.HasField("due_date"):
             updates["due_date"] = request.due_date or None
         if request.HasField("parent_id"):
-            updates["parent_id"] = _parse_uuid(request.parent_id, "parent_id")
+            updates["parent_id"] = (
+                _parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
+            )
         if request.blocked_by_task_ids:
             updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
         if request.HasField("is_milestone"):
