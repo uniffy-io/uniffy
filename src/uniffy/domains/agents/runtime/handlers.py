@@ -11,6 +11,7 @@ itself - the worker drives that turn.
 """
 
 import asyncio
+import os
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -87,7 +88,11 @@ from uniffy.observability.metrics import (
 )
 
 SUBSCRIBE_WALL_BUDGET_SECONDS = 120.0
-SUBSCRIBE_BLOCK_MS = 5000
+# How long each XREAD round waits for new events before yielding control
+# back to the loop. Each blocking round pins one streams-pool connection
+# for that duration, so smaller values let a pod multiplex more
+# concurrent subscribers at the cost of more empty round-trips.
+SUBSCRIBE_BLOCK_MS = int(os.getenv("AGENT_RUN_SUBSCRIBE_BLOCK_MS", "1000"))
 SUBSCRIBE_BATCH_COUNT = 100
 SUBSCRIBE_TIMEOUT_MESSAGE = "subscribe_timeout"
 

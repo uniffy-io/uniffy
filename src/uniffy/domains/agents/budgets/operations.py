@@ -17,7 +17,8 @@ from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import Numeric, and_, case, func, select
+from sqlalchemy import literal as sa_literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import (
@@ -34,6 +35,15 @@ from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.organizations.operations import OrganizationOperations
+
+
+@dataclass(frozen=True)
+class _PreflightSpend:
+    """Internal: the three spend values resolved in one preflight query."""
+
+    user_day: Decimal
+    user_month: Decimal
+    org_month: Decimal
 
 
 @dataclass
@@ -447,11 +457,15 @@ class BudgetsOperations:
     ) -> None:
         """Enforce dollar-spend caps before an LLM call.
 
-        Runs two aggregates (user-daily, org-monthly) and raises
-        ``BudgetExceededError`` only when a row-backed cap with
+        Raises ``BudgetExceededError`` only when a row-backed cap with
         ``hard_limit=True`` is already exhausted. Absent rows and null
         columns fall through to "no limit" - there are no default
         dollar caps.
+
+        When any cap is configured a single aggregate query runs over
+        the current month window and returns the three values needed
+        (user-day, user-month, org-month) via conditional SUMs. One
+        index range scan instead of three.
         """
         now = now or datetime.now(UTC)
 
@@ -464,76 +478,117 @@ class BudgetsOperations:
         )
         quota = quota_result.scalar_one_or_none()
 
-        if quota is not None and quota.daily_limit is not None:
-            day_start, day_end = day_window(now)
-            spent_today = await self._sum_cost(
-                organization_id=organization_id,
-                user_id=user_id,
-                period_start=day_start,
-                period_end=day_end,
-            )
-            if spent_today >= quota.daily_limit:
-                if quota.hard_limit:
-                    raise BudgetExceededError(
-                        scope="user",
-                        limit_kind="spend",
-                        current=str(spent_today),
-                        limit=str(quota.daily_limit),
-                    )
-                logger.warning(
-                    "Soft budget overage (user/daily)",
-                    user_id=str(user_id),
-                    organization_id=str(organization_id),
-                    spent=str(spent_today),
-                    limit=str(quota.daily_limit),
-                )
+        daily_cap = quota.daily_limit if quota is not None else None
+        user_monthly_cap = quota.monthly_limit if quota is not None else None
+        org_monthly_cap = budget.monthly_limit if budget is not None else None
+
+        if daily_cap is None and user_monthly_cap is None and org_monthly_cap is None:
+            return
 
         reset_day = budget.reset_day if budget else 1
         period_start, period_end = month_window(reset_day, now)
-        if quota is not None and quota.monthly_limit is not None:
-            spent_this_period = await self._sum_cost(
-                organization_id=organization_id,
-                user_id=user_id,
-                period_start=period_start,
-                period_end=period_end,
-            )
-            if spent_this_period >= quota.monthly_limit:
-                if quota.hard_limit:
-                    raise BudgetExceededError(
-                        scope="user",
-                        limit_kind="spend",
-                        current=str(spent_this_period),
-                        limit=str(quota.monthly_limit),
-                    )
-                logger.warning(
-                    "Soft budget overage (user/monthly)",
-                    user_id=str(user_id),
-                    organization_id=str(organization_id),
-                    spent=str(spent_this_period),
-                    limit=str(quota.monthly_limit),
-                )
+        day_start, day_end = day_window(now)
 
-        if budget is not None and budget.monthly_limit is not None:
-            spent_org = await self._sum_cost(
-                organization_id=organization_id,
-                user_id=None,
-                period_start=period_start,
-                period_end=period_end,
-            )
-            if spent_org >= budget.monthly_limit:
-                if budget.hard_limit:
-                    raise BudgetExceededError(
-                        scope="org",
-                        limit_kind="spend",
-                        current=str(spent_org),
-                        limit=str(budget.monthly_limit),
-                    )
-                logger.warning(
-                    "Soft budget overage (org/monthly)",
-                    organization_id=str(organization_id),
-                    spent=str(spent_org),
-                    limit=str(budget.monthly_limit),
+        spent = await self._sum_costs_for_preflight(
+            organization_id=organization_id,
+            user_id=user_id,
+            period_start=period_start,
+            period_end=period_end,
+            day_start=day_start,
+            day_end=day_end,
+        )
+
+        if daily_cap is not None and spent.user_day >= daily_cap:
+            if quota is not None and quota.hard_limit:
+                raise BudgetExceededError(
+                    scope="user",
+                    limit_kind="spend",
+                    current=str(spent.user_day),
+                    limit=str(daily_cap),
                 )
+            logger.warning(
+                "Soft budget overage (user/daily)",
+                user_id=str(user_id),
+                organization_id=str(organization_id),
+                spent=str(spent.user_day),
+                limit=str(daily_cap),
+            )
+
+        if user_monthly_cap is not None and spent.user_month >= user_monthly_cap:
+            if quota is not None and quota.hard_limit:
+                raise BudgetExceededError(
+                    scope="user",
+                    limit_kind="spend",
+                    current=str(spent.user_month),
+                    limit=str(user_monthly_cap),
+                )
+            logger.warning(
+                "Soft budget overage (user/monthly)",
+                user_id=str(user_id),
+                organization_id=str(organization_id),
+                spent=str(spent.user_month),
+                limit=str(user_monthly_cap),
+            )
+
+        if org_monthly_cap is not None and spent.org_month >= org_monthly_cap:
+            if budget is not None and budget.hard_limit:
+                raise BudgetExceededError(
+                    scope="org",
+                    limit_kind="spend",
+                    current=str(spent.org_month),
+                    limit=str(org_monthly_cap),
+                )
+            logger.warning(
+                "Soft budget overage (org/monthly)",
+                organization_id=str(organization_id),
+                spent=str(spent.org_month),
+                limit=str(org_monthly_cap),
+            )
+
+    async def _sum_costs_for_preflight(
+        self,
+        *,
+        organization_id: UUID,
+        user_id: UUID,
+        period_start: datetime,
+        period_end: datetime,
+        day_start: datetime,
+        day_end: datetime,
+    ) -> _PreflightSpend:
+        """Aggregate user-day, user-month and org-month spend in one query.
+
+        Range scans ``agents_run_logs`` once over ``[period_start, period_end)``
+        and emits three conditional SUMs. Uses the
+        ``(organization_id, created_at)`` index for the range.
+        """
+        cost = AgentRunLog.cost
+        in_user = AgentRunLog.user_id == user_id
+        in_day = and_(
+            AgentRunLog.created_at >= day_start,
+            AgentRunLog.created_at < day_end,
+        )
+        zero = sa_literal(0, type_=Numeric)
+        result = await self._session.execute(
+            select(
+                func.coalesce(
+                    func.sum(case((and_(in_user, in_day), cost), else_=zero)), 0
+                ),
+                func.coalesce(
+                    func.sum(case((in_user, cost), else_=zero)), 0
+                ),
+                func.coalesce(func.sum(cost), 0),
+            ).where(
+                AgentRunLog.organization_id == organization_id,
+                AgentRunLog.created_at >= period_start,
+                AgentRunLog.created_at < period_end,
+            )
+        )
+        user_day, user_month, org_month = result.one()
+        return _PreflightSpend(
+            user_day=Decimal(user_day or 0),
+            user_month=Decimal(user_month or 0),
+            org_month=Decimal(org_month or 0),
+        )
 
     async def _get_budget_row(
         self, organization_id: UUID

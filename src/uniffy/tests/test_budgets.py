@@ -16,7 +16,17 @@ import pytest
 from uniffy.core.errors import BudgetExceededError, ValidationError
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.user_quota import AgentUserQuota
-from uniffy.domains.agents.budgets.operations import BudgetsOperations
+from uniffy.domains.agents.budgets.operations import (
+    BudgetsOperations,
+    _PreflightSpend,
+)
+
+
+def _spend(value: str) -> _PreflightSpend:
+    """All three spend axes set to the same Decimal, for tests that only
+    care about one cap firing."""
+    d = Decimal(value)
+    return _PreflightSpend(user_day=d, user_month=d, org_month=d)
 
 
 def _make_ops(budget=None, quota=None) -> BudgetsOperations:
@@ -69,7 +79,7 @@ class TestCheckPreflightHardUserDaily:
             hard_limit=True,
         )
         ops = _make_ops(quota=quota)
-        ops._sum_cost = AsyncMock(return_value=Decimal("5.00"))
+        ops._sum_costs_for_preflight = AsyncMock(return_value=_spend("5.00"))
 
         async def run() -> None:
             with pytest.raises(BudgetExceededError) as excinfo:
@@ -92,7 +102,7 @@ class TestCheckPreflightHardUserDaily:
             hard_limit=True,
         )
         ops = _make_ops(quota=quota)
-        ops._sum_cost = AsyncMock(return_value=Decimal("4.99"))
+        ops._sum_costs_for_preflight = AsyncMock(return_value=_spend("4.99"))
 
         async def run() -> None:
             await ops.check_preflight(
@@ -112,7 +122,7 @@ class TestCheckPreflightHardUserDaily:
             hard_limit=False,
         )
         ops = _make_ops(quota=quota)
-        ops._sum_cost = AsyncMock(return_value=Decimal("100.00"))
+        ops._sum_costs_for_preflight = AsyncMock(return_value=_spend("100.00"))
 
         async def run() -> None:
             await ops.check_preflight(
@@ -135,7 +145,7 @@ class TestCheckPreflightHardOrgMonthly:
             reset_day=1,
         )
         ops = _make_ops(budget=budget)
-        ops._sum_cost = AsyncMock(return_value=Decimal("100.00"))
+        ops._sum_costs_for_preflight = AsyncMock(return_value=_spend("100.00"))
 
         async def run() -> None:
             with pytest.raises(BudgetExceededError) as excinfo:
@@ -165,7 +175,7 @@ class TestCheckPreflightHardOrgMonthly:
             reset_day=1,
         )
         ops = _make_ops(budget=budget, quota=quota)
-        ops._sum_cost = AsyncMock(return_value=Decimal("1000.00"))
+        ops._sum_costs_for_preflight = AsyncMock(return_value=_spend("1000.00"))
 
         async def run() -> None:
             with pytest.raises(BudgetExceededError) as excinfo:

@@ -79,20 +79,22 @@ def upgrade() -> None:
         ),
     )
 
-    op.create_index(
-        "ix_agents_messages_session_not_invalidated",
-        "agents_messages",
-        ["session_id", "created_at"],
-        postgresql_where=sa.text("is_invalidated = false"),
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "CREATE INDEX CONCURRENTLY IF NOT EXISTS "
+            "ix_agents_messages_session_not_invalidated "
+            "ON agents_messages (session_id, created_at) "
+            "WHERE is_invalidated = false"
+        )
 
 
 def downgrade() -> None:
     """Drop the invalidation index and columns."""
-    op.drop_index(
-        "ix_agents_messages_session_not_invalidated",
-        table_name="agents_messages",
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "DROP INDEX CONCURRENTLY IF EXISTS "
+            "ix_agents_messages_session_not_invalidated"
+        )
     op.drop_column("agents_messages", "previous_content")
     op.drop_column("agents_messages", "edited_at")
     op.drop_column("agents_messages", "invalidated_by")

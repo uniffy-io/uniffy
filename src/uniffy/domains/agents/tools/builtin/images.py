@@ -250,6 +250,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 organization_id=ctx.organization_id,
                 model=image_model,
                 provider_key_id=image_provider_key_id,
+                kind="image",
                 input_tokens=0,
                 output_tokens=0,
                 tool_calls=None,

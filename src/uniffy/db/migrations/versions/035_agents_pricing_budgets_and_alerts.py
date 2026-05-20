@@ -241,11 +241,12 @@ def upgrade() -> None:
         ),
     )
 
-    op.create_index(
-        "ix_agents_run_logs_org_created_kind",
-        "agents_run_logs",
-        ["organization_id", "created_at", "kind"],
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "CREATE INDEX CONCURRENTLY IF NOT EXISTS "
+            "ix_agents_run_logs_org_created_kind "
+            "ON agents_run_logs (organization_id, created_at, kind)"
+        )
 
     try:
         from datetime import UTC, datetime
@@ -325,10 +326,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Reverse the upgrade in dependency order."""
-    op.drop_index(
-        "ix_agents_run_logs_org_created_kind",
-        table_name="agents_run_logs",
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "DROP INDEX CONCURRENTLY IF EXISTS "
+            "ix_agents_run_logs_org_created_kind"
+        )
     op.drop_column("agents_run_logs", "thinking_tokens")
     op.drop_column("agents_run_logs", "cost_usd")
     op.drop_column("agents_run_logs", "image_count")
