@@ -249,6 +249,7 @@ class UsersHandlers:
                     hashed_password=hashed_pw,
                     full_name=request.full_name if request.HasField("full_name") else None,
                     is_system_admin=request.is_system_admin,
+                    actor_user_id=user_id,
                 )
                 return CreateUserResponse(user=user_to_profile(user))
         except ConnectError:
@@ -292,6 +293,7 @@ class UsersHandlers:
                         request.is_system_admin if request.HasField("is_system_admin") else None
                     ),
                     hashed_password=hashed_pw,
+                    actor_user_id=user_id,
                 )
                 return UpdateUserResponse(user=user_to_profile(user))
         except PermissionDeniedError as e:
@@ -324,7 +326,7 @@ class UsersHandlers:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
-                await ops.delete(target_user_id)
+                await ops.delete(target_user_id, actor_user_id=user_id)
                 return DeleteUserResponse(success=True)
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))

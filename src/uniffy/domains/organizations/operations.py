@@ -14,6 +14,8 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_org_defaults
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
@@ -112,6 +114,7 @@ class OrganizationOperations:
         owner_user_id: UUID,
         domain: str | None = None,
         plan: str = "free",
+        actor_user_id: UUID | None = None,
     ) -> Organization:
         """
         Create a new organization.
@@ -215,6 +218,17 @@ class OrganizationOperations:
             )
         await self._session.commit()
 
+        await write_audit_event(
+            self._session,
+            organization_id=org.id,
+            actor_user_id=actor_user_id or owner_user_id,
+            action=Action.ORGANIZATION_CREATED,
+            resource_type="ORGANIZATION",
+            resource_id=org.id,
+            details={"name": name, "slug": slug, "plan": plan},
+        )
+        await self._session.commit()
+
         return org
 
     async def update(
@@ -225,6 +239,7 @@ class OrganizationOperations:
         domain: str | None = None,
         plan: str | None = None,
         is_active: bool | None = None,
+        actor_user_id: UUID | None = None,
     ) -> Organization:
         """
         Update organization details.
@@ -252,22 +267,39 @@ class OrganizationOperations:
         """
         org = await self.get_by_id(org_id)
 
-        if name is not None:
+        changed_keys: list[str] = []
+        if name is not None and org.name != name:
             org.name = name
-        if slug is not None:
+            changed_keys.append("name")
+        if slug is not None and org.slug != slug:
             org.slug = slug
-        if domain is not None:
+            changed_keys.append("slug")
+        if domain is not None and org.domain != domain:
             org.domain = domain
-        if plan is not None:
+            changed_keys.append("domain")
+        if plan is not None and org.plan != plan:
             org.plan = plan
-        if is_active is not None:
+            changed_keys.append("plan")
+        if is_active is not None and org.is_active != is_active:
             org.is_active = is_active
+            changed_keys.append("is_active")
+
+        if changed_keys:
+            await write_audit_event(
+                self._session,
+                organization_id=org_id,
+                actor_user_id=actor_user_id,
+                action=Action.ORGANIZATION_SETTINGS_CHANGED,
+                resource_type="ORGANIZATION",
+                resource_id=org_id,
+                details={"changed_keys": changed_keys},
+            )
 
         await self._session.commit()
         await self._session.refresh(org)
         return org
 
-    async def delete(self, org_id: UUID) -> bool:
+    async def delete(self, org_id: UUID, actor_user_id: UUID | None = None) -> bool:
         """
         Delete an organization and all related data.
 
@@ -314,7 +346,16 @@ class OrganizationOperations:
             sql_delete(OrganizationMember).where(OrganizationMember.organization_id == org_id)
         )
 
-        # Delete organization
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=actor_user_id,
+            action=Action.ORGANIZATION_DELETED,
+            resource_type="ORGANIZATION",
+            resource_id=org_id,
+            details={"name": org.name, "slug": org.slug},
+        )
+
         await self._session.delete(org)
         await self._session.commit()
 
@@ -619,6 +660,7 @@ class OrganizationOperations:
         user_id: UUID,
         org_id: UUID,
         role: OrganizationRole = OrganizationRole.MEMBER,
+        actor_user_id: UUID | None = None,
     ) -> OrganizationMember:
         """
         Add user to organization.
@@ -671,6 +713,17 @@ class OrganizationOperations:
 
         chat_ops = ChatChannelOperations(self._session)
         await chat_ops.join_default_channels(user_id, org_id)
+        await self._session.commit()
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=actor_user_id,
+            action=Action.ORGANIZATION_MEMBER_ADDED,
+            resource_type="USER",
+            resource_id=user_id,
+            details={"role": role.value},
+        )
         await self._session.commit()
 
         await _drop_user_perm_cache(user_id)
@@ -726,8 +779,23 @@ class OrganizationOperations:
             if not admin_membership or admin_membership.role != OrganizationRole.OWNER:
                 raise PermissionDeniedError("Only owners can modify owner roles")
 
+        previous_role = member.role
         member.role = new_role
         member.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+            action=Action.ORGANIZATION_MEMBER_ROLE_CHANGED,
+            resource_type="USER",
+            resource_id=target_user_id,
+            details={
+                "previous_role": previous_role.value,
+                "new_role": new_role.value,
+            },
+        )
+
         await self._session.commit()
         await self._session.refresh(member)
 
@@ -777,7 +845,19 @@ class OrganizationOperations:
             )
         )
 
+        previous_role = membership.role
         await self._session.delete(membership)
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+            action=Action.ORGANIZATION_MEMBER_REMOVED,
+            resource_type="USER",
+            resource_id=target_user_id,
+            details={"previous_role": previous_role.value},
+        )
+
         await self._session.commit()
 
         # Remove user from search index for this organization
@@ -920,11 +1000,26 @@ class OrganizationOperations:
         await self.require_org_admin(user_id, org_id)
         org = await self.get_by_id(org_id)
         settings = dict(org.settings or {})
+        changed_keys: list[str] = []
         if chat_agents_enabled is not None:
             chat = dict(settings.get("chat") or {})
-            chat["agents_enabled"] = chat_agents_enabled
-            settings["chat"] = chat
+            if chat.get("agents_enabled") != chat_agents_enabled:
+                chat["agents_enabled"] = chat_agents_enabled
+                settings["chat"] = chat
+                changed_keys.append("chat.agents_enabled")
         org.settings = settings
+
+        if changed_keys:
+            await write_audit_event(
+                self._session,
+                organization_id=org_id,
+                actor_user_id=user_id,
+                action=Action.ORGANIZATION_SETTINGS_CHANGED,
+                resource_type="ORGANIZATION",
+                resource_id=org_id,
+                details={"changed_keys": changed_keys},
+            )
+
         await self._session.commit()
         await self._session.refresh(org)
         return dict(org.settings or {})
@@ -982,6 +1077,17 @@ class OrganizationOperations:
             granted_by=admin_user_id,
         )
         self._session.add(da)
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+            action=Action.DOMAIN_ADMIN_GRANTED,
+            resource_type="USER",
+            resource_id=target_user_id,
+            details={"domain": domain.value},
+        )
+
         await self._session.commit()
         await self._session.refresh(da)
 
@@ -1041,7 +1147,23 @@ class OrganizationOperations:
         if not da:
             raise NotFoundError("DomainAdmin", f"{target_user_id}:{domain.value}")
 
+        previous_state = {
+            "granted_at": da.granted_at.isoformat(),
+            "granted_by": str(da.granted_by),
+        }
+
         await self._session.delete(da)
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+            action=Action.DOMAIN_ADMIN_REVOKED,
+            resource_type="USER",
+            resource_id=target_user_id,
+            details={"domain": domain.value, "previous_state": previous_state},
+        )
+
         await self._session.commit()
 
         await invalidate_visible_sets_for_user(org_id, target_user_id)

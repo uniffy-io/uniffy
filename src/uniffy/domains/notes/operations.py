@@ -12,6 +12,8 @@ from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
@@ -321,6 +323,9 @@ class NoteOperations(BaseContentOperations[Note]):
 
         old_refs = note.outgoing_references if content_changed else None
 
+        previous_parent_id = note.parent_id
+        parent_changed = False
+
         parsed_inline_names: list[str] | None = None
         if title is not None:
             note.title = title
@@ -335,8 +340,12 @@ class NoteOperations(BaseContentOperations[Note]):
         if slug is not None:
             note.slug = slug
         if parent_id == "":
+            if note.parent_id is not None:
+                parent_changed = True
             note.parent_id = None
         elif parent_id is not None:
+            if note.parent_id != parent_id:
+                parent_changed = True
             note.parent_id = parent_id
         if metadata is not None:
             # Reassign a new dict so SQLAlchemy detects the JSONB change.
@@ -346,6 +355,22 @@ class NoteOperations(BaseContentOperations[Note]):
 
         note.version += 1
         note.updated_at = datetime.now(UTC)
+
+        if parent_changed:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.NOTE_MOVED,
+                resource_type=ContentType.NOTE.value,
+                resource_id=note.id,
+                details={
+                    "previous_parent_id": (
+                        str(previous_parent_id) if previous_parent_id else None
+                    ),
+                    "new_parent_id": str(note.parent_id) if note.parent_id else None,
+                },
+            )
 
         await self.session.commit()
         await self.session.refresh(note)
@@ -418,6 +443,22 @@ class NoteOperations(BaseContentOperations[Note]):
 
         for nid in removed_ids:
             await self.search_indexer.remove(build_content_urn(self.content_type, nid))
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=(
+                Action.NOTE_PERMANENTLY_DELETED if permanent else Action.NOTE_DELETED
+            ),
+            resource_type=ContentType.NOTE.value,
+            resource_id=note_id,
+            details={
+                "title": note.title,
+                "node_type": note.node_type.value,
+                "descendant_count": max(0, len(removed_ids) - 1),
+            },
+        )
         await self.session.commit()
 
         return True
@@ -438,6 +479,16 @@ class NoteOperations(BaseContentOperations[Note]):
         note.is_deleted = False
         note.deleted_at = None
         note.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.NOTE_RESTORED,
+            resource_type=ContentType.NOTE.value,
+            resource_id=note_id,
+            details={"title": note.title, "node_type": note.node_type.value},
+        )
 
         await self.session.commit()
         await self.session.refresh(note)
@@ -621,6 +672,15 @@ class NoteOperations(BaseContentOperations[Note]):
                 content_urn=urn,
             )
             await self.search_indexer.remove(urn)
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.NOTE_PERMANENTLY_DELETED,
+                resource_type=ContentType.NOTE.value,
+                resource_id=nid,
+                details={"source": "empty_trash"},
+            )
         await self.session.commit()
 
         return count

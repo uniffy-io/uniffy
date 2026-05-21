@@ -12,6 +12,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.rate_limit_config import AgentRateLimitConfig
 from uniffy.core.valkey.rate_limit import (
@@ -20,7 +22,6 @@ from uniffy.core.valkey.rate_limit import (
     LimitConfig,
     invalidate_overrides_cache,
 )
-from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 # Bounds to prevent nonsensical or abusive overrides. A 1-second window
@@ -151,21 +152,21 @@ class RateLimitsOperations:
                 window_seconds=window_seconds,
             )
             self._session.add(row)
-            action = "rate_limit.create"
+            action = Action.AGENT_RATE_LIMIT_CREATED
         else:
             existing.limit = limit
             existing.window_seconds = window_seconds
             existing.updated_at = now
             row = existing
-            action = "rate_limit.update"
+            action = Action.AGENT_RATE_LIMIT_UPDATED
 
         await self._session.commit()
         await self._session.refresh(row)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
             resource_type="rate_limit",
             resource_id=row.id,
@@ -215,11 +216,11 @@ class RateLimitsOperations:
         await self._session.delete(row)
         await self._session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="rate_limit.delete",
+            actor_user_id=user_id,
+            action=Action.AGENT_RATE_LIMIT_DELETED,
             resource_type="rate_limit",
             resource_id=row_id,
             details={"kind": kind},

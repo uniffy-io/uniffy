@@ -7,6 +7,8 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.members import (
     ContentMembersOperations,
@@ -129,6 +131,17 @@ class RoomOperations(BaseContentOperations[Room]):
         await self.session.commit()
         await self.session.refresh(room)
 
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.ROOM_CREATED,
+            resource_type=ContentType.ROOM.value,
+            resource_id=room.id,
+            details={"name": room.name, "room_type": room_type.value},
+        )
+        await self.session.commit()
+
         if group_ids:
             members_ops = ContentMembersOperations(self.session)
             for gid in group_ids:
@@ -171,28 +184,55 @@ class RoomOperations(BaseContentOperations[Room]):
         room = await self.get_by_id(user_id, organization_id, room_id)
         await self._require_edit(user_id, organization_id, room)
 
-        if name is not None:
+        changed_keys: list[str] = []
+        was_active = room.status != RoomStatus.RETIRED if room.status else True
+        if name is not None and room.name != name:
             room.name = name
-        if description is not None:
+            changed_keys.append("name")
+        if description is not None and room.description != description:
             room.description = description
-        if room_type is not None:
+            changed_keys.append("description")
+        if room_type is not None and room.room_type != room_type:
             room.room_type = room_type
-        if capacity is not None:
+            changed_keys.append("room_type")
+        if capacity is not None and room.capacity != capacity:
             room.capacity = capacity
-        if floor is not None:
+            changed_keys.append("capacity")
+        if floor is not None and room.floor != floor:
             room.floor = floor
-        if building is not None:
+            changed_keys.append("floor")
+        if building is not None and room.building != building:
             room.building = building
-        if location is not None:
+            changed_keys.append("building")
+        if location is not None and room.location != location:
             room.location = location
-        if amenities is not None:
+            changed_keys.append("location")
+        if amenities is not None and room.amenities != amenities:
             room.amenities = amenities
-        if status is not None:
+            changed_keys.append("amenities")
+        if status is not None and room.status != status:
             room.status = status
-        if image_file_id is not None:
+            changed_keys.append("status")
+        if image_file_id is not None and room.image_file_id != image_file_id:
             room.image_file_id = image_file_id
+            changed_keys.append("image_file_id")
 
         room.updated_at = datetime.now(UTC)
+
+        if changed_keys:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=(
+                    Action.ROOM_ARCHIVED
+                    if status == RoomStatus.RETIRED and was_active
+                    else Action.ROOM_UPDATED
+                ),
+                resource_type=ContentType.ROOM.value,
+                resource_id=room_id,
+                details={"changed_keys": changed_keys},
+            )
 
         await self.session.commit()
         await self.session.refresh(room)
@@ -239,6 +279,16 @@ class RoomOperations(BaseContentOperations[Room]):
         else:
             room.is_deleted = True
             room.deleted_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.ROOM_DELETED,
+            resource_type=ContentType.ROOM.value,
+            resource_id=room_id,
+            details={"name": room.name, "permanent": permanent},
+        )
 
         await self.session.commit()
 

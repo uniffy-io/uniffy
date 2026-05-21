@@ -28,6 +28,7 @@ from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
 from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
 from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
 from uniffy_proto.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
+from uniffy_proto.audit.v1.audit_connect import AuditServiceASGIApplication
 from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
@@ -48,6 +49,7 @@ from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplica
 from uniffy_proto.tags.v1.tags_connect import TagsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
+from uniffy.core.audit import RequestContextMiddleware as AuditRequestContextMiddleware
 from uniffy.core.llm_providers import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -81,6 +83,7 @@ from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.attachments.service import AttachmentsServiceImpl
+from uniffy.domains.audit.service import AuditServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
@@ -366,6 +369,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(HttpVersionMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuditRequestContextMiddleware)
 
     api_dispatcher = _create_api_dispatcher()
     app.mount("/api", api_dispatcher)
@@ -461,6 +465,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         AttachmentsServiceASGIApplication(
             AttachmentsServiceImpl(), interceptors=[logging_interceptor]
         ),
+    )
+    dispatcher.add_service(
+        "/audit.v1.AuditService",
+        AuditServiceASGIApplication(AuditServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/comments.v1.CommentsService",

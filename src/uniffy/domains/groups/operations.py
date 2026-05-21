@@ -5,6 +5,8 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.login.group import Group
@@ -101,6 +103,17 @@ class GroupOperations:
         self._session.add(group)
         await self._session.commit()
         await self._session.refresh(group)
+
+        await write_audit_event(
+            self._session,
+            organization_id=organization_id,
+            actor_user_id=created_by_user_id,
+            action=Action.GROUP_CREATED,
+            resource_type="GROUP",
+            resource_id=group.id,
+            details={"name": name, "is_private": is_private, "is_default": is_default},
+        )
+        await self._session.commit()
         return group
 
     async def update(
@@ -110,6 +123,7 @@ class GroupOperations:
         description: str | None = None,
         is_private: bool | None = None,
         is_default: bool | None = None,
+        actor_user_id: UUID | None = None,
     ) -> Group:
         """
         Update group details.
@@ -135,21 +149,37 @@ class GroupOperations:
         """
         group = await self.get_by_id(group_id)
 
-        if name is not None:
+        changed_keys: list[str] = []
+        if name is not None and group.name != name:
             group.name = name
             group.slug = name.lower().replace(" ", "-")
-        if description is not None:
+            changed_keys.append("name")
+        if description is not None and group.description != description:
             group.description = description
-        if is_private is not None:
+            changed_keys.append("description")
+        if is_private is not None and group.is_private != is_private:
             group.is_private = is_private
-        if is_default is not None:
+            changed_keys.append("is_private")
+        if is_default is not None and group.is_default != is_default:
             group.is_default = is_default
+            changed_keys.append("is_default")
+
+        if changed_keys:
+            await write_audit_event(
+                self._session,
+                organization_id=group.organization_id,
+                actor_user_id=actor_user_id,
+                action=Action.GROUP_UPDATED,
+                resource_type="GROUP",
+                resource_id=group_id,
+                details={"changed_keys": changed_keys},
+            )
 
         await self._session.commit()
         await self._session.refresh(group)
         return group
 
-    async def delete(self, group_id: UUID) -> None:
+    async def delete(self, group_id: UUID, actor_user_id: UUID | None = None) -> None:
         """
         Delete a group.
 
@@ -170,6 +200,16 @@ class GroupOperations:
             )
         )
         member_user_ids = [row[0] for row in member_ids_result.all()]
+
+        await write_audit_event(
+            self._session,
+            organization_id=group.organization_id,
+            actor_user_id=actor_user_id,
+            action=Action.GROUP_DELETED,
+            resource_type="GROUP",
+            resource_id=group_id,
+            details={"name": group.name, "member_count": len(member_user_ids)},
+        )
 
         await self._session.delete(group)
         await self._session.commit()
@@ -249,6 +289,7 @@ class GroupOperations:
         group_id: UUID,
         user_id: UUID,
         role: GroupRole = GroupRole.MEMBER,
+        actor_user_id: UUID | None = None,
     ) -> GroupMember:
         """
         Add user to group.
@@ -276,6 +317,18 @@ class GroupOperations:
         self._session.add(membership)
         await self._session.commit()
         await self._session.refresh(membership)
+
+        group = await self.get_by_id(group_id)
+        await write_audit_event(
+            self._session,
+            organization_id=group.organization_id,
+            actor_user_id=actor_user_id,
+            action=Action.GROUP_MEMBER_ADDED,
+            resource_type="GROUP",
+            resource_id=group_id,
+            details={"target_user_id": str(user_id), "role": role.value},
+        )
+        await self._session.commit()
 
         await invalidate_perm_user(user_id)
 
@@ -325,7 +378,12 @@ class GroupOperations:
         await self._session.refresh(membership)
         return membership
 
-    async def remove_member(self, group_id: UUID, user_id: UUID) -> None:
+    async def remove_member(
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        actor_user_id: UUID | None = None,
+    ) -> None:
         """
         Remove user from group.
 
@@ -345,7 +403,23 @@ class GroupOperations:
         )
         membership = result.scalar_one_or_none()
         if membership:
+            previous_role = membership.role
             await self._session.delete(membership)
+
+            group = await self.get_by_id(group_id)
+            await write_audit_event(
+                self._session,
+                organization_id=group.organization_id,
+                actor_user_id=actor_user_id,
+                action=Action.GROUP_MEMBER_REMOVED,
+                resource_type="GROUP",
+                resource_id=group_id,
+                details={
+                    "target_user_id": str(user_id),
+                    "previous_role": previous_role.value,
+                },
+            )
+
             await self._session.commit()
             await invalidate_perm_user(user_id)
 

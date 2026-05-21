@@ -241,6 +241,7 @@ class OrganizationsHandlers:
                     name=request.name,
                     slug=request.slug,
                     owner_user_id=owner_id,
+                    actor_user_id=user_id,
                 )
 
                 return CreateOrganizationResponse(organization=org_info_to_proto(org))
@@ -282,6 +283,7 @@ class OrganizationsHandlers:
                     name=request.name if request.HasField("name") else None,
                     slug=request.slug if request.HasField("slug") else None,
                     is_active=request.is_active if request.HasField("is_active") else None,
+                    actor_user_id=user_id,
                 )
 
                 return UpdateOrganizationResponse(organization=org_info_to_proto(org))
@@ -314,7 +316,7 @@ class OrganizationsHandlers:
                 await user_ops.require_system_admin(user_id)
 
                 ops = OrganizationOperations(session)
-                await ops.delete(org_id)
+                await ops.delete(org_id, actor_user_id=user_id)
 
                 return DeleteOrganizationResponse(success=True)
         except PermissionDeniedError as e:
@@ -458,7 +460,9 @@ class OrganizationsHandlers:
                 user_ops = _UserOps(session)
                 target_user = await user_ops.get_by_id(target_user_id)
 
-                membership = await ops.add_member(target_user_id, org_id, role)
+                membership = await ops.add_member(
+                    target_user_id, org_id, role, actor_user_id=user_id
+                )
 
                 return AddMemberResponse(member=member_info_to_proto(target_user, membership))
         except PermissionDeniedError as e:

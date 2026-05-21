@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Icon } from '@phosphor-icons/react';
 import {
     ShieldCheck,
     NotePencil,
@@ -7,11 +8,17 @@ import {
     WarningCircle,
     Kanban,
     Robot,
+    Buildings,
+    LockSimple,
+    UsersThree,
+    Check,
+    X,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
 import { ContentType, AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import { AccessModeSelector } from '@/features/permissions';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
+import { cn } from '@/shared/utils/cn';
 import type { SerializedContentTypeDefaults } from '@/features/admin/store/adminSlice';
 
 const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
@@ -87,6 +94,93 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
     );
 }
 
+interface ScopeCardProps {
+    icon: Icon;
+    name: string;
+    description: string;
+    applies: boolean;
+}
+
+function ScopeCard({ icon: Icon, name, description, applies }: ScopeCardProps) {
+    return (
+        <div
+            className={cn(
+                'relative flex flex-col gap-2 p-3 rounded-lg border-2 transition-colors',
+                applies
+                    ? 'border-primary bg-primary/5'
+                    : 'border-dashed border-border bg-muted/30',
+            )}
+        >
+            <div className="flex items-center gap-2">
+                <Icon
+                    size={18}
+                    weight="duotone"
+                    className={applies ? 'text-primary shrink-0' : 'text-muted-foreground shrink-0'}
+                />
+                <span
+                    className={cn(
+                        'text-sm font-medium truncate',
+                        applies ? 'text-foreground' : 'text-muted-foreground',
+                    )}
+                >
+                    {name}
+                </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+            <div
+                className={cn(
+                    'flex items-center gap-1 text-xs font-medium mt-1',
+                    applies ? 'text-primary' : 'text-muted-foreground/70',
+                )}
+            >
+                {applies ? (
+                    <>
+                        <Check size={12} weight="bold" />
+                        Defaults apply
+                    </>
+                ) : (
+                    <>
+                        <X size={12} weight="bold" />
+                        Owner-only
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ScopeOverview() {
+    return (
+        <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground mb-3">
+                Defaults below apply only to content created in the{' '}
+                <span className="font-medium text-foreground">Organization</span> space.
+                Content in Personal Space and Shared With Me stays owner-only regardless.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+                <ScopeCard
+                    icon={LockSimple}
+                    name="Personal Space"
+                    description="Private content visible only to you."
+                    applies={false}
+                />
+                <ScopeCard
+                    icon={UsersThree}
+                    name="Shared With Me"
+                    description="Items others have shared directly with you."
+                    applies={false}
+                />
+                <ScopeCard
+                    icon={Buildings}
+                    name="Organization"
+                    description="Content created in the org's shared space."
+                    applies
+                />
+            </div>
+        </div>
+    );
+}
+
 export function PermissionDefaultsSection() {
     const { defaults, loading, error, refresh, update, dismissError } = usePermissionDefaults();
 
@@ -108,6 +202,8 @@ export function PermissionDefaultsSection() {
                     <span className="hidden sm:inline"> These can be overridden per item.</span>
                 </p>
             </div>
+
+            <ScopeOverview />
 
             {error && (
                 <div className="p-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">

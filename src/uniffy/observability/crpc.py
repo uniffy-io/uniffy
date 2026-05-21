@@ -12,8 +12,12 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.observability.metrics import RPC_REQUEST_DURATION, RPC_REQUESTS_TOTAL
+
+# Auth context is imported lazily in `_extract_user_id` below: the auth
+# domain transitively imports the audit writer, which imports
+# `observability.metrics`. Importing `auth.context` at module top
+# closes the package-init cycle when the writer is imported first.
 
 # Context variable to store HTTP version from ASGI scope
 http_version_var: ContextVar[str] = ContextVar("http_version", default="unknown")
@@ -77,6 +81,8 @@ class LoggingInterceptor:
 
         # Extract user info from auth context
         try:
+            from uniffy.domains.auth.context import get_user_id_from_context
+
             user_id = str(get_user_id_from_context(ctx))
         except Exception:
             # If auth fails, user is not authenticated (e.g., login/register endpoints)

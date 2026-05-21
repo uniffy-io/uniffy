@@ -68,6 +68,8 @@ from uniffy_proto.files.v1.files_pb2 import (
     UploadChunksResponse,
 )
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy, resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.members import ContentMembersOperations
@@ -1633,9 +1635,30 @@ class FilesHandlers:
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
                         file = await file_ops._fetch_by_id(file_id, organization_id)
-                        if file is not None:
+                        if file is not None and file.folder_id != target_folder_id:
+                            previous_folder_id = file.folder_id
                             file.folder_id = target_folder_id
                             file.updated_at = datetime.now(UTC)
+                            await write_audit_event(
+                                session,
+                                organization_id=organization_id,
+                                actor_user_id=user_id,
+                                action=Action.FILE_MOVED,
+                                resource_type=ContentType.FILE.value,
+                                resource_id=file_id,
+                                details={
+                                    "previous_folder_id": (
+                                        str(previous_folder_id)
+                                        if previous_folder_id
+                                        else None
+                                    ),
+                                    "new_folder_id": (
+                                        str(target_folder_id)
+                                        if target_folder_id
+                                        else None
+                                    ),
+                                },
+                            )
 
                     await session.commit()
                     files_moved += 1

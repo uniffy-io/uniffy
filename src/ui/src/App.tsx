@@ -40,8 +40,8 @@ const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
-const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSettingsPage'), 'OrgSettingsPage');
-const AgentsBudgetsPage = lazyImport(() => import('@/features/admin/pages/AgentsBudgetsPage'), 'AgentsBudgetsPage');
+const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsPage'), 'AuditLogsPage');
+const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
 const UsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
 const ServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
@@ -235,8 +235,8 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
-                            <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
-                            <Route path="agents-budgets" element={<LazyRoute><AgentsBudgetsPage /></LazyRoute>} />
+                            <Route path="audit-logs" element={<LazyRoute><AuditLogsPage /></LazyRoute>} />
+                            <Route path="agents" element={<LazyRoute><AdminAgentsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
 
                             {/* Storage Management */}

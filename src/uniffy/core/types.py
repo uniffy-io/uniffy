@@ -49,8 +49,11 @@ class AccessMode(str, Enum):
 
 
 class ContentMemberAction(str, Enum):
-    """
-    Action recorded in a :class:`ContentMemberEvent` audit row.
+    """Wire-level action label for permissions audit events.
+
+    Mapped to ``audit_events.action`` strings of the form
+    ``permissions.*`` by the permissions converter; this enum stays
+    because the ``permissions.v1`` proto contract still exposes it.
     """
 
     MEMBER_ADDED = "MEMBER_ADDED"

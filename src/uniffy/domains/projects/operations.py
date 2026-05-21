@@ -10,6 +10,8 @@ from sqlalchemy import String, and_, cast, delete, func, not_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
@@ -283,6 +285,20 @@ class ProjectOperations(BaseContentOperations[Project]):
         else:
             project.is_deleted = True
             project.deleted_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=(
+                Action.PROJECT_PERMANENTLY_DELETED
+                if permanent
+                else Action.PROJECT_DELETED
+            ),
+            resource_type=ContentType.PROJECT.value,
+            resource_id=project_id,
+            details={"name": project.name},
+        )
 
         await self.session.commit()
         await self.search_indexer.remove(
@@ -894,6 +910,10 @@ class TaskOperations(BaseContentOperations[Task]):
         old_priority = task.priority
         old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
         old_title = task.title
+        previous_parent_id = task.parent_id
+        parent_changed = (
+            "parent_id" in kwargs and kwargs.get("parent_id") != task.parent_id
+        )
 
         nullable_fields = {
             "start_date",
@@ -975,6 +995,22 @@ class TaskOperations(BaseContentOperations[Task]):
 
         task.version += 1
         task.updated_at = datetime.now(UTC)
+
+        if parent_changed:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.TASK_MOVED,
+                resource_type=ContentType.TASK.value,
+                resource_id=task_id,
+                details={
+                    "previous_parent_id": (
+                        str(previous_parent_id) if previous_parent_id else None
+                    ),
+                    "new_parent_id": str(task.parent_id) if task.parent_id else None,
+                },
+            )
 
         await self.session.commit()
         await self.session.refresh(task)
@@ -1222,6 +1258,18 @@ class TaskOperations(BaseContentOperations[Task]):
         else:
             task.is_deleted = True
             task.deleted_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=(
+                Action.TASK_PERMANENTLY_DELETED if permanent else Action.TASK_DELETED
+            ),
+            resource_type=ContentType.TASK.value,
+            resource_id=task_id,
+            details={"title": task.title, "project_id": str(task.project_id)},
+        )
 
         await self.session.commit()
         await self.search_indexer.remove(

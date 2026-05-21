@@ -17,6 +17,8 @@ from sqlalchemy import String, and_, cast, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import (
     PermissionChecker,
     invalidate_visible_sets_for_user,
@@ -423,6 +425,20 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     count += 1
             stats.member_count = count
 
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_CREATED,
+            resource_type=ContentType.CHAT.value,
+            resource_id=channel.id,
+            details={
+                "name": channel.name,
+                "channel_type": channel_type.value,
+                "is_default": is_default,
+            },
+        )
+
         await self.session.commit()
         await self.session.refresh(channel)
 
@@ -676,16 +692,33 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not is_elevated:
             raise PermissionDeniedError("update", "channel")
 
-        if name is not None:
+        changed_keys: list[str] = []
+        if name is not None and channel.name != name:
             channel.name = name
-        if description is not None:
+            changed_keys.append("name")
+        if description is not None and channel.description != description:
             channel.description = description
-        if icon is not None:
+            changed_keys.append("description")
+        if icon is not None and channel.icon != icon:
             channel.icon = icon
-        if is_default is not None:
+            changed_keys.append("icon")
+        if is_default is not None and channel.is_default != is_default:
             channel.is_default = is_default
+            changed_keys.append("is_default")
 
         channel.updated_at = datetime.now(UTC)
+
+        if changed_keys:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.CHAT_CHANNEL_UPDATED,
+                resource_type=ContentType.CHAT.value,
+                resource_id=channel.id,
+                details={"changed_keys": changed_keys},
+            )
+
         await self.session.commit()
         await self.session.refresh(channel)
 
@@ -720,6 +753,17 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         channel.is_archived = True
         channel.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_ARCHIVED,
+            resource_type=ContentType.CHAT.value,
+            resource_id=channel.id,
+            details={"name": channel.name},
+        )
+
         await self.session.commit()
 
         await invalidate_cached_channel(channel.id)
@@ -743,6 +787,20 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel.is_deleted = True
         channel.deleted_at = now
         channel.updated_at = now
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_DELETED,
+            resource_type=ContentType.CHAT.value,
+            resource_id=channel.id,
+            details={
+                "name": channel.name,
+                "channel_type": channel.channel_type.value,
+            },
+        )
+
         await self.session.commit()
 
         await invalidate_cached_channel(channel.id)
@@ -968,6 +1026,22 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(member_count=ChatChannelStats.member_count + len(added))
             )
+
+            for member in added:
+                if member.user_id is not None:
+                    await write_audit_event(
+                        self.session,
+                        organization_id=organization_id,
+                        actor_user_id=user_id,
+                        action=Action.CHAT_CHANNEL_MEMBER_ADDED,
+                        resource_type=ContentType.CHAT.value,
+                        resource_id=channel_id,
+                        details={
+                            "target_user_id": str(member.user_id),
+                            "role": member.role.value,
+                        },
+                    )
+
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)
@@ -1026,6 +1100,25 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(member_count=ChatChannelStats.member_count - len(removable_ids))
             )
+
+            for removed_id in removable_ids:
+                if removed_id is None:
+                    continue
+                self_removal = removed_id == user_id
+                await write_audit_event(
+                    self.session,
+                    organization_id=organization_id,
+                    actor_user_id=user_id,
+                    action=(
+                        Action.CHAT_CHANNEL_MEMBER_REMOVED
+                        if self_removal
+                        else Action.CHAT_CHANNEL_MEMBER_KICKED
+                    ),
+                    resource_type=ContentType.CHAT.value,
+                    resource_id=channel_id,
+                    details={"target_user_id": str(removed_id)},
+                )
+
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)

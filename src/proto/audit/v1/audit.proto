@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package audit.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/audit/v1;auditv1";
+
+// AuditService exposes the central audit log to org admins.
+//
+// ListEvents is the paginated read used by the admin UI. ExportEvents
+// streams a CSV or NDJSON dump of the same filter shape so auditors can
+// attach evidence to compliance reports.
+service AuditService {
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  rpc ExportEvents(ExportEventsRequest) returns (stream ExportEventsResponse);
+}
+
+enum ExportFormat {
+  EXPORT_FORMAT_UNSPECIFIED = 0;
+  EXPORT_FORMAT_CSV = 1;
+  EXPORT_FORMAT_JSON = 2;
+}
+
+message ExportEventsRequest {
+  // Reuses the ListEvents filter so client-side filter state can drive
+  // both flows. organization_id, action filters, time bounds, etc.
+  ListEventsRequest filter = 1;
+  ExportFormat format = 2;
+}
+
+message ExportEventsResponse {
+  // CSV header row arrives in the first chunk; NDJSON has no header.
+  bytes payload = 1;
+}
+
+// A single immutable audit row.
+message AuditEvent {
+  string id = 1;
+  string organization_id = 2;
+  optional string actor_user_id = 3;
+  optional string actor_org_role = 4;
+  optional string on_behalf_of_user_id = 5;
+  string action = 6;
+  optional string resource_type = 7;
+  optional string resource_id = 8;
+  // JSON-encoded action-specific payload. Parsed client-side. Kept
+  // as a string here so the proto contract is stable as new actions
+  // add new keys without requiring a proto change.
+  string details_json = 9;
+  optional string ip_address = 10;
+  optional string user_agent = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  // Newest first. Default when the client leaves `order` unset.
+  SORT_ORDER_TIME_DESC = 1;
+  // Oldest first.
+  SORT_ORDER_TIME_ASC = 2;
+}
+
+message ListEventsRequest {
+  // Org scope. Required. System admins pass the target org explicitly.
+  string organization_id = 1;
+
+  // Optional filters - combined with AND.
+  optional string actor_user_id = 2;
+  repeated string actions = 3;
+  optional string resource_type = 4;
+  optional string resource_id = 5;
+  optional google.protobuf.Timestamp from_time = 6;
+  optional google.protobuf.Timestamp to_time = 7;
+
+  // Cursor pagination. Default page size 50, max 500.
+  uint32 page_size = 8;
+  optional string page_token = 9;
+
+  // Sort direction. Unspecified == TIME_DESC.
+  SortOrder order = 10;
+}
+
+message ListEventsResponse {
+  repeated AuditEvent events = 1;
+  optional string next_page_token = 2;
+}

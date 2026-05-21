@@ -8,6 +8,8 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
@@ -71,25 +73,22 @@ class AuthOperations:
             If authentication fails.
 
         """
+        user: User | None = None
+        organization_id: UUID | None = None
         try:
-            # Get user by email
             user = await self._get_user_by_email(email)
             if not user:
                 raise AuthenticationError("Invalid email or password")
 
-            # Check if user is active
             if not user.is_active:
                 raise AuthenticationError("User account is deactivated")
 
-            # Verify password
             if not user.hashed_password:
                 raise AuthenticationError("Password login not available. Please use SSO.")
 
             if not verify_password(password, user.hashed_password):
                 raise AuthenticationError("Invalid email or password")
 
-            # Handle organization context
-            organization_id = None
             organization_role = None
             domain_admin_domains: list[str] | None = None
             if organization_slug:
@@ -99,10 +98,8 @@ class AuthOperations:
                     domain_admin_domains,
                 ) = await self._verify_org_membership(user.id, organization_slug)
 
-            # Create session record
             session_record = await self._create_session(user.id, user_agent)
 
-            # Create tokens with token_version and session_id
             access_token = create_access_token(
                 user.id,
                 organization_id,
@@ -117,6 +114,20 @@ class AuthOperations:
                 session_id=session_record.id,
             )
 
+            await write_audit_event(
+                self._session,
+                organization_id=organization_id,
+                actor_user_id=user.id,
+                action=Action.AUTH_LOGIN_SUCCESS,
+                resource_type="USER",
+                resource_id=user.id,
+                details={
+                    "email": user.email,
+                    "session_id": str(session_record.id),
+                },
+            )
+            await self._session.commit()
+
             logger.info(f"User {user.email} authenticated successfully")
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="success").inc()
 
@@ -129,8 +140,21 @@ class AuthOperations:
                 session_id=session_record.id,
                 domain_admin_domains=domain_admin_domains,
             )
-        except AuthenticationError:
+        except AuthenticationError as exc:
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="failure").inc()
+            await write_audit_event(
+                self._session,
+                organization_id=organization_id,
+                actor_user_id=user.id if user else None,
+                action=Action.AUTH_LOGIN_FAILURE,
+                resource_type="USER" if user else None,
+                resource_id=user.id if user else None,
+                details={
+                    "email_attempted": email,
+                    "failure_reason": str(exc),
+                },
+            )
+            await self._session.commit()
             raise
 
     async def register(
@@ -315,6 +339,19 @@ class AuthOperations:
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
 
+            await write_audit_event(
+                self._session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.AUTH_TOKEN_REFRESHED,
+                resource_type="USER",
+                resource_id=user_id,
+                details={"session_id": str(session_id) if session_id else None},
+                dedupe_key=str(user_id),
+                dedupe_ttl_seconds=3600,
+            )
+            await self._session.commit()
+
             return AuthResult(
                 access_token=access_token,
                 refresh_token=new_refresh_token,
@@ -389,6 +426,16 @@ class AuthOperations:
 
         session_record.is_revoked = True
         session_record.revoked_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self._session,
+            organization_id=None,
+            actor_user_id=user_id,
+            action=Action.AUTH_SESSION_TERMINATED,
+            resource_type="USER_SESSION",
+            resource_id=session_id,
+            details={"initiator": "self"},
+        )
         await self._session.commit()
 
         logger.info(f"Session {session_id} revoked for user {user_id}")
@@ -431,8 +478,22 @@ class AuthOperations:
             update(User).where(User.id == user_id).values(cache_key_seed=os.urandom(32))
         )
 
-        await self._session.commit()
         revoked_count = result.rowcount  # type: ignore[union-attr]
+        await write_audit_event(
+            self._session,
+            organization_id=None,
+            actor_user_id=user_id,
+            action=Action.AUTH_TOKEN_REVOKED,
+            resource_type="USER",
+            resource_id=user_id,
+            details={
+                "actor": "self",
+                "revoked_session_count": revoked_count,
+                "kept_session_id": str(current_session_id),
+            },
+        )
+
+        await self._session.commit()
 
         logger.info(
             f"Revoked {revoked_count} other sessions for user {user_id}, "
@@ -521,6 +582,15 @@ class AuthOperations:
         if session_record:
             session_record.is_revoked = True
             session_record.revoked_at = datetime.now(UTC)
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=Action.AUTH_SESSION_TERMINATED,
+                resource_type="USER_SESSION",
+                resource_id=session_id,
+                details={"initiator": "logout"},
+            )
             await self._session.commit()
             logger.info(f"Logout: session {session_id} revoked for user {user_id}")
 

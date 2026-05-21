@@ -154,12 +154,14 @@ export function DomainAdminsSection() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground md:text-3xl">Domain Admins</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage elevated roles for specific application domains
+                    <div className="flex items-center gap-3 mb-2">
+                        <Crown size={24} weight="duotone" className="text-primary shrink-0" />
+                        <h1 className="text-2xl font-bold">Domain Admins</h1>
+                    </div>
+                    <p className="text-muted-foreground">
+                        Manage elevated roles for specific application domains.
                     </p>
                 </div>
                 <Button onClick={() => setShowGrantDialog(true)}>
@@ -168,7 +170,6 @@ export function DomainAdminsSection() {
                 </Button>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 <div className="rounded-lg border border-border bg-card p-4">
                     <p className="text-2xl font-bold text-foreground">{totalCount}</p>
@@ -190,7 +191,6 @@ export function DomainAdminsSection() {
                 })}
             </div>
 
-            {/* Domain filter tabs */}
             <div className="flex gap-1 overflow-x-auto border-b border-border">
                 {DOMAIN_TABS.map((tab) => (
                     <button

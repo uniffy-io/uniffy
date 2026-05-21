@@ -1,7 +1,6 @@
 """Database models package."""
 
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.audit_log import AgentAuditLog
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.prompt import AgentPrompt
 from uniffy.core.models.agents.provider_key import ProviderKey
@@ -9,6 +8,7 @@ from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.app_settings.application_setting import ApplicationSetting
 from uniffy.core.models.attachments.attachment import Attachment
+from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
@@ -52,7 +52,6 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.projects.activity import TaskActivity
@@ -84,6 +83,8 @@ __all__ = [
     "ApplicationSetting",
     # Attachments
     "Attachment",
+    # Audit
+    "AuditEvent",
     # Login models
     "User",
     "Organization",
@@ -115,7 +116,6 @@ __all__ = [
     "Bookmark",
     # Agents
     "Agent",
-    "AgentAuditLog",
     "AgentMessage",
     "AgentSession",
     "AgentPrompt",
@@ -136,7 +136,6 @@ __all__ = [
     "EventReminder",
     # Permission models
     "ContentMember",
-    "ContentMemberEvent",
     "DomainAdmin",
     "OrganizationPermissionDefaults",
     "DomainType",

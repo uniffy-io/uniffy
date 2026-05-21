@@ -160,7 +160,7 @@ class GroupsHandlers:
             Updated group.
 
         """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
@@ -171,6 +171,7 @@ class GroupsHandlers:
                 description=request.description if request.HasField("description") else None,
                 is_private=request.is_private if request.HasField("is_private") else None,
                 is_default=request.is_default if request.HasField("is_default") else None,
+                actor_user_id=user_id,
             )
 
         return pb.UpdateGroupResponse(group=group_info_to_proto(group))
@@ -196,12 +197,12 @@ class GroupsHandlers:
             Success status.
 
         """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            await ops.delete(group_id)
+            await ops.delete(group_id, actor_user_id=user_id)
 
         return pb.DeleteGroupResponse(success=True)
 
@@ -279,7 +280,7 @@ class GroupsHandlers:
             Created membership.
 
         """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
@@ -290,6 +291,7 @@ class GroupsHandlers:
                 group_id=group_id,
                 user_id=target_user_id,
                 role=role,
+                actor_user_id=user_id,
             )
             # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
@@ -357,13 +359,15 @@ class GroupsHandlers:
             Success status.
 
         """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            await ops.remove_member(group_id, target_user_id)
+            await ops.remove_member(
+                group_id, target_user_id, actor_user_id=user_id
+            )
 
         return pb.RemoveGroupMemberResponse(success=True)
 

@@ -13,6 +13,7 @@ import { settingsReducer } from '@/features/settings/store/settingsSlice';
 import { permissionsReducer } from '@/features/permissions';
 import { adminReducer } from '@/features/admin/store/adminSlice';
 import { agentsGovernanceReducer } from '@/features/admin/store/agentsGovernanceSlice';
+import { auditReducer } from '@/features/admin/store/auditSlice';
 import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 import { zenModeReducer } from '@/app/zenModeSlice';
@@ -198,6 +199,7 @@ const rootReducer = combineReducers({
   permissions: permissionsReducer,
   admin: adminReducer,
   agentsGovernance: agentsGovernanceReducer,
+  audit: auditReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
   projects: projectsReducer,

@@ -1,6 +1,12 @@
 # Uniffy
 
-A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
+> **Work Infrastructure, finally unified.**  
+
+<p align="center">
+  <img src="docs/assets/hero.png" alt="Uniffy - Work Infrastructure, finally unified" width="100%" />
+</p>
+
+A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. Fully private. No trackers, no advertasing, no data harvesting, no training on your data.  OPT-IN AI Agents inside your work workspace configured and controlled by you. You choose the model, skills, permissions, and behavior. 
 
 ## Table of Contents
 

@@ -7,6 +7,8 @@ from uuid import UUID
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.avatars import delete_avatar as s3_delete_avatar
 from uniffy.core.avatars import upload_avatar as s3_upload_avatar
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -19,7 +21,6 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
-from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.cache import (
     fetch_agent_row,
     invalidate_cached_agent,
@@ -247,11 +248,11 @@ class AgentOperations(BaseContentOperations[Agent]):
         await self._index_for_search(agent, skip_member_lookup=not group_ids)
         await self.session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self.session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="agent.create",
+            actor_user_id=user_id,
+            action=Action.AGENT_CREATED,
             resource_type="agent",
             resource_id=agent.id,
             details={"name": agent.name},
@@ -512,6 +513,29 @@ class AgentOperations(BaseContentOperations[Agent]):
                 removed_skill_ids=removed_skill_ids,
             )
 
+        for sid in added_skill_ids:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.AGENT_SKILL_ENABLED,
+                resource_type="agent",
+                resource_id=agent_id,
+                details={"skill_id": str(sid)},
+            )
+        for sid in removed_skill_ids:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.AGENT_SKILL_DISABLED,
+                resource_type="agent",
+                resource_id=agent_id,
+                details={"skill_id": str(sid)},
+            )
+        if added_skill_ids or removed_skill_ids:
+            await self.session.commit()
+
         if agent.prompt_id != old_prompt_id:
             await track_agent_prompt_ref(
                 agent_id,
@@ -543,11 +567,11 @@ class AgentOperations(BaseContentOperations[Agent]):
                     serializable[k] = v[:200] + "..."
                 else:
                     serializable[k] = v
-            await create_audit_log(
+            await write_audit_event(
                 self.session,
                 organization_id=organization_id,
-                user_id=user_id,
-                action="agent.update",
+                actor_user_id=user_id,
+                action=Action.AGENT_UPDATED,
                 resource_type="agent",
                 resource_id=agent_id,
                 details={"changes": serializable},

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 
 from loguru import logger
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
 
@@ -268,6 +271,31 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 "Failed to create image generation run log",
                 exc_info=True,
             )
+
+    try:
+        await write_audit_event(
+            ctx.session,
+            organization_id=ctx.organization_id,
+            actor_user_id=ctx.user_id,
+            action=Action.AGENT_IMAGE_GENERATION,
+            resource_type="FILE",
+            resource_id=file_id,
+            details={
+                "actor_kind": "agent",
+                "agent_id": str(ctx.agent_id),
+                "model_id": image_model,
+                "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+                "output_file_urn": file_urn,
+                "size": size,
+                "quality": quality,
+                "tokens": 0,
+                "cost": float(image_cost) if image_cost is not None else 0.0,
+                "cost_currency": image_cost_currency,
+                "duration_ms": gen_duration_ms,
+            },
+        )
+    except Exception:
+        logger.warning("Image generation audit emission failed", exc_info=True)
 
     await ctx.session.commit()
 

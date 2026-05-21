@@ -1,8 +1,10 @@
 """Proto <-> domain converters for the permissions members service.
 
 Wraps the canonical enum converters in ``core.converters.common_proto``
-with message-level converters for ``ContentMember``,
-``ContentMemberEvent``, and ``ContentAccessPolicy``.
+with message-level converters for ``ContentMember`` and
+``ContentAccessPolicy``, plus an ``AuditEvent`` -> ``ContentMemberEvent``
+projection so the existing proto contract for ``ListMemberEvents``
+stays stable while the underlying storage moved to ``audit_events``.
 """
 
 from uuid import UUID
@@ -17,21 +19,45 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
     ContentMemberEvent as ProtoContentMemberEvent,
 )
 
+from uniffy.core.audit.actions import Action
 from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_member_action_to_proto,
     content_role_to_proto,
     content_type_to_proto,
-    org_role_to_proto,
     subject_type_to_proto,
 )
 from uniffy.core.converters.proto import (
     datetime_to_timestamp,
     optional_timestamp,
 )
+from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
-from uniffy.core.types import AccessMode, ContentRole
+from uniffy.core.types import (
+    AccessMode,
+    ContentMemberAction,
+    ContentRole,
+    ContentType,
+    SubjectType,
+)
+
+_ACTION_FROM_AUDIT: dict[str, ContentMemberAction] = {
+    Action.PERMISSIONS_MEMBER_ADDED: ContentMemberAction.MEMBER_ADDED,
+    Action.PERMISSIONS_MEMBER_ROLE_CHANGED: ContentMemberAction.MEMBER_ROLE_CHANGED,
+    Action.PERMISSIONS_MEMBER_REMOVED: ContentMemberAction.MEMBER_REMOVED,
+    Action.PERMISSIONS_ACCESS_MODE_CHANGED: ContentMemberAction.ACCESS_MODE_CHANGED,
+    Action.PERMISSIONS_BASELINE_ROLE_CHANGED: ContentMemberAction.BASELINE_ROLE_CHANGED,
+    Action.PERMISSIONS_OWNERSHIP_TRANSFERRED: ContentMemberAction.OWNERSHIP_TRANSFERRED,
+}
+
+_ACTION_TO_AUDIT: dict[ContentMemberAction, str] = {
+    domain: audit for audit, domain in _ACTION_FROM_AUDIT.items()
+}
+
+
+def audit_action_for_member_action(action: ContentMemberAction) -> str:
+    """Map a legacy ``ContentMemberAction`` to its ``audit_events`` action."""
+    return _ACTION_TO_AUDIT[action]
 
 
 def content_member_to_proto(member: ContentMember) -> ProtoContentMember:
@@ -70,44 +96,74 @@ def content_access_policy_to_proto(
     return proto
 
 
-def content_member_event_to_proto(
-    event: ContentMemberEvent,
+def audit_event_to_content_member_event_proto(
+    event: AuditEvent,
 ) -> ProtoContentMemberEvent:
-    """Convert a ``ContentMemberEvent`` audit row to its proto."""
+    """Project an ``AuditEvent`` row back into the legacy proto shape.
+
+    Unpacks the structured payload that the permissions audit helpers
+    stash in ``details``. Unknown actions raise ``KeyError`` - filtering
+    in :meth:`ContentMembersOperations.list_member_events` already
+    constrains the action namespace to ``permissions.*``.
+    """
+    member_action = _ACTION_FROM_AUDIT[event.action]
+    details = event.details or {}
+
     proto = ProtoContentMemberEvent(
         id=str(event.id),
-        content_type=content_type_to_proto(event.content_type),
-        content_id=str(event.content_id),
-        action=content_member_action_to_proto(event.action),
-        actor_user_id=str(event.actor_user_id),
-        actor_org_role=org_role_to_proto(event.actor_org_role),
-        note=event.note,
-        occurred_at=datetime_to_timestamp(event.occurred_at),
+        content_type=content_type_to_proto(ContentType(event.resource_type)),
+        content_id=str(event.resource_id) if event.resource_id else "",
+        action=content_member_action_to_proto(member_action),
+        actor_user_id=str(event.actor_user_id) if event.actor_user_id else "",
+        note=str(details.get("note") or ""),
+        occurred_at=datetime_to_timestamp(event.created_at),
     )
 
-    if event.subject_type is not None:
-        proto.subject_type = subject_type_to_proto(event.subject_type)
-    if event.subject_id is not None:
-        proto.subject_id = str(event.subject_id)
+    if event.actor_org_role:
+        from uniffy.core.converters.common_proto import org_role_to_proto
+        from uniffy.core.models.login.organization_member import OrganizationRole
 
-    if event.previous_role is not None:
-        proto.previous_role = content_role_to_proto(event.previous_role)
-    if event.new_role is not None:
-        proto.new_role = content_role_to_proto(event.new_role)
+        proto.actor_org_role = org_role_to_proto(OrganizationRole(event.actor_org_role))
 
-    if event.previous_access_mode is not None:
-        proto.previous_access_mode = access_mode_to_proto(event.previous_access_mode)
-    if event.new_access_mode is not None:
-        proto.new_access_mode = access_mode_to_proto(event.new_access_mode)
+    subject_type_raw = details.get("subject_type")
+    if subject_type_raw:
+        proto.subject_type = subject_type_to_proto(SubjectType(subject_type_raw))
+    subject_id_raw = details.get("subject_id")
+    if subject_id_raw:
+        proto.subject_id = str(subject_id_raw)
 
-    if event.previous_baseline_role is not None:
-        proto.previous_baseline_role = content_role_to_proto(event.previous_baseline_role)
-    if event.new_baseline_role is not None:
-        proto.new_baseline_role = content_role_to_proto(event.new_baseline_role)
+    previous_role_raw = details.get("previous_role")
+    if previous_role_raw:
+        proto.previous_role = content_role_to_proto(ContentRole(previous_role_raw))
+    new_role_raw = details.get("new_role")
+    if new_role_raw:
+        proto.new_role = content_role_to_proto(ContentRole(new_role_raw))
 
-    if event.previous_owner_id is not None:
-        proto.previous_owner_id = str(event.previous_owner_id)
-    if event.new_owner_id is not None:
-        proto.new_owner_id = str(event.new_owner_id)
+    previous_access_mode_raw = details.get("previous_access_mode")
+    if previous_access_mode_raw:
+        proto.previous_access_mode = access_mode_to_proto(
+            AccessMode(previous_access_mode_raw)
+        )
+    new_access_mode_raw = details.get("new_access_mode")
+    if new_access_mode_raw:
+        proto.new_access_mode = access_mode_to_proto(AccessMode(new_access_mode_raw))
+
+    previous_baseline_role_raw = details.get("previous_baseline_role")
+    if previous_baseline_role_raw:
+        proto.previous_baseline_role = content_role_to_proto(
+            ContentRole(previous_baseline_role_raw)
+        )
+    new_baseline_role_raw = details.get("new_baseline_role")
+    if new_baseline_role_raw:
+        proto.new_baseline_role = content_role_to_proto(
+            ContentRole(new_baseline_role_raw)
+        )
+
+    previous_owner_id_raw = details.get("previous_owner_id")
+    if previous_owner_id_raw:
+        proto.previous_owner_id = str(previous_owner_id_raw)
+    new_owner_id_raw = details.get("new_owner_id")
+    if new_owner_id_raw:
+        proto.new_owner_id = str(new_owner_id_raw)
 
     return proto

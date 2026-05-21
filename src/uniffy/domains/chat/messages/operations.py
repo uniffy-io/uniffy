@@ -13,6 +13,8 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_mentioned_agent_ids_from_content,
@@ -22,7 +24,7 @@ from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChanne
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
-from uniffy.core.types import AccessMode, ContentRole, SubjectType
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -979,6 +981,23 @@ class ChatMessageOperations:
         msg.deleted_at = now
         msg.updated_at = now
 
+        # Admin moderation only - self-deletes carry too much volume to
+        # audit. Detected by actor == sender.
+        if msg.sender_id != user_id:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.CHAT_MESSAGE_DELETED_BY_ADMIN,
+                resource_type=ContentType.CHAT_MESSAGE.value,
+                resource_id=message_id,
+                details={
+                    "channel_id": str(channel_id),
+                    "sender_id": str(msg.sender_id),
+                    "sender_type": msg.sender_type.value,
+                },
+            )
+
         # Decrement channel stats
         if msg.root_id is None:
             await self.session.execute(
@@ -1048,7 +1067,6 @@ class ChatMessageOperations:
 
         # Clean up file attachments
         try:
-            from uniffy.core.types import ContentType
             from uniffy.domains.attachments.operations import AttachmentOperations
 
             att_ops = AttachmentOperations(self.session)

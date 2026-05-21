@@ -5,9 +5,15 @@ import re
 
 from loguru import logger
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.domains.agents.providers.base import ToolCall
-from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
+from uniffy.domains.agents.tools.definitions import (
+    ToolContext,
+    ToolDefinition,
+    ToolResult,
+)
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
 MAX_TOOL_RESULT_CHARS = 100_000
@@ -111,6 +117,13 @@ class ToolExecutor:
         are caught and returned as failed ToolResults rather than
         propagated.
 
+        For every mutating tool (``read_only=False``), an
+        ``agent.tool_call.<name>`` row is written through the central
+        audit pipeline. The row attributes the action to the human
+        owner (``ctx.user_id``) and surfaces the agent's identity via
+        ``details.actor_kind = "agent"`` + ``details.agent_id``.
+        Read-only tools are not audited.
+
         Parameters
         ----------
         tool_call : ToolCall
@@ -130,6 +143,7 @@ class ToolExecutor:
                 error=f"Unknown tool: {tool_call.name}",
             )
 
+        error_reason: str | None = None
         try:
             result = await asyncio.wait_for(
                 tool_def.executor(self._context, tool_call.input),
@@ -141,14 +155,14 @@ class ToolExecutor:
                     data=_truncate_result(result.data),
                     error=result.error,
                 )
-            return result
         except TimeoutError:
             logger.warning(
                 "Tool execution timed out",
                 tool=tool_call.name,
                 timeout_seconds=tool_def.timeout_seconds,
             )
-            return ToolResult(
+            error_reason = "timeout"
+            result = ToolResult(
                 success=False,
                 data="",
                 error=(
@@ -162,7 +176,8 @@ class ToolExecutor:
                 tool=tool_call.name,
                 error=str(exc),
             )
-            return ToolResult(
+            error_reason = "not_found"
+            result = ToolResult(
                 success=False,
                 data="",
                 error=f"Not found: {exc}",
@@ -173,7 +188,8 @@ class ToolExecutor:
                 tool=tool_call.name,
                 error=str(exc),
             )
-            return ToolResult(
+            error_reason = "permission_denied"
+            result = ToolResult(
                 success=False,
                 data="",
                 error=f"Permission denied: {exc}",
@@ -184,7 +200,8 @@ class ToolExecutor:
                 tool=tool_call.name,
                 error=str(exc),
             )
-            return ToolResult(
+            error_reason = "validation_error"
+            result = ToolResult(
                 success=False,
                 data="",
                 error=f"Validation error: {exc}",
@@ -196,8 +213,56 @@ class ToolExecutor:
                 error=str(exc),
                 exc_info=True,
             )
-            return ToolResult(
+            error_reason = type(exc).__name__
+            result = ToolResult(
                 success=False,
                 data="",
                 error=_sanitize_error_message(tool_call.name, exc),
+            )
+
+        if not tool_def.read_only:
+            await self._emit_tool_call_audit(tool_def, result, error_reason)
+
+        return result
+
+    async def _emit_tool_call_audit(
+        self,
+        tool_def: ToolDefinition,
+        result: ToolResult,
+        error_reason: str | None,
+    ) -> None:
+        """Emit an ``agent.tool_call.<name>`` row for a mutating tool.
+
+        Best-effort: a failure to write the audit row never breaks the
+        tool loop. The audit row is added to the same session the tool
+        used, so it commits with the surrounding mutation when the
+        tool path commits, and rolls back together when it does not.
+        """
+        try:
+            details: dict = {
+                "actor_kind": "agent",
+                "tool_name": tool_def.name,
+                "status": "success" if result.success else "failed",
+            }
+            if self._context.agent_id is not None:
+                details["agent_id"] = str(self._context.agent_id)
+            if self._context.session_id is not None:
+                details["agent_session_id"] = str(self._context.session_id)
+            if error_reason is not None:
+                details["error_reason"] = error_reason
+
+            await write_audit_event(
+                self._context.session,
+                organization_id=self._context.organization_id,
+                actor_user_id=self._context.user_id,
+                action=tool_call_action(tool_def.name),
+                resource_type=None,
+                resource_id=None,
+                details=details,
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to emit tool-call audit row",
+                tool=tool_def.name,
+                exc_info=True,
             )

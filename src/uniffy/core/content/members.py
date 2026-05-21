@@ -48,14 +48,13 @@ from uniffy.core.auth.permissions.visible_sets import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
 from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import (
     AccessMode,
-    ContentMemberAction,
     ContentRole,
     ContentType,
     NotificationType,
@@ -122,7 +121,8 @@ class ContentMembersOperations:
     2. Resolves the actor's effective role through ``PermissionChecker``.
     3. Enforces the capability required for the action.
     4. Performs the mutation.
-    5. Writes a row to ``permissions_content_member_events``.
+    5. Writes an ``audit_events`` row via ``write_audit_event`` (action
+       in the ``permissions.*`` namespace).
     6. Updates the search index membership / access policy fields.
     7. Emits a notification where appropriate.
 
@@ -218,7 +218,7 @@ class ContentMembersOperations:
         - Adding the current owner as a member (owner is implicit)
         """
         content = await self._load_content(organization_id, content_type, content_id)
-        actor_role, actor_org_role = await self._require_manage(
+        _actor_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
 
@@ -274,7 +274,6 @@ class ContentMembersOperations:
                 subject_id=subject_id,
                 new_role=role,
                 actor_user_id=actor_user_id,
-                actor_org_role=actor_org_role,
                 note=note,
             )
         else:
@@ -293,7 +292,6 @@ class ContentMembersOperations:
                     previous_role=previous_role,
                     new_role=role,
                     actor_user_id=actor_user_id,
-                    actor_org_role=actor_org_role,
                     note=note,
                 )
 
@@ -344,7 +342,7 @@ class ContentMembersOperations:
         Rejects the same conditions as :meth:`add_member`.
         """
         content = await self._load_content(organization_id, content_type, content_id)
-        _actor_role, actor_org_role = await self._require_manage(
+        _actor_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
 
@@ -384,7 +382,6 @@ class ContentMembersOperations:
             previous_role=previous_role,
             new_role=new_role,
             actor_user_id=actor_user_id,
-            actor_org_role=actor_org_role,
             note=note,
         )
 
@@ -436,7 +433,7 @@ class ContentMembersOperations:
     ) -> None:
         """Remove a ``ContentMember`` row. Requires MANAGE."""
         content = await self._load_content(organization_id, content_type, content_id)
-        _actor_role, actor_org_role = await self._require_manage(
+        _actor_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
 
@@ -461,7 +458,6 @@ class ContentMembersOperations:
             subject_id=subject_id,
             previous_role=previous_role,
             actor_user_id=actor_user_id,
-            actor_org_role=actor_org_role,
             note=note,
         )
 
@@ -518,7 +514,7 @@ class ContentMembersOperations:
           written for each.
         """
         content = await self._load_content(organization_id, content_type, content_id)
-        _actor_role, actor_org_role = await self._require_manage(
+        _actor_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
         )
 
@@ -555,7 +551,6 @@ class ContentMembersOperations:
                     subject_id=member.subject_id,
                     previous_role=member.role,
                     actor_user_id=actor_user_id,
-                    actor_org_role=actor_org_role,
                     note=note,
                 )
                 await self.session.delete(member)
@@ -587,7 +582,6 @@ class ContentMembersOperations:
                 previous_access_mode=previous_access_mode,
                 new_access_mode=new_access_mode,
                 actor_user_id=actor_user_id,
-                actor_org_role=actor_org_role,
                 note=note,
             )
 
@@ -600,7 +594,6 @@ class ContentMembersOperations:
                 previous_baseline_role=previous_baseline_role,
                 new_baseline_role=content.baseline_role,
                 actor_user_id=actor_user_id,
-                actor_org_role=actor_org_role,
                 note=note,
             )
 
@@ -748,7 +741,7 @@ class ContentMembersOperations:
         - Writes OWNERSHIP_TRANSFERRED + MEMBER_ADDED events.
         """
         content = await self._load_content(organization_id, content_type, content_id)
-        _actor_role, actor_org_role = await self._require_transfer(
+        _actor_role = await self._require_transfer(
             actor_user_id, organization_id, content_type, content_id, content
         )
 
@@ -800,7 +793,6 @@ class ContentMembersOperations:
             previous_owner_id=previous_owner_id,
             new_owner_id=new_owner_user_id,
             actor_user_id=actor_user_id,
-            actor_org_role=actor_org_role,
             note=note,
         )
         await record_member_added(
@@ -812,7 +804,6 @@ class ContentMembersOperations:
             subject_id=previous_owner_id,
             new_role=ContentRole.ADMIN,
             actor_user_id=actor_user_id,
-            actor_org_role=actor_org_role,
             note="Demoted to ADMIN via ownership transfer",
         )
 
@@ -858,11 +849,17 @@ class ContentMembersOperations:
         limit: int = 50,
         offset: int = 0,
         actor_filter_user_id: UUID | None = None,
-        action_filter: ContentMemberAction | None = None,
+        action_filter: str | None = None,
         after: datetime | None = None,
         before: datetime | None = None,
-    ) -> list[ContentMemberEvent]:
-        """List audit events for a content item. Requires VIEW."""
+    ) -> list[AuditEvent]:
+        """List permissions audit events for a content item. Requires VIEW.
+
+        Sourced from the central ``audit_events`` table, filtered to
+        actions in the ``permissions.*`` namespace targeting this row.
+        Callers that need the ``ContentMemberEvent`` proto shape unpack
+        ``details`` via the permissions-domain converter.
+        """
         content = await self._load_content(organization_id, content_type, content_id)
 
         role = await self.permission_checker.effective_role(
@@ -878,24 +875,25 @@ class ContentMembersOperations:
             raise PermissionDeniedError("view_member_events", content_type.value)
 
         query = (
-            select(ContentMemberEvent)
+            select(AuditEvent)
             .where(
-                ContentMemberEvent.organization_id == organization_id,
-                ContentMemberEvent.content_type == content_type,
-                ContentMemberEvent.content_id == content_id,
+                AuditEvent.organization_id == organization_id,
+                AuditEvent.resource_type == content_type.value,
+                AuditEvent.resource_id == content_id,
+                AuditEvent.action.like("permissions.%"),
             )
-            .order_by(ContentMemberEvent.occurred_at.desc())
+            .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
             .limit(limit)
             .offset(offset)
         )
         if actor_filter_user_id is not None:
-            query = query.where(ContentMemberEvent.actor_user_id == actor_filter_user_id)
+            query = query.where(AuditEvent.actor_user_id == actor_filter_user_id)
         if action_filter is not None:
-            query = query.where(ContentMemberEvent.action == action_filter)
+            query = query.where(AuditEvent.action == action_filter)
         if after is not None:
-            query = query.where(ContentMemberEvent.occurred_at >= after)
+            query = query.where(AuditEvent.created_at >= after)
         if before is not None:
-            query = query.where(ContentMemberEvent.occurred_at <= before)
+            query = query.where(AuditEvent.created_at <= before)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -921,12 +919,8 @@ class ContentMembersOperations:
         content_type: ContentType,
         content_id: UUID,
         content,
-    ) -> tuple[ContentRole, OrganizationRole]:
-        """Resolve the actor's role and require MANAGE.
-
-        Returns (effective_role, snapshot_of_actor_org_role) so the
-        caller can reuse the org role for audit logging.
-        """
+    ) -> ContentRole:
+        """Resolve the actor's role and require MANAGE."""
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -938,8 +932,7 @@ class ContentMembersOperations:
         )
         if not role_can_manage(role):
             raise PermissionDeniedError("manage", content_type.value)
-        org_role = await self.permission_checker.get_user_org_role(actor_user_id, organization_id)
-        return role, org_role or OrganizationRole.MEMBER
+        return role
 
     async def _require_transfer(
         self,
@@ -948,7 +941,8 @@ class ContentMembersOperations:
         content_type: ContentType,
         content_id: UUID,
         content,
-    ) -> tuple[ContentRole, OrganizationRole]:
+    ) -> ContentRole:
+        """Resolve the actor's role and require TRANSFER."""
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -960,8 +954,7 @@ class ContentMembersOperations:
         )
         if not role_can_transfer(role):
             raise PermissionDeniedError("transfer", content_type.value)
-        org_role = await self.permission_checker.get_user_org_role(actor_user_id, organization_id)
-        return role, org_role or OrganizationRole.MEMBER
+        return role
 
     async def _get_existing_member(
         self,

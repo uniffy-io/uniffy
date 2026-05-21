@@ -21,6 +21,8 @@ from sqlalchemy import Numeric, and_, case, func, select
 from sqlalchemy import literal as sa_literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.errors import (
     BudgetExceededError,
     NotFoundError,
@@ -31,7 +33,6 @@ from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.user_quota import AgentUserQuota
-from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -154,7 +155,7 @@ class BudgetsOperations:
                 currency=resolved_currency,
             )
             self._session.add(row)
-            action = "budget.create"
+            action = Action.AGENT_BUDGET_CREATED
         else:
             row.monthly_limit = dollar_cap
             row.image_monthly_limit = image_monthly_limit
@@ -163,15 +164,15 @@ class BudgetsOperations:
             row.reset_day = resolved_day
             row.currency = resolved_currency
             row.updated_at = now
-            action = "budget.update"
+            action = Action.AGENT_BUDGET_UPDATED
 
         await self._session.commit()
         await self._session.refresh(row)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
             resource_type="budget",
             resource_id=row.id,
@@ -205,11 +206,11 @@ class BudgetsOperations:
         await self._session.delete(row)
         await self._session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="budget.delete",
+            actor_user_id=user_id,
+            action=Action.AGENT_BUDGET_DELETED,
             resource_type="budget",
             resource_id=row_id,
         )
@@ -315,7 +316,7 @@ class BudgetsOperations:
                 currency=resolved_currency,
             )
             self._session.add(row)
-            action = "user_quota.create"
+            action = Action.AGENT_USER_QUOTA_CREATED
         else:
             row.daily_limit = daily_dollar
             row.monthly_limit = monthly_dollar
@@ -324,15 +325,15 @@ class BudgetsOperations:
             row.hard_limit = hard_limit
             row.currency = resolved_currency
             row.updated_at = now
-            action = "user_quota.update"
+            action = Action.AGENT_USER_QUOTA_UPDATED
 
         await self._session.commit()
         await self._session.refresh(row)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=actor_user_id,
+            actor_user_id=actor_user_id,
             action=action,
             resource_type="user_quota",
             resource_id=row.id,
@@ -372,11 +373,11 @@ class BudgetsOperations:
         await self._session.delete(row)
         await self._session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=actor_user_id,
-            action="user_quota.delete",
+            actor_user_id=actor_user_id,
+            action=Action.AGENT_USER_QUOTA_DELETED,
             resource_type="user_quota",
             resource_id=row_id,
             details={"target_user_id": str(target_user_id)},
@@ -697,11 +698,11 @@ class BudgetsOperations:
         await self._session.commit()
         await self._session.refresh(row)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="currency_rate.upsert",
+            actor_user_id=user_id,
+            action=Action.AGENT_CURRENCY_RATE_UPSERTED,
             resource_type="currency_rate",
             resource_id=row.id,
             details={"from": from_cur, "to": to_cur, "rate": str(rate_value)},
@@ -735,11 +736,11 @@ class BudgetsOperations:
         await self._session.delete(row)
         await self._session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="currency_rate.delete",
+            actor_user_id=user_id,
+            action=Action.AGENT_CURRENCY_RATE_DELETED,
             resource_type="currency_rate",
             resource_id=row_id,
             details={"from": from_currency, "to": to_currency},
@@ -788,11 +789,11 @@ class BudgetsOperations:
             existing.updated_at = datetime.now(UTC)
         await self._session.commit()
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="display_currency.set",
+            actor_user_id=user_id,
+            action=Action.AGENT_DISPLAY_CURRENCY_SET,
             resource_type="runtime_settings",
             resource_id=organization_id,
             details={"display_currency": cur},

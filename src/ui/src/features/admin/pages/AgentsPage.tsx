@@ -1,20 +1,12 @@
-/**
- * Agents Budgets admin page.
- *
- * Two tabs:
- * - Budget: org-wide monthly spend cap, image cap, hard-limit toggle,
- *   alert thresholds, reset day. Surfaces the current-period spend
- *   alongside the cap so admins can eyeball headroom.
- * - Rate Limits: the five rate-limit kinds, each with a per-org
- *   override (limit + window seconds). Defaults are shown faded with
- *   a "Default" badge until the admin overrides them.
- *
- * Runtime settings will land in a third tab once the backend RPC
- * lands; the model exists but no service exposes it yet.
- */
-
 import { useEffect, useMemo, useState } from 'react';
-import { Coins, CurrencyDollar, Gauge, Trash, Wallet } from '@phosphor-icons/react';
+import {
+    ChatCircleText,
+    Coins,
+    CurrencyDollar,
+    Gauge,
+    Robot,
+    Trash,
+} from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
@@ -24,6 +16,10 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/shared/utils/cn';
 import { COMMON_CURRENCIES, currencySymbol, formatCurrency } from '@/shared/utils/currencyFormatting';
+import {
+    fetchOrganizationSettings,
+    updateOrganizationSettings,
+} from '@/features/admin/store/adminThunks';
 import {
     fetchOrgBudget,
     updateOrgBudget,
@@ -39,9 +35,10 @@ import {
 } from '@/features/admin/store/agentsGovernanceThunks';
 import type { RateLimitState } from '@/features/admin/store/agentsGovernanceSlice';
 
-type TabId = 'budget' | 'rate-limits' | 'currencies';
+type TabId = 'general' | 'budget' | 'rate-limits' | 'currencies';
 
 const TABS: { id: TabId; label: string }[] = [
+    { id: 'general', label: 'General' },
     { id: 'budget', label: 'Budget' },
     { id: 'rate-limits', label: 'Rate limits' },
     { id: 'currencies', label: 'Currencies' },
@@ -70,19 +67,20 @@ const RATE_LIMIT_LABELS: Record<number, { name: string; description: string }> =
     },
 };
 
-export function AgentsBudgetsPage() {
-    useDocumentTitle('Agents Budgets');
-    const [activeTab, setActiveTab] = useState<TabId>('budget');
+export function AgentsPage() {
+    useDocumentTitle('Agents');
+    const [activeTab, setActiveTab] = useState<TabId>('general');
 
     return (
         <div className="space-y-6">
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <Wallet size={24} weight="duotone" className="text-primary" />
-                    <h1 className="text-2xl font-bold">Agents Budgets</h1>
+                    <Robot size={24} weight="duotone" className="text-primary" />
+                    <h1 className="text-2xl font-bold">Agents</h1>
                 </div>
                 <p className="text-muted-foreground">
-                    Cost caps, alerts, and request-rate overrides for your organization.
+                    Org-wide controls for AI agents: availability, spend caps, request rates, and
+                    cost currency.
                 </p>
             </div>
 
@@ -104,6 +102,7 @@ export function AgentsBudgetsPage() {
                 ))}
             </div>
 
+            {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'budget' && <BudgetTab />}
             {activeTab === 'rate-limits' && <RateLimitsTab />}
             {activeTab === 'currencies' && <CurrenciesTab />}
@@ -111,7 +110,58 @@ export function AgentsBudgetsPage() {
     );
 }
 
-// --- Budget tab ---
+function GeneralTab() {
+    const dispatch = useAppDispatch();
+    const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const settings = useAppSelector((s) => s.admin.orgSettings);
+    const loading = useAppSelector((s) => s.admin.orgSettingsLoading);
+    const saving = useAppSelector((s) => s.admin.orgSettingsSaving);
+
+    useEffect(() => {
+        if (organizationId) {
+            dispatch(fetchOrganizationSettings());
+        }
+    }, [dispatch, organizationId]);
+
+    const agentsEnabled = settings?.chat.agentsEnabled ?? false;
+
+    const handleToggleAgents = (next: boolean) => {
+        dispatch(updateOrganizationSettings({ chat: { agentsEnabled: next } }));
+    };
+
+    return (
+        <section className="border border-border rounded-xl bg-card">
+            <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <ChatCircleText size={20} weight="duotone" className="text-violet-500" />
+                <div>
+                    <h2 className="text-base font-semibold">Availability</h2>
+                    <p className="text-xs text-muted-foreground">
+                        Where and how agents can be reached across the organization.
+                    </p>
+                </div>
+            </header>
+
+            <div className="flex items-start justify-between gap-6 px-5 py-4">
+                <div className="flex items-start gap-3 min-w-0">
+                    <Robot size={20} weight="duotone" className="mt-0.5 text-amber-500 shrink-0" />
+                    <div className="min-w-0">
+                        <div className="text-sm font-medium">Agents in chat</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Allow members to DM agents and trigger them in channels via mentions,
+                            replies, or threads. When off, agents are hidden from chat pickers and
+                            do not respond.
+                        </p>
+                    </div>
+                </div>
+                <ToggleSwitch
+                    enabled={agentsEnabled}
+                    onChange={handleToggleAgents}
+                    disabled={loading || saving || !organizationId}
+                />
+            </div>
+        </section>
+    );
+}
 
 function BudgetTab() {
     const dispatch = useAppDispatch();
@@ -311,8 +361,6 @@ function BudgetTab() {
     );
 }
 
-// --- Rate limits tab ---
-
 function RateLimitsTab() {
     const dispatch = useAppDispatch();
     const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
@@ -439,8 +487,6 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
         </div>
     );
 }
-
-// --- Currencies tab ---
 
 function CurrenciesTab() {
     const dispatch = useAppDispatch();
@@ -655,8 +701,6 @@ function CurrenciesTab() {
         </section>
     );
 }
-
-// --- Shared row primitive ---
 
 function FieldRow({
     label,

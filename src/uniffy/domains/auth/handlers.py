@@ -130,10 +130,10 @@ class AuthHandlers:
                     domain_admin_domains=_domain_admins_to_proto(result),
                 )
         except AuthenticationError as e:
-            logger.warning(f"Login failed: {e}")
+            logger.warning("Login failed: {}", e)
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
-            logger.error(f"Login error: {e}", exc_info=True)
+            logger.opt(exception=True).error("Login error: {}", e)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def refresh_token(

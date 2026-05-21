@@ -10,6 +10,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import (
     PermissionChecker,
     resolve_access_policy,
@@ -52,6 +54,21 @@ THRESHOLD_XLARGE = 2 * 1024 * 1024 * 1024  # 2 GB
 
 # Default upload expiry: 24 hours
 DEFAULT_UPLOAD_EXPIRY_HOURS = int(os.getenv("UPLOAD_EXPIRY_HOURS", 24))
+
+
+def _file_uploaded_audit_enabled() -> bool:
+    """Feature flag gate for the high-volume ``file.uploaded`` audit row.
+
+    Default off because every successful upload writes one row; the
+    volume swamps the audit table on storage-heavy deployments. Set
+    ``AUDIT_EVENTS_FILE_UPLOADED=true`` to opt in once storage volume
+    has been characterised in production.
+    """
+    return os.getenv("AUDIT_EVENTS_FILE_UPLOADED", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
 
 def calculate_chunk_size(total_size: int) -> int:
@@ -560,6 +577,21 @@ class FileOperations(BaseContentOperations[File]):
         upload.status = UploadStatus.COMPLETED
         upload.updated_at = datetime.now(UTC)
 
+        if _file_uploaded_audit_enabled():
+            await write_audit_event(
+                self.session,
+                organization_id=upload.organization_id,
+                actor_user_id=user_id,
+                action=Action.FILE_UPLOADED,
+                resource_type=ContentType.FILE.value,
+                resource_id=file.id,
+                details={
+                    "filename": file.filename,
+                    "mime_type": file.mime_type,
+                    "size_bytes": actual_size,
+                },
+            )
+
         await self.session.commit()
         await self.session.refresh(file)
 
@@ -898,6 +930,21 @@ class FileOperations(BaseContentOperations[File]):
 
         # Remove from search index
         await self.search_indexer.remove(build_content_urn(self.content_type, file_id))
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=(
+                Action.FILE_PERMANENTLY_DELETED if permanent else Action.FILE_DELETED
+            ),
+            resource_type=ContentType.FILE.value,
+            resource_id=file_id,
+            details={
+                "filename": file.filename if not permanent else None,
+                "mime_type": file.mime_type if not permanent else None,
+            },
+        )
         await self.session.commit()
 
         return True
@@ -935,6 +982,16 @@ class FileOperations(BaseContentOperations[File]):
         file.is_deleted = False
         file.deleted_at = None
         file.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.FILE_RESTORED,
+            resource_type=ContentType.FILE.value,
+            resource_id=file_id,
+            details={"filename": file.filename},
+        )
 
         await self.session.commit()
         await self.session.refresh(file)

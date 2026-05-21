@@ -51,8 +51,9 @@ from uniffy.core.types import (
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.permissions.converters import (
+    audit_action_for_member_action,
+    audit_event_to_content_member_event_proto,
     content_access_policy_to_proto,
-    content_member_event_to_proto,
     content_member_to_proto,
 )
 
@@ -371,9 +372,11 @@ class MembersHandlers:
         if request.actor_user_id:
             actor_filter_user_id = _parse_uuid(request.actor_user_id, "actor_user_id")
 
-        action_filter = None
+        action_filter: str | None = None
         if request.action:
-            action_filter = content_member_action_from_proto(request.action)
+            domain_action = content_member_action_from_proto(request.action)
+            if domain_action is not None:
+                action_filter = audit_action_for_member_action(domain_action)
 
         after = None
         if request.HasField("after"):
@@ -401,7 +404,9 @@ class MembersHandlers:
                 )
 
                 response = ListMemberEventsResponse()
-                response.events.extend(content_member_event_to_proto(event) for event in events)
+                response.events.extend(
+                    audit_event_to_content_member_event_proto(event) for event in events
+                )
 
                 # total_count would need an extra count query;
                 # report a best-effort total derived from the page.

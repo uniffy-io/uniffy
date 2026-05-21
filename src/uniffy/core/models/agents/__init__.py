@@ -2,7 +2,6 @@
 
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.approval_audit import AgentApprovalAudit
-from uniffy.core.models.agents.audit_log import AgentAuditLog
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.budget_alert import AgentBudgetAlert
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
@@ -21,7 +20,6 @@ from uniffy.core.models.agents.user_quota import AgentUserQuota
 __all__ = [
     "Agent",
     "AgentApprovalAudit",
-    "AgentAuditLog",
     "AgentBudget",
     "AgentBudgetAlert",
     "AgentChannelBinding",

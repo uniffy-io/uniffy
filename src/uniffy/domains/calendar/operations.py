@@ -9,6 +9,8 @@ from sqlalchemy import String, and_, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
@@ -430,6 +432,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.location = location
         if meeting_url is not None:
             event.meeting_url = meeting_url
+        previous_calendar_id = event.calendar_id
+        calendar_moved = (
+            calendar_id is not None and calendar_id != event.calendar_id
+        )
         if calendar_id is not None:
             event.calendar_id = calendar_id
         if category_id is not None:
@@ -605,6 +611,23 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     event_id=event_id,
                 )
 
+        if calendar_moved:
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.CALENDAR_EVENT_MOVED,
+                resource_type=ContentType.CALENDAR_EVENT.value,
+                resource_id=event_id,
+                details={
+                    "previous_calendar_id": (
+                        str(previous_calendar_id) if previous_calendar_id else None
+                    ),
+                    "new_calendar_id": str(event.calendar_id),
+                },
+            )
+            await self.session.commit()
+
         return event
 
     async def delete(
@@ -670,6 +693,23 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             await queries.soft_delete_event(self.session, event)
 
         await self.search_indexer.remove(build_content_urn(self.content_type, event_id))
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=(
+                Action.CALENDAR_EVENT_PERMANENTLY_DELETED
+                if permanent
+                else Action.CALENDAR_EVENT_DELETED
+            ),
+            resource_type=ContentType.CALENDAR_EVENT.value,
+            resource_id=event_id,
+            details={
+                "title": event.title,
+                "start_time": event.start_time.isoformat(),
+            },
+        )
         await self.session.commit()
 
         return True

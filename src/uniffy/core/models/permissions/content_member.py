@@ -12,8 +12,9 @@ Semantics:
   The permission checker picks the highest applicable role, with ``BLOCKED``
   from any source winning.
 - ``expires_at`` is optional. Expired rows are filtered by the read path.
-- ``added_by_user_id`` is the audit actor; use ``ContentMemberEvent`` for
-  the full history of additions, role changes, and removals.
+- ``added_by_user_id`` is the audit actor; the full history of additions,
+  role changes, and removals lives in ``audit_events`` under
+  ``action`` values starting with ``permissions.``.
 """
 
 from datetime import UTC, datetime
@@ -50,8 +51,7 @@ class ContentMember(SQLModel, table=True):
     role : ContentRole
         Role granted to the subject. May be ``BLOCKED`` for explicit deny.
     added_by_user_id : UUID
-        User who created this grant (for audit; see ``ContentMemberEvent``
-        for the full history).
+        User who created this grant. Full history lives in ``audit_events``.
     added_at : datetime
         When the grant was created.
     updated_at : datetime

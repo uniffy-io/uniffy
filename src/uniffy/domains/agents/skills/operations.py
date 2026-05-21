@@ -7,10 +7,11 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.cache import (
     invalidate_agents_using_skill,
     invalidate_org_always_active_skills,
@@ -118,11 +119,11 @@ class SkillOperations:
         await self._session.commit()
         await self._session.refresh(skill)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="skill.create",
+            actor_user_id=user_id,
+            action=Action.AGENT_SKILL_CREATED,
             resource_type="skill",
             resource_id=skill.id,
             details={
@@ -366,11 +367,11 @@ class SkillOperations:
         await self._session.refresh(skill)
 
         if audit_changes:
-            await create_audit_log(
+            await write_audit_event(
                 self._session,
                 organization_id=organization_id,
-                user_id=user_id,
-                action="skill.update",
+                actor_user_id=user_id,
+                action=Action.AGENT_SKILL_UPDATED,
                 resource_type="skill",
                 resource_id=skill_id,
                 details={"changes": audit_changes},
@@ -448,11 +449,11 @@ class SkillOperations:
         skill_name = skill.name
         was_always_active = skill.always_active
         await self._session.delete(skill)
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="skill.delete",
+            actor_user_id=user_id,
+            action=Action.AGENT_SKILL_DELETED,
             resource_type="skill",
             resource_id=skill_id,
             details={"name": skill_name},

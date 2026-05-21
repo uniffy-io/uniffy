@@ -7,6 +7,8 @@ from loguru import logger
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.audit import write_audit_event
+from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.crypto import decrypt_value, encrypt_value
@@ -25,7 +27,6 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.cache import (
     get_cached_provider_metadata,
     invalidate_provider_metadata,
@@ -123,11 +124,11 @@ class ProviderOperations:
         await self._session.commit()
         await self._session.refresh(key)
 
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="provider_key.add",
+            actor_user_id=user_id,
+            action=Action.AGENT_PROVIDER_KEY_ADDED,
             resource_type="provider_key",
             resource_id=key.id,
             details={
@@ -224,11 +225,11 @@ class ProviderOperations:
         key_label = key.label
         key_provider = key.provider
         await self._session.delete(key)
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="provider_key.remove",
+            actor_user_id=user_id,
+            action=Action.AGENT_PROVIDER_KEY_DELETED,
             resource_type="provider_key",
             resource_id=key_id,
             details={"provider": key_provider, "label": key_label},
@@ -626,11 +627,11 @@ class ProviderOperations:
 
         key.is_enabled = enabled
         key.updated_at = datetime.now(UTC)
-        await create_audit_log(
+        await write_audit_event(
             self._session,
             organization_id=organization_id,
-            user_id=user_id,
-            action="provider_key.toggle",
+            actor_user_id=user_id,
+            action=Action.AGENT_PROVIDER_KEY_TOGGLED,
             resource_type="provider_key",
             resource_id=key_id,
             details={"enabled": enabled},
