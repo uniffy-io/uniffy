@@ -44,6 +44,8 @@ export interface ProjectsState {
   errors: ErrorState;
   /** Snapshot for reverting failed optimistic task updates */
   _pendingTaskSnapshot?: Task;
+  /** Snapshots of parent tasks whose subtask counts were optimistically adjusted */
+  _pendingParentSnapshots?: Record<string, Task>;
 }
 
 const initialState: ProjectsState = {
@@ -100,11 +102,11 @@ export const projectsSlice = createSlice({
       const { id, ...updates } = action.payload;
       const task = state.tasks[id];
       if (task) {
-        // Snapshot BEFORE applying changes so rejected thunks can revert
         state._pendingTaskSnapshot = { ...task };
-        // If status changed on a subtask, update parent's subtask counts
+        state._pendingParentSnapshots = {};
         if (updates.status && task.parentId && state.tasks[task.parentId]) {
           const parent = state.tasks[task.parentId];
+          state._pendingParentSnapshots[parent.id] = { ...parent };
           const wasDone = task.status === "status_done";
           const nowDone = updates.status === "status_done";
           if (wasDone && !nowDone) {
@@ -113,7 +115,29 @@ export const projectsSlice = createSlice({
             parent.subtaskCompleted = parent.subtaskCompleted + 1;
           }
         }
-        // Merge fieldValues instead of replacing
+        if ("parentId" in updates && updates.parentId !== task.parentId) {
+          const wasDone = task.status === "status_done";
+          if (task.parentId && state.tasks[task.parentId]) {
+            const oldParent = state.tasks[task.parentId];
+            if (!state._pendingParentSnapshots[oldParent.id]) {
+              state._pendingParentSnapshots[oldParent.id] = { ...oldParent };
+            }
+            oldParent.subtaskTotal = Math.max(0, oldParent.subtaskTotal - 1);
+            if (wasDone) {
+              oldParent.subtaskCompleted = Math.max(0, oldParent.subtaskCompleted - 1);
+            }
+          }
+          if (updates.parentId && state.tasks[updates.parentId]) {
+            const newParent = state.tasks[updates.parentId];
+            if (!state._pendingParentSnapshots[newParent.id]) {
+              state._pendingParentSnapshots[newParent.id] = { ...newParent };
+            }
+            newParent.subtaskTotal = newParent.subtaskTotal + 1;
+            if (wasDone) {
+              newParent.subtaskCompleted = newParent.subtaskCompleted + 1;
+            }
+          }
+        }
         if (updates.fieldValues) {
           updates.fieldValues = { ...task.fieldValues, ...updates.fieldValues };
         }
@@ -309,15 +333,21 @@ export const projectsSlice = createSlice({
           state.tasks[spawnedTask.id] = spawnedTask;
         }
         state._pendingTaskSnapshot = undefined;
+        state._pendingParentSnapshots = undefined;
       })
       .addCase(updateTask.rejected, (state, action) => {
         state.loading.updating = null;
         state.errors.general = (action.payload as string) || action.error.message || "Failed to update task";
-        // Revert optimistic update on failure
         if (state._pendingTaskSnapshot) {
           const snapshot = state._pendingTaskSnapshot;
           state.tasks[snapshot.id] = snapshot;
           state._pendingTaskSnapshot = undefined;
+        }
+        if (state._pendingParentSnapshots) {
+          for (const snapshot of Object.values(state._pendingParentSnapshots)) {
+            state.tasks[snapshot.id] = snapshot;
+          }
+          state._pendingParentSnapshots = undefined;
         }
       });
 
@@ -333,14 +363,20 @@ export const projectsSlice = createSlice({
           state.tasks[spawnedTask.id] = spawnedTask;
         }
         state._pendingTaskSnapshot = undefined;
+        state._pendingParentSnapshots = undefined;
       })
       .addCase(moveTask.rejected, (state, action) => {
         state.errors.general = (action.payload as string) || action.error.message || "Failed to move task";
-        // Revert optimistic update on failure
         if (state._pendingTaskSnapshot) {
           const snapshot = state._pendingTaskSnapshot;
           state.tasks[snapshot.id] = snapshot;
           state._pendingTaskSnapshot = undefined;
+        }
+        if (state._pendingParentSnapshots) {
+          for (const snapshot of Object.values(state._pendingParentSnapshots)) {
+            state.tasks[snapshot.id] = snapshot;
+          }
+          state._pendingParentSnapshots = undefined;
         }
       });
 

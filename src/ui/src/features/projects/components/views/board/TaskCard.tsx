@@ -18,10 +18,18 @@ import { useTagsByIds } from "@/features/tags/store/selectors";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
+import { MentionChipCompact } from "@/components/mention";
+import { useMentionState } from "@/components/mention/useMentionState";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
 import { TagChip } from "@/features/tags";
+
+function ReferenceChip({ urn }: { urn: string }) {
+  const liveState = useMentionState(urn);
+  const label = liveState?.title || extractFallbackLabel(urn);
+  return <MentionChipCompact urn={urn} label={label} liveState={liveState} />;
+}
 
 interface TaskCardProps {
   task: Task;
@@ -31,6 +39,7 @@ interface TaskCardProps {
   onCheckboxChange: (taskId: string) => void;
   isSelected?: boolean;
   projectSlug: string;
+  reparentHintActive?: boolean;
 }
 
 export function TaskCard({
@@ -41,6 +50,7 @@ export function TaskCard({
   onCheckboxChange,
   isSelected,
   projectSlug,
+  reparentHintActive = false,
 }: TaskCardProps) {
   const {
     attributes,
@@ -78,6 +88,7 @@ export function TaskCard({
         "hover:border-primary/50 transition-colors",
         isDragging && "opacity-50 shadow-lg",
         isSelected && "ring-2 ring-primary",
+        reparentHintActive && "outline-2 outline-dashed outline-primary/70 -outline-offset-2",
         hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400"
       )}
       onClick={onClick}
@@ -225,14 +236,9 @@ export function TaskCard({
         {(task.assigneeIds.length > 0 || task.outgoingReferences.length > 0) && (
         <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
           {/* Reference chips */}
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
             {task.outgoingReferences?.slice(0, 2).map((urn) => (
-              <span
-                key={urn}
-                className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
-              >
-                {extractFallbackLabel(urn)}
-              </span>
+              <ReferenceChip key={urn} urn={urn} />
             ))}
             {(task.outgoingReferences?.length || 0) > 2 && (
               <span className="text-[10px] text-muted-foreground">

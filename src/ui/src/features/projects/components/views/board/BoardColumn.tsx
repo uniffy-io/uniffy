@@ -30,6 +30,8 @@ interface BoardColumnProps {
   onCheckboxChange: (taskId: string) => void;
   onAddTask: () => void;
   projectSlug: string;
+  reparentHintActive?: boolean;
+  activeDragTaskId?: string | null;
 }
 
 export function BoardColumn({
@@ -41,6 +43,8 @@ export function BoardColumn({
   onCheckboxChange,
   onAddTask,
   projectSlug,
+  reparentHintActive = false,
+  activeDragTaskId = null,
 }: BoardColumnProps) {
   const { isMobile } = useBreakpoint();
   const { setNodeRef, isOver } = useDroppable({
@@ -100,6 +104,9 @@ export function BoardColumn({
                 onCheckboxChange={onCheckboxChange}
                 isSelected={selectedTaskIds.includes(task.id)}
                 projectSlug={projectSlug}
+                reparentHintActive={
+                  reparentHintActive && activeDragTaskId !== null && activeDragTaskId !== task.id
+                }
               />
             ))}
           </SortableContext>

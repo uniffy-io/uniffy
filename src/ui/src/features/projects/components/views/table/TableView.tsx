@@ -23,6 +23,7 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
+  type DragMoveEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -88,6 +89,13 @@ import { useProjectPermission } from "@/features/projects/hooks/useProjectPermis
 import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import { checkReparent } from "@/features/projects/utils/reparent";
+
+type RowDropZone = "before" | "reparent" | "after";
+interface DropIndicator {
+  overId: string;
+  zone: RowDropZone;
+}
 
 const MAX_SUBTASK_DEPTH = 5;
 
@@ -688,59 +696,121 @@ export function TableView() {
 
   // ===== Drag-and-Drop =====
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const dropIndicatorRef = useRef<DropIndicator | null>(null);
+  const pointerYRef = useRef<number | null>(null);
+  const allTasksList = useMemo(() => Object.values(allTasks), [allTasks]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor)
   );
+
+  useEffect(() => {
+    if (!activeTask) return;
+    const onPointerMove = (e: PointerEvent) => {
+      pointerYRef.current = e.clientY;
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    return () => window.removeEventListener("pointermove", onPointerMove);
+  }, [activeTask]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = filteredTasks.find((t) => t.id === event.active.id);
     if (task) setActiveTask(task);
   }, [filteredTasks]);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { active, over } = event;
-    setActiveTask(null);
-    if (!over || active.id === over.id) return;
-
-    const activeIdx = orderedTaskIds.indexOf(active.id as string);
-    const overIdx = orderedTaskIds.indexOf(over.id as string);
-
-    if (activeIdx === -1 || overIdx === -1 || activeIdx === overIdx) return;
-
-    const activeTask = filteredTasks[activeIdx];
-    const overTask = filteredTasks[overIdx];
-
-    let newSortOrder: number;
-
-    // Moving UP (activeIdx > overIdx):
-    // Insert BEFORE overTask.
-    // New sortOrder should be between prevTask (if exists) and overTask.
-    if (activeIdx > overIdx) {
-      const prevTask = overIdx > 0 ? filteredTasks[overIdx - 1] : null;
-      if (prevTask) {
-        newSortOrder = (prevTask.sortOrder + overTask.sortOrder) / 2;
-      } else {
-        // Moved to the very top
-        newSortOrder = overTask.sortOrder / 2;
+    if (!over || active.id === over.id) {
+      if (dropIndicatorRef.current !== null) {
+        dropIndicatorRef.current = null;
+        setDropIndicator(null);
       }
-    } 
-    // Moving DOWN (activeIdx < overIdx):
-    // Insert AFTER overTask.
-    // New sortOrder should be between overTask and nextTask (if exists).
-    else {
-      const nextTask = overIdx < filteredTasks.length - 1 ? filteredTasks[overIdx + 1] : null;
-      if (nextTask) {
-        newSortOrder = (overTask.sortOrder + nextTask.sortOrder) / 2;
-      } else {
-        // Moved to the very bottom
-        newSortOrder = overTask.sortOrder + 10000;
-      }
+      return;
     }
 
-    dispatch(optimisticUpdateTask({ id: active.id as string, sortOrder: newSortOrder }));
-    dispatch(moveTask({ id: active.id as string, status: activeTask.status, sortOrder: newSortOrder }));
-  }, [dispatch, orderedTaskIds, filteredTasks]);
+    const overRect = over.rect;
+    if (!overRect) return;
+
+    const pointerY = pointerYRef.current ??
+      (active.rect.current.translated
+        ? active.rect.current.translated.top + active.rect.current.translated.height / 2
+        : null);
+    if (pointerY === null) return;
+
+    const ratio = (pointerY - overRect.top) / overRect.height;
+    const zone: RowDropZone = ratio < 0.3 ? "before" : ratio > 0.7 ? "after" : "reparent";
+    const overId = over.id as string;
+
+    const next: DropIndicator = { overId, zone };
+    const prev = dropIndicatorRef.current;
+    if (!prev || prev.overId !== next.overId || prev.zone !== next.zone) {
+      dropIndicatorRef.current = next;
+      setDropIndicator(next);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    const indicator = dropIndicatorRef.current;
+    setActiveTask(null);
+    setDropIndicator(null);
+    dropIndicatorRef.current = null;
+
+    if (!over || active.id === over.id) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    const activeTaskRow = filteredTasks.find((t) => t.id === activeId);
+    if (!activeTaskRow) return;
+
+    const overTask = allTasks[overId];
+    if (!overTask) return;
+
+    const zone: RowDropZone = indicator?.overId === overId ? indicator.zone : "reparent";
+
+    if (zone === "reparent") {
+      const check = checkReparent(activeId, overId, allTasksList, activeTaskRow.parentId);
+      if (!check.ok) return;
+      dispatch(optimisticUpdateTask({ id: activeId, parentId: overId }));
+      dispatch(updateTask({ id: activeId, parentId: overId }));
+      return;
+    }
+
+    const activeIdx = orderedTaskIds.indexOf(activeId);
+    const overIdx = orderedTaskIds.indexOf(overId);
+    if (activeIdx === -1 || overIdx === -1) return;
+
+    const orderedOver = filteredTasks[overIdx];
+    const insertBefore = zone === "before";
+    const direction = insertBefore ? -1 : 1;
+    let neighborIdx = overIdx + direction;
+    while (
+      neighborIdx >= 0 &&
+      neighborIdx < filteredTasks.length &&
+      filteredTasks[neighborIdx].id === activeId
+    ) {
+      neighborIdx += direction;
+    }
+    const neighbor =
+      neighborIdx >= 0 && neighborIdx < filteredTasks.length ? filteredTasks[neighborIdx] : null;
+
+    let newSortOrder: number;
+    if (insertBefore) {
+      newSortOrder = neighbor
+        ? (neighbor.sortOrder + orderedOver.sortOrder) / 2
+        : orderedOver.sortOrder / 2;
+    } else {
+      newSortOrder = neighbor
+        ? (orderedOver.sortOrder + neighbor.sortOrder) / 2
+        : orderedOver.sortOrder + 10000;
+    }
+
+    if (newSortOrder === activeTaskRow.sortOrder) return;
+
+    dispatch(optimisticUpdateTask({ id: activeId, sortOrder: newSortOrder }));
+    dispatch(moveTask({ id: activeId, status: activeTaskRow.status, sortOrder: newSortOrder }));
+  }, [dispatch, orderedTaskIds, filteredTasks, allTasks, allTasksList]);
 
   const toggleParentExpand = useCallback((taskId: string) => {
     setExpandedParents((prev) => {
@@ -775,6 +845,7 @@ export function TableView() {
     const hasChildren = task.subtaskTotal > 0 && depth < MAX_SUBTASK_DEPTH;
     const isExp = expandedParents.has(task.id);
     const childSubtasks = isExp ? getSubtasksForParent(task.id) : [];
+    const rowZone = dropIndicator?.overId === task.id ? dropIndicator.zone : null;
 
     return (
       <div key={task.id}>
@@ -796,6 +867,7 @@ export function TableView() {
           onTitleClick={(e) => handleTitleClick(task.id, e)}
           isSubtask
           subtaskDepth={depth}
+          dropZone={rowZone}
           expandable={hasChildren}
           isExpanded={isExp}
           onToggleExpand={() => toggleParentExpand(task.id)}
@@ -809,6 +881,7 @@ export function TableView() {
     const hasSubtasks = task.subtaskTotal > 0;
     const isExpanded = expandedParents.has(task.id);
     const subtasks = isExpanded ? getSubtasksForParent(task.id) : [];
+    const rowZone = dropIndicator?.overId === task.id ? dropIndicator.zone : null;
 
     return (
       <div key={task.id}>
@@ -831,6 +904,7 @@ export function TableView() {
           expandable={hasSubtasks}
           isExpanded={isExpanded}
           onToggleExpand={() => toggleParentExpand(task.id)}
+          dropZone={rowZone}
         />
         {isExpanded && subtasks.map((child) => renderSubtaskRow(child, 1))}
       </div>
@@ -1005,6 +1079,7 @@ export function TableView() {
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
         >
           <div>
@@ -1298,6 +1373,7 @@ interface TableRowProps {
   expandable?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  dropZone?: RowDropZone | null;
 }
 
 function SortableTableRow(props: Omit<TableRowProps, "dragHandleProps" | "isDragging" | "style" | "rowRef">) {
@@ -1353,6 +1429,7 @@ function TableRow({
   expandable,
   isExpanded,
   onToggleExpand,
+  dropZone,
 }: TableRowProps) {
   return (
     <div
@@ -1362,7 +1439,8 @@ function TableRow({
         "hover:bg-muted/30 transition-colors",
         isSelected && "bg-primary/5",
         isDragging && "bg-muted/50",
-        isSubtask && "bg-muted/10"
+        isSubtask && "bg-muted/10",
+        dropZone === "reparent" && "bg-primary/10 ring-2 ring-primary/50 ring-inset"
       )}
       style={{ height: LAYOUT.TABLE_ROW_HEIGHT, ...style }}
       onClick={onClick}
@@ -1370,6 +1448,12 @@ function TableRow({
       {/* Selection Indicator */}
       {isSelected && (
         <div className="absolute left-0 w-0.5 h-full bg-primary" />
+      )}
+      {dropZone === "before" && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary pointer-events-none" />
+      )}
+      {dropZone === "after" && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary pointer-events-none" />
       )}
 
       {/* Drag Handle / Subtask indent */}

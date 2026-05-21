@@ -8,7 +8,7 @@
  * - Task filtering by search query
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -30,7 +30,8 @@ import {
   updateFieldDefinition,
 } from "@/features/projects/store/projectsSlice";
 import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
-import { moveTask, updateFieldThunk } from "@/features/projects/store/projectsThunks";
+import { moveTask, updateFieldThunk, updateTask } from "@/features/projects/store/projectsThunks";
+import { checkReparent } from "@/features/projects/utils/reparent";
 import {
   selectSelectedTaskIds,
   selectSearchQuery,
@@ -51,7 +52,7 @@ import { useProjectPermission } from "@/features/projects/hooks/useProjectPermis
 export function BoardView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
-  const tasks = useFilteredTasks(project?.id ?? "");
+  const tasks = useFilteredTasks(project?.id ?? "", { includeSubtasks: true });
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
   const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
@@ -59,9 +60,11 @@ export function BoardView() {
   const hasSprints = allSprints.length > 0;
 
   const { canEdit } = useProjectPermission();
-  // Track the currently dragged task
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isAddStatusOpen, setIsAddStatusOpen] = useState(false);
+  const altHeldRef = useRef(false);
+  const pointerYRef = useRef<number | null>(null);
+  const [reparentHintActive, setReparentHintActive] = useState(false);
 
   // Configure sensors for drag detection
   const pointerSensor = useSensor(PointerSensor, {
@@ -73,6 +76,34 @@ export function BoardView() {
     coordinateGetter: sortableKeyboardCoordinates,
   });
   const sensors = useSensors(pointerSensor, keyboardSensor);
+
+  useEffect(() => {
+    if (!activeTask) return;
+    const sync = (held: boolean) => {
+      altHeldRef.current = held;
+      setReparentHintActive(held);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") sync(true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") sync(false);
+    };
+    const onBlur = () => sync(false);
+    const onPointerMove = (e: PointerEvent) => {
+      pointerYRef.current = e.clientY;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("pointermove", onPointerMove);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pointermove", onPointerMove);
+    };
+  }, [activeTask]);
 
   if (!project) {
     return null;
@@ -155,7 +186,11 @@ export function BoardView() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    const altHeld = altHeldRef.current;
+    const pointerY = pointerYRef.current;
     setActiveTask(null);
+    setReparentHintActive(false);
+    altHeldRef.current = false;
 
     if (!over) return;
 
@@ -163,28 +198,66 @@ export function BoardView() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Determine the target status
-    // "over" could be a column ID or another task ID
-    let newStatus: string;
+    const overIsColumn = statusOptions.some((s) => s.id === over.id);
+    const overTask = overIsColumn ? null : tasks.find((t) => t.id === over.id);
 
-    // Check if dropped over a column
-    if (statusOptions.some((s) => s.id === over.id)) {
-      newStatus = over.id as string;
-    } else {
-      // Dropped over another task - find that task's status
-      const overTask = tasks.find((t) => t.id === over.id);
-      if (overTask) {
-        newStatus = overTask.status;
-      } else {
-        return;
-      }
+    if (altHeld && overTask) {
+      const check = checkReparent(taskId, overTask.id, tasks, task.parentId);
+      if (!check.ok) return;
+      dispatch(optimisticUpdateTask({ id: taskId, parentId: overTask.id }));
+      dispatch(updateTask({ id: taskId, parentId: overTask.id }));
+      return;
     }
 
-    // Only update if status changed
+    if (overTask && overTask.status === task.status && over.rect) {
+      const columnTasks = tasksByStatus[task.status] ?? [];
+      const overIdx = columnTasks.findIndex((t) => t.id === overTask.id);
+      if (overIdx === -1) return;
+
+      const insertBefore =
+        pointerY !== null
+          ? (pointerY - over.rect.top) / over.rect.height < 0.5
+          : columnTasks.findIndex((t) => t.id === taskId) > overIdx;
+      const direction = insertBefore ? -1 : 1;
+      let neighborIdx = overIdx + direction;
+      while (
+        neighborIdx >= 0 &&
+        neighborIdx < columnTasks.length &&
+        columnTasks[neighborIdx].id === taskId
+      ) {
+        neighborIdx += direction;
+      }
+      const neighbor =
+        neighborIdx >= 0 && neighborIdx < columnTasks.length ? columnTasks[neighborIdx] : null;
+
+      let newSortOrder: number;
+      if (insertBefore) {
+        newSortOrder = neighbor
+          ? (neighbor.sortOrder + overTask.sortOrder) / 2
+          : overTask.sortOrder / 2;
+      } else {
+        newSortOrder = neighbor
+          ? (overTask.sortOrder + neighbor.sortOrder) / 2
+          : overTask.sortOrder + 10000;
+      }
+
+      if (newSortOrder === task.sortOrder) return;
+      dispatch(optimisticUpdateTask({ id: taskId, sortOrder: newSortOrder }));
+      dispatch(moveTask({ id: taskId, status: task.status, sortOrder: newSortOrder }));
+      return;
+    }
+
+    let newStatus: string;
+    if (overIsColumn) {
+      newStatus = over.id as string;
+    } else if (overTask) {
+      newStatus = overTask.status;
+    } else {
+      return;
+    }
+
     if (task.status !== newStatus) {
-      // Optimistic update for instant visual feedback
       dispatch(optimisticUpdateTask({ id: taskId, status: newStatus }));
-      // Persist via API
       dispatch(
         moveTask({
           id: taskId,
@@ -261,6 +334,8 @@ export function BoardView() {
                 onCheckboxChange={handleCheckboxChange}
                 onAddTask={handleAddTask}
                 projectSlug={project?.slug || ""}
+                reparentHintActive={reparentHintActive}
+                activeDragTaskId={activeTask?.id ?? null}
               />
             ))}
 

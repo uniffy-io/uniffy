@@ -90,10 +90,19 @@ export function useTasks() {
   };
 }
 
+interface UseFilteredTasksOptions {
+  /** When true, subtasks (tasks with a parent) are included in the result. Defaults to false. */
+  includeSubtasks?: boolean;
+}
+
 /**
  * Hook for filtering and sorting tasks
  */
-export function useFilteredTasks(projectId: string) {
+export function useFilteredTasks(
+  projectId: string,
+  options: UseFilteredTasksOptions = {},
+) {
+  const { includeSubtasks = false } = options;
   const tasks = useAppSelector(selectTasksForProject(projectId));
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
   const sortConfig = useAppSelector((state) => state.projectsUi.activeSortConfig);
@@ -102,8 +111,7 @@ export function useFilteredTasks(projectId: string) {
   const taskTypeFilter = useAppSelector((state) => state.projectsUi.taskTypeFilter);
 
   const filteredTasks = useMemo(() => {
-    // Exclude subtasks — they are only visible in the parent task's detail panel
-    let result = tasks.filter((t) => !t.parentId);
+    let result = includeSubtasks ? tasks.slice() : tasks.filter((t) => !t.parentId);
 
     // Apply search filter
     if (searchQuery) {
@@ -144,12 +152,14 @@ export function useFilteredTasks(projectId: string) {
         return sortConfig.direction === "asc" ? comparison : -comparison;
       });
     } else {
-      // Default: sort by task number (asc)
-      result.sort((a, b) => a.number - b.number);
+      result.sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        return a.number - b.number;
+      });
     }
 
     return result;
-  }, [tasks, searchQuery, sortConfig, filterConfig, sprintFilter, taskTypeFilter]);
+  }, [tasks, searchQuery, sortConfig, filterConfig, sprintFilter, taskTypeFilter, includeSubtasks]);
 
   return filteredTasks;
 }
