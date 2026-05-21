@@ -68,7 +68,7 @@ export function EncryptionSection() {
 
                     <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
                         <Button
-                            variant="primary"
+                            variant="default"
                             onClick={() => setConfirmOpen(true)}
                             disabled={!isOwner || rotating}
                         >
