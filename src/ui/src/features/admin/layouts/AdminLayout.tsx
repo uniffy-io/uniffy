@@ -16,6 +16,7 @@ import {
     Robot,
     ClipboardText,
     CaretRight,
+    Key,
 } from '@phosphor-icons/react';
 
 interface NavItem {
@@ -45,6 +46,7 @@ const orgGroups: NavGroup[] = [
         title: 'Security',
         items: [
             { name: 'Default Permissions', path: '/admin/permissions', icon: ShieldCheck },
+            { name: 'Encryption', path: '/admin/encryption', icon: Key },
             { name: 'Audit Log', path: '/admin/audit-logs', icon: ClipboardText },
         ],
     },

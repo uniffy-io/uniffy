@@ -1,6 +1,8 @@
 ## Uniffy
 ***Work Infrastructure, finally unified.***
 
+[[[toc|min=1|max=4|style=flat|bullets=none]]]
+
 ---
 
 ### The Problem

@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setOrgStorageQuota } from '@/features/admin/store/adminThunks';
+import { setOrgStorageQuota, fetchOrgStorageUsage } from '@/features/admin/store/adminThunks';
 import { ByteInput } from '@/features/admin/components/storage/ByteInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,7 @@ export function OrgQuotaEditDialog({ open, onClose }: OrgQuotaEditDialogProps) {
                 warnAtPercent,
                 enforce,
             })).unwrap();
+            await dispatch(fetchOrgStorageUsage());
             onClose();
         } finally {
             setSaving(false);

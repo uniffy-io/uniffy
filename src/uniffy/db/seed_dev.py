@@ -201,10 +201,12 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
         List of (provider_name, ProviderKey) tuples for successfully seeded keys.
 
     """
-    from uniffy.core.crypto import encrypt_value
+    from uniffy.core.crypto import OrgCipher
     from uniffy.core.models.agents.provider_key import ProviderKey
     from uniffy.core.types import AccessMode, ContentRole
     from uniffy.domains.agents.providers.utils import build_key_hint
+
+    org_cipher = OrgCipher(session)
 
     provider_key_configs = [
         {
@@ -235,12 +237,13 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
             continue
 
         credential = credential.strip()
+        encrypted = await org_cipher.encrypt(default_org.id, credential)
         key = ProviderKey(
             organization_id=default_org.id,
             provider=config["provider"],
             credential_type=config["credential_type"],
             label=config["label"],
-            encrypted_credential=encrypt_value(credential),
+            encrypted_credential=encrypted,
             key_hint=build_key_hint(credential),
             is_valid=True,
             is_enabled=True,

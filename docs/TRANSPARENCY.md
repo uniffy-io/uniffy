@@ -1,5 +1,7 @@
 # Transparency
 
+[[[toc|min=1|max=4|style=flat|bullets=none]]]
+
 ### License
 
 Uniffy is **source-available** software, free to use for teams of up to 10 users, using the [Business Source License 1.1 (BSL 1.1)](LICENSE). 

@@ -36,6 +36,7 @@ from uniffy.domains.files.quota_converters import (
     storage_quota_to_proto,
     storage_usage_to_proto,
     user_quota_override_to_proto,
+    user_usage_row_to_proto,
 )
 from uniffy.domains.files.quota_operations import QuotaOperations
 
@@ -353,32 +354,16 @@ class QuotaHandlersMixin:
         try:
             async with open_session() as session:
                 ops = QuotaOperations(session)
-                usage_list = await ops.list_user_usage(
+                rows = await ops.list_user_usage(
                     admin_user_id=user_id,
                     organization_id=organization_id,
                 )
 
-                total_used = 0
-                total_count = 0
-                proto_users = []
-
-                for usage in usage_list:
-                    effective_quota = await ops.get_effective_user_quota(
-                        organization_id, usage.user_id
-                    )
-                    override = await ops.get_user_quota_override(organization_id, usage.user_id)
-                    proto_users.append(
-                        storage_usage_to_proto(
-                            usage,
-                            effective_quota_bytes=effective_quota,
-                            has_override=override is not None,
-                        )
-                    )
-                    total_used += usage.used_bytes
-                    total_count += usage.file_count
+                total_used = sum(r.used_bytes for r in rows)
+                total_count = sum(r.file_count for r in rows)
 
                 return ListOrgStorageUsageResponse(
-                    users=proto_users,
+                    users=[user_usage_row_to_proto(r) for r in rows],
                     total_used_bytes=total_used,
                     total_file_count=total_count,
                 )

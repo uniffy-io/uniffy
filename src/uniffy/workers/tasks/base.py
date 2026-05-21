@@ -24,6 +24,10 @@ from typing import Any
 
 from loguru import logger
 
+from uniffy.core.crypto import (
+    close_dek_invalidation_subscriber,
+    subscribe_dek_invalidations,
+)
 from uniffy.core.llm_providers import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -86,11 +90,22 @@ async def _on_startup_shared(ctx: dict[str, Any], queue_name: QueueName) -> None
     except Exception as e:
         logger.warning(f"Worker: Valkey ops client not available: {e}")
 
+    try:
+        await subscribe_dek_invalidations()
+        logger.info("Worker: Org DEK invalidation subscriber started")
+    except Exception as e:
+        logger.warning(f"Worker: Org DEK invalidation subscriber not available: {e}")
+
 
 async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
     """Close every shared resource opened on startup, in reverse order."""
     queue_name: QueueName = ctx.get("queue", "core")
     logger.info(f"Worker shutting down (queue={queue_name})...")
+
+    try:
+        await close_dek_invalidation_subscriber()
+    except Exception as exc:
+        logger.warning(f"Failed to close DEK invalidation subscriber: {exc}")
 
     for name, coro in [
         ("ops_client", close_ops_client()),

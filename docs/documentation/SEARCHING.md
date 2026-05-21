@@ -1,5 +1,7 @@
 # Searching in Uniffy
 
+[[[toc|min=1|max=4|style=flat|bullets=none]]]
+
 Open search anytime with `Ctrl+K` (or `Cmd+K` on Mac). This shortcut can be customized in **Settings > Keyboard Shortcuts**.
 
 ---

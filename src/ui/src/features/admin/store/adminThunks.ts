@@ -639,3 +639,34 @@ export const recalculateStorageUsage = createAsyncThunk<
         hasOverride: u.hasOverride,
     }));
 });
+
+// Encryption key rotation (org owner only)
+
+export interface EncryptionRotationResult {
+    newVersion: number;
+    previousVersion: number;
+    rotatedAtSeconds: number;
+}
+
+export const rotateEncryptionKey = createAsyncThunk<
+    EncryptionRotationResult,
+    void,
+    { state: RootState }
+>('admin/rotateEncryptionKey', async (_, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await adminApi.rotateEncryptionKey({ organizationId });
+
+    return {
+        newVersion: response.newVersion,
+        previousVersion: response.previousVersion,
+        rotatedAtSeconds: response.rotatedAt
+            ? Number(response.rotatedAt.seconds)
+            : Math.floor(Date.now() / 1000),
+    };
+});

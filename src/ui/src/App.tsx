@@ -40,6 +40,7 @@ const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
+const EncryptionPage = lazyImport(() => import('@/features/admin/pages/EncryptionPage'), 'EncryptionPage');
 const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsPage'), 'AuditLogsPage');
 const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
@@ -235,6 +236,7 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
+                            <Route path="encryption" element={<LazyRoute><EncryptionPage /></LazyRoute>} />
                             <Route path="audit-logs" element={<LazyRoute><AuditLogsPage /></LazyRoute>} />
                             <Route path="agents" element={<LazyRoute><AdminAgentsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />

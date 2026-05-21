@@ -1,10 +1,12 @@
 """Storage quota operations for managing org and user quotas."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import BigInteger, func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.domain_admin import is_domain_admin
@@ -14,7 +16,26 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.storage_quota import StorageQuota
 from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.files.user_storage_quota_override import UserStorageQuotaOverride
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.types import DomainType
+
+
+@dataclass(frozen=True)
+class UserUsageRow:
+    """One row for the admin storage table.
+
+    Carries every field the admin UI displays for a single org member,
+    whether or not they have ever uploaded. Members with no
+    ``StorageUsage`` row get ``used_bytes=0`` and ``last_recalculated_at=None``.
+    """
+
+    user_id: UUID
+    organization_id: UUID
+    used_bytes: int
+    file_count: int
+    has_override: bool
+    effective_quota_bytes: int | None
+    last_recalculated_at: datetime | None
 
 
 class QuotaCheckResult:
@@ -121,19 +142,29 @@ class QuotaOperations:
             select(StorageQuota).where(StorageQuota.organization_id == organization_id)
         )
         quota = result.scalar_one_or_none()
+        if quota is not None:
+            return quota
 
-        if quota is None:
-            quota = StorageQuota(
-                organization_id=organization_id,
-                org_quota_bytes=None,
-                default_user_quota_bytes=None,
-                warn_at_percent=80,
-                enforce=True,
-            )
-            self.session.add(quota)
+        quota = StorageQuota(
+            organization_id=organization_id,
+            org_quota_bytes=None,
+            default_user_quota_bytes=None,
+            warn_at_percent=80,
+            enforce=True,
+        )
+        self.session.add(quota)
+        try:
             await self.session.commit()
-            await self.session.refresh(quota)
-
+        except IntegrityError:
+            await self.session.rollback()
+            result = await self.session.execute(
+                select(StorageQuota).where(StorageQuota.organization_id == organization_id)
+            )
+            existing = result.scalar_one_or_none()
+            if existing is None:
+                raise
+            return existing
+        await self.session.refresh(quota)
         return quota
 
     async def set_org_quota(
@@ -452,31 +483,73 @@ class QuotaOperations:
         self,
         admin_user_id: UUID,
         organization_id: UUID,
-    ) -> list[StorageUsage]:
-        """
-        List all users' usage in an organization (for admin table).
+    ) -> list[UserUsageRow]:
+        """List one row per active org member with their storage usage.
 
-        Parameters
-        ----------
-        admin_user_id : UUID
-            Admin user requesting the list.
-        organization_id : UUID
-            Organization ID.
+        Starts from ``OrganizationMember`` so members who have never
+        uploaded still appear. Joins ``StorageUsage`` and
+        ``UserStorageQuotaOverride`` to surface usage totals and the
+        effective quota. Inactive memberships are excluded.
 
-        Returns
-        -------
-        list[StorageUsage]
-            All usage records in the organization.
-
+        Sort: used_bytes DESC, then user_id ASC (stable tie-break --
+        the frontend resolves user names separately).
         """
         await self._require_admin(admin_user_id, organization_id)
 
-        result = await self.session.execute(
-            select(StorageUsage)
-            .where(StorageUsage.organization_id == organization_id)
-            .order_by(StorageUsage.used_bytes.desc())
+        org_quota = await self.get_org_quota(organization_id)
+        org_default = org_quota.default_user_quota_bytes
+
+        used_col = func.coalesce(StorageUsage.used_bytes, 0).label("used_bytes")
+        file_col = func.coalesce(StorageUsage.file_count, 0).label("file_count")
+
+        stmt = (
+            select(
+                OrganizationMember.user_id,
+                used_col,
+                file_col,
+                StorageUsage.last_recalculated_at,
+                UserStorageQuotaOverride.quota_bytes.label("override_bytes"),
+            )
+            .select_from(OrganizationMember)
+            .outerjoin(
+                StorageUsage,
+                (StorageUsage.user_id == OrganizationMember.user_id)
+                & (StorageUsage.organization_id == OrganizationMember.organization_id),
+            )
+            .outerjoin(
+                UserStorageQuotaOverride,
+                (UserStorageQuotaOverride.user_id == OrganizationMember.user_id)
+                & (
+                    UserStorageQuotaOverride.organization_id
+                    == OrganizationMember.organization_id
+                ),
+            )
+            .where(
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
+            )
+            .order_by(used_col.desc(), OrganizationMember.user_id.asc())
         )
-        return list(result.scalars().all())
+
+        result = await self.session.execute(stmt)
+        rows: list[UserUsageRow] = []
+        for row in result.all():
+            override_bytes = row.override_bytes
+            effective_quota = (
+                override_bytes if override_bytes is not None else org_default
+            )
+            rows.append(
+                UserUsageRow(
+                    user_id=row.user_id,
+                    organization_id=organization_id,
+                    used_bytes=int(row.used_bytes),
+                    file_count=int(row.file_count),
+                    has_override=override_bytes is not None,
+                    effective_quota_bytes=effective_quota,
+                    last_recalculated_at=row.last_recalculated_at,
+                )
+            )
+        return rows
 
     async def increment_usage(
         self,

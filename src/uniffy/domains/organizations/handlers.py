@@ -40,6 +40,8 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     RemoveMemberResponse,
     RevokeDomainAdminRequest,
     RevokeDomainAdminResponse,
+    RotateEncryptionKeyRequest,
+    RotateEncryptionKeyResponse,
     UpdateMemberRoleRequest,
     UpdateMemberRoleResponse,
     UpdateOrganizationRequest,
@@ -52,6 +54,7 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
 
 from uniffy.core.converters import (
     content_type_from_proto,
+    datetime_to_timestamp,
     domain_admin_info_to_proto,
     domain_type_from_proto,
     domain_type_to_proto,
@@ -857,4 +860,36 @@ class OrganizationsHandlers:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
             logger.error(f"Error getting user domain admins: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def rotate_encryption_key(
+        self,
+        request: RotateEncryptionKeyRequest,
+        ctx: RequestContext,
+    ) -> RotateEncryptionKeyResponse:
+        """Rotate the organization's Data Encryption Key (org owner only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        try:
+            async with open_session() as session:
+                ops = OrganizationOperations(session)
+                previous_version, new_version, rotated_at = (
+                    await ops.rotate_encryption_key(user_id, org_id)
+                )
+                return RotateEncryptionKeyResponse(
+                    new_version=new_version,
+                    previous_version=previous_version,
+                    rotated_at=datetime_to_timestamp(rotated_at),
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error rotating encryption key: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

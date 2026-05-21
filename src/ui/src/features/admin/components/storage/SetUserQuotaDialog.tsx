@@ -12,6 +12,8 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     setUserStorageQuotaOverride,
     removeUserStorageQuotaOverride,
+    fetchOrgStorageUsage,
+    fetchUserStorageQuotaOverrides,
 } from '@/features/admin/store/adminThunks';
 import { ByteInput } from '@/features/admin/components/storage/ByteInput';
 import { StorageProgressBar } from '@/features/admin/components/storage/StorageProgressBar';
@@ -67,6 +69,10 @@ export function SetUserQuotaDialog({ open, userId, onClose }: SetUserQuotaDialog
                 quotaBytes,
                 note: note || undefined,
             })).unwrap();
+            await Promise.all([
+                dispatch(fetchOrgStorageUsage()),
+                dispatch(fetchUserStorageQuotaOverrides()),
+            ]);
             onClose();
         } finally {
             setSaving(false);
@@ -78,6 +84,10 @@ export function SetUserQuotaDialog({ open, userId, onClose }: SetUserQuotaDialog
         setSaving(true);
         try {
             await dispatch(removeUserStorageQuotaOverride({ userId })).unwrap();
+            await Promise.all([
+                dispatch(fetchOrgStorageUsage()),
+                dispatch(fetchUserStorageQuotaOverrides()),
+            ]);
             onClose();
         } finally {
             setSaving(false);

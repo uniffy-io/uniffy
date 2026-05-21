@@ -363,3 +363,19 @@ class GetUserDomainAdminsResponse(_message.Message):
     DOMAINS_FIELD_NUMBER: _ClassVar[int]
     domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
     def __init__(self, domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+
+class RotateEncryptionKeyRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class RotateEncryptionKeyResponse(_message.Message):
+    __slots__ = ("new_version", "previous_version", "rotated_at")
+    NEW_VERSION_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_VERSION_FIELD_NUMBER: _ClassVar[int]
+    ROTATED_AT_FIELD_NUMBER: _ClassVar[int]
+    new_version: int
+    previous_version: int
+    rotated_at: _timestamp_pb2.Timestamp
+    def __init__(self, new_version: _Optional[int] = ..., previous_version: _Optional[int] = ..., rotated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

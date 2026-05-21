@@ -225,4 +225,5 @@ src/unictl/dist/
 .claude/local/
 
 .pnpm-store/
-core
+/core
+/core.[0-9]*

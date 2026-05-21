@@ -50,6 +50,10 @@ from uniffy_proto.tags.v1.tags_connect import TagsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.audit import RequestContextMiddleware as AuditRequestContextMiddleware
+from uniffy.core.crypto import (
+    close_dek_invalidation_subscriber,
+    subscribe_dek_invalidations,
+)
 from uniffy.core.llm_providers import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -307,6 +311,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Provider invalidation subscriber not available: {e}")
 
+    # Per-org DEK invalidation: drops the in-process DEK LRU on a peer's
+    # org_deks:invalidate:{org_id} publish (issued on rotation).
+    try:
+        await subscribe_dek_invalidations()
+    except Exception as e:
+        logger.warning(f"Org DEK invalidation subscriber not available: {e}")
+
     try:
         from uniffy.core.realtime import ydoc_manager as _rt_manager  # noqa: F401
 
@@ -337,6 +348,7 @@ async def lifespan(app: FastAPI):
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
+    await close_dek_invalidation_subscriber()
     await close_streams_client()
     await close_ops_client()
     await close_pubsub()

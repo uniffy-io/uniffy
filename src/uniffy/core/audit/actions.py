@@ -64,6 +64,7 @@ class Action:
     ORGANIZATION_MEMBER_REMOVED = "organization.member_removed"
     ORGANIZATION_MEMBER_ROLE_CHANGED = "organization.member_role_changed"
     ORGANIZATION_DELETED = "organization.deleted"
+    ORGANIZATION_ENCRYPTION_KEY_ROTATED = "organization.encryption_key_rotated"
 
     # Permissions (sourced via core/content/members.py emissions)
     PERMISSIONS_MEMBER_ADDED = "permissions.member_added"
