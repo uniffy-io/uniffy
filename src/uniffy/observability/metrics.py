@@ -302,6 +302,22 @@ LLM_PROVIDER_LRU_MISS_TOTAL = Counter(
 )
 
 
+ORG_DEK_CACHE_HIT_TOTAL = Counter(
+    "uniffy_org_dek_cache_hit_total",
+    "In-process per-org DEK LRU hits (no master-unwrap needed)",
+)
+
+ORG_DEK_CACHE_MISS_TOTAL = Counter(
+    "uniffy_org_dek_cache_miss_total",
+    "In-process per-org DEK LRU misses (master-unwrap ran)",
+)
+
+ORG_DEK_UNWRAP_SECONDS = Histogram(
+    "uniffy_org_dek_unwrap_seconds",
+    "Wall time spent unwrapping a per-org DEK with the master cipher",
+)
+
+
 REALTIME_ACTIVE_DOCS = Gauge(
     "uniffy_realtime_active_docs",
     "Yjs documents currently hydrated in this replica's YDocManager",

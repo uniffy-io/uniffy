@@ -75,6 +75,9 @@ class OrganizationsService(Protocol):
     async def get_user_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def rotate_encryption_key(self, request: organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsService]):
     def __init__(self, service: OrganizationsService | AsyncGenerator[OrganizationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -270,6 +273,16 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_user_domain_admins,
+                ),
+                "/organizations.v1.OrganizationsService/RotateEncryptionKey": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RotateEncryptionKey",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rotate_encryption_key,
                 ),
             },
             interceptors=interceptors,
@@ -665,6 +678,26 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def rotate_encryption_key(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RotateEncryptionKey",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -707,6 +740,8 @@ class OrganizationsServiceSync(Protocol):
     def list_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_user_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rotate_encryption_key(self, request: organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -903,6 +938,16 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_user_domain_admins,
+                ),
+                "/organizations.v1.OrganizationsService/RotateEncryptionKey": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RotateEncryptionKey",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rotate_encryption_key,
                 ),
             },
             interceptors=interceptors,
@@ -1292,6 +1337,26 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rotate_encryption_key(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RotateEncryptionKey",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RotateEncryptionKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

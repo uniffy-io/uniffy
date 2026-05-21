@@ -32,6 +32,7 @@ FILE_PATH_TO_SLUG: dict[str, str] = {
     "LICENSES.md": "licenses",
     "documentation/SEARCHING.md": "searching",
     "documentation/SHARING.md": "sharing",
+    "documentation/ENCRYPTION.md": "encryption",
 }
 
 
@@ -301,6 +302,21 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(sharing_note)
 
+            # Encryption note (in Docs subfolder)
+            encryption_note = Note(
+                organization_id=default_org.id,
+                owner_id=admin_user.id,
+                parent_id=docs_folder.id,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.EDITOR,
+                node_type=NodeType.NOTE,
+                title="Encryption",
+                content="",
+                slug="encryption",
+                note_metadata={"system_generated": "true"},
+            )
+            session.add(encryption_note)
+
             # Flush to get all IDs
             await session.flush()
             await session.refresh(about_note)
@@ -309,6 +325,7 @@ async def _seed_initial_data_locked() -> None:
             await session.refresh(licenses_note)
             await session.refresh(searching_note)
             await session.refresh(sharing_note)
+            await session.refresh(encryption_note)
             logger.info("Created note placeholders")
 
             # 7. Build slug-to-URN mapping for link replacement
@@ -319,6 +336,7 @@ async def _seed_initial_data_locked() -> None:
                 "licenses": build_note_urn(licenses_note.id),
                 "searching": build_note_urn(searching_note.id),
                 "sharing": build_note_urn(sharing_note.id),
+                "encryption": build_note_urn(encryption_note.id),
             }
 
             # 8. Read content, replace markdown links with URN mentions,
@@ -359,6 +377,14 @@ async def _seed_initial_data_locked() -> None:
                 extract_urns_from_content(sharing_note.content) or None
             )
 
+            encryption_content = (DOCS_DIR / "documentation" / "ENCRYPTION.md").read_text()
+            encryption_note.content = replace_markdown_links_with_urns(
+                encryption_content, slug_to_urn
+            )
+            encryption_note.outgoing_references = (
+                extract_urns_from_content(encryption_note.content) or None
+            )
+
             await session.flush()
             logger.info("Updated notes with URN-based mentions and outgoing references")
 
@@ -370,6 +396,7 @@ async def _seed_initial_data_locked() -> None:
                 licenses_note,
                 searching_note,
                 sharing_note,
+                encryption_note,
             ]
 
             # 8b. Seed shared "documentation" + "uniffy" tags and assign to
@@ -1040,7 +1067,7 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-    from uniffy.core.crypto import encrypt_value
+    from uniffy.core.crypto import app_encrypt
     from uniffy.core.models.app_settings.application_setting import ApplicationSetting
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -1059,7 +1086,7 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     session.add(
         ApplicationSetting(
             key="vapid_private_key",
-            value=encrypt_value(priv_b64),
+            value=app_encrypt(priv_b64),
             is_encrypted=True,
             description="VAPID private key (ECDSA P-256, base64url, encrypted).",
         )

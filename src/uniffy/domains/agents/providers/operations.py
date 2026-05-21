@@ -11,7 +11,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.members import register_content_loader
-from uniffy.core.crypto import decrypt_value, encrypt_value
+from uniffy.core.crypto import OrgCipher, ReEncryptingConsumer, register_consumer
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
 from uniffy.core.llm_providers.cache import (
     get_provider_lru,
@@ -45,6 +45,7 @@ class ProviderOperations:
         """Initialize provider operations."""
         self._session = session
         self._org_ops = OrganizationOperations(session)
+        self._org_cipher = OrgCipher(session)
 
     async def add_key(
         self,
@@ -92,7 +93,7 @@ class ProviderOperations:
                 f"A key with label '{label}' already exists for provider '{provider}'",
             )
 
-        encrypted = encrypt_value(credential)
+        encrypted = await self._org_cipher.encrypt(organization_id, credential)
         hint = build_key_hint(credential)
 
         key = ProviderKey(
@@ -258,7 +259,7 @@ class ProviderOperations:
         if not key:
             raise NotFoundError("ProviderKey", str(key_id))
 
-        credential = decrypt_value(key.encrypted_credential)
+        credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
         llm = get_provider_registry().create_provider(key.provider, credential, key.credential_type)
         is_valid, error = await llm.validate()
 
@@ -304,7 +305,9 @@ class ProviderOperations:
             if key.provider in seen_providers:
                 continue
             seen_providers.add(key.provider)
-            credential = decrypt_value(key.encrypted_credential)
+            credential = await self._org_cipher.decrypt(
+                key.organization_id, key.encrypted_credential
+            )
             llm = registry.create_provider(
                 key.provider,
                 credential,
@@ -342,7 +345,7 @@ class ProviderOperations:
                 f"No valid {provider} key configured for this organization",
             )
 
-        credential = decrypt_value(key.encrypted_credential)
+        credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
 
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
@@ -432,7 +435,7 @@ class ProviderOperations:
             return provider
 
         record_lru_miss()
-        credential = decrypt_value(key.encrypted_credential)
+        credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
         provider = registry.create_provider(
             key.provider, credential, key.credential_type
         )
@@ -596,7 +599,7 @@ class ProviderOperations:
         if not key:
             raise NotFoundError("ProviderKey", str(key_id))
 
-        credential = decrypt_value(key.encrypted_credential)
+        credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
         llm = get_provider_registry().create_provider(
             key.provider,
             credential,
@@ -661,3 +664,35 @@ async def _load_provider_key(
 
 
 register_content_loader(ContentType.PROVIDER_KEY, _load_provider_key)
+
+
+async def _list_provider_keys_for_org(
+    session: AsyncSession,
+    organization_id: UUID,
+):
+    """Yield every ``ProviderKey`` row owned by an organization.
+
+    Used by per-org DEK rotation to re-encrypt each row under the fresh
+    DEK. Rows are yielded one-at-a-time so the rotation loop can commit
+    in batches without holding every row in memory.
+    """
+    result = await session.execute(
+        select(ProviderKey).where(ProviderKey.organization_id == organization_id)
+    )
+    for row in result.scalars():
+        yield row
+
+
+def _provider_key_set_ciphertext(row: ProviderKey, ciphertext: str) -> None:
+    row.encrypted_credential = ciphertext
+
+
+register_consumer(
+    ReEncryptingConsumer(
+        name="agents_provider_keys",
+        table_name="agents_provider_keys",
+        list_rows=_list_provider_keys_for_org,
+        get_ciphertext=lambda row: row.encrypted_credential,
+        set_ciphertext=_provider_key_set_ciphertext,
+    )
+)

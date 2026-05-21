@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
-import { OrganizationsService, GetOrganizationOverviewRequestSchema, GetOrganizationSettingsRequestSchema, GetPermissionDefaultsRequestSchema, GetUserDomainAdminsRequestSchema, GrantDomainAdminRequestSchema, ListDomainAdminsRequestSchema, ListMembersRequestSchema, RemoveMemberRequestSchema, RevokeDomainAdminRequestSchema, UpdateMemberRoleRequestSchema, UpdateOrganizationSettingsRequestSchema, UpdatePermissionDefaultsRequestSchema } from '@uniffy/proto/organizations/v1/organizations_pb';
+import { OrganizationsService, GetOrganizationOverviewRequestSchema, GetOrganizationSettingsRequestSchema, GetPermissionDefaultsRequestSchema, GetUserDomainAdminsRequestSchema, GrantDomainAdminRequestSchema, ListDomainAdminsRequestSchema, ListMembersRequestSchema, RemoveMemberRequestSchema, RevokeDomainAdminRequestSchema, RotateEncryptionKeyRequestSchema, UpdateMemberRoleRequestSchema, UpdateOrganizationSettingsRequestSchema, UpdatePermissionDefaultsRequestSchema } from '@uniffy/proto/organizations/v1/organizations_pb';
 import { GroupsService, AddGroupMemberRequestSchema, CreateGroupRequestSchema, DeleteGroupRequestSchema, ListGroupMembersRequestSchema, ListGroupsRequestSchema, RemoveGroupMemberRequestSchema, UpdateGroupRequestSchema } from '@uniffy/proto/groups/v1/groups_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -103,6 +103,11 @@ export const adminApi = {
 
     getUserDomainAdmins: async (request: MessageInitShape<typeof GetUserDomainAdminsRequestSchema>) => {
         return organizationsClient.getUserDomainAdmins(request);
+    },
+
+    // Encryption (from organizations service, org owner only)
+    rotateEncryptionKey: async (request: MessageInitShape<typeof RotateEncryptionKeyRequestSchema>) => {
+        return organizationsClient.rotateEncryptionKey(request);
     },
 };
 

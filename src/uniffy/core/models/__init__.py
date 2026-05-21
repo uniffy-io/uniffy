@@ -36,6 +36,7 @@ from uniffy.core.models.chat import (
 )
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
+from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
@@ -121,6 +122,8 @@ __all__ = [
     "AgentPrompt",
     "AgentSkill",
     "ProviderKey",
+    # Crypto
+    "OrgEncryptionKey",
     # Comments
     "Comment",
     "CommentAnchorType",

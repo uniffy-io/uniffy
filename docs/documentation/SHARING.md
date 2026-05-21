@@ -1,20 +1,6 @@
 # Sharing and Permissions
 
-## Table of Contents
-
-- [Quick Reference](#quick-reference)
-- [Access Modes](#access-modes)
-- [Content Roles](#content-roles)
-- [How Access is Decided](#how-access-is-decided)
-- [Managing Members](#managing-members)
-- [Blocking a User](#blocking-a-user)
-- [Transferring Ownership](#transferring-ownership)
-- [Temporary Access](#temporary-access)
-- [Sharing With Groups](#sharing-with-groups)
-- [Organization Roles](#organization-roles)
-- [Default Settings](#default-settings)
-- [Domain Admins](#domain-admins)
-- [Access History](#access-history)
+[[[toc|min=1|max=4|style=flat|bullets=none]]]
 
 ---
 

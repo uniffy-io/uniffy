@@ -90,6 +90,9 @@ const (
 	// OrganizationsServiceGetUserDomainAdminsProcedure is the fully-qualified name of the
 	// OrganizationsService's GetUserDomainAdmins RPC.
 	OrganizationsServiceGetUserDomainAdminsProcedure = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
+	// OrganizationsServiceRotateEncryptionKeyProcedure is the fully-qualified name of the
+	// OrganizationsService's RotateEncryptionKey RPC.
+	OrganizationsServiceRotateEncryptionKeyProcedure = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
 )
 
 // OrganizationsServiceClient is a client for the organizations.v1.OrganizationsService service.
@@ -120,6 +123,10 @@ type OrganizationsServiceClient interface {
 	RevokeDomainAdmin(context.Context, *connect.Request[v1.RevokeDomainAdminRequest]) (*connect.Response[v1.RevokeDomainAdminResponse], error)
 	ListDomainAdmins(context.Context, *connect.Request[v1.ListDomainAdminsRequest]) (*connect.Response[v1.ListDomainAdminsResponse], error)
 	GetUserDomainAdmins(context.Context, *connect.Request[v1.GetUserDomainAdminsRequest]) (*connect.Response[v1.GetUserDomainAdminsResponse], error)
+	// Encryption key rotation (Org Owner only). Generates a fresh Data
+	// Encryption Key for the organization, re-encrypts every secret under
+	// it, and retires the previous key.
+	RotateEncryptionKey(context.Context, *connect.Request[v1.RotateEncryptionKeyRequest]) (*connect.Response[v1.RotateEncryptionKeyResponse], error)
 }
 
 // NewOrganizationsServiceClient constructs a client for the organizations.v1.OrganizationsService
@@ -247,6 +254,12 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(organizationsServiceMethods.ByName("GetUserDomainAdmins")),
 			connect.WithClientOptions(opts...),
 		),
+		rotateEncryptionKey: connect.NewClient[v1.RotateEncryptionKeyRequest, v1.RotateEncryptionKeyResponse](
+			httpClient,
+			baseURL+OrganizationsServiceRotateEncryptionKeyProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("RotateEncryptionKey")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -271,6 +284,7 @@ type organizationsServiceClient struct {
 	revokeDomainAdmin          *connect.Client[v1.RevokeDomainAdminRequest, v1.RevokeDomainAdminResponse]
 	listDomainAdmins           *connect.Client[v1.ListDomainAdminsRequest, v1.ListDomainAdminsResponse]
 	getUserDomainAdmins        *connect.Client[v1.GetUserDomainAdminsRequest, v1.GetUserDomainAdminsResponse]
+	rotateEncryptionKey        *connect.Client[v1.RotateEncryptionKeyRequest, v1.RotateEncryptionKeyResponse]
 }
 
 // ListMyOrganizations calls organizations.v1.OrganizationsService.ListMyOrganizations.
@@ -369,6 +383,11 @@ func (c *organizationsServiceClient) GetUserDomainAdmins(ctx context.Context, re
 	return c.getUserDomainAdmins.CallUnary(ctx, req)
 }
 
+// RotateEncryptionKey calls organizations.v1.OrganizationsService.RotateEncryptionKey.
+func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, req *connect.Request[v1.RotateEncryptionKeyRequest]) (*connect.Response[v1.RotateEncryptionKeyResponse], error) {
+	return c.rotateEncryptionKey.CallUnary(ctx, req)
+}
+
 // OrganizationsServiceHandler is an implementation of the organizations.v1.OrganizationsService
 // service.
 type OrganizationsServiceHandler interface {
@@ -398,6 +417,10 @@ type OrganizationsServiceHandler interface {
 	RevokeDomainAdmin(context.Context, *connect.Request[v1.RevokeDomainAdminRequest]) (*connect.Response[v1.RevokeDomainAdminResponse], error)
 	ListDomainAdmins(context.Context, *connect.Request[v1.ListDomainAdminsRequest]) (*connect.Response[v1.ListDomainAdminsResponse], error)
 	GetUserDomainAdmins(context.Context, *connect.Request[v1.GetUserDomainAdminsRequest]) (*connect.Response[v1.GetUserDomainAdminsResponse], error)
+	// Encryption key rotation (Org Owner only). Generates a fresh Data
+	// Encryption Key for the organization, re-encrypts every secret under
+	// it, and retires the previous key.
+	RotateEncryptionKey(context.Context, *connect.Request[v1.RotateEncryptionKeyRequest]) (*connect.Response[v1.RotateEncryptionKeyResponse], error)
 }
 
 // NewOrganizationsServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -521,6 +544,12 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		connect.WithSchema(organizationsServiceMethods.ByName("GetUserDomainAdmins")),
 		connect.WithHandlerOptions(opts...),
 	)
+	organizationsServiceRotateEncryptionKeyHandler := connect.NewUnaryHandler(
+		OrganizationsServiceRotateEncryptionKeyProcedure,
+		svc.RotateEncryptionKey,
+		connect.WithSchema(organizationsServiceMethods.ByName("RotateEncryptionKey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organizations.v1.OrganizationsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case OrganizationsServiceListMyOrganizationsProcedure:
@@ -561,6 +590,8 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 			organizationsServiceListDomainAdminsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetUserDomainAdminsProcedure:
 			organizationsServiceGetUserDomainAdminsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceRotateEncryptionKeyProcedure:
+			organizationsServiceRotateEncryptionKeyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -644,4 +675,8 @@ func (UnimplementedOrganizationsServiceHandler) ListDomainAdmins(context.Context
 
 func (UnimplementedOrganizationsServiceHandler) GetUserDomainAdmins(context.Context, *connect.Request[v1.GetUserDomainAdminsRequest]) (*connect.Response[v1.GetUserDomainAdminsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetUserDomainAdmins is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) RotateEncryptionKey(context.Context, *connect.Request[v1.RotateEncryptionKeyRequest]) (*connect.Response[v1.RotateEncryptionKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.RotateEncryptionKey is not implemented"))
 }

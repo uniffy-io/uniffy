@@ -19,6 +19,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_org_defaults
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
+from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.login.group_member import GroupMember
@@ -158,6 +159,9 @@ class OrganizationOperations:
 
         await self._session.commit()
         await self._session.refresh(org)
+
+        await OrgCipher(self._session).provision(org.id, owner_user_id)
+        await self._session.commit()
 
         # Index owner user for search in this organization
         result = await self._session.execute(select(User).where(User.id == owner_user_id))
@@ -557,6 +561,22 @@ class OrganizationOperations:
             OrganizationRole.ADMIN,
         ):
             raise PermissionDeniedError("Requires organization admin privileges")
+        return membership
+
+    async def require_org_owner(
+        self,
+        user_id: UUID,
+        org_id: UUID,
+    ) -> OrganizationMember:
+        """Verify user is the organization OWNER.
+
+        Stricter than ``require_org_admin``: an org admin alone is not
+        enough. Used for actions that must stay on a single accountable
+        person (ownership transfer, encryption key rotation).
+        """
+        membership = await self.get_membership(user_id, org_id)
+        if not membership or membership.role != OrganizationRole.OWNER:
+            raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
     async def require_org_member(
@@ -1249,3 +1269,31 @@ class OrganizationOperations:
             )
         )
         return [row[0] for row in result.all()]
+
+    async def rotate_encryption_key(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> tuple[int, int, datetime]:
+        """Generate a fresh DEK for the organization and re-encrypt secrets.
+
+        Org OWNER only -- admins cannot rotate (separation of duty).
+        Returns ``(previous_version, new_version, rotated_at)``.
+        """
+        await self.require_org_owner(user_id, organization_id)
+        new_version = await OrgCipher(self._session).rotate(organization_id, user_id)
+        rotated_at = datetime.now(UTC)
+        await write_audit_event(
+            self._session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.ORGANIZATION_ENCRYPTION_KEY_ROTATED,
+            resource_type="organization",
+            resource_id=organization_id,
+            details={
+                "previous_version": new_version - 1,
+                "new_version": new_version,
+            },
+        )
+        await self._session.commit()
+        return new_version - 1, new_version, rotated_at

@@ -73,7 +73,7 @@ async def load_vapid_config() -> None:
     try:
         from sqlalchemy import select
 
-        from uniffy.core.crypto import decrypt_value
+        from uniffy.core.crypto import app_decrypt
         from uniffy.core.models.app_settings.application_setting import (
             ApplicationSetting,
         )
@@ -101,7 +101,7 @@ async def load_vapid_config() -> None:
 
             private_key_row = rows["vapid_private_key"]
             private_key = (
-                decrypt_value(private_key_row.value)
+                app_decrypt(private_key_row.value)
                 if private_key_row.is_encrypted
                 else private_key_row.value
             )

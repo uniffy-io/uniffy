@@ -42,6 +42,11 @@ service OrganizationsService {
   rpc RevokeDomainAdmin(RevokeDomainAdminRequest) returns (RevokeDomainAdminResponse);
   rpc ListDomainAdmins(ListDomainAdminsRequest) returns (ListDomainAdminsResponse);
   rpc GetUserDomainAdmins(GetUserDomainAdminsRequest) returns (GetUserDomainAdminsResponse);
+
+  // Encryption key rotation (Org Owner only). Generates a fresh Data
+  // Encryption Key for the organization, re-encrypts every secret under
+  // it, and retires the previous key.
+  rpc RotateEncryptionKey(RotateEncryptionKeyRequest) returns (RotateEncryptionKeyResponse);
 }
 
 // User's Organizations Messages
@@ -281,4 +286,19 @@ message GetUserDomainAdminsRequest {
 
 message GetUserDomainAdminsResponse {
   repeated common.v1.DomainType domains = 1;
+}
+
+// Encryption key rotation (Org Owner only)
+
+message RotateEncryptionKeyRequest {
+  string organization_id = 1;
+}
+
+message RotateEncryptionKeyResponse {
+  // New active DEK version after the rotation.
+  int32 new_version = 1;
+  // Previous DEK version that was retired.
+  int32 previous_version = 2;
+  // When the rotation finished.
+  google.protobuf.Timestamp rotated_at = 3;
 }

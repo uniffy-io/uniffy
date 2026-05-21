@@ -47,7 +47,7 @@ export function UserQuotaTable() {
             const q = search.toLowerCase();
             list = list.filter((u) => {
                 const info = memberMap[u.userId];
-                if (!info) return false;
+                if (!info) return u.userId.toLowerCase().includes(q);
                 return info.name.toLowerCase().includes(q) || info.email.toLowerCase().includes(q);
             });
         }
@@ -154,7 +154,7 @@ export function UserQuotaTable() {
 
                 {filteredAndSorted.length === 0 && (
                     <div className="p-8 text-center text-muted-foreground text-sm">
-                        {search ? 'No users match the search.' : 'No storage usage data yet.'}
+                        {search ? 'No users match the search.' : 'No active members in this organization.'}
                     </div>
                 )}
             </div>
@@ -232,8 +232,19 @@ function DesktopTable({
                                 </td>
                                 <td className="px-4 py-3 text-right text-foreground hidden lg:table-cell">
                                     <span className="flex items-center justify-end gap-1.5">
-                                        {usage.effectiveQuotaBytes !== null
-                                            ? formatFileSize(usage.effectiveQuotaBytes) : 'Unlimited'}
+                                        {usage.hasOverride
+                                            ? usage.effectiveQuotaBytes !== null
+                                                ? formatFileSize(usage.effectiveQuotaBytes)
+                                                : 'Unlimited'
+                                            : (
+                                                <span className="text-muted-foreground">
+                                                    Default (
+                                                    {usage.effectiveQuotaBytes !== null
+                                                        ? formatFileSize(usage.effectiveQuotaBytes)
+                                                        : 'Unlimited'}
+                                                    )
+                                                </span>
+                                            )}
                                         {usage.hasOverride && (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                                 Custom

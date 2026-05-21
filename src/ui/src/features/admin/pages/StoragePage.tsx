@@ -27,7 +27,7 @@ export function StoragePage() {
         dispatch(fetchOrgStorageUsage());
         dispatch(fetchUserStorageQuotaOverrides());
         if (!membersFetched) {
-            dispatch(fetchMembers({ pageSize: 200 }));
+            dispatch(fetchMembers({ pageSize: 500 }));
         }
     }, [dispatch, membersFetched]);
 

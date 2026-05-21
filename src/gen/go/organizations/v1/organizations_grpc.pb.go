@@ -38,6 +38,7 @@ const (
 	OrganizationsService_RevokeDomainAdmin_FullMethodName          = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
 	OrganizationsService_ListDomainAdmins_FullMethodName           = "/organizations.v1.OrganizationsService/ListDomainAdmins"
 	OrganizationsService_GetUserDomainAdmins_FullMethodName        = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
+	OrganizationsService_RotateEncryptionKey_FullMethodName        = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -70,6 +71,10 @@ type OrganizationsServiceClient interface {
 	RevokeDomainAdmin(ctx context.Context, in *RevokeDomainAdminRequest, opts ...grpc.CallOption) (*RevokeDomainAdminResponse, error)
 	ListDomainAdmins(ctx context.Context, in *ListDomainAdminsRequest, opts ...grpc.CallOption) (*ListDomainAdminsResponse, error)
 	GetUserDomainAdmins(ctx context.Context, in *GetUserDomainAdminsRequest, opts ...grpc.CallOption) (*GetUserDomainAdminsResponse, error)
+	// Encryption key rotation (Org Owner only). Generates a fresh Data
+	// Encryption Key for the organization, re-encrypts every secret under
+	// it, and retires the previous key.
+	RotateEncryptionKey(ctx context.Context, in *RotateEncryptionKeyRequest, opts ...grpc.CallOption) (*RotateEncryptionKeyResponse, error)
 }
 
 type organizationsServiceClient struct {
@@ -270,6 +275,16 @@ func (c *organizationsServiceClient) GetUserDomainAdmins(ctx context.Context, in
 	return out, nil
 }
 
+func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, in *RotateEncryptionKeyRequest, opts ...grpc.CallOption) (*RotateEncryptionKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotateEncryptionKeyResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_RotateEncryptionKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrganizationsServiceServer is the server API for OrganizationsService service.
 // All implementations must embed UnimplementedOrganizationsServiceServer
 // for forward compatibility.
@@ -300,6 +315,10 @@ type OrganizationsServiceServer interface {
 	RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error)
 	ListDomainAdmins(context.Context, *ListDomainAdminsRequest) (*ListDomainAdminsResponse, error)
 	GetUserDomainAdmins(context.Context, *GetUserDomainAdminsRequest) (*GetUserDomainAdminsResponse, error)
+	// Encryption key rotation (Org Owner only). Generates a fresh Data
+	// Encryption Key for the organization, re-encrypts every secret under
+	// it, and retires the previous key.
+	RotateEncryptionKey(context.Context, *RotateEncryptionKeyRequest) (*RotateEncryptionKeyResponse, error)
 	mustEmbedUnimplementedOrganizationsServiceServer()
 }
 
@@ -366,6 +385,9 @@ func (UnimplementedOrganizationsServiceServer) ListDomainAdmins(context.Context,
 }
 func (UnimplementedOrganizationsServiceServer) GetUserDomainAdmins(context.Context, *GetUserDomainAdminsRequest) (*GetUserDomainAdminsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserDomainAdmins not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) RotateEncryptionKey(context.Context, *RotateEncryptionKeyRequest) (*RotateEncryptionKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateEncryptionKey not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) mustEmbedUnimplementedOrganizationsServiceServer() {}
 func (UnimplementedOrganizationsServiceServer) testEmbeddedByValue()                              {}
@@ -730,6 +752,24 @@ func _OrganizationsService_GetUserDomainAdmins_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_RotateEncryptionKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateEncryptionKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).RotateEncryptionKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_RotateEncryptionKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).RotateEncryptionKey(ctx, req.(*RotateEncryptionKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrganizationsService_ServiceDesc is the grpc.ServiceDesc for OrganizationsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -812,6 +852,10 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserDomainAdmins",
 			Handler:    _OrganizationsService_GetUserDomainAdmins_Handler,
+		},
+		{
+			MethodName: "RotateEncryptionKey",
+			Handler:    _OrganizationsService_RotateEncryptionKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
