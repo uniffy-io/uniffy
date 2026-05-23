@@ -32,6 +32,9 @@ interface BoardColumnProps {
   projectSlug: string;
   reparentHintActive?: boolean;
   activeDragTaskId?: string | null;
+  dropId?: string;
+  showHeader?: boolean;
+  showFooter?: boolean;
 }
 
 export function BoardColumn({
@@ -45,10 +48,13 @@ export function BoardColumn({
   projectSlug,
   reparentHintActive = false,
   activeDragTaskId = null,
+  dropId,
+  showHeader = true,
+  showFooter = true,
 }: BoardColumnProps) {
   const { isMobile } = useBreakpoint();
   const { setNodeRef, isOver } = useDroppable({
-    id: statusOption.id,
+    id: dropId ?? statusOption.id,
   });
 
   // Get priority option for a task
@@ -62,24 +68,20 @@ export function BoardColumn({
       className="flex-shrink-0 flex flex-col bg-muted/30 rounded-lg"
       style={{ width: isMobile ? 280 : LAYOUT.BOARD_COLUMN_WIDTH }}
     >
-      {/* Column Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
-        {/* Status color dot */}
-        <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: statusOption.color }}
-        />
-
-        {/* Status name */}
-        <span className="font-medium text-sm text-foreground truncate">
-          {statusOption.label}
-        </span>
-
-        {/* Task count */}
-        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-          {tasks.length}
-        </span>
-      </div>
+      {showHeader && (
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+          <div
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: statusOption.color }}
+          />
+          <span className="font-medium text-sm text-foreground truncate">
+            {statusOption.label}
+          </span>
+          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            {tasks.length}
+          </span>
+        </div>
+      )}
 
       {/* Cards Area */}
       <ScrollArea className="flex-1">
@@ -120,15 +122,16 @@ export function BoardColumn({
         </div>
       </ScrollArea>
 
-      {/* Add Task Button */}
-      <button
-        type="button"
-        onClick={onAddTask}
-        className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors border-t border-border"
-      >
-        <Plus size={14} />
-        <span>Add task</span>
-      </button>
+      {showFooter && (
+        <button
+          type="button"
+          onClick={onAddTask}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors border-t border-border"
+        >
+          <Plus size={14} />
+          <span>Add task</span>
+        </button>
+      )}
     </div>
   );
 }

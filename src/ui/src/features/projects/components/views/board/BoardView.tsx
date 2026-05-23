@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Plus } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,19 +33,25 @@ import {
 import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { moveTask, updateFieldThunk, updateTask } from "@/features/projects/store/projectsThunks";
 import { checkReparent } from "@/features/projects/utils/reparent";
+import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import {
   selectSelectedTaskIds,
   selectSearchQuery,
+  selectActiveGroupByFieldId,
   selectTask,
   toggleTaskSelection,
   openDetailPanel,
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { useSwimlaneCollapse } from "@/features/projects/hooks/useSwimlaneCollapse";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, SelectOption } from "@/features/projects/types";
+import { GROUP_BY_EPIC_KEY } from "@/features/projects/components/header/ProjectHeader";
 import { BoardColumn } from "./BoardColumn";
 import { TaskCard } from "./TaskCard";
+import { BoardSwimlane, SwimlaneStatusHeaderRow } from "./BoardSwimlane";
+import { NO_EPIC_LANE_ID, parseSwimlaneDropId } from "./swimlaneDropId";
 import { AddStatusDialog } from "./AddStatusDialog";
 import { EmptyState } from "../table/EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
@@ -55,9 +62,11 @@ export function BoardView() {
   const tasks = useFilteredTasks(project?.id ?? "", { includeSubtasks: true });
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
+  const groupBy = useAppSelector(selectActiveGroupByFieldId);
   const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
   const allSprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const hasSprints = allSprints.length > 0;
+  const isSwimlaneMode = groupBy === GROUP_BY_EPIC_KEY;
 
   const { canEdit } = useProjectPermission();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -65,6 +74,7 @@ export function BoardView() {
   const altHeldRef = useRef(false);
   const pointerYRef = useRef<number | null>(null);
   const [reparentHintActive, setReparentHintActive] = useState(false);
+  const { isCollapsed, toggle: toggleLane } = useSwimlaneCollapse(project?.id ?? "");
 
   // Configure sensors for drag detection
   const pointerSensor = useSensor(PointerSensor, {
@@ -130,6 +140,51 @@ export function BoardView() {
     {} as Record<string, Task[]>
   );
 
+  const epicTasks = isSwimlaneMode
+    ? tasks
+        .filter((t) => (t.taskType || "task") === "epic")
+        .slice()
+        .sort((a, b) => {
+          if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+          return a.title.localeCompare(b.title);
+        })
+    : [];
+
+  const taskIsEpic = (t: Task) => (t.taskType || "task") === "epic";
+  const laneIdForTask = (t: Task): string => {
+    if (!t.parentId) return NO_EPIC_LANE_ID;
+    const parent = tasks.find((p) => p.id === t.parentId);
+    return parent && taskIsEpic(parent) ? parent.id : NO_EPIC_LANE_ID;
+  };
+
+  const epicLanes = isSwimlaneMode
+    ? epicTasks.map((epic) => {
+        const laneTasks = tasks.filter((t) => t.parentId === epic.id && !taskIsEpic(t));
+        const byStatus = statusOptions.reduce((acc, opt) => {
+          acc[opt.id] = laneTasks.filter((t) => t.status === opt.id);
+          return acc;
+        }, {} as Record<string, Task[]>);
+        return { laneId: epic.id, epic, tasksByStatus: byStatus };
+      })
+    : [];
+
+  const noEpicTasks = isSwimlaneMode
+    ? tasks.filter((t) => !taskIsEpic(t) && laneIdForTask(t) === NO_EPIC_LANE_ID)
+    : [];
+  const noEpicByStatus = isSwimlaneMode
+    ? statusOptions.reduce((acc, opt) => {
+        acc[opt.id] = noEpicTasks.filter((t) => t.status === opt.id);
+        return acc;
+      }, {} as Record<string, Task[]>)
+    : {};
+
+  // Status IDs that count toward "done" in lane progress badges.
+  const doneStatusIds = new Set(
+    statusOptions
+      .filter((s) => s.id === "status_done" || s.label.toLowerCase().includes("done"))
+      .map((s) => s.id),
+  );
+
   const handleTaskClick = (taskId: string, e: React.MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {
       dispatch(toggleTaskSelection(taskId));
@@ -184,6 +239,49 @@ export function BoardView() {
     }
   };
 
+  const reorderWithinColumn = (
+    taskId: string,
+    task: Task,
+    columnTasks: Task[],
+    overTask: Task,
+    overRect: { top: number; height: number },
+    pointerY: number | null,
+  ) => {
+    const overIdx = columnTasks.findIndex((t) => t.id === overTask.id);
+    if (overIdx === -1) return;
+
+    const insertBefore =
+      pointerY !== null
+        ? (pointerY - overRect.top) / overRect.height < 0.5
+        : columnTasks.findIndex((t) => t.id === taskId) > overIdx;
+    const direction = insertBefore ? -1 : 1;
+    let neighborIdx = overIdx + direction;
+    while (
+      neighborIdx >= 0 &&
+      neighborIdx < columnTasks.length &&
+      columnTasks[neighborIdx].id === taskId
+    ) {
+      neighborIdx += direction;
+    }
+    const neighbor =
+      neighborIdx >= 0 && neighborIdx < columnTasks.length ? columnTasks[neighborIdx] : null;
+
+    let newSortOrder: number;
+    if (insertBefore) {
+      newSortOrder = neighbor
+        ? (neighbor.sortOrder + overTask.sortOrder) / 2
+        : overTask.sortOrder / 2;
+    } else {
+      newSortOrder = neighbor
+        ? (overTask.sortOrder + neighbor.sortOrder) / 2
+        : overTask.sortOrder + 10000;
+    }
+
+    if (newSortOrder === task.sortOrder) return;
+    dispatch(optimisticUpdateTask({ id: taskId, sortOrder: newSortOrder }));
+    dispatch(moveTask({ id: taskId, status: task.status, sortOrder: newSortOrder }));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     const altHeld = altHeldRef.current;
@@ -198,58 +296,92 @@ export function BoardView() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const overIsColumn = statusOptions.some((s) => s.id === over.id);
-    const overTask = overIsColumn ? null : tasks.find((t) => t.id === over.id);
+    const overId = over.id as string;
+    const swimlaneDrop = parseSwimlaneDropId(overId);
+    const overIsColumn = !swimlaneDrop && statusOptions.some((s) => s.id === overId);
+    const overTask = overIsColumn || swimlaneDrop ? null : tasks.find((t) => t.id === overId);
 
+    // Alt+drop: explicit reparent to overTask (works in either mode)
     if (altHeld && overTask) {
       const check = checkReparent(taskId, overTask.id, tasks, task.parentId);
       if (!check.ok) return;
+      const warning = getHierarchyRuleViolation(
+        task.taskType || "task",
+        overTask.taskType || "task",
+      );
       dispatch(optimisticUpdateTask({ id: taskId, parentId: overTask.id }));
       dispatch(updateTask({ id: taskId, parentId: overTask.id }));
+      if (warning) toast.warning(warning);
       return;
     }
 
+    if (isSwimlaneMode) {
+      let destLaneId: string | null = null;
+      let destStatus: string | null = null;
+      if (swimlaneDrop) {
+        destLaneId = swimlaneDrop.laneId;
+        destStatus = swimlaneDrop.statusId;
+      } else if (overTask) {
+        destLaneId = laneIdForTask(overTask);
+        destStatus = overTask.status;
+      }
+      if (destLaneId === null || destStatus === null) return;
+
+      const sourceLaneId = laneIdForTask(task);
+      const parentChange = destLaneId !== sourceLaneId;
+      const statusChange = destStatus !== task.status;
+      const newParentId = destLaneId === NO_EPIC_LANE_ID ? null : destLaneId;
+
+      // In-lane, in-column drag onto another task -> reorder
+      if (!parentChange && !statusChange && overTask && over.rect) {
+        const laneTasks = destLaneId === NO_EPIC_LANE_ID ? noEpicTasks : tasks.filter((t) => t.parentId === destLaneId);
+        const columnTasks = laneTasks.filter((t) => t.status === destStatus);
+        reorderWithinColumn(taskId, task, columnTasks, overTask, over.rect, pointerY);
+        return;
+      }
+
+      if (parentChange && newParentId !== null) {
+        const check = checkReparent(taskId, newParentId, tasks, task.parentId);
+        if (!check.ok) return;
+      }
+
+      if (parentChange || statusChange) {
+        let warning: string | null = null;
+        if (parentChange) {
+          const newParentType =
+            newParentId === null
+              ? null
+              : (tasks.find((t) => t.id === newParentId)?.taskType ?? "task");
+          warning = getHierarchyRuleViolation(task.taskType || "task", newParentType);
+        }
+        dispatch(
+          optimisticUpdateTask({
+            id: taskId,
+            ...(parentChange ? { parentId: newParentId } : {}),
+            ...(statusChange ? { status: destStatus } : {}),
+          }),
+        );
+        if (statusChange) {
+          dispatch(moveTask({ id: taskId, status: destStatus, sortOrder: 0 }));
+        }
+        if (parentChange) {
+          dispatch(updateTask({ id: taskId, parentId: newParentId }));
+        }
+        if (warning) toast.warning(warning);
+      }
+      return;
+    }
+
+    // Status-grouped (default) board behaviour
     if (overTask && overTask.status === task.status && over.rect) {
       const columnTasks = tasksByStatus[task.status] ?? [];
-      const overIdx = columnTasks.findIndex((t) => t.id === overTask.id);
-      if (overIdx === -1) return;
-
-      const insertBefore =
-        pointerY !== null
-          ? (pointerY - over.rect.top) / over.rect.height < 0.5
-          : columnTasks.findIndex((t) => t.id === taskId) > overIdx;
-      const direction = insertBefore ? -1 : 1;
-      let neighborIdx = overIdx + direction;
-      while (
-        neighborIdx >= 0 &&
-        neighborIdx < columnTasks.length &&
-        columnTasks[neighborIdx].id === taskId
-      ) {
-        neighborIdx += direction;
-      }
-      const neighbor =
-        neighborIdx >= 0 && neighborIdx < columnTasks.length ? columnTasks[neighborIdx] : null;
-
-      let newSortOrder: number;
-      if (insertBefore) {
-        newSortOrder = neighbor
-          ? (neighbor.sortOrder + overTask.sortOrder) / 2
-          : overTask.sortOrder / 2;
-      } else {
-        newSortOrder = neighbor
-          ? (overTask.sortOrder + neighbor.sortOrder) / 2
-          : overTask.sortOrder + 10000;
-      }
-
-      if (newSortOrder === task.sortOrder) return;
-      dispatch(optimisticUpdateTask({ id: taskId, sortOrder: newSortOrder }));
-      dispatch(moveTask({ id: taskId, status: task.status, sortOrder: newSortOrder }));
+      reorderWithinColumn(taskId, task, columnTasks, overTask, over.rect, pointerY);
       return;
     }
 
     let newStatus: string;
     if (overIsColumn) {
-      newStatus = over.id as string;
+      newStatus = overId;
     } else if (overTask) {
       newStatus = overTask.status;
     } else {
@@ -320,14 +452,36 @@ export function BoardView() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {/* Horizontal scroll container for columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-4 p-4 h-full min-w-max">
-            {statusOptions.map((status) => (
-              <BoardColumn
-                key={status.id}
-                statusOption={status}
-                tasks={tasksByStatus[status.id] || []}
+        {/* Horizontal scroll container */}
+        <div className="flex-1 overflow-x-auto overflow-y-auto">
+          {isSwimlaneMode ? (
+            <div className="p-4 min-w-max">
+              <SwimlaneStatusHeaderRow statusOptions={statusOptions} />
+              {epicLanes.map(({ laneId, epic, tasksByStatus: byStatus }) => (
+                <BoardSwimlane
+                  key={laneId}
+                  laneId={laneId}
+                  epic={epic}
+                  tasksByStatus={byStatus}
+                  statusOptions={statusOptions}
+                  priorityOptions={priorityOptions}
+                  selectedTaskIds={selectedTaskIds}
+                  onTaskClick={handleTaskClick}
+                  onCheckboxChange={handleCheckboxChange}
+                  onAddTask={handleAddTask}
+                  projectSlug={project?.slug || ""}
+                  reparentHintActive={reparentHintActive}
+                  activeDragTaskId={activeTask?.id ?? null}
+                  collapsed={isCollapsed(laneId)}
+                  onToggleCollapse={() => toggleLane(laneId)}
+                  doneStatusIds={doneStatusIds}
+                />
+              ))}
+              <BoardSwimlane
+                laneId={NO_EPIC_LANE_ID}
+                epic={null}
+                tasksByStatus={noEpicByStatus}
+                statusOptions={statusOptions}
                 priorityOptions={priorityOptions}
                 selectedTaskIds={selectedTaskIds}
                 onTaskClick={handleTaskClick}
@@ -336,31 +490,52 @@ export function BoardView() {
                 projectSlug={project?.slug || ""}
                 reparentHintActive={reparentHintActive}
                 activeDragTaskId={activeTask?.id ?? null}
+                collapsed={isCollapsed(NO_EPIC_LANE_ID)}
+                onToggleCollapse={() => toggleLane(NO_EPIC_LANE_ID)}
+                doneStatusIds={doneStatusIds}
               />
-            ))}
+            </div>
+          ) : (
+            <div className="flex gap-4 p-4 h-full min-w-max">
+              {statusOptions.map((status) => (
+                <BoardColumn
+                  key={status.id}
+                  statusOption={status}
+                  tasks={tasksByStatus[status.id] || []}
+                  priorityOptions={priorityOptions}
+                  selectedTaskIds={selectedTaskIds}
+                  onTaskClick={handleTaskClick}
+                  onCheckboxChange={handleCheckboxChange}
+                  onAddTask={handleAddTask}
+                  projectSlug={project?.slug || ""}
+                  reparentHintActive={reparentHintActive}
+                  activeDragTaskId={activeTask?.id ?? null}
+                />
+              ))}
 
-            {/* Add Status Column - Shortcut to manage statuses */}
-            {canEdit && (
-              <div className="shrink-0 w-85 relative">
-                <Button
-                  variant="ghost"
-                  className="w-full h-12 border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground"
-                  onClick={() => setIsAddStatusOpen(!isAddStatusOpen)}
-                >
-                  <Plus size={16} className="mr-2" />
-                  Add Status
-                </Button>
-                {isAddStatusOpen && (
-                  <div className="absolute top-14 left-0 z-50">
-                    <AddStatusDialog
-                      onSubmit={handleAddStatus}
-                      onClose={() => setIsAddStatusOpen(false)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              {/* Add Status Column - Shortcut to manage statuses */}
+              {canEdit && (
+                <div className="shrink-0 w-85 relative">
+                  <Button
+                    variant="ghost"
+                    className="w-full h-12 border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground"
+                    onClick={() => setIsAddStatusOpen(!isAddStatusOpen)}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Add Status
+                  </Button>
+                  {isAddStatusOpen && (
+                    <div className="absolute top-14 left-0 z-50">
+                      <AddStatusDialog
+                        onSubmit={handleAddStatus}
+                        onClose={() => setIsAddStatusOpen(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Drag Overlay - shows the card being dragged */}

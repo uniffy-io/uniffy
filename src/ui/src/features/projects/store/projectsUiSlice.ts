@@ -334,6 +334,13 @@ export const projectsUiSlice = createSlice({
     },
 
     /**
+     * Toggle the table view's outline (hierarchical subtask) rendering.
+     */
+    setTableOutlineEnabled: (state, action: PayloadAction<boolean>) => {
+      state.tableOutlineEnabled = action.payload;
+    },
+
+    /**
      * Set search query
      */
     setSearchQuery: (state, action: PayloadAction<string>) => {
@@ -483,6 +490,7 @@ export const {
   setFilterConfig,
   setSortConfig,
   setGroupBy,
+  setTableOutlineEnabled,
   setSearchQuery,
   setSprintFilter,
   setTaskTypeFilter,
@@ -513,6 +521,7 @@ export const selectAutosaveState = (state: RootState) => state.projectsUi.autosa
 export const selectActiveSortConfig = (state: RootState) => state.projectsUi.activeSortConfig;
 export const selectActiveFilterConfig = (state: RootState) => state.projectsUi.activeFilterConfig;
 export const selectActiveGroupByFieldId = (state: RootState) => state.projectsUi.activeGroupByFieldId;
+export const selectTableOutlineEnabled = (state: RootState) => state.projectsUi.tableOutlineEnabled;
 export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintFilter;
 export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;

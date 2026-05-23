@@ -10,7 +10,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear, TreeView } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -24,6 +24,7 @@ import {
   setGroupBy,
   setSprintFilter,
   setTaskTypeFilter,
+  setTableOutlineEnabled,
   selectViewMode,
   selectSearchQuery,
   selectSelectedTaskIds,
@@ -31,6 +32,7 @@ import {
   selectActiveGroupByFieldId,
   selectSprintFilter,
   selectTaskTypeFilter,
+  selectTableOutlineEnabled,
   clearSelection,
   openCreateTaskModal,
   toggleSidebar,
@@ -80,6 +82,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
   const sprintFilter = useAppSelector(selectSprintFilter);
   const taskTypeFilter = useAppSelector(selectTaskTypeFilter);
+  const tableOutlineEnabled = useAppSelector(selectTableOutlineEnabled);
   const hasSprintsWithTasks = allSprints.some((s) => s.taskCount > 0);
   const [showDeleteTasksConfirm, setShowDeleteTasksConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -217,8 +220,8 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
       </div>
 
       {/* View Tabs + Filter Bar */}
-      <div className="flex flex-wrap items-center gap-2 md:gap-4 px-3 md:px-4 py-2">
-        <div className="flex items-center gap-0.5 md:gap-1">
+      <div className="flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2 min-w-0">
+        <div className="flex items-center gap-0.5 md:gap-1 min-w-0">
           <ViewTab
             icon={<Table size={16} />}
             label={isMobile ? "" : "Table"}
@@ -283,7 +286,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         </div>
 
         {/* Filter Button */}
-        <div className="relative">
+        <div className="relative min-w-0">
           <Button
             variant="ghost"
             size="sm"
@@ -348,7 +351,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
 
         {/* Manage Statuses Button (Board view only) - hidden on mobile */}
         {viewMode === "board" && !isMobile && (
-            <div className="relative">
+            <div className="relative min-w-0">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -376,6 +379,36 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             activeGroupByFieldId={activeGroupByFieldId}
             onSelect={(value) => dispatch(setGroupBy(value))}
             showSprintOption={hasSprintsWithTasks}
+          />
+        )}
+
+        {/* Outline toggle (Table view only) - hidden on mobile */}
+        {viewMode === "table" && !isMobile && (
+          <button
+            type="button"
+            onClick={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
+            className={cn(
+              "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors hover:bg-muted min-w-0",
+              tableOutlineEnabled ? "text-primary font-medium" : "text-muted-foreground",
+            )}
+            title={tableOutlineEnabled ? "Outline on - subtasks nest under parents" : "Outline off - tasks render flat"}
+          >
+            <TreeView size={16} className="shrink-0" />
+            <span className="truncate">Outline</span>
+          </button>
+        )}
+
+        {/* Group By (Board view: Status | Epic) - hidden on mobile */}
+        {viewMode === "board" && !isMobile && (
+          <GroupByDropdown
+            activeGroupByFieldId={
+              activeGroupByFieldId === GROUP_BY_EPIC_KEY ? GROUP_BY_EPIC_KEY : null
+            }
+            onSelect={(value) => dispatch(setGroupBy(value))}
+            showSprintOption={false}
+            options={BOARD_GROUP_BY_OPTIONS}
+            defaultLabel="Status"
+            triggerLabel="Group by"
           />
         )}
 
@@ -421,15 +454,15 @@ function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-2 md:px-2.5 py-1 text-sm rounded-md transition-colors",
+        "flex items-center gap-1.5 px-2 md:px-2.5 py-1 text-sm rounded-md transition-colors min-w-0",
         isActive
           ? "text-primary bg-primary/10"
           : "text-muted-foreground hover:text-foreground hover:bg-muted"
       )}
       title={label || undefined}
     >
-      {icon}
-      {label && <span>{label}</span>}
+      <span className="shrink-0 flex items-center">{icon}</span>
+      {label && <span className="truncate">{label}</span>}
     </button>
   );
 }
@@ -437,6 +470,7 @@ function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
 // ===== Group By Dropdown =====
 
 export const GROUP_BY_TAGS_KEY = "__tags__";
+export const GROUP_BY_EPIC_KEY = "__epic__";
 
 const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: null, label: "No grouping" },
@@ -448,10 +482,18 @@ const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: GROUP_BY_TAGS_KEY, label: "Tags" },
 ];
 
+const BOARD_GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
+  { value: null, label: "Status" },
+  { value: GROUP_BY_EPIC_KEY, label: "Epic" },
+];
+
 interface GroupByDropdownProps {
   activeGroupByFieldId: string | null;
   onSelect: (value: string | null) => void;
   showSprintOption: boolean;
+  options?: { value: string | null; label: string }[];
+  defaultLabel?: string;
+  triggerLabel?: string;
 }
 
 // ===== Quick Filter Dropdown =====
@@ -490,20 +532,21 @@ function QuickFilterDropdown({ label, value, options, onSelect }: QuickFilterDro
   }, [isOpen, handleClose]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-w-0">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors",
+          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors min-w-0",
           "hover:bg-muted",
           isFiltered
             ? "text-primary font-medium"
             : "text-muted-foreground"
         )}
+        title={displayLabel}
       >
-        <span>{displayLabel}</span>
-        <CaretDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
+        <span className="truncate">{displayLabel}</span>
+        <CaretDown size={12} className={cn("shrink-0 transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
@@ -539,16 +582,24 @@ function QuickFilterDropdown({ label, value, options, onSelect }: QuickFilterDro
   );
 }
 
-function GroupByDropdown({ activeGroupByFieldId, onSelect, showSprintOption }: GroupByDropdownProps) {
+function GroupByDropdown({
+  activeGroupByFieldId,
+  onSelect,
+  showSprintOption,
+  options: optionsOverride,
+  defaultLabel = "No grouping",
+  triggerLabel = "Group by",
+}: GroupByDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const baseOptions = optionsOverride ?? GROUP_BY_OPTIONS;
   const options = showSprintOption
-    ? GROUP_BY_OPTIONS
-    : GROUP_BY_OPTIONS.filter((o) => o.value !== "__sprint__");
+    ? baseOptions
+    : baseOptions.filter((o) => o.value !== "__sprint__");
 
   const activeOption = options.find((o) => o.value === activeGroupByFieldId);
-  const displayLabel = activeOption?.value ? activeOption.label : "No grouping";
+  const displayLabel = activeOption ? activeOption.label : defaultLabel;
 
   const handleClose = useCallback(() => setIsOpen(false), []);
 
@@ -564,27 +615,28 @@ function GroupByDropdown({ activeGroupByFieldId, onSelect, showSprintOption }: G
   }, [isOpen, handleClose]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-w-0">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors",
+          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors min-w-0",
           "hover:bg-muted",
           activeGroupByFieldId
             ? "text-primary font-medium"
             : "text-muted-foreground"
         )}
+        title={displayLabel}
       >
-        <SquaresFour size={16} />
-        <span>{displayLabel}</span>
-        <CaretDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
+        <SquaresFour size={16} className="shrink-0" />
+        <span className="truncate">{displayLabel}</span>
+        <CaretDown size={12} className={cn("shrink-0 transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
         <div className="absolute top-full right-0 z-50 mt-1.5 w-48 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95">
           <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Group by
+            {triggerLabel}
           </div>
           {options.map((option) => {
             const isActive = option.value === activeGroupByFieldId;
@@ -672,7 +724,7 @@ function TagsQuickFilter({ filterConfig, onChange }: TagsQuickFilterProps) {
   const displayLabel = isFiltered ? `Tags (${selectedTagIds.length})` : "Tags";
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-w-0">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

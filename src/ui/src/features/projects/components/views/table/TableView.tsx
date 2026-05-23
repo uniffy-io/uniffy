@@ -73,8 +73,10 @@ import {
   selectHiddenColumnsForProject,
   hideColumn,
   showColumn,
+  selectTableOutlineEnabled,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { useProjectCollapsedSet } from "@/features/projects/hooks/useProjectCollapsedSet";
 import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
@@ -90,6 +92,8 @@ import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTyp
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { checkReparent } from "@/features/projects/utils/reparent";
+import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
+import { toast } from "sonner";
 
 type RowDropZone = "before" | "reparent" | "after";
 interface DropIndicator {
@@ -126,43 +130,50 @@ export function TableView() {
   const undoStack = useAppSelector(selectUndoStack);
   const redoStack = useAppSelector(selectRedoStack);
   const allTasks = useAppSelector((state) => state.projects.tasks);
-  const filteredTasks = useFilteredTasks(project?.id ?? "");
+  const outlineEnabled = useAppSelector(selectTableOutlineEnabled);
+  const filteredTasks = useFilteredTasks(project?.id ?? "", {
+    includeSubtasks: !outlineEnabled,
+  });
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const columnWidths = useAppSelector(selectColumnWidthsForProject(project?.id ?? ""));
   const hiddenColumnIds = useAppSelector(selectHiddenColumnsForProject(project?.id ?? ""));
 
   // Track collapsed group sections
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  // Track expanded parent tasks (for subtask rows)
-  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  // Track expanded parent tasks (for outline subtask rows). Persisted per
+  // project so a user's expand/collapse choices survive reload.
+  const {
+    has: isParentExpanded,
+    toggle: toggleParentExpand,
+    add: markParentExpanded,
+  } = useProjectCollapsedSet("table:outline-expanded", project?.id ?? "");
   // Track create field dialog
   const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
   // Track known task IDs so we can detect newly created subtasks
   const knownTaskIdsRef = useRef<Set<string>>(new Set());
+  const hasSeededKnownTasksRef = useRef(false);
 
-  // Auto-expand parent when a new subtask is created
+  // Auto-expand a parent when the user creates a new subtask in this session.
+  // Bulk arrivals (initial fetch, project switch) bring many tasks at once;
+  // those are skipped so we don't clobber the persisted collapse state.
   useEffect(() => {
     const currentIds = new Set(Object.keys(allTasks));
-    const known = knownTaskIdsRef.current;
-
-    // Find newly added tasks
-    for (const id of currentIds) {
-      if (!known.has(id)) {
-        const task = allTasks[id];
-        if (task?.parentId) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-expanding parent when new subtask is created
-          setExpandedParents((prev) => {
-            if (prev.has(task.parentId!)) return prev;
-            const next = new Set(prev);
-            next.add(task.parentId!);
-            return next;
-          });
-        }
-      }
+    if (!hasSeededKnownTasksRef.current) {
+      knownTaskIdsRef.current = currentIds;
+      hasSeededKnownTasksRef.current = true;
+      return;
     }
-
+    const known = knownTaskIdsRef.current;
+    const newIds: string[] = [];
+    for (const id of currentIds) {
+      if (!known.has(id)) newIds.push(id);
+    }
+    if (newIds.length === 1) {
+      const task = allTasks[newIds[0]];
+      if (task?.parentId) markParentExpanded(task.parentId);
+    }
     knownTaskIdsRef.current = currentIds;
-  }, [allTasks]);
+  }, [allTasks, markParentExpanded]);
 
   // All non-title fields for the column menu (including hidden ones).
   // The unified-tags Tags column is appended as a synthetic field so the
@@ -772,8 +783,13 @@ export function TableView() {
     if (zone === "reparent") {
       const check = checkReparent(activeId, overId, allTasksList, activeTaskRow.parentId);
       if (!check.ok) return;
+      const warning = getHierarchyRuleViolation(
+        activeTaskRow.taskType || "task",
+        overTask.taskType || "task",
+      );
       dispatch(optimisticUpdateTask({ id: activeId, parentId: overId }));
       dispatch(updateTask({ id: activeId, parentId: overId }));
+      if (warning) toast.warning(warning);
       return;
     }
 
@@ -812,17 +828,6 @@ export function TableView() {
     dispatch(moveTask({ id: activeId, status: activeTaskRow.status, sortOrder: newSortOrder }));
   }, [dispatch, orderedTaskIds, filteredTasks, allTasks, allTasksList]);
 
-  const toggleParentExpand = useCallback((taskId: string) => {
-    setExpandedParents((prev) => {
-      const next = new Set(prev);
-      if (next.has(taskId)) {
-        next.delete(taskId);
-      } else {
-        next.add(taskId);
-      }
-      return next;
-    });
-  }, []);
 
   const getSubtasksForParent = useCallback(
     (parentId: string): Task[] => {
@@ -843,7 +848,7 @@ export function TableView() {
 
   const renderSubtaskRow = (task: Task, depth: number = 1): React.ReactNode => {
     const hasChildren = task.subtaskTotal > 0 && depth < MAX_SUBTASK_DEPTH;
-    const isExp = expandedParents.has(task.id);
+    const isExp = isParentExpanded(task.id);
     const childSubtasks = isExp ? getSubtasksForParent(task.id) : [];
     const rowZone = dropIndicator?.overId === task.id ? dropIndicator.zone : null;
 
@@ -879,7 +884,8 @@ export function TableView() {
 
   const renderSortableRowWithSubtasks = (task: Task) => {
     const hasSubtasks = task.subtaskTotal > 0;
-    const isExpanded = expandedParents.has(task.id);
+    const expandable = outlineEnabled && hasSubtasks;
+    const isExpanded = expandable && isParentExpanded(task.id);
     const subtasks = isExpanded ? getSubtasksForParent(task.id) : [];
     const rowZone = dropIndicator?.overId === task.id ? dropIndicator.zone : null;
 
@@ -901,8 +907,9 @@ export function TableView() {
           onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
           onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
           onTitleClick={(e) => handleTitleClick(task.id, e)}
-          expandable={hasSubtasks}
+          expandable={expandable}
           isExpanded={isExpanded}
+          collapsedSubtaskCount={expandable && !isExpanded ? task.subtaskTotal : 0}
           onToggleExpand={() => toggleParentExpand(task.id)}
           dropZone={rowZone}
         />
@@ -1372,6 +1379,7 @@ interface TableRowProps {
   subtaskDepth?: number;
   expandable?: boolean;
   isExpanded?: boolean;
+  collapsedSubtaskCount?: number;
   onToggleExpand?: () => void;
   dropZone?: RowDropZone | null;
 }
@@ -1428,6 +1436,7 @@ function TableRow({
   subtaskDepth,
   expandable,
   isExpanded,
+  collapsedSubtaskCount = 0,
   onToggleExpand,
   dropZone,
 }: TableRowProps) {
@@ -1527,6 +1536,14 @@ function TableRow({
           <span className="mr-1.5 flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
             <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
             {task.subtaskCompleted}/{task.subtaskTotal}
+          </span>
+        )}
+        {collapsedSubtaskCount > 0 && (
+          <span
+            className="mr-1.5 text-[10px] text-muted-foreground shrink-0"
+            title={`${collapsedSubtaskCount} subtask${collapsedSubtaskCount === 1 ? "" : "s"} hidden`}
+          >
+            +{collapsedSubtaskCount}
           </span>
         )}
         <TaskTitleCell task={task} />

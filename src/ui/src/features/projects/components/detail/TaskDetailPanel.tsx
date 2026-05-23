@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { X, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { toast } from "sonner";
+import { TASK_TYPES, getTaskTypeConfig, getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { isOverdue } from "@/shared/utils/dateFormatting";
@@ -331,6 +332,11 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                         type="button"
                         onClick={() => {
                           dispatch(updateTask({ id: task.id, taskType: type.value }));
+                          const parentType = task.parentId
+                            ? (allProjectTasks.find((t) => t.id === task.parentId)?.taskType ?? null)
+                            : null;
+                          const warning = getHierarchyRuleViolation(type.value, parentType);
+                          if (warning) toast.warning(warning);
                         }}
                         className={cn(
                           "flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors",
@@ -356,8 +362,13 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                     project={project}
                     allTasks={allProjectTasks}
                     onSelect={(parentId) => {
+                      const parentType = parentId
+                        ? (allProjectTasks.find((t) => t.id === parentId)?.taskType ?? null)
+                        : null;
+                      const warning = getHierarchyRuleViolation(task.taskType || "task", parentType);
                       dispatch(optimisticUpdateTask({ id: task.id, parentId }));
                       dispatch(updateTask({ id: task.id, parentId }));
+                      if (warning) toast.warning(warning);
                     }}
                     onNavigate={(id) => dispatch(selectTask(id))}
                     disabled={!canEdit}

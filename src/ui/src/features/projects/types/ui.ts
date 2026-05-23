@@ -113,6 +113,9 @@ export interface ProjectsUiState {
   sprintFilter: string | null; // sprint ID, "__backlog__" for unassigned, or null for all
   taskTypeFilter: string | null; // task type value or null for all
 
+  // Table view: outline mode (hierarchical subtask rendering with caret/indent)
+  tableOutlineEnabled: boolean;
+
   // Roadmap view state
   roadmapStartDate: string; // ISO date string
   roadmapZoomLevel: "day" | "week" | "month";
@@ -169,6 +172,8 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   sprintFilter: null,
   taskTypeFilter: null,
+
+  tableOutlineEnabled: true,
 
   roadmapStartDate: new Date().toISOString().split("T")[0],
   roadmapZoomLevel: "week",
