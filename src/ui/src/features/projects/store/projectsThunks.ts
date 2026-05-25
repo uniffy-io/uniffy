@@ -96,7 +96,17 @@ export const fetchProject = createAsyncThunk<
  */
 export const fetchProjectTasks = createAsyncThunk<
   Task[],
-  string | { projectId: string; tagIds?: string[]; tagFilterMode?: 'all' | 'any' | 'none' },
+  | string
+  | {
+      projectId: string;
+      tagIds?: string[];
+      tagFilterMode?: 'all' | 'any' | 'none';
+      inEpicId?: string;
+      rootOnly?: boolean;
+      hasSubtasks?: boolean;
+      minDepth?: number;
+      maxDepth?: number;
+    },
   { dispatch: AppDispatch; rejectValue: string }
 >(
   "projects/fetchProjectTasks",
@@ -110,6 +120,11 @@ export const fetchProjectTasks = createAsyncThunk<
       const response = await projectsApi.listTasks(params.projectId, orgId, {
         tagIds: params.tagIds,
         tagFilterMode: params.tagFilterMode,
+        inEpicId: params.inEpicId,
+        rootOnly: params.rootOnly,
+        hasSubtasks: params.hasSubtasks,
+        minDepth: params.minDepth,
+        maxDepth: params.maxDepth,
       });
       hydrateTaskTags(dispatch, response.protoTasks);
       return response.tasks;

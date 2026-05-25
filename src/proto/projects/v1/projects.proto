@@ -405,6 +405,7 @@ message ListTasksRequest {
   string project_id = 2;
   optional common.v1.PaginationRequest pagination = 3;
   optional bool include_deleted = 4;
+  // Literal parent task id. Use ``root_only`` for top-level filtering.
   optional string parent_id = 5;
   optional string sprint_id = 6;
   optional bool backlog_only = 7;
@@ -412,6 +413,16 @@ message ListTasksRequest {
   // for ALL / ANY / NONE semantics. Empty = no tag filter.
   repeated string tag_ids = 8;
   optional TagFilterMode tag_filter_mode = 9;
+  // Return tasks whose ancestor chain contains the given Epic task id
+  // (the Epic itself is included).
+  optional string in_epic_id = 10;
+  // Return only tasks with no parent (top-level).
+  optional bool root_only = 11;
+  // Return only tasks referenced as parent by at least one other task.
+  optional bool has_subtasks = 12;
+  // Inclusive bounds on depth in the parent chain (0 = root).
+  optional int32 min_depth = 13;
+  optional int32 max_depth = 14;
 }
 
 message CreateTaskResponse {

@@ -459,15 +459,11 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     # Build filter kwargs
     list_kwargs: dict = {}
 
-    if "parent_id" in args:
-        pid = args["parent_id"]
-        if pid == "root":
-            list_kwargs["parent_id"] = "root"
-        elif pid:
-            parent_id, err = _parse_uuid(pid, "parent_id")
-            if err:
-                return ToolResult(success=False, data="", error=err)
-            list_kwargs["parent_id"] = parent_id
+    if "parent_id" in args and args["parent_id"]:
+        parent_id, err = _parse_uuid(args["parent_id"], "parent_id")
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        list_kwargs["parent_id"] = parent_id
 
     if "sprint_id" in args:
         sprint_id, err = _parse_uuid(args["sprint_id"], "sprint_id")
@@ -477,6 +473,24 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
 
     if args.get("backlog_only"):
         list_kwargs["backlog_only"] = True
+
+    if "in_epic_id" in args and args["in_epic_id"]:
+        in_epic_id, err = _parse_uuid(args["in_epic_id"], "in_epic_id")
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        list_kwargs["in_epic_id"] = in_epic_id
+
+    if args.get("root_only"):
+        list_kwargs["root_only"] = True
+
+    if "has_subtasks" in args:
+        list_kwargs["has_subtasks"] = bool(args["has_subtasks"])
+
+    if "min_depth" in args and args["min_depth"] is not None:
+        list_kwargs["min_depth"] = int(args["min_depth"])
+
+    if "max_depth" in args and args["max_depth"] is not None:
+        list_kwargs["max_depth"] = int(args["max_depth"])
 
     ops = TaskOperations(ctx.session)
     tasks, total = await ops.list_tasks(
@@ -774,7 +788,8 @@ list_tasks = ToolDefinition(
     name="tasks.list_tasks",
     description=(
         "List tasks in a project with full details (status, priority, type, assignees, dates, "
-        "dependencies, subtask hierarchy, sprint). Supports filtering by parent, sprint, or backlog."
+        "dependencies, subtask hierarchy, sprint). Supports filtering by parent, sprint, backlog, "
+        "and hierarchy (in-epic, root-only, has-subtasks, depth)."
     ),
     parameter_schema={
         "type": "object",
@@ -783,8 +798,7 @@ list_tasks = ToolDefinition(
             "parent_id": {
                 "type": "string",
                 "description": (
-                    "Filter by parent: 'root' for top-level only, "
-                    "or a task UUID for subtasks. Omit for all."
+                    "Filter by literal parent task UUID. Use ``root_only`` for top-level filtering."
                 ),
             },
             "sprint_id": {
@@ -794,6 +808,32 @@ list_tasks = ToolDefinition(
             "backlog_only": {
                 "type": "boolean",
                 "description": "If true, only show unassigned sprint tasks.",
+            },
+            "in_epic_id": {
+                "type": "string",
+                "description": (
+                    "Return tasks whose ancestor chain contains the given Epic task UUID "
+                    "(the Epic itself is included)."
+                ),
+            },
+            "root_only": {
+                "type": "boolean",
+                "description": "If true, only return tasks with no parent (top-level).",
+            },
+            "has_subtasks": {
+                "type": "boolean",
+                "description": (
+                    "If true, only return tasks that have at least one subtask. "
+                    "If false, only return tasks without subtasks."
+                ),
+            },
+            "min_depth": {
+                "type": "integer",
+                "description": "Inclusive lower bound on depth in the parent chain (0 = root).",
+            },
+            "max_depth": {
+                "type": "integer",
+                "description": "Inclusive upper bound on depth in the parent chain (0 = root).",
             },
         },
         "required": ["project_id"],

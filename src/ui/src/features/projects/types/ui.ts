@@ -112,6 +112,8 @@ export interface ProjectsUiState {
   // Quick filters
   sprintFilter: string | null; // sprint ID, "__backlog__" for unassigned, or null for all
   taskTypeFilter: string | null; // task type value or null for all
+  rootOnlyFilter: boolean; // true = only top-level tasks (parent_id IS NULL)
+  inEpicFilter: string | null; // Epic task ID to scope tasks by ancestry
 
   // Table view: outline mode (hierarchical subtask rendering with caret/indent)
   tableOutlineEnabled: boolean;
@@ -172,6 +174,8 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   sprintFilter: null,
   taskTypeFilter: null,
+  rootOnlyFilter: false,
+  inEpicFilter: null,
 
   tableOutlineEnabled: true,
 

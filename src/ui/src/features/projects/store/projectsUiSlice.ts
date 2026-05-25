@@ -361,6 +361,14 @@ export const projectsUiSlice = createSlice({
       state.taskTypeFilter = action.payload;
     },
 
+    setRootOnlyFilter: (state, action: PayloadAction<boolean>) => {
+      state.rootOnlyFilter = action.payload;
+    },
+
+    setInEpicFilter: (state, action: PayloadAction<string | null>) => {
+      state.inEpicFilter = action.payload;
+    },
+
     // ===== Roadmap State =====
 
     /**
@@ -494,6 +502,8 @@ export const {
   setSearchQuery,
   setSprintFilter,
   setTaskTypeFilter,
+  setRootOnlyFilter,
+  setInEpicFilter,
   setRoadmapStartDate,
   setRoadmapZoom,
   setTaskSaving,
@@ -524,6 +534,8 @@ export const selectActiveGroupByFieldId = (state: RootState) => state.projectsUi
 export const selectTableOutlineEnabled = (state: RootState) => state.projectsUi.tableOutlineEnabled;
 export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintFilter;
 export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
+export const selectRootOnlyFilter = (state: RootState) => state.projectsUi.rootOnlyFilter;
+export const selectInEpicFilter = (state: RootState) => state.projectsUi.inEpicFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
 export const selectColumnWidthsForProject = (projectId: string) => (state: RootState): Record<string, number> =>

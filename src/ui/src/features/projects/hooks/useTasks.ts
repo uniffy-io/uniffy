@@ -13,7 +13,7 @@ import {
   moveTask,
   deleteTask,
 } from "@/features/projects/store/projectsThunks";
-import { applyFilters } from "@/features/projects/utils/filterTasks";
+import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
 import type { Task, CreateTaskRequest, UpdateTaskRequest, MoveTaskRequest } from "@/features/projects/types/project";
 
 /**
@@ -109,9 +109,25 @@ export function useFilteredTasks(
   const filterConfig = useAppSelector((state) => state.projectsUi.activeFilterConfig);
   const sprintFilter = useAppSelector((state) => state.projectsUi.sprintFilter);
   const taskTypeFilter = useAppSelector((state) => state.projectsUi.taskTypeFilter);
+  const rootOnlyFilter = useAppSelector((state) => state.projectsUi.rootOnlyFilter);
+  const inEpicFilter = useAppSelector((state) => state.projectsUi.inEpicFilter);
+
+  // Hierarchy index is computed against the full task set so ancestry walks
+  // are correct even when the quick filters would otherwise hide a parent.
+  const hierarchyIndex = useMemo(() => buildTaskHierarchyIndex(tasks), [tasks]);
 
   const filteredTasks = useMemo(() => {
     let result = includeSubtasks ? tasks.slice() : tasks.filter((t) => !t.parentId);
+
+    if (rootOnlyFilter) {
+      result = result.filter((t) => !t.parentId);
+    }
+
+    if (inEpicFilter) {
+      result = result.filter(
+        (t) => t.id === inEpicFilter || hierarchyIndex.ancestorIdsById.get(t.id)?.has(inEpicFilter),
+      );
+    }
 
     // Apply search filter
     if (searchQuery) {
@@ -136,7 +152,7 @@ export function useFilteredTasks(
     }
 
     // Apply filter conditions
-    result = applyFilters(result, filterConfig);
+    result = applyFilters(result, filterConfig, hierarchyIndex);
 
     // Apply sorting
     if (sortConfig) {
@@ -159,7 +175,18 @@ export function useFilteredTasks(
     }
 
     return result;
-  }, [tasks, searchQuery, sortConfig, filterConfig, sprintFilter, taskTypeFilter, includeSubtasks]);
+  }, [
+    tasks,
+    searchQuery,
+    sortConfig,
+    filterConfig,
+    sprintFilter,
+    taskTypeFilter,
+    rootOnlyFilter,
+    inEpicFilter,
+    includeSubtasks,
+    hierarchyIndex,
+  ]);
 
   return filteredTasks;
 }

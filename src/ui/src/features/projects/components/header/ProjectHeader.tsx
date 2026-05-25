@@ -25,6 +25,8 @@ import {
   setSprintFilter,
   setTaskTypeFilter,
   setTableOutlineEnabled,
+  setRootOnlyFilter,
+  setInEpicFilter,
   selectViewMode,
   selectSearchQuery,
   selectSelectedTaskIds,
@@ -33,6 +35,8 @@ import {
   selectSprintFilter,
   selectTaskTypeFilter,
   selectTableOutlineEnabled,
+  selectRootOnlyFilter,
+  selectInEpicFilter,
   clearSelection,
   openCreateTaskModal,
   toggleSidebar,
@@ -46,7 +50,7 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, ViewType } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
-import { updateFieldDefinition, selectProjectTimeStats } from "@/features/projects/store/projectsSlice";
+import { updateFieldDefinition, selectProjectTimeStats, selectTasksForProject } from "@/features/projects/store/projectsSlice";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
@@ -83,6 +87,16 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const sprintFilter = useAppSelector(selectSprintFilter);
   const taskTypeFilter = useAppSelector(selectTaskTypeFilter);
   const tableOutlineEnabled = useAppSelector(selectTableOutlineEnabled);
+  const rootOnlyFilter = useAppSelector(selectRootOnlyFilter);
+  const inEpicFilter = useAppSelector(selectInEpicFilter);
+  const projectTasks = useAppSelector(selectTasksForProject(project.id));
+  const epicOptions = useMemo(
+    () =>
+      projectTasks
+        .filter((t) => t.taskType === "epic")
+        .map((t) => ({ value: t.id, label: t.title })),
+    [projectTasks],
+  );
   const hasSprintsWithTasks = allSprints.some((s) => s.taskCount > 0);
   const [showDeleteTasksConfirm, setShowDeleteTasksConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -307,6 +321,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
               filterConfig={activeFilterConfig}
               onApply={(config) => dispatch(setFilterConfig(config))}
               onClose={() => setIsFilterOpen(false)}
+              epicOptions={epicOptions}
             />
           )}
         </div>
@@ -346,6 +361,32 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           <TagsQuickFilter
             filterConfig={activeFilterConfig}
             onChange={(config) => dispatch(setFilterConfig(config))}
+          />
+        )}
+
+        {/* Root-only quick filter */}
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8", rootOnlyFilter && "text-primary")}
+            onClick={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
+            title={rootOnlyFilter ? "Showing top-level tasks only" : "Show top-level tasks only"}
+          >
+            Root only
+          </Button>
+        )}
+
+        {/* In-Epic quick filter */}
+        {!isMobile && epicOptions.length > 0 && (
+          <QuickFilterDropdown
+            label="Epic"
+            value={inEpicFilter}
+            options={[
+              { value: null, label: "All tasks" },
+              ...epicOptions,
+            ]}
+            onSelect={(value) => dispatch(setInEpicFilter(value))}
           />
         )}
 

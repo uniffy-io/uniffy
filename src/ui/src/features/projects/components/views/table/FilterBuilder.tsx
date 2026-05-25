@@ -14,7 +14,13 @@ import { Button } from "@/components/ui/button";
 import { TagPicker } from "@/features/tags";
 import type { FieldDefinition } from "@/features/projects/types";
 import type { FilterCondition, FilterConfig, FilterOperator } from "@/features/projects/types/views";
-import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
+import {
+  HIERARCHY_DEPTH_FIELD_ID,
+  HIERARCHY_HAS_SUBTASKS_FIELD_ID,
+  HIERARCHY_IN_EPIC_FIELD_ID,
+  HIERARCHY_ROOT_ONLY_FIELD_ID,
+  TAGS_FILTER_FIELD_ID,
+} from "@/features/projects/utils/filterTasks";
 
 const TAGS_PSEUDO_FIELD: FieldDefinition = {
   id: TAGS_FILTER_FIELD_ID,
@@ -28,6 +34,50 @@ const TAGS_PSEUDO_FIELD: FieldDefinition = {
   createdAt: "",
   updatedAt: "",
 };
+
+function _makePseudoField(id: string, name: string, type: FieldDefinition["type"]): FieldDefinition {
+  return {
+    id,
+    projectId: "",
+    name,
+    type,
+    isRequired: false,
+    isSystem: true,
+    sortOrder: 1000,
+    config: {},
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+const IN_EPIC_PSEUDO_FIELD = _makePseudoField(HIERARCHY_IN_EPIC_FIELD_ID, "In Epic", "text");
+const ROOT_ONLY_PSEUDO_FIELD = _makePseudoField(HIERARCHY_ROOT_ONLY_FIELD_ID, "Root only", "text");
+const HAS_SUBTASKS_PSEUDO_FIELD = _makePseudoField(HIERARCHY_HAS_SUBTASKS_FIELD_ID, "Has subtasks", "text");
+const DEPTH_PSEUDO_FIELD = _makePseudoField(HIERARCHY_DEPTH_FIELD_ID, "Depth", "number");
+
+const IN_EPIC_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "equals", label: "is" },
+  { value: "not_equals", label: "is not" },
+  { value: "is_empty", label: "has no ancestors" },
+  { value: "is_not_empty", label: "has ancestors" },
+];
+
+const ROOT_ONLY_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "is_empty", label: "yes (top-level)" },
+  { value: "is_not_empty", label: "no (has parent)" },
+];
+
+const HAS_SUBTASKS_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "is_not_empty", label: "yes (has subtasks)" },
+  { value: "is_empty", label: "no (leaf task)" },
+];
+
+const DEPTH_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "equals", label: "equals" },
+  { value: "greater_than", label: "greater than" },
+  { value: "less_than", label: "less than" },
+  { value: "between", label: "between" },
+];
 
 const TAG_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "equals", label: "is" },
@@ -43,6 +93,8 @@ interface FilterBuilderProps {
   filterConfig: FilterConfig | null;
   onApply: (config: FilterConfig | null) => void;
   onClose: () => void;
+  /** Optional Epic-task options for the "In Epic" pseudo-field. */
+  epicOptions?: { value: string; label: string }[];
 }
 
 const TEXT_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -87,6 +139,10 @@ const PERSON_OPERATORS: { value: FilterOperator; label: string }[] = [
 
 function getOperatorsForField(field: FieldDefinition): { value: FilterOperator; label: string }[] {
   if (field.id === TAGS_FILTER_FIELD_ID) return TAG_OPERATORS;
+  if (field.id === HIERARCHY_IN_EPIC_FIELD_ID) return IN_EPIC_OPERATORS;
+  if (field.id === HIERARCHY_ROOT_ONLY_FIELD_ID) return ROOT_ONLY_OPERATORS;
+  if (field.id === HIERARCHY_HAS_SUBTASKS_FIELD_ID) return HAS_SUBTASKS_OPERATORS;
+  if (field.id === HIERARCHY_DEPTH_FIELD_ID) return DEPTH_OPERATORS;
   switch (field.type) {
     case "single_select":
     case "multi_select":
@@ -106,11 +162,19 @@ function needsValueInput(operator: FilterOperator): boolean {
   return operator !== "is_empty" && operator !== "is_not_empty";
 }
 
-export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClose }: FilterBuilderProps) {
+export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClose, epicOptions }: FilterBuilderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // The unified-tags filter is exposed as a pseudo-field so it slots into
-  // the existing condition row UI without parallel infrastructure.
-  const fields = [...rawFields, TAGS_PSEUDO_FIELD];
+  // The unified-tags filter and the hierarchy filters are exposed as
+  // pseudo-fields so they slot into the existing condition row UI without
+  // parallel infrastructure.
+  const fields = [
+    ...rawFields,
+    TAGS_PSEUDO_FIELD,
+    IN_EPIC_PSEUDO_FIELD,
+    ROOT_ONLY_PSEUDO_FIELD,
+    HAS_SUBTASKS_PSEUDO_FIELD,
+    DEPTH_PSEUDO_FIELD,
+  ];
   const [conditions, setConditions] = useState<FilterCondition[]>(
     filterConfig?.conditions ?? []
   );
@@ -238,8 +302,10 @@ export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClos
               {needsValueInput(condition.operator) && (
                 <ConditionValueInput
                   field={field}
+                  operator={condition.operator}
                   value={condition.value}
                   onChange={(value) => updateCondition(condition.id, { value })}
+                  epicOptions={epicOptions}
                 />
               )}
 
@@ -396,10 +462,15 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
 
 // ===== Value Input =====
 
-function ConditionValueInput({ field, value, onChange }: {
+const NUMBER_INPUT_CLASS =
+  "h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+function ConditionValueInput({ field, operator, value, onChange, epicOptions }: {
   field?: FieldDefinition;
+  operator: FilterOperator;
   value: string | number | string[] | null;
   onChange: (value: string | number | string[] | null) => void;
+  epicOptions?: { value: string; label: string }[];
 }) {
   if (field?.id === TAGS_FILTER_FIELD_ID) {
     const selectedIds = Array.isArray(value)
@@ -413,6 +484,23 @@ function ConditionValueInput({ field, value, onChange }: {
           selectedTagIds={selectedIds}
           onChange={(next) => onChange(next.length ? next : null)}
           placeholder="Pick tags"
+        />
+      </div>
+    );
+  }
+
+  if (field?.id === HIERARCHY_IN_EPIC_FIELD_ID) {
+    const options = [
+      { value: "", label: epicOptions && epicOptions.length ? "Pick an Epic..." : "No Epics in this project" },
+      ...(epicOptions ?? []),
+    ];
+    return (
+      <div className="flex-1 min-w-[160px]">
+        <FilterSelect
+          value={String(value ?? "")}
+          options={options}
+          onChange={(val) => onChange(val || null)}
+          placeholder="Pick an Epic..."
         />
       </div>
     );
@@ -462,13 +550,46 @@ function ConditionValueInput({ field, value, onChange }: {
   }
 
   if (field.type === "number") {
+    if (operator === "between") {
+      const [minVal, maxVal] = Array.isArray(value)
+        ? (value as [string | number, string | number])
+        : [null, null];
+      return (
+        <div className="flex items-center gap-1 flex-1 min-w-40">
+          <input
+            type="number"
+            inputMode="numeric"
+            value={minVal !== null && minVal !== undefined ? String(minVal) : ""}
+            onChange={(e) => {
+              const next = e.target.value ? Number(e.target.value) : null;
+              onChange(next !== null || maxVal !== null ? ([next, maxVal] as unknown as string[]) : null);
+            }}
+            placeholder="Min"
+            className={NUMBER_INPUT_CLASS}
+          />
+          <span className="text-xs text-muted-foreground">to</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={maxVal !== null && maxVal !== undefined ? String(maxVal) : ""}
+            onChange={(e) => {
+              const next = e.target.value ? Number(e.target.value) : null;
+              onChange(minVal !== null || next !== null ? ([minVal, next] as unknown as string[]) : null);
+            }}
+            placeholder="Max"
+            className={NUMBER_INPUT_CLASS}
+          />
+        </div>
+      );
+    }
     return (
       <input
         type="number"
+        inputMode="numeric"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
         placeholder="Value..."
-        className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
+        className={NUMBER_INPUT_CLASS}
       />
     );
   }

@@ -468,6 +468,11 @@ export const projectsApi = {
     options: {
       tagIds?: string[];
       tagFilterMode?: 'all' | 'any' | 'none';
+      inEpicId?: string;
+      rootOnly?: boolean;
+      hasSubtasks?: boolean;
+      minDepth?: number;
+      maxDepth?: number;
     } = {},
   ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
     const tagFilterMode =
@@ -482,6 +487,11 @@ export const projectsApi = {
       ...(options.tagIds && options.tagIds.length
         ? { tagIds: options.tagIds, tagFilterMode }
         : {}),
+      ...(options.inEpicId ? { inEpicId: options.inEpicId } : {}),
+      ...(options.rootOnly ? { rootOnly: true } : {}),
+      ...(options.hasSubtasks !== undefined ? { hasSubtasks: options.hasSubtasks } : {}),
+      ...(options.minDepth !== undefined ? { minDepth: options.minDepth } : {}),
+      ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
     });
     return {
       tasks: response.tasks.map(protoTaskToFrontend),

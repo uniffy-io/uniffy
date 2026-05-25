@@ -2799,13 +2799,24 @@ type ListTasksRequest struct {
 	ProjectId      string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,3,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
 	IncludeDeleted *bool                  `protobuf:"varint,4,opt,name=include_deleted,json=includeDeleted,proto3,oneof" json:"include_deleted,omitempty"`
-	ParentId       *string                `protobuf:"bytes,5,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	SprintId       *string                `protobuf:"bytes,6,opt,name=sprint_id,json=sprintId,proto3,oneof" json:"sprint_id,omitempty"`
-	BacklogOnly    *bool                  `protobuf:"varint,7,opt,name=backlog_only,json=backlogOnly,proto3,oneof" json:"backlog_only,omitempty"`
+	// Literal parent task id. Use “root_only“ for top-level filtering.
+	ParentId    *string `protobuf:"bytes,5,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	SprintId    *string `protobuf:"bytes,6,opt,name=sprint_id,json=sprintId,proto3,oneof" json:"sprint_id,omitempty"`
+	BacklogOnly *bool   `protobuf:"varint,7,opt,name=backlog_only,json=backlogOnly,proto3,oneof" json:"backlog_only,omitempty"`
 	// Filter tasks by unified-tag ids. Combined with “tag_filter_mode“
 	// for ALL / ANY / NONE semantics. Empty = no tag filter.
 	TagIds        []string       `protobuf:"bytes,8,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
 	TagFilterMode *TagFilterMode `protobuf:"varint,9,opt,name=tag_filter_mode,json=tagFilterMode,proto3,enum=projects.v1.TagFilterMode,oneof" json:"tag_filter_mode,omitempty"`
+	// Return tasks whose ancestor chain contains the given Epic task id
+	// (the Epic itself is included).
+	InEpicId *string `protobuf:"bytes,10,opt,name=in_epic_id,json=inEpicId,proto3,oneof" json:"in_epic_id,omitempty"`
+	// Return only tasks with no parent (top-level).
+	RootOnly *bool `protobuf:"varint,11,opt,name=root_only,json=rootOnly,proto3,oneof" json:"root_only,omitempty"`
+	// Return only tasks referenced as parent by at least one other task.
+	HasSubtasks *bool `protobuf:"varint,12,opt,name=has_subtasks,json=hasSubtasks,proto3,oneof" json:"has_subtasks,omitempty"`
+	// Inclusive bounds on depth in the parent chain (0 = root).
+	MinDepth      *int32 `protobuf:"varint,13,opt,name=min_depth,json=minDepth,proto3,oneof" json:"min_depth,omitempty"`
+	MaxDepth      *int32 `protobuf:"varint,14,opt,name=max_depth,json=maxDepth,proto3,oneof" json:"max_depth,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2901,6 +2912,41 @@ func (x *ListTasksRequest) GetTagFilterMode() TagFilterMode {
 		return *x.TagFilterMode
 	}
 	return TagFilterMode_TAG_FILTER_MODE_UNSPECIFIED
+}
+
+func (x *ListTasksRequest) GetInEpicId() string {
+	if x != nil && x.InEpicId != nil {
+		return *x.InEpicId
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetRootOnly() bool {
+	if x != nil && x.RootOnly != nil {
+		return *x.RootOnly
+	}
+	return false
+}
+
+func (x *ListTasksRequest) GetHasSubtasks() bool {
+	if x != nil && x.HasSubtasks != nil {
+		return *x.HasSubtasks
+	}
+	return false
+}
+
+func (x *ListTasksRequest) GetMinDepth() int32 {
+	if x != nil && x.MinDepth != nil {
+		return *x.MinDepth
+	}
+	return 0
+}
+
+func (x *ListTasksRequest) GetMaxDepth() int32 {
+	if x != nil && x.MaxDepth != nil {
+		return *x.MaxDepth
+	}
+	return 0
 }
 
 type CreateTaskResponse struct {
@@ -5528,7 +5574,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x12DeleteTasksRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\btask_ids\x18\x02 \x03(\tR\ataskIds\x12\x1c\n" +
-	"\tpermanent\x18\x03 \x01(\bR\tpermanent\"\xfd\x03\n" +
+	"\tpermanent\x18\x03 \x01(\bR\tpermanent\"\xf8\x05\n" +
 	"\x10ListTasksRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -5541,7 +5587,15 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\tsprint_id\x18\x06 \x01(\tH\x03R\bsprintId\x88\x01\x01\x12&\n" +
 	"\fbacklog_only\x18\a \x01(\bH\x04R\vbacklogOnly\x88\x01\x01\x12\x17\n" +
 	"\atag_ids\x18\b \x03(\tR\x06tagIds\x12G\n" +
-	"\x0ftag_filter_mode\x18\t \x01(\x0e2\x1a.projects.v1.TagFilterModeH\x05R\rtagFilterMode\x88\x01\x01B\r\n" +
+	"\x0ftag_filter_mode\x18\t \x01(\x0e2\x1a.projects.v1.TagFilterModeH\x05R\rtagFilterMode\x88\x01\x01\x12!\n" +
+	"\n" +
+	"in_epic_id\x18\n" +
+	" \x01(\tH\x06R\binEpicId\x88\x01\x01\x12 \n" +
+	"\troot_only\x18\v \x01(\bH\aR\brootOnly\x88\x01\x01\x12&\n" +
+	"\fhas_subtasks\x18\f \x01(\bH\bR\vhasSubtasks\x88\x01\x01\x12 \n" +
+	"\tmin_depth\x18\r \x01(\x05H\tR\bminDepth\x88\x01\x01\x12 \n" +
+	"\tmax_depth\x18\x0e \x01(\x05H\n" +
+	"R\bmaxDepth\x88\x01\x01B\r\n" +
 	"\v_paginationB\x12\n" +
 	"\x10_include_deletedB\f\n" +
 	"\n" +
@@ -5549,7 +5603,15 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
 	"_sprint_idB\x0f\n" +
 	"\r_backlog_onlyB\x12\n" +
-	"\x10_tag_filter_mode\"\xd9\x01\n" +
+	"\x10_tag_filter_modeB\r\n" +
+	"\v_in_epic_idB\f\n" +
+	"\n" +
+	"_root_onlyB\x0f\n" +
+	"\r_has_subtasksB\f\n" +
+	"\n" +
+	"_min_depthB\f\n" +
+	"\n" +
+	"_max_depth\"\xd9\x01\n" +
 	"\x12CreateTaskResponse\x12%\n" +
 	"\x04task\x18\x01 \x01(\v2\x11.projects.v1.TaskR\x04task\x12=\n" +
 	"\x0eupdated_parent\x18\x02 \x01(\v2\x11.projects.v1.TaskH\x00R\rupdatedParent\x88\x01\x01\x129\n" +

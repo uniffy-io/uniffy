@@ -606,7 +606,7 @@ class DeleteTasksRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., task_ids: _Optional[_Iterable[str]] = ..., permanent: _Optional[bool] = ...) -> None: ...
 
 class ListTasksRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id", "sprint_id", "backlog_only", "tag_ids", "tag_filter_mode")
+    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id", "sprint_id", "backlog_only", "tag_ids", "tag_filter_mode", "in_epic_id", "root_only", "has_subtasks", "min_depth", "max_depth")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     PAGINATION_FIELD_NUMBER: _ClassVar[int]
@@ -616,6 +616,11 @@ class ListTasksRequest(_message.Message):
     BACKLOG_ONLY_FIELD_NUMBER: _ClassVar[int]
     TAG_IDS_FIELD_NUMBER: _ClassVar[int]
     TAG_FILTER_MODE_FIELD_NUMBER: _ClassVar[int]
+    IN_EPIC_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_ONLY_FIELD_NUMBER: _ClassVar[int]
+    HAS_SUBTASKS_FIELD_NUMBER: _ClassVar[int]
+    MIN_DEPTH_FIELD_NUMBER: _ClassVar[int]
+    MAX_DEPTH_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     pagination: _common_pb2.PaginationRequest
@@ -625,7 +630,12 @@ class ListTasksRequest(_message.Message):
     backlog_only: bool
     tag_ids: _containers.RepeatedScalarFieldContainer[str]
     tag_filter_mode: TagFilterMode
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ..., tag_filter_mode: _Optional[_Union[TagFilterMode, str]] = ...) -> None: ...
+    in_epic_id: str
+    root_only: bool
+    has_subtasks: bool
+    min_depth: int
+    max_depth: int
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ..., tag_filter_mode: _Optional[_Union[TagFilterMode, str]] = ..., in_epic_id: _Optional[str] = ..., root_only: _Optional[bool] = ..., has_subtasks: _Optional[bool] = ..., min_depth: _Optional[int] = ..., max_depth: _Optional[int] = ...) -> None: ...
 
 class CreateTaskResponse(_message.Message):
     __slots__ = ("task", "updated_parent", "spawned_task")

@@ -875,12 +875,9 @@ class ProjectsHandlers:
                 1000,
             )
 
-        parent_id: UUID | str | None = None
-        if request.HasField("parent_id"):
-            if request.parent_id == "root":
-                parent_id = "root"
-            elif request.parent_id:
-                parent_id = _parse_uuid(request.parent_id, "parent_id")
+        parent_id: UUID | None = None
+        if request.HasField("parent_id") and request.parent_id:
+            parent_id = _parse_uuid(request.parent_id, "parent_id")
 
         sprint_id_filter = None
         if request.HasField("sprint_id"):
@@ -901,6 +898,21 @@ class ProjectsHandlers:
             _TagFilterMode.TAG_FILTER_MODE_NONE: "none",
         }.get(mode_value, "all")
 
+        in_epic_id_filter: UUID | None = None
+        if request.HasField("in_epic_id") and request.in_epic_id:
+            in_epic_id_filter = _parse_uuid(request.in_epic_id, "in_epic_id")
+
+        root_only = request.root_only if request.HasField("root_only") else False
+        has_subtasks_filter: bool | None = (
+            request.has_subtasks if request.HasField("has_subtasks") else None
+        )
+        min_depth_filter: int | None = (
+            request.min_depth if request.HasField("min_depth") else None
+        )
+        max_depth_filter: int | None = (
+            request.max_depth if request.HasField("max_depth") else None
+        )
+
         try:
             async with open_session() as session:
                 ops = TaskOperations(session)
@@ -916,6 +928,11 @@ class ProjectsHandlers:
                     backlog_only=backlog_only,
                     tag_ids=tag_ids_filter or None,
                     tag_filter_mode=tag_filter_mode,
+                    in_epic_id=in_epic_id_filter,
+                    root_only=root_only,
+                    has_subtasks=has_subtasks_filter,
+                    min_depth=min_depth_filter,
+                    max_depth=max_depth_filter,
                     page=page,
                     page_size=page_size,
                 )
