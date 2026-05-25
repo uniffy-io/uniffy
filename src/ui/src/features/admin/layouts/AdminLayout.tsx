@@ -10,8 +10,6 @@ import {
     ShieldCheck,
     Crown,
     Door,
-    Buildings,
-    HardDrives,
     Database,
     Robot,
     ClipboardText,
@@ -61,18 +59,6 @@ const orgGroups: NavGroup[] = [
             { name: 'Rooms', path: '/admin/rooms', icon: Door },
             { name: 'Storage', path: '/admin/storage', icon: Database },
             { name: 'Email', path: '/admin/email', icon: Envelope },
-        ],
-    },
-];
-
-const serverGroups: NavGroup[] = [
-    {
-        id: 'server',
-        title: 'Server',
-        items: [
-            { name: 'Organizations', path: '/admin/organizations', icon: Buildings },
-            { name: 'Users', path: '/admin/users', icon: Users },
-            { name: 'Settings', path: '/admin/server-settings', icon: HardDrives },
         ],
     },
 ];
@@ -161,17 +147,14 @@ function DesktopGroup({
 
 export function AdminLayout() {
     const location = useLocation();
-    const { canAccessAdmin, canAccessOrgSection, canAccessServerSection } = useAdminAccess();
+    const { canAccessAdmin } = useAdminAccess();
     const [collapsedPref, setCollapsedPref] = useState<Set<string>>(loadCollapsed);
 
     if (!canAccessAdmin) {
         return <Navigate to="/" replace />;
     }
 
-    const visibleGroups: NavGroup[] = [
-        ...(canAccessOrgSection ? orgGroups : []),
-        ...(canAccessServerSection ? serverGroups : []),
-    ];
+    const visibleGroups: NavGroup[] = orgGroups;
 
     const activeGroupId = visibleGroups.find((g) =>
         g.items.some((i) => isItemActive(location.pathname, i.path))

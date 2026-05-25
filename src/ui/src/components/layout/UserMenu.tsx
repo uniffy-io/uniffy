@@ -3,6 +3,7 @@ import {
     SignOut,
     Moon,
     ShieldCheck,
+    ShieldWarning,
     Smiley,
     Sun,
     Desktop,
@@ -43,7 +44,7 @@ export function UserMenu() {
     const navigate = useNavigate();
     const { user, refreshToken } = useAppSelector((state) => state.auth);
     const recordingState = useAppSelector((state) => state.recording.state);
-    const { canAccessAdmin } = useAdminAccess();
+    const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
     const { themeMode, setTheme, availableModes } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const [showStatusPicker, setShowStatusPicker] = useState(false);
@@ -273,6 +274,20 @@ export function UserMenu() {
                                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
                                 <ShieldCheck size={16} weight="duotone" className="text-muted-foreground group-hover:text-primary transition-colors duration-200" />
                                 <span>Administration</span>
+                            </button>
+                        )}
+
+                        {isSystemAdmin && (
+                            <button
+                                onClick={() => {
+                                    navigate('/platform');
+                                    setIsOpen(false);
+                                }}
+                                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+                            >
+                                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-amber-500 transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                                <ShieldWarning size={16} weight="duotone" className="text-amber-600 dark:text-amber-400 group-hover:text-amber-500 transition-colors duration-200" />
+                                <span>Platform admin</span>
                             </button>
                         )}
                     </div>

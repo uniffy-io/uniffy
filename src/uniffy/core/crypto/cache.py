@@ -1,17 +1,18 @@
-"""In-process LRU for per-org Data Encryption Keys.
+"""In-process caches for Data Encryption Keys.
 
-Decryption is hot: every agent provider-key decrypt and every future
-per-org secret read goes through ``OrgCipher``. Without a cache, each
-read would unwrap the wrapped DEK with the master cipher on every
-call. The LRU caches the constructed ``Fernet`` for each
-``(org_id, version)`` pair so subsequent decrypts skip the master
-unwrap entirely.
+Decryption is hot: every secret read goes through one of the cipher
+seams (per-org or deployment-singleton). Without a cache each read
+would unwrap the wrapped DEK with the master cipher on every call.
+The caches keep the constructed ``Fernet`` per ``(scope, version)``
+so subsequent decrypts skip the master unwrap.
 
-Cross-pod invalidation lands via the ``org_deks:invalidate:{org_id}``
-pubsub channel (``core/crypto/pubsub.py``). A rotation in any pod
-publishes once; every pod's subscriber drops the matching entries.
+Cross-pod invalidation lands via the
+``org_deks:invalidate:{org_id}`` channel for the per-org LRU and
+``deployment_deks:invalidate`` for the deployment-singleton cache
+(``core/crypto/pubsub.py``). A rotation in any pod publishes once;
+every pod's subscriber drops the matching entries.
 
-The LRU is in-process only -- DEK plaintext never enters Valkey.
+Both caches are in-process only -- DEK plaintext never enters Valkey.
 """
 
 from __future__ import annotations
@@ -108,3 +109,63 @@ def get_org_dek_lru() -> OrgDekLRU:
     if _lru is None:
         _lru = OrgDekLRU()
     return _lru
+
+
+class DeploymentDekCache:
+    """Bounded TTL cache for the deployment-singleton DEK.
+
+    Keyed only on ``version`` because the deployment cipher has no
+    organization dimension. Old versions stay readable after rotation
+    so historical ciphertexts decrypt; rotation publishes an
+    invalidation message so every pod drops the soon-to-be-retired
+    version before the re-encrypt sweep starts.
+    """
+
+    def __init__(self) -> None:
+        self._entries: OrderedDict[int, _CachedDek] = OrderedDict()
+        self._lock = asyncio.Lock()
+
+    async def get(self, version: int) -> Fernet | None:
+        async with self._lock:
+            entry = self._entries.get(version)
+            if entry is None:
+                return None
+            if time.time() - entry.cached_at > _TTL_SECONDS:
+                self._entries.pop(version, None)
+                return None
+            self._entries.move_to_end(version)
+            return entry.fernet
+
+    async def set(self, version: int, fernet: Fernet) -> None:
+        async with self._lock:
+            self._entries[version] = _CachedDek(fernet=fernet, cached_at=time.time())
+            self._entries.move_to_end(version)
+            while len(self._entries) > _MAX_SIZE:
+                self._entries.popitem(last=False)
+
+    async def invalidate_all(self) -> int:
+        """Drop every cached version. Returns the count removed."""
+        async with self._lock:
+            dropped = len(self._entries)
+            self._entries.clear()
+            return dropped
+
+    async def invalidate_version(self, version: int) -> bool:
+        """Drop one cached version. Returns True if a row was removed."""
+        async with self._lock:
+            return self._entries.pop(version, None) is not None
+
+    async def size(self) -> int:
+        async with self._lock:
+            return len(self._entries)
+
+
+_deployment_cache: DeploymentDekCache | None = None
+
+
+def get_deployment_dek_cache() -> DeploymentDekCache:
+    """Return the process-singleton deployment-DEK cache."""
+    global _deployment_cache
+    if _deployment_cache is None:
+        _deployment_cache = DeploymentDekCache()
+    return _deployment_cache

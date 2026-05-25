@@ -318,6 +318,22 @@ ORG_DEK_UNWRAP_SECONDS = Histogram(
 )
 
 
+DEPLOYMENT_DEK_CACHE_HIT_TOTAL = Counter(
+    "uniffy_deployment_dek_cache_hit_total",
+    "In-process deployment-singleton DEK cache hits (no master-unwrap needed)",
+)
+
+DEPLOYMENT_DEK_CACHE_MISS_TOTAL = Counter(
+    "uniffy_deployment_dek_cache_miss_total",
+    "In-process deployment-singleton DEK cache misses (master-unwrap ran)",
+)
+
+DEPLOYMENT_DEK_UNWRAP_SECONDS = Histogram(
+    "uniffy_deployment_dek_unwrap_seconds",
+    "Wall time spent unwrapping the deployment-singleton DEK with the master cipher",
+)
+
+
 REALTIME_ACTIVE_DOCS = Gauge(
     "uniffy_realtime_active_docs",
     "Yjs documents currently hydrated in this replica's YDocManager",

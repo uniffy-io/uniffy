@@ -23,17 +23,23 @@ from uniffy.domains.auth.tokens import (
     decode_access_token,
 )
 from uniffy.domains.auth.types import AuthResult
+from uniffy.domains.system_config.operations import public_registration_enabled
 from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
 
-def is_public_registration_enabled() -> bool:
+async def is_public_registration_enabled(session: AsyncSession) -> bool:
     """Return True when the public ``Register`` RPC is allowed to create users.
 
-    Production deploys gate this off so the only path to a new user is an
-    accepted invitation; self-hosters / dev environments flip it on with
-    ``ALLOW_PUBLIC_REGISTRATION=true``.
+    Resolution chain (in order):
+
+    1. ``deployment_settings(namespace='system', key='public_registration')`` --
+       the operator-edited row written from ``/platform/server-settings``.
+    2. Env ``ALLOW_PUBLIC_REGISTRATION`` -- used as the seed value when no
+       row exists. Operators can ship without env and set the flag from
+       the UI, or ship with env and override later.
+    3. Coded default ``False`` -- production-safe.
     """
-    return os.getenv("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower() == "true"
+    return await public_registration_enabled(session)
 
 
 class AuthOperations:
@@ -203,7 +209,7 @@ class AuthOperations:
 
         """
         try:
-            if not is_public_registration_enabled():
+            if not await is_public_registration_enabled(self._session):
                 await write_audit_event(
                     self._session,
                     organization_id=None,

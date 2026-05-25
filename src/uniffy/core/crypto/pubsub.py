@@ -1,8 +1,14 @@
-"""Cross-pod invalidation for the in-process DEK LRU.
+"""Cross-pod invalidation for the in-process DEK caches.
 
-A rotation in any pod publishes once to ``org_deks:invalidate:{org_id}``;
-every pod's subscriber drops the matching ``OrgDekLRU`` entries. The
-publisher reuses the shared pubsub tier; the subscriber owns a
+Two long-lived listeners:
+
+* per-org: ``org_deks:invalidate:{org_id}`` -- a rotation in any pod
+  publishes once; every pod's subscriber drops the matching
+  ``OrgDekLRU`` entries.
+* deployment-singleton: ``deployment_deks:invalidate`` -- a rotation
+  drops every cached entry in ``DeploymentDekCache``.
+
+The publishers reuse the shared pubsub tier; each subscriber owns a
 long-lived ``PSUBSCRIBE`` connection with the same reconnect / shutdown
 pattern as ``ProviderClientLRU``.
 """
@@ -19,11 +25,12 @@ from loguru import logger
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
-from uniffy.core.crypto.cache import get_org_dek_lru
+from uniffy.core.crypto.cache import get_deployment_dek_cache, get_org_dek_lru
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.core.valkey.pubsub import publish_to_channel
 
 _INVALIDATE_PATTERN = "org_deks:invalidate:*"
+_DEPLOYMENT_INVALIDATE_CHANNEL = "deployment_deks:invalidate"
 _RECONNECT_BACKOFF_SECONDS = 5.0
 _POLL_TIMEOUT_SECONDS = 1.0
 
@@ -175,3 +182,141 @@ async def _handle_invalidate_message(raw: object) -> None:
     dropped = await get_org_dek_lru().invalidate(organization_id)
     if dropped:
         logger.debug(f"Org DEK LRU dropped {dropped} entries for {organization_id}")
+
+
+# --- Deployment-singleton DEK channel ---------------------------------
+
+async def publish_deployment_dek_invalidation() -> None:
+    """Tell every pod to drop its cached deployment DEK entries."""
+    await publish_to_channel(
+        _DEPLOYMENT_INVALIDATE_CHANNEL,
+        {"event": "rotate"},
+    )
+
+
+_deployment_subscriber_task: asyncio.Task[None] | None = None
+_deployment_subscriber_shutdown: asyncio.Event | None = None
+
+
+async def subscribe_deployment_dek_invalidations() -> None:
+    """Start the long-lived listener for deployment-DEK invalidation.
+
+    Idempotent: a second call is a no-op while the first task is alive.
+    """
+    global _deployment_subscriber_task, _deployment_subscriber_shutdown
+
+    if (
+        _deployment_subscriber_task is not None
+        and not _deployment_subscriber_task.done()
+    ):
+        return
+
+    _deployment_subscriber_shutdown = asyncio.Event()
+    _deployment_subscriber_task = asyncio.create_task(_run_deployment_subscriber())
+    logger.info("Deployment DEK invalidation subscriber started")
+
+
+async def close_deployment_dek_invalidation_subscriber() -> None:
+    """Signal shutdown and await the subscriber task."""
+    global _deployment_subscriber_task, _deployment_subscriber_shutdown
+
+    if _deployment_subscriber_shutdown is not None:
+        _deployment_subscriber_shutdown.set()
+
+    if _deployment_subscriber_task is not None:
+        try:
+            await asyncio.wait_for(_deployment_subscriber_task, timeout=3.0)
+        except (TimeoutError, asyncio.CancelledError):
+            _deployment_subscriber_task.cancel()
+        except Exception as exc:
+            logger.warning(
+                f"Deployment DEK invalidation subscriber teardown failed: {exc}"
+            )
+        _deployment_subscriber_task = None
+
+    _deployment_subscriber_shutdown = None
+    logger.info("Deployment DEK invalidation subscriber stopped")
+
+
+async def _run_deployment_subscriber() -> None:
+    """Listen on ``deployment_deks:invalidate`` and drop the cache."""
+    url = ValkeyConfig.from_env().to_url()
+
+    while (
+        _deployment_subscriber_shutdown is None
+        or not _deployment_subscriber_shutdown.is_set()
+    ):
+        client: aioredis.Redis | None = None
+        pubsub = None
+        try:
+            client = aioredis.from_url(
+                url,
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                socket_keepalive=True,
+                health_check_interval=30,
+            )
+            pubsub = client.pubsub()
+            await pubsub.subscribe(_DEPLOYMENT_INVALIDATE_CHANNEL)
+            logger.info(
+                f"Deployment DEK invalidation subscriber listening on "
+                f"{_DEPLOYMENT_INVALIDATE_CHANNEL}"
+            )
+
+            while (
+                _deployment_subscriber_shutdown is None
+                or not _deployment_subscriber_shutdown.is_set()
+            ):
+                msg = await pubsub.get_message(
+                    ignore_subscribe_messages=True,
+                    timeout=_POLL_TIMEOUT_SECONDS,
+                )
+                if msg is None:
+                    continue
+                if msg.get("type") != "message":
+                    continue
+                dropped = await get_deployment_dek_cache().invalidate_all()
+                if dropped:
+                    logger.debug(
+                        f"Deployment DEK cache dropped {dropped} entries"
+                    )
+
+        except (RedisConnectionError, RedisTimeoutError, OSError) as exc:
+            logger.warning(
+                f"Deployment DEK invalidation subscriber connection error: {exc}; "
+                f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception(
+                f"Deployment DEK invalidation subscriber unexpected error: {exc}; "
+                f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
+            )
+        finally:
+            if pubsub is not None:
+                with contextlib.suppress(Exception):
+                    await pubsub.unsubscribe(_DEPLOYMENT_INVALIDATE_CHANNEL)
+                with contextlib.suppress(Exception):
+                    await pubsub.aclose()
+            if client is not None:
+                with contextlib.suppress(Exception):
+                    await client.aclose()
+
+        if (
+            _deployment_subscriber_shutdown is not None
+            and _deployment_subscriber_shutdown.is_set()
+        ):
+            break
+        try:
+            await asyncio.wait_for(
+                _deployment_subscriber_shutdown.wait()
+                if _deployment_subscriber_shutdown is not None
+                else asyncio.sleep(_RECONNECT_BACKOFF_SECONDS),
+                timeout=_RECONNECT_BACKOFF_SECONDS,
+            )
+        except TimeoutError:
+            pass
+        except asyncio.CancelledError:
+            raise

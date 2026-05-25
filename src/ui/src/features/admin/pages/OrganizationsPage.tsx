@@ -99,24 +99,20 @@ export function OrganizationsPage() {
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="rounded-xl bg-primary p-2.5 md:p-3 shadow-lg shrink-0">
-            <Buildings size={24} weight="duotone" className="text-primary-foreground md:hidden" />
-            <Buildings size={28} weight="duotone" className="text-primary-foreground hidden md:block" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Organizations</h1>
-            <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-              Manage all organizations in the system
-            </p>
-          </div>
+    <div className="flex flex-col gap-6 max-w-5xl w-full mx-auto">
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+          <Buildings size={22} weight="duotone" className="text-primary" />
         </div>
-        <Button size="md" onClick={handleCreate} className="shrink-0">
-          <Plus size={16} />
-          <span className="hidden sm:inline">Add Organization</span>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-semibold text-foreground">Organizations</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage all organizations in the deployment.
+          </p>
+        </div>
+        <Button size="sm" onClick={handleCreate} className="shrink-0">
+          <Plus size={14} />
+          <span className="hidden sm:inline ml-1">Add organization</span>
         </Button>
       </div>
 

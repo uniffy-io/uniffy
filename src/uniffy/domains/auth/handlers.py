@@ -400,9 +400,10 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> GetAuthConfigResponse:
         """Public auth configuration the login / register pages need."""
-        return GetAuthConfigResponse(
-            public_registration_enabled=is_public_registration_enabled(),
-        )
+        del request, ctx
+        async with open_session() as session:
+            enabled = await is_public_registration_enabled(session)
+        return GetAuthConfigResponse(public_registration_enabled=enabled)
 
     async def get_invitation(
         self,

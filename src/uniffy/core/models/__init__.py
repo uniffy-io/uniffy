@@ -36,6 +36,7 @@ from uniffy.core.models.chat import (
 )
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
+from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
@@ -64,6 +65,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.shared import (
@@ -108,6 +110,9 @@ __all__ = [
     "EmailSuppressionReason",
     # Org settings (KV)
     "OrgSetting",
+    # Deployment settings (KV)
+    "DeploymentSetting",
+    "DeploymentEncryptionKey",
     # Notes models
     "Note",
     # Projects models

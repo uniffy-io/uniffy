@@ -184,6 +184,16 @@ class Action:
     MAIL_SUPPRESSED = "mail.suppressed"
     MAIL_CONFIG_UPDATED = "mail.config_updated"
     MAIL_CONFIG_CLEARED = "mail.config_cleared"
+    MAIL_CONFIG_FORCE_CLEARED = "mail.config_force_cleared"
+    MAIL_SUPPRESSION_REMOVED = "mail.suppression_removed"
+    MAIL_SYSTEM_CONFIG_UPDATED = "mail.system_config_updated"
+    MAIL_SYSTEM_CONFIG_CLEARED = "mail.system_config_cleared"
+
+    # Deployment encryption
+    DEPLOYMENT_ENCRYPTION_ROTATED = "deployment.encryption_rotated"
+
+    # System config flags
+    SYSTEM_PUBLIC_REGISTRATION_CHANGED = "system.public_registration_changed"
 
     # Rooms
     ROOM_CREATED = "room.created"

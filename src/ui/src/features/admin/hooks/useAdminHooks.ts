@@ -44,16 +44,12 @@ export function useAdminAccess() {
         const isOrgAdminRole = ['ADMIN', 'OWNER'].includes(currentOrganizationRole ?? '');
 
         return {
-            /** Whether the user is a system-wide administrator */
+            /** Whether the user is a system-wide administrator (platform operator) */
             isSystemAdmin,
             /** Whether the user is an admin/owner of the current organization */
             isOrgAdmin: isOrgAdminRole,
-            /** Whether the user can access the admin panel (org admin or system admin) */
+            /** Whether the user can access the org admin panel (/admin/*) */
             canAccessAdmin: isOrgAdminRole || isSystemAdmin,
-            /** Whether the user can access organization-level admin sections */
-            canAccessOrgSection: isOrgAdminRole || isSystemAdmin,
-            /** Whether the user can access server-level admin sections */
-            canAccessServerSection: isSystemAdmin,
         };
     }, [user?.isSystemAdmin, currentOrganizationRole]);
 }

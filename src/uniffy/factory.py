@@ -47,13 +47,23 @@ from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplica
 from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
 from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
+from uniffy_proto.superadmin.v1.system_config_connect import (
+    SystemConfigServiceASGIApplication,
+)
+from uniffy_proto.superadmin.v1.system_encryption_connect import (
+    SystemEncryptionServiceASGIApplication,
+)
+from uniffy_proto.superadmin.v1.system_mail_connect import SystemMailServiceASGIApplication
 from uniffy_proto.tags.v1.tags_connect import TagsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.audit import RequestContextMiddleware as AuditRequestContextMiddleware
 from uniffy.core.crypto import (
+    DeploymentCipher,
     close_dek_invalidation_subscriber,
+    close_deployment_dek_invalidation_subscriber,
     subscribe_dek_invalidations,
+    subscribe_deployment_dek_invalidations,
 )
 from uniffy.core.llm_providers import (
     close_provider_invalidation_subscriber,
@@ -74,7 +84,7 @@ from uniffy.core.valkey import (
     init_streams_client,
     signal_pubsub_shutdown,
 )
-from uniffy.db import close_db, init_db, seed_initial_data
+from uniffy.db import close_db, init_db, open_session, seed_initial_data
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
@@ -99,6 +109,7 @@ from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.mail.service import OrgMailServiceImpl
+from uniffy.domains.mail.system_service import SystemMailServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
@@ -109,6 +120,8 @@ from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
+from uniffy.domains.system_config.service import SystemConfigServiceImpl
+from uniffy.domains.system_encryption.service import SystemEncryptionServiceImpl
 from uniffy.domains.tags.service import TagsServiceImpl
 from uniffy.domains.users.http_routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
@@ -320,6 +333,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Org DEK invalidation subscriber not available: {e}")
 
+    # Deployment-singleton DEK invalidation: drops the in-process
+    # DeploymentDekCache on a peer's deployment_deks:invalidate publish.
+    try:
+        await subscribe_deployment_dek_invalidations()
+    except Exception as e:
+        logger.warning(
+            f"Deployment DEK invalidation subscriber not available: {e}"
+        )
+
     try:
         from uniffy.core.realtime import ydoc_manager as _rt_manager  # noqa: F401
 
@@ -334,6 +356,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.exception(f"Failed to seed initial data: {e}")
         raise
+
+    # Ensure the deployment-singleton DEK exists so /platform/encryption
+    try:
+        async with open_session() as session:
+            version = await DeploymentCipher(session).provision_if_missing()
+            logger.info(f"Deployment DEK active at v{version}")
+    except Exception as e:
+        logger.warning(f"Deployment DEK provisioning skipped: {e}")
 
     # Load VAPID config from DB/env (non-blocking - push works without it)
     try:
@@ -351,6 +381,7 @@ async def lifespan(app: FastAPI):
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
     await close_dek_invalidation_subscriber()
+    await close_deployment_dek_invalidation_subscriber()
     await close_streams_client()
     await close_ops_client()
     await close_pubsub()
@@ -488,6 +519,24 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/mail.v1.OrgMailService",
         OrgMailServiceASGIApplication(
             OrgMailServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemMailService",
+        SystemMailServiceASGIApplication(
+            SystemMailServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemEncryptionService",
+        SystemEncryptionServiceASGIApplication(
+            SystemEncryptionServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemConfigService",
+        SystemConfigServiceASGIApplication(
+            SystemConfigServiceImpl(), interceptors=[logging_interceptor]
         ),
     )
     dispatcher.add_service(
