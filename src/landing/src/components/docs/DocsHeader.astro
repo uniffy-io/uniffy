@@ -1,0 +1,57 @@
+---
+import Header from "@/components/Header.astro";
+import Search from "@astrojs/starlight/components/Search.astro";
+import Sidebar from "@astrojs/starlight/components/Sidebar.astro";
+---
+
+<Header mobileExtraLabel="Documentation">
+  <div slot="mobile-extra" class="docs-mobile-nav">
+    <div class="docs-mobile-nav__search">
+      <Search {...Astro.props} />
+    </div>
+    <div class="docs-mobile-nav__sidebar">
+      <Sidebar {...Astro.props} />
+    </div>
+  </div>
+</Header>
+
+<style is:global>
+  .docs-mobile-nav__search {
+    padding: 0 0.5rem 0.75rem;
+  }
+  .docs-mobile-nav__search site-search button[data-open-modal] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-night-band);
+    border: 1px solid var(--color-night-hairline);
+    color: var(--color-night-muted);
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .docs-mobile-nav__search site-search button[data-open-modal] kbd {
+    margin-left: auto;
+    background: var(--color-night-soft);
+    border: 1px solid var(--color-night-hairline);
+    color: var(--color-night-faint);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.25rem;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+  }
+  .docs-mobile-nav__sidebar {
+    padding: 0 0.5rem;
+  }
+  .docs-mobile-nav__sidebar ul {
+    padding-inline-start: 0;
+  }
+
+  starlight-menu-button {
+    display: none !important;
+  }
+</style>

@@ -5,16 +5,27 @@ type NavLink = {
   icon: "mention" | "cpu" | "shield" | "scales" | "tag" | "book";
   external?: boolean;
   spyId?: string;
+  matchPrefix?: string;
 };
 
 const links: NavLink[] = [
-  { href: "#product", label: "Product", icon: "mention", spyId: "product" },
-  { href: "#ai", label: "AI", icon: "cpu", spyId: "ai" },
-  { href: "#sovereign", label: "Sovereign", icon: "shield", spyId: "sovereign" },
-  { href: "#compare", label: "Compare", icon: "scales", spyId: "compare" },
-  { href: "#pricing", label: "Pricing", icon: "tag", spyId: "pricing" },
-  { href: "https://docs.uniffy.io", label: "Docs", icon: "book", external: true },
+  { href: "/#product", label: "Product", icon: "mention", spyId: "product" },
+  { href: "/#ai", label: "AI", icon: "cpu", spyId: "ai" },
+  { href: "/#sovereign", label: "Sovereign", icon: "shield", spyId: "sovereign" },
+  { href: "/#compare", label: "Compare", icon: "scales", spyId: "compare" },
+  { href: "/#pricing", label: "Pricing", icon: "tag", spyId: "pricing" },
+  { href: "/docs/", label: "Docs", icon: "book", matchPrefix: "/docs/" },
 ];
+
+const currentPath = Astro.url.pathname;
+const isCurrent = (link: NavLink) =>
+  link.matchPrefix !== undefined && currentPath.startsWith(link.matchPrefix);
+
+interface Props {
+  mobileExtraLabel?: string;
+}
+const { mobileExtraLabel } = Astro.props;
+const hasMobileExtra = Astro.slots.has("mobile-extra");
 ---
 
 <a
@@ -53,7 +64,11 @@ const links: NavLink[] = [
             data-spy={link.spyId ?? ""}
             target={link.external ? "_blank" : undefined}
             rel={link.external ? "noreferrer" : undefined}
-            class="nav-cell group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-200"
+            aria-current={isCurrent(link) ? "page" : undefined}
+            class:list={[
+              "nav-cell group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-200",
+              isCurrent(link) && "is-active",
+            ]}
           >
             <span class="nav-cell__icon relative grid h-7 w-7 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors duration-200">
               {link.icon === "mention" && (
@@ -101,6 +116,7 @@ const links: NavLink[] = [
     </nav>
 
     <div class="flex items-center gap-2">
+      <slot name="actions-leading" />
       <a
         href="https://cloud.uniffy.io/login"
         class="signin hidden md:inline-flex items-center rounded-md px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200 hover:text-night-text"
@@ -216,6 +232,17 @@ const links: NavLink[] = [
         }
       </ul>
     </nav>
+
+    {hasMobileExtra && (
+      <div class="mobile-nav__extra border-t border-night-hairline px-3 py-4">
+        {mobileExtraLabel && (
+          <h4 class="px-2 pb-3 font-mono text-[10px] font-bold uppercase tracking-wider text-night-faint">
+            {mobileExtraLabel}
+          </h4>
+        )}
+        <slot name="mobile-extra" />
+      </div>
+    )}
 
     <div class="flex flex-col gap-2 border-t border-night-hairline px-5 py-4">
       <a
