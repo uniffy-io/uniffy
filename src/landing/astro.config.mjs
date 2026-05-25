@@ -19,6 +19,7 @@ export default defineConfig({
         Footer: "./src/components/docs/DocsFooter.astro",
         Sidebar: "./src/components/docs/DocsSidebar.astro",
         Pagination: "./src/components/docs/DocsPagination.astro",
+        MobileMenuFooter: "./src/components/docs/DocsMobileMenuFooter.astro",
       },
       social: [
         {
@@ -30,7 +31,10 @@ export default defineConfig({
       sidebar: [
         {
           label: "Introduction",
-          items: [{ label: "Overview", link: "/docs/" }],
+          items: [
+            { label: "Overview", link: "/docs/" },
+            { label: "Principles", link: "/docs/principles/" },
+          ],
         },
         {
           label: "User Guide",

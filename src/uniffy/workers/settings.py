@@ -49,7 +49,9 @@ from uniffy.workers.tasks import (
     egress_on_shutdown,
     egress_on_startup,
     execute_agent_cron_tasks,
+    expire_support_sessions,
     flush_chat_read_cursors,
+    notify_pending_org_purges,
     on_job_end,
     on_job_start,
     reap_expired_multipart_uploads,
@@ -76,6 +78,8 @@ class CoreWorkerSettings:
         cron(auto_unmute_channels, minute=None, second={0}),
         cron(recalculate_all_storage_usage, hour=3, minute=0),
         cron(reap_expired_multipart_uploads, minute={0}),
+        cron(notify_pending_org_purges, hour=2, minute=15),
+        cron(expire_support_sessions, minute=None),
     ]
     on_startup = core_on_startup
     on_shutdown = core_on_shutdown

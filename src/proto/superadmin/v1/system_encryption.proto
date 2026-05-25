@@ -13,15 +13,13 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadm
 // secret under a fresh DEK and is audit-logged.
 service SystemEncryptionService {
   // Snapshot the active + retired deployment DEK rows.
-  rpc GetDeploymentEncryptionStatus(GetDeploymentEncryptionStatusRequest)
-      returns (GetDeploymentEncryptionStatusResponse) {}
+  rpc GetDeploymentEncryptionStatus(GetDeploymentEncryptionStatusRequest) returns (GetDeploymentEncryptionStatusResponse) {}
 
   // Bump the active DEK to a fresh version and re-encrypt every
   // registered ``DeploymentReEncryptingConsumer`` row under it.
   // Publishes a cross-pod cache invalidation so peers drop the
   // retired Fernet immediately. Returns the new active version.
-  rpc RotateDeploymentDek(RotateDeploymentDekRequest)
-      returns (RotateDeploymentDekResponse) {}
+  rpc RotateDeploymentDek(RotateDeploymentDekRequest) returns (RotateDeploymentDekResponse) {}
 }
 
 message DeploymentEncryptionStatus {

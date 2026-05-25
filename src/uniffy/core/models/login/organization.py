@@ -53,6 +53,23 @@ class Organization(SQLModel, table=True):
     plan: str = Field(default="free", max_length=50, nullable=False)
     max_members: int | None = Field(default=None)
     settings: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    is_suspended: bool = Field(default=False, nullable=False, index=True)
+    suspended_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    suspended_by_user_id: UUID | None = Field(default=None, nullable=True)
+    suspension_reason: str | None = Field(default=None, max_length=1000)
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
+    deleted_by_user_id: UUID | None = Field(default=None, nullable=True)
+    deletion_reason: str | None = Field(default=None, max_length=1000)
+    purge_warning_sent_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

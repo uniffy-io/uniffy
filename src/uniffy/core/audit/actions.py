@@ -61,6 +61,9 @@ class Action:
     USER_EMAIL_CHANGED = "user.email_changed"
     USER_AVATAR_CHANGED = "user.avatar_changed"
     USER_DELETED = "user.deleted"
+    USER_FORCE_LOGOUT = "user.force_logout"
+    USER_SYSTEM_ADMIN_GRANTED = "user.system_admin_granted"
+    USER_SYSTEM_ADMIN_REVOKED = "user.system_admin_revoked"
 
     # Organizations
     ORGANIZATION_CREATED = "organization.created"
@@ -75,6 +78,12 @@ class Action:
     ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
     ORGANIZATION_INVITATION_RESENT = "organization.invitation_resent"
     ORGANIZATION_SECURITY_SETTINGS_CHANGED = "organization.security_settings_changed"
+    ORGANIZATION_SUSPENDED = "organization.suspended"
+    ORGANIZATION_UNSUSPENDED = "organization.unsuspended"
+    ORGANIZATION_DELETED_BY_PLATFORM = "organization.deleted_by_platform"
+    ORGANIZATION_RESTORED = "organization.restored"
+    ORGANIZATION_PURGED = "organization.purged"
+    ORGANIZATION_PURGE_WARNING_SENT = "organization.purge_warning_sent"
 
     # Permissions (sourced via core/content/members.py emissions)
     PERMISSIONS_MEMBER_ADDED = "permissions.member_added"
@@ -194,6 +203,16 @@ class Action:
 
     # System config flags
     SYSTEM_PUBLIC_REGISTRATION_CHANGED = "system.public_registration_changed"
+
+    # Support sessions (time-bound platform-operator grants into a tenant)
+    SUPPORT_SESSION_REQUESTED = "support_session.requested"
+    SUPPORT_SESSION_APPROVED = "support_session.approved"
+    SUPPORT_SESSION_REJECTED = "support_session.rejected"
+    SUPPORT_SESSION_STARTED = "support_session.started"
+    SUPPORT_SESSION_REVOKED = "support_session.revoked"
+    SUPPORT_SESSION_EXPIRED = "support_session.expired"
+    SUPPORT_SESSION_CIPHER_BRIDGE_ATTEMPT = "support_session.cipher_bridge_attempt"
+    SUPPORT_SESSION_CONSENT_MODE_CHANGED = "support_session.consent_mode_changed"
 
     # Rooms
     ROOM_CREATED = "room.created"

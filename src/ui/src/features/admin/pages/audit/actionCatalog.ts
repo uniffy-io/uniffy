@@ -46,6 +46,9 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'user.email_changed', label: 'Email changed' },
             { value: 'user.avatar_changed', label: 'Avatar changed' },
             { value: 'user.deleted', label: 'Deleted' },
+            { value: 'user.force_logout', label: 'Force logout' },
+            { value: 'user.system_admin_granted', label: 'System admin granted' },
+            { value: 'user.system_admin_revoked', label: 'System admin revoked' },
         ],
     },
     {
@@ -65,6 +68,13 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'organization.invitation_revoked', label: 'Invitation revoked' },
             { value: 'organization.invitation_resent', label: 'Invitation resent' },
             { value: 'organization.security_settings_changed', label: 'Security settings changed' },
+            { value: 'organization.encryption_key_rotated', label: 'Encryption key rotated' },
+            { value: 'organization.suspended', label: 'Suspended by platform' },
+            { value: 'organization.unsuspended', label: 'Unsuspended by platform' },
+            { value: 'organization.deleted_by_platform', label: 'Deleted by platform' },
+            { value: 'organization.restored', label: 'Restored by platform' },
+            { value: 'organization.purged', label: 'Purged' },
+            { value: 'organization.purge_warning_sent', label: 'Purge warning sent' },
         ],
     },
     {
@@ -228,6 +238,44 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'mail.suppressed', label: 'Suppressed' },
             { value: 'mail.config_updated', label: 'Config updated' },
             { value: 'mail.config_cleared', label: 'Config cleared' },
+            { value: 'mail.config_force_cleared', label: 'Config force-cleared by platform' },
+            { value: 'mail.suppression_removed', label: 'Suppression removed' },
+            { value: 'mail.system_config_updated', label: 'System config updated' },
+            { value: 'mail.system_config_cleared', label: 'System config cleared' },
+        ],
+    },
+    {
+        domain: 'deployment',
+        label: 'Deployment',
+        badgeClass:
+            'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+        actions: [
+            { value: 'deployment.encryption_rotated', label: 'Encryption rotated' },
+        ],
+    },
+    {
+        domain: 'system',
+        label: 'System',
+        badgeClass:
+            'bg-slate-200 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300',
+        actions: [
+            { value: 'system.public_registration_changed', label: 'Public registration changed' },
+        ],
+    },
+    {
+        domain: 'support_session',
+        label: 'Support sessions',
+        badgeClass:
+            'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300',
+        actions: [
+            { value: 'support_session.requested', label: 'Requested by operator' },
+            { value: 'support_session.approved', label: 'Approved by owner' },
+            { value: 'support_session.rejected', label: 'Rejected by owner' },
+            { value: 'support_session.started', label: 'Started' },
+            { value: 'support_session.revoked', label: 'Revoked' },
+            { value: 'support_session.expired', label: 'Expired' },
+            { value: 'support_session.cipher_bridge_attempt', label: 'Decrypt bridge attempt' },
+            { value: 'support_session.consent_mode_changed', label: 'Consent mode changed' },
         ],
     },
     {

@@ -56,7 +56,7 @@ least one org configured at `/admin/email`. Local dev uses mailcatcher
 3. Toast: "Invitation sent to <email>". The **Invitations** table below
    the member list shows a `PENDING` row.
 4. The invite email lands (template `auth/invitation`) with a
-   `{FRONTEND_BASE_URL}/auth/accept-invite?token=...` link.
+   `{UNIFFY_BASE_URL}/auth/accept-invite?token=...` link.
 5. Open the link in an incognito window. The page shows the inviter
    name + org name + role. Fill username + password (8+ chars), submit.
 6. Redirected to `/` as a fresh signed-in member. The invitation row
@@ -103,7 +103,7 @@ least one org configured at `/admin/email`. Local dev uses mailcatcher
    submit. Page shows "If an account exists for <email>, a reset link
    is on its way."
 3. The `auth/password_reset` email lands within ~10s with a
-   `{FRONTEND_BASE_URL}/auth/reset-password?token=...` link, branded
+   `{UNIFFY_BASE_URL}/auth/reset-password?token=...` link, branded
    with the user's primary org name + SMTP config.
 4. Open the link. Page shows the bound email + the "All existing
    sessions will be signed out" notice.

@@ -197,7 +197,7 @@ All providers are reached through SMTP. For Resend, use the SMTP relay (`smtp.re
 | `MAIL_REPLY_TO` | empty | Optional `Reply-To` header. |
 | `MAIL_RATE_LIMIT_PER_MIN` | `100` | Per-org or per-system cap, enforced via a Valkey token bucket. |
 | `MAIL_DELIVERY_LOG_ENABLED` | `false` | Persist per-send rows in `mail_delivery_log`. Off saves storage; on gives forensics. |
-| `FRONTEND_BASE_URL` | `http://localhost:5173` | Public app URL used to build password-reset links and other in-email URLs. No trailing slash. Example: `https://app.uniffy.io`. |
+| `UNIFFY_BASE_URL` | `http://localhost:5173` | Public app URL used to build user facing links in outbound email (accept invite, password reset, support session notifications). No trailing slash. Example: `https://cloud.uniffy.io`. |
 | `SMTP_HOST` | empty | SMTP server hostname. |
 | `SMTP_PORT` | `587` | SMTP port. `587` for STARTTLS, `465` for implicit TLS. |
 | `SMTP_USERNAME` | empty | SMTP auth user. For Resend: `resend`. |

@@ -79,26 +79,20 @@
 
 header.header {
   padding-inline: 0;
-  background-color: rgba(13, 17, 23, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: #0d1117;
   border-bottom: 1px solid var(--sl-color-hairline);
 }
 
 .sidebar-pane {
-  background-color: rgba(21, 27, 35, 0.6) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background-color: #0d1117;
 }
 
-.mobile-nav__panel {
-  background-color: #151b23;
-}
-
-.mobile-nav__scrim {
-  background-color: rgba(13, 17, 23, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+@media (min-width: 50rem) {
+  .sidebar-pane {
+    background-color: rgba(21, 27, 35, 0.6) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 }
 
 mobile-starlight-toc {
@@ -199,5 +193,71 @@ starlight-menu-button + nav a[aria-current="page"],
 }
 .sidebar-content a[aria-current="page"]:hover {
   color: var(--sl-color-text-invert);
+}
+
+.sl-markdown-content details.principle {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--sl-color-hairline);
+}
+.sl-markdown-content details.principle:first-of-type {
+  margin-top: 2rem;
+}
+.sl-markdown-content details.principle:last-of-type {
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+.sl-markdown-content details.principle + details.principle {
+  margin-top: 0;
+}
+.sl-markdown-content details.principle > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--sl-font);
+  font-size: var(--sl-text-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--sl-color-white);
+  user-select: none;
+  padding: 0.4rem 0;
+  transition: color 150ms ease;
+}
+.sl-markdown-content details.principle > summary::-webkit-details-marker,
+.sl-markdown-content details.principle > summary::marker {
+  display: none;
+  content: "";
+}
+.sl-markdown-content details.principle > summary::before {
+  content: "";
+  display: block;
+  flex: 0 0 0.85rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  background-color: var(--sl-color-gray-3);
+  clip-path: polygon(25% 10%, 25% 90%, 82% 50%);
+  transition: transform 200ms ease, background-color 150ms ease;
+}
+.sl-markdown-content details.principle[open] > summary::before {
+  transform: rotate(90deg);
+  background-color: var(--sl-color-accent);
+}
+.sl-markdown-content details.principle > summary:hover {
+  color: var(--sl-color-accent);
+}
+.sl-markdown-content details.principle > summary:hover::before {
+  background-color: var(--sl-color-accent);
+}
+.sl-markdown-content details.principle[open] > summary {
+  margin-bottom: 0.5rem;
+}
+.sl-markdown-content details.principle > *:not(summary):first-of-type {
+  margin-top: 0.25rem;
+}
+
+.sl-markdown-content .accent {
+  color: var(--sl-color-accent);
 }
 

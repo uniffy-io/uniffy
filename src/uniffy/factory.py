@@ -47,8 +47,18 @@ from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplica
 from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
 from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
+from uniffy_proto.superadmin.v1.platform_audit_connect import (
+    PlatformAuditServiceASGIApplication,
+)
+from uniffy_proto.superadmin.v1.support_session_connect import (
+    SupportServiceASGIApplication,
+)
 from uniffy_proto.superadmin.v1.system_config_connect import (
     SystemConfigServiceASGIApplication,
+)
+from uniffy_proto.superadmin.v1.system_directory_connect import (
+    SystemOrganizationsServiceASGIApplication,
+    SystemUsersServiceASGIApplication,
 )
 from uniffy_proto.superadmin.v1.system_encryption_connect import (
     SystemEncryptionServiceASGIApplication,
@@ -115,6 +125,12 @@ from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
+from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
+from uniffy.domains.platform.directory.service import (
+    SystemOrganizationsServiceImpl,
+    SystemUsersServiceImpl,
+)
+from uniffy.domains.platform.support_session.service import SupportServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
@@ -537,6 +553,30 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/superadmin.v1.SystemConfigService",
         SystemConfigServiceASGIApplication(
             SystemConfigServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemOrganizationsService",
+        SystemOrganizationsServiceASGIApplication(
+            SystemOrganizationsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemUsersService",
+        SystemUsersServiceASGIApplication(
+            SystemUsersServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SupportService",
+        SupportServiceASGIApplication(
+            SupportServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.PlatformAuditService",
+        PlatformAuditServiceASGIApplication(
+            PlatformAuditServiceImpl(), interceptors=[logging_interceptor]
         ),
     )
     dispatcher.add_service(

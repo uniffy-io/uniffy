@@ -4,7 +4,7 @@ import Search from "@astrojs/starlight/components/Search.astro";
 import Sidebar from "@astrojs/starlight/components/Sidebar.astro";
 ---
 
-<Header mobileExtraLabel="Documentation">
+<Header mobileExtraLabel="Documentation" mobileLinksMode="extra-only">
   <div slot="mobile-extra" class="docs-mobile-nav">
     <div class="docs-mobile-nav__search">
       <Search {...Astro.props} />

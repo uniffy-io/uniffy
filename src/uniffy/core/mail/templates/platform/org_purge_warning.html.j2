@@ -1,0 +1,11 @@
+{% extends "base.html.j2" %}
+{% block title %}Final notice: {{ org_name }} purge in 24 hours{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">{{ org_name }} will be permanently deleted on {{ purge_at }}.</p>
+<p style="margin:0 0 16px 0;">This is the final notice before the data is removed. After {{ purge_at }} the workspace and all its content (notes, files, chat, calendar, projects) will no longer be recoverable.</p>
+{% if reason %}
+<p style="margin:0 0 16px 0;"><strong>Reason recorded at the time of deletion:</strong> {{ reason }}</p>
+{% endif %}
+<p style="margin:0 0 16px 0;">If you believe this is an error, contact your platform admin or support immediately to restore the workspace.</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">This notice is automatic; the original action is recorded in your workspace audit log.</p>
+{% endblock %}

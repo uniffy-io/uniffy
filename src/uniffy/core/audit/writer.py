@@ -112,6 +112,9 @@ async def write_audit_event(
         session, organization_id, actor_user_id
     )
 
+    merged_details = dict(details or {})
+    _merge_support_session_tag(merged_details, organization_id)
+
     event = AuditEvent(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
@@ -120,12 +123,43 @@ async def write_audit_event(
         action=action,
         resource_type=resource_type,
         resource_id=resource_id,
-        details=details or {},
+        details=merged_details,
         ip_address=audit_ip_var.get(),
         user_agent=audit_user_agent_var.get(),
     )
     session.add(event)
     return event
+
+
+def _merge_support_session_tag(
+    details: dict, organization_id: UUID | None
+) -> None:
+    """Stamp ``actor_kind``/``support_session_id``/``scope`` when active.
+
+    Lookup is best-effort: the ContextVar is set by
+    :meth:`PermissionChecker._support_session_role` when it finds an
+    active session for the request's (user, org). Audit writes that
+    happen elsewhere in the same request inherit the tag automatically
+    so the org owner can filter their audit log for support access.
+
+    Skips silently when no session is active, when the writer targets
+    a different org than the one under session, or when the caller has
+    already set ``actor_kind`` explicitly (don't clobber).
+    """
+    from uniffy.domains.platform.support_session.context import (
+        get_active_support_session,
+    )
+
+    active = get_active_support_session()
+    if active is None:
+        return
+    if organization_id is not None and active.organization_id != organization_id:
+        return
+    if "actor_kind" in details:
+        return
+    details["actor_kind"] = "support"
+    details["support_session_id"] = str(active.session_id)
+    details["scope"] = active.scope
 
 
 async def _snapshot_actor_role(

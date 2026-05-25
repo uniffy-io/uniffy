@@ -54,7 +54,7 @@ def _hash_token(raw: str) -> str:
 
 
 def _frontend_base_url() -> str:
-    return os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    return os.getenv("UNIFFY_BASE_URL", "http://localhost:5173").rstrip("/")
 
 
 def _reset_url(raw_token: str) -> str:

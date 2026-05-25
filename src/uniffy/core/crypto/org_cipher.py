@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from cryptography.fernet import Fernet, InvalidToken
+from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +44,18 @@ from uniffy.observability.metrics import (
     ORG_DEK_UNWRAP_SECONDS,
 )
 
+
+class SupportSessionCipherBridgeDenied(CryptoError):
+    """Raised when a support-session actor tries to decrypt without opt-in.
+
+    Default-deny: every ``OrgCipher.decrypt`` call refuses to bridge
+    plaintext through a support session unless the caller passes
+    ``allow_support_session_bridge=True``. The exception is caught
+    by upstream layers that surface secrets as masked placeholders
+    instead of raising to the operator.
+    """
+
+
 _REENCRYPT_BATCH_SIZE = 200
 
 
@@ -62,13 +75,43 @@ class OrgCipher:
         token = fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"v{version}:{token}"
 
-    async def decrypt(self, organization_id: UUID, ciphertext: str) -> str:
+    async def decrypt(
+        self,
+        organization_id: UUID,
+        ciphertext: str,
+        *,
+        allow_support_session_bridge: bool = False,
+    ) -> str:
         """Decrypt ``ciphertext`` previously produced by ``encrypt``.
 
         Cross-tenant ciphertexts fail loudly: the Fernet token only
         decrypts under the DEK that produced it, and that DEK belongs
         to exactly one organization.
+
+        When the current request runs under an active support session
+        for ``organization_id`` and the caller does not pass
+        ``allow_support_session_bridge=True``, the call raises
+        :class:`SupportSessionCipherBridgeDenied`. A bridge-attempt
+        audit row is always written (allowed or denied) so the org
+        owner sees every plaintext exposure attempt.
         """
+        from uniffy.domains.platform.support_session.context import (
+            get_active_support_session,
+        )
+
+        active = get_active_support_session()
+        if active is not None and active.organization_id == organization_id:
+            await self._write_bridge_attempt_audit(
+                active=active,
+                organization_id=organization_id,
+                allowed=allow_support_session_bridge,
+            )
+            if not allow_support_session_bridge:
+                raise SupportSessionCipherBridgeDenied(
+                    "Decryption refused under an active support session; "
+                    "caller must opt in via allow_support_session_bridge=True"
+                )
+
         version, payload = self._parse(ciphertext)
         fernet = await self._fernet_for(organization_id, version)
         try:
@@ -77,6 +120,36 @@ class OrgCipher:
             raise CryptoError(
                 "Failed to decrypt ciphertext; wrong organization or corrupted payload"
             ) from exc
+
+    async def _write_bridge_attempt_audit(
+        self,
+        *,
+        active,
+        organization_id: UUID,
+        allowed: bool,
+    ) -> None:
+        """Record a support-session bridge attempt on ``OrgCipher.decrypt``."""
+        from uniffy.core.audit import write_audit_event
+        from uniffy.core.audit.actions import Action
+
+        try:
+            await write_audit_event(
+                self._session,
+                organization_id=organization_id,
+                actor_user_id=active.support_user_id,
+                action=Action.SUPPORT_SESSION_CIPHER_BRIDGE_ATTEMPT,
+                resource_type="support_session",
+                resource_id=active.session_id,
+                details={
+                    "allowed": allowed,
+                    "scope": active.scope,
+                },
+            )
+        except Exception:
+            logger.warning(
+                "OrgCipher: failed to record bridge-attempt audit row",
+                component="crypto",
+            )
 
     async def provision(
         self,
@@ -169,7 +242,11 @@ class OrgCipher:
             batch = 0
             async for row in consumer.list_rows(self._session, organization_id):
                 ciphertext = consumer.get_ciphertext(row)
-                plaintext = await self.decrypt(organization_id, ciphertext)
+                plaintext = await self.decrypt(
+                    organization_id,
+                    ciphertext,
+                    allow_support_session_bridge=True,
+                )
                 fresh_ciphertext = await self.encrypt(organization_id, plaintext)
                 consumer.set_ciphertext(row, fresh_ciphertext)
                 batch += 1

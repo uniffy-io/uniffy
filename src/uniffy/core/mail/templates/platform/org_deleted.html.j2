@@ -1,0 +1,11 @@
+{% extends "base.html.j2" %}
+{% block title %}Your workspace {{ org_name }} is scheduled for deletion{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">{{ org_name }} has been scheduled for deletion.</p>
+<p style="margin:0 0 16px 0;">A platform operator marked your workspace for deletion on {{ deleted_at }}. The data will remain restorable for {{ grace_days }} days, until <strong>{{ purge_at }}</strong>, after which it will be permanently removed.</p>
+{% if reason %}
+<p style="margin:0 0 16px 0;"><strong>Reason recorded by the operator:</strong> {{ reason }}</p>
+{% endif %}
+<p style="margin:0 0 16px 0;">If this was unexpected, contact support immediately. You can restore the workspace from your platform admin contact while it is still within the grace window.</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">This action was performed by a platform operator and is recorded in your workspace audit log.</p>
+{% endblock %}

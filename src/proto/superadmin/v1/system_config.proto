@@ -17,8 +17,7 @@ service SystemConfigService {
   rpc GetSystemConfig(GetSystemConfigRequest) returns (GetSystemConfigResponse) {}
 
   // Set the public-registration flag.
-  rpc SetPublicRegistration(SetPublicRegistrationRequest)
-      returns (SetPublicRegistrationResponse) {}
+  rpc SetPublicRegistration(SetPublicRegistrationRequest) returns (SetPublicRegistrationResponse) {}
 }
 
 // One configuration flag's effective state.

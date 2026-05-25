@@ -17,6 +17,16 @@ from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.core.types import generate_id as uuid7
 
 
+@pytest.fixture(autouse=True)
+def _no_support_session():
+    """Skip the support-session DB lookup. None of these tests exercise it,
+    and the branch otherwise hits a MagicMock session."""
+    with patch.object(
+        PermissionChecker, "_support_session_role", AsyncMock(return_value=None)
+    ):
+        yield
+
+
 def _make_checker() -> PermissionChecker:
     return PermissionChecker(MagicMock())
 

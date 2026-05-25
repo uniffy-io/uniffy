@@ -2,7 +2,7 @@
 type NavLink = {
   href: string;
   label: string;
-  icon: "mention" | "cpu" | "shield" | "scales" | "tag" | "book";
+  icon: "mention" | "cpu" | "shield" | "compass" | "scales" | "tag" | "book";
   external?: boolean;
   spyId?: string;
   matchPrefix?: string;
@@ -12,6 +12,7 @@ const links: NavLink[] = [
   { href: "/#product", label: "Product", icon: "mention", spyId: "product" },
   { href: "/#ai", label: "AI", icon: "cpu", spyId: "ai" },
   { href: "/#sovereign", label: "Sovereign", icon: "shield", spyId: "sovereign" },
+  { href: "/#principles", label: "Principles", icon: "compass", spyId: "principles" },
   { href: "/#compare", label: "Compare", icon: "scales", spyId: "compare" },
   { href: "/#pricing", label: "Pricing", icon: "tag", spyId: "pricing" },
   { href: "/docs/", label: "Docs", icon: "book", matchPrefix: "/docs/" },
@@ -23,9 +24,11 @@ const isCurrent = (link: NavLink) =>
 
 interface Props {
   mobileExtraLabel?: string;
+  mobileLinksMode?: "all" | "extra-only";
 }
-const { mobileExtraLabel } = Astro.props;
+const { mobileExtraLabel, mobileLinksMode = "all" } = Astro.props;
 const hasMobileExtra = Astro.slots.has("mobile-extra");
+const showMobileMainLinks = mobileLinksMode === "all";
 ---
 
 <a
@@ -41,15 +44,15 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
 >
   <div class="site-header__beam pointer-events-none absolute inset-x-0 -bottom-px h-px"></div>
 
-  <div class="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
-    <a href="/" class="brand group relative flex items-center gap-2.5 font-sans text-xl font-bold tracking-tight" aria-label="Uniffy home">
-      <span class="brand__cell relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-night-hairline transition-colors duration-300 group-hover:border-accent/60">
+  <div class="flex h-14 items-center justify-between gap-4 px-4 md:px-6">
+    <a href="/" class="brand group relative flex items-center gap-2 font-sans text-lg font-bold tracking-tight" aria-label="Uniffy home">
+      <span class="brand__cell relative grid h-8 w-8 place-items-center overflow-hidden rounded-md border border-night-hairline transition-colors duration-300 group-hover:border-accent/60">
         <img
           src="/uniffy-glyph.png"
           alt=""
-          width="32"
-          height="32"
-          class="h-7 w-7"
+          width="24"
+          height="24"
+          class="h-5 w-5"
         />
       </span>
       <span class="brand__word relative text-night-text">Uniffy</span>
@@ -86,6 +89,11 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
                   <path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56l160,0Z" />
                 </svg>
               )}
+              {link.icon === "compass" && (
+                <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm51.31-148.61a8,8,0,0,0-7.7-2L99.06,84.61A16.06,16.06,0,0,0,86.61,97.06L65,170.61a8,8,0,0,0,9.74,9.74l72.55-21.61a16.06,16.06,0,0,0,12.45-12.45l21.61-72.55A8,8,0,0,0,179.31,67.39ZM145.32,141a8,8,0,0,1-1.62,2.69a7.86,7.86,0,0,1-2.69,1.62L88.43,160,103.17,109.84a8,8,0,0,1,1.62-2.69a7.86,7.86,0,0,1,2.69-1.62L160,90.79Z" />
+                </svg>
+              )}
               {link.icon === "scales" && (
                 <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
                   <path d="M239.43,133l-32-80A8,8,0,0,0,200,48H136V32a8,8,0,0,0-16,0V48H56a8,8,0,0,0-7.43,5l-32,80A8.13,8.13,0,0,0,16,136a40,40,0,0,0,80,0,8.13,8.13,0,0,0-.57-3l-26.06-65.1L120,64.85V200H88a8,8,0,0,0,0,16h80a8,8,0,0,0,0-16H136V64.85l50.63,3,26.06,65.16A8.13,8.13,0,0,0,212.43,136a40,40,0,0,0,80,0A8.13,8.13,0,0,0,239.43,133ZM56,160a24,24,0,0,1-23.32-18.36L56,84.06l23.32,57.58A24,24,0,0,1,56,160Zm144,0a24,24,0,0,1-23.32-18.36L200,84.06l23.32,57.58A24,24,0,0,1,200,160Z" />
@@ -119,7 +127,7 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
       <slot name="actions-leading" />
       <a
         href="https://cloud.uniffy.io/login"
-        class="signin hidden md:inline-flex items-center rounded-md px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200 hover:text-night-text"
+        class="signin hidden md:inline-flex items-center rounded-md px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200 hover:text-night-text"
       >
         Sign in
       </a>
@@ -176,7 +184,14 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
       </button>
     </div>
 
-    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Mobile">
+    <nav
+      class:list={[
+        "overflow-y-auto px-3 py-4",
+        showMobileMainLinks ? "flex-1" : "flex-none",
+      ]}
+      aria-label="Mobile"
+    >
+      {showMobileMainLinks && (
       <ul class="flex flex-col gap-0.5">
         {
           links.map((link) => (
@@ -202,6 +217,11 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
                   {link.icon === "shield" && (
                     <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
                       <path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56l160,0Z" />
+                    </svg>
+                  )}
+                  {link.icon === "compass" && (
+                    <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm51.31-148.61a8,8,0,0,0-7.7-2L99.06,84.61A16.06,16.06,0,0,0,86.61,97.06L65,170.61a8,8,0,0,0,9.74,9.74l72.55-21.61a16.06,16.06,0,0,0,12.45-12.45l21.61-72.55A8,8,0,0,0,179.31,67.39ZM145.32,141a8,8,0,0,1-1.62,2.69a7.86,7.86,0,0,1-2.69,1.62L88.43,160,103.17,109.84a8,8,0,0,1,1.62-2.69a7.86,7.86,0,0,1,2.69-1.62L160,90.79Z" />
                     </svg>
                   )}
                   {link.icon === "scales" && (
@@ -231,10 +251,18 @@ const hasMobileExtra = Astro.slots.has("mobile-extra");
           ))
         }
       </ul>
+      )}
     </nav>
 
     {hasMobileExtra && (
-      <div class="mobile-nav__extra border-t border-night-hairline px-3 py-4">
+      <div
+        class:list={[
+          "mobile-nav__extra px-3 py-4",
+          showMobileMainLinks
+            ? "border-t border-night-hairline"
+            : "flex-1 overflow-y-auto",
+        ]}
+      >
         {mobileExtraLabel && (
           <h4 class="px-2 pb-3 font-mono text-[10px] font-bold uppercase tracking-wider text-night-faint">
             {mobileExtraLabel}

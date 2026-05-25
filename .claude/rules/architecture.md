@@ -53,7 +53,7 @@ uniffy/
 │   │   ├── python/       # Python package: uniffy-proto (uv workspace member)
 │   │   ├── typescript/   # TypeScript package: @uniffy/proto (pnpm workspace member)
 │   │   └── go/           # Go module: github.com/uniffy-io/uniffy-proto-go
-│   ├── uniffy/           # Python backend (FastAPI + ConnectRPC)
+│   ├── uniffy/           # Python backend (Granian + FastAPI + ConnectRPC)
 │   │   ├── core/         # Core models, auth, search, types, errors
 │   │   ├── domains/      # Domain modules (vertical slices)
 │   │   ├── db/           # Database session, migrations, seed data

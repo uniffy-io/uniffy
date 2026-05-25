@@ -1,0 +1,9 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+The support session for {{ org_name }} has ended.
+
+Operator: {{ operator_email }}
+Reason: {{ revoke_reason or "ended by " + revoked_by }}
+
+The full session record (request, approval, every action taken) remains in your audit log.
+{% endblock %}

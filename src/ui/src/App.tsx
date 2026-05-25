@@ -44,6 +44,7 @@ const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
+const SupportAccessPage = lazyImport(() => import('@/features/admin/pages/SupportAccessPage'), 'SupportAccessPage');
 const EncryptionPage = lazyImport(() => import('@/features/admin/pages/EncryptionPage'), 'EncryptionPage');
 const EmailPage = lazyImport(() => import('@/features/admin/pages/EmailPage'), 'EmailPage');
 const SecurityPage = lazyImport(() => import('@/features/admin/pages/SecurityPage'), 'SecurityPage');
@@ -54,8 +55,8 @@ const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'
 // Platform (cross-tenant operator surface)
 const PlatformLayout = lazyImport(() => import('@/features/platform/layouts/PlatformLayout'), 'PlatformLayout');
 const PlatformOverviewPage = lazyImport(() => import('@/features/platform/pages/PlatformOverviewPage'), 'PlatformOverviewPage');
-const PlatformOrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
-const PlatformUsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
+const PlatformOrganizationsPage = lazyImport(() => import('@/features/platform/pages/PlatformOrganizationsPage'), 'PlatformOrganizationsPage');
+const PlatformUsersPage = lazyImport(() => import('@/features/platform/pages/PlatformUsersPage'), 'PlatformUsersPage');
 const PlatformServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
 const PlatformMailPage = lazyImport(() => import('@/features/platform/pages/PlatformMailPage'), 'PlatformMailPage');
 const PlatformEncryptionPage = lazyImport(() => import('@/features/platform/pages/PlatformEncryptionPage'), 'PlatformEncryptionPage');
@@ -275,6 +276,7 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
+                            <Route path="support-access" element={<LazyRoute><SupportAccessPage /></LazyRoute>} />
                             <Route path="security" element={<LazyRoute><SecurityPage /></LazyRoute>} />
                             <Route path="encryption" element={<LazyRoute><EncryptionPage /></LazyRoute>} />
                             <Route path="email" element={<LazyRoute><EmailPage /></LazyRoute>} />

@@ -59,6 +59,11 @@ from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
+from uniffy.core.models.platform.support_session import (
+    SupportSession,
+    SupportSessionScope,
+    SupportSessionState,
+)
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
@@ -193,4 +198,8 @@ __all__ = [
     "TagAssignment",
     # Realtime
     "RealtimeYjsSnapshot",
+    # Platform (support sessions)
+    "SupportSession",
+    "SupportSessionScope",
+    "SupportSessionState",
 ]

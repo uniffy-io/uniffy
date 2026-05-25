@@ -135,6 +135,12 @@ class PermissionChecker:
             ):
                 return ContentRole.ADMIN
 
+            support_role = await self._support_session_role(
+                user_id, organization_id
+            )
+            if support_role is not None:
+                return support_role
+
             if owner_id == user_id:
                 return ContentRole.OWNER
 
@@ -354,6 +360,60 @@ class PermissionChecker:
     ) -> bool:
         """Return True if the user has an active membership in the org."""
         return await self._get_user_org_role(user_id, organization_id) is not None
+
+    async def _support_session_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> ContentRole | None:
+        """Return the role granted by an active support session, if any.
+
+        Only meaningful for ``is_system_admin=true`` users. The session
+        confers ``VIEWER`` (READ_ONLY) in v1; READ_WRITE is planned but
+        not wired yet. Operators with an active session sit between the
+        org/domain admin bypass and the owner_id check so existing
+        explicit grants are ignored during the session - the session is
+        the single audit-attributable access path.
+        """
+        from uniffy.core.models.login.user import User
+        from uniffy.core.models.platform.support_session import (
+            SupportSessionScope,
+        )
+        from uniffy.domains.platform.support_session.context import (
+            ActiveSupportSession,
+            active_support_session_var,
+        )
+        from uniffy.domains.platform.support_session.operations import (
+            SupportSessionOperations,
+        )
+
+        user_row = (
+            await self.session.execute(
+                select(User.is_system_admin).where(User.id == user_id)
+            )
+        ).scalar_one_or_none()
+        if not user_row:
+            return None
+
+        ops = SupportSessionOperations(self.session)
+        session = await ops.active_session_for(
+            user_id=user_id, organization_id=organization_id
+        )
+        if session is None:
+            return None
+
+        active_support_session_var.set(
+            ActiveSupportSession(
+                session_id=session.id,
+                organization_id=session.organization_id,
+                support_user_id=session.support_user_id,
+                scope=session.scope.value,
+            )
+        )
+
+        if session.scope == SupportSessionScope.READ_WRITE:
+            return ContentRole.EDITOR
+        return ContentRole.VIEWER
 
     async def _is_domain_admin_for_content(
         self,

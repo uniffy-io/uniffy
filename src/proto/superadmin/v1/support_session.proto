@@ -1,0 +1,254 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Time-bound, owner-consented grants that let a platform operator
+// step into a single tenant org for support. Unlike per-tenant
+// memberships, support sessions are temporary, audited end-to-end,
+// and surface to the org owner live (in-app banner + email + audit
+// rows tagged ``actor_kind=support``).
+//
+// Two consent modes (deployment policy; Phase 6 wires the knob):
+//
+// * ``OWNER_APPROVED`` (default for cloud) -- operator creates a row
+//   in ``PENDING``. Org owner must approve before it goes ``ACTIVE``.
+// * ``OPERATOR_JUSTIFIED`` -- session goes ``ACTIVE`` immediately;
+//   org owner sees the banner and may revoke at any time.
+//
+// v1 ships ``READ_ONLY`` scope only -- ``READ_WRITE`` is in the proto
+// for forward compatibility but ``RequestSession`` rejects it.
+// Existing explicit ``ContentMember`` rows for the support user are
+// IGNORED while a session is active so the session is the single
+// access path and the audit trail attributes access cleanly.
+//
+// Hard floors that apply even with an active session:
+//
+// * ``OrgCipher.decrypt`` is default-deny; callers wishing to bridge
+//   through a support session must opt in explicitly (per-call). An
+//   audit row is written on every bridge attempt.
+// * ``org_settings`` rows with ``is_secret=true`` return the masked
+//   placeholder ``"* * * *"`` instead of decrypted plaintext.
+service SupportService {
+  // Operator-side: open a new session against one org. Returns the
+  // row in ``PENDING`` (OWNER_APPROVED mode) or ``ACTIVE``
+  // (OPERATOR_JUSTIFIED mode). Caller must have ``is_system_admin``.
+  rpc RequestSession(RequestSessionRequest) returns (RequestSessionResponse) {}
+
+  // Owner-side: approve a ``PENDING`` session in OWNER_APPROVED mode.
+  // Caller must be org OWNER or ADMIN of the target org.
+  rpc ApproveSession(ApproveSessionRequest) returns (ApproveSessionResponse) {}
+
+  // Owner-side: reject a ``PENDING`` session. Same gate as approve.
+  rpc RejectSession(RejectSessionRequest) returns (RejectSessionResponse) {}
+
+  // Either side: revoke an ``ACTIVE`` or ``PENDING`` session early.
+  // Org OWNER/ADMIN can always revoke; the support user can always
+  // end their own session.
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {}
+
+  // Operator-side: list sessions where the caller is
+  // ``support_user_id``. Most recent first.
+  rpc ListMySessions(ListMySessionsRequest) returns (ListMySessionsResponse) {}
+
+  // Owner-side: list sessions targeting one org. Caller must be that
+  // org's OWNER or ADMIN. Used by the in-org admin audit view.
+  rpc ListOrgSessions(ListOrgSessionsRequest) returns (ListOrgSessionsResponse) {}
+
+  // Operator-side: cross-tenant list of every session in the
+  // deployment. Used by ``/platform/sessions`` (Phase 5). Caller
+  // must have ``is_system_admin``.
+  rpc ListAllSessions(ListAllSessionsRequest) returns (ListAllSessionsResponse) {}
+
+  // Read the effective consent policy for one org: deployment
+  // default, per-org override (if any), and resolved effective
+  // value. Caller must be org OWNER/ADMIN of the target org OR
+  // a platform admin.
+  rpc GetOrgConsentMode(GetOrgConsentModeRequest) returns (GetOrgConsentModeResponse) {}
+
+  // Set the per-org override. Caller must be org OWNER/ADMIN of
+  // the target org. Override can only TIGHTEN the deployment
+  // default; attempts to loosen (OWNER_APPROVED -> OPERATOR_JUSTIFIED
+  // when deployment is OWNER_APPROVED) are silently coerced back to
+  // OWNER_APPROVED.
+  rpc SetOrgConsentMode(SetOrgConsentModeRequest) returns (SetOrgConsentModeResponse) {}
+}
+
+// Read vs read-write access during a session. v1 ships READ_ONLY
+// only; the enum is here for forward compatibility.
+enum SupportSessionScope {
+  SUPPORT_SESSION_SCOPE_UNSPECIFIED = 0;
+  SUPPORT_SESSION_SCOPE_READ_ONLY = 1;
+  SUPPORT_SESSION_SCOPE_READ_WRITE = 2;
+}
+
+// Lifecycle of a single session row.
+enum SupportSessionState {
+  SUPPORT_SESSION_STATE_UNSPECIFIED = 0;
+  // Operator created the row; awaiting org owner approval.
+  SUPPORT_SESSION_STATE_PENDING = 1;
+  // Approved (or operator-justified mode) and within ``expires_at``.
+  SUPPORT_SESSION_STATE_ACTIVE = 2;
+  // ``expires_at`` reached; ARQ cron flipped the row.
+  SUPPORT_SESSION_STATE_EXPIRED = 3;
+  // Org owner or support user ended it early.
+  SUPPORT_SESSION_STATE_REVOKED = 4;
+  // Org owner declined the request.
+  SUPPORT_SESSION_STATE_REJECTED = 5;
+}
+
+message SupportSession {
+  string id = 1;
+  string organization_id = 2;
+  string organization_name = 3;
+  string organization_slug = 4;
+  string support_user_id = 5;
+  string support_user_email = 6;
+  optional string support_user_full_name = 7;
+  string requested_by_user_id = 8;
+  optional string granted_by_user_id = 9;
+  optional string granted_by_email = 10;
+  optional string revoked_by_user_id = 11;
+  optional string revoked_by_email = 12;
+  string reason = 13;
+  SupportSessionScope scope = 14;
+  SupportSessionState state = 15;
+  google.protobuf.Timestamp requested_at = 16;
+  optional google.protobuf.Timestamp granted_at = 17;
+  google.protobuf.Timestamp expires_at = 18;
+  optional google.protobuf.Timestamp revoked_at = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+}
+
+message RequestSessionRequest {
+  string organization_id = 1;
+  // Required, free-text. Surfaced in audit + owner notification.
+  string reason = 2;
+  // READ_ONLY is the only accepted value in v1; READ_WRITE will be
+  // rejected with INVALID_ARGUMENT until a future phase ships the
+  // write path.
+  SupportSessionScope scope = 3;
+  // Requested duration. Capped by deployment env (Phase 6); default
+  // 30min, max 120min.
+  int32 duration_minutes = 4;
+}
+
+message RequestSessionResponse {
+  SupportSession session = 1;
+}
+
+message ApproveSessionRequest {
+  string session_id = 1;
+}
+
+message ApproveSessionResponse {
+  SupportSession session = 1;
+}
+
+message RejectSessionRequest {
+  string session_id = 1;
+  // Optional free-text shown in audit.
+  string reason = 2;
+}
+
+message RejectSessionResponse {
+  SupportSession session = 1;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+  // Optional free-text shown in audit.
+  string reason = 2;
+}
+
+message RevokeSessionResponse {
+  SupportSession session = 1;
+}
+
+message ListMySessionsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  // When true, include EXPIRED / REVOKED / REJECTED rows. Default
+  // returns PENDING + ACTIVE only.
+  bool include_inactive = 3;
+}
+
+message ListMySessionsResponse {
+  repeated SupportSession sessions = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListOrgSessionsRequest {
+  string organization_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  bool include_inactive = 4;
+}
+
+message ListOrgSessionsResponse {
+  repeated SupportSession sessions = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListAllSessionsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  // Optional state filter (UNSPECIFIED = all states).
+  SupportSessionState state = 3;
+  // Optional substring match on org name/slug or support user email.
+  string search = 4;
+}
+
+message ListAllSessionsResponse {
+  repeated SupportSession sessions = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+// How a support session goes ACTIVE for a given org. UNSPECIFIED
+// when the per-org override is cleared.
+enum SupportConsentMode {
+  SUPPORT_CONSENT_MODE_UNSPECIFIED = 0;
+  SUPPORT_CONSENT_MODE_OWNER_APPROVED = 1;
+  SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED = 2;
+}
+
+message SupportConsentModeView {
+  // Deployment-wide policy (env-driven).
+  SupportConsentMode deployment_mode = 1;
+  // Per-org override row, if one is set.
+  SupportConsentMode org_override = 2;
+  // Resolved effective mode after the tighten-only rule applies.
+  SupportConsentMode effective = 3;
+  // True when the org cannot loosen the deployment policy (i.e.
+  // deployment is OWNER_APPROVED). UI shows the toggle as locked.
+  bool locked_by_deployment = 4;
+}
+
+message GetOrgConsentModeRequest {
+  string organization_id = 1;
+}
+
+message GetOrgConsentModeResponse {
+  SupportConsentModeView view = 1;
+}
+
+message SetOrgConsentModeRequest {
+  string organization_id = 1;
+  // Pass UNSPECIFIED to clear the per-org override (fall back to
+  // deployment default).
+  SupportConsentMode mode = 2;
+}
+
+message SetOrgConsentModeResponse {
+  SupportConsentModeView view = 1;
+}

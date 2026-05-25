@@ -1,0 +1,14 @@
+{% extends "base.html.j2" %}
+{% block title %}Support access request for {{ org_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">A platform operator is requesting temporary access to {{ org_name }}.</p>
+<p style="margin:0 0 16px 0;"><strong>{{ operator_email }}</strong> would like to enter your workspace for up to <strong>{{ duration_minutes }} minutes</strong> to assist with support.</p>
+<p style="margin:0 0 16px 0;"><strong>Scope:</strong> {{ scope }} (read-only)</p>
+{% if reason %}
+<p style="margin:0 0 16px 0;"><strong>Reason given:</strong> {{ reason }}</p>
+{% endif %}
+<p style="margin:0 0 24px 0;">
+  <a href="{{ app_url }}/admin" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">Review request</a>
+</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">The operator cannot access your data until you approve. If you do nothing, the request expires automatically. You can revoke access at any time after approval.</p>
+{% endblock %}

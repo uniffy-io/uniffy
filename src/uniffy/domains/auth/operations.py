@@ -712,6 +712,12 @@ class AuthOperations:
         if not org:
             raise AuthenticationError("Organization not found")
 
+        if org.deleted_at is not None:
+            raise AuthenticationError("Organization has been deleted")
+
+        if org.is_suspended:
+            raise AuthenticationError("Organization is suspended")
+
         # Check membership
         result = await self._session.execute(
             select(OrganizationMember).where(
