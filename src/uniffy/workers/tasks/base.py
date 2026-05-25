@@ -140,6 +140,19 @@ async def core_on_startup(ctx: dict[str, Any]) -> None:
     except Exception as e:
         logger.warning(f"Core worker: VAPID config not available: {e}")
 
+    from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
+
+    for name, adapter in DELIVERY_ADAPTERS.items():
+        try:
+            await adapter.startup()
+        except Exception as exc:
+            logger.error(
+                "Core worker: delivery adapter startup failed (name={name}): {exc}",
+                name=name,
+                exc=exc,
+            )
+            raise
+
 
 async def core_on_shutdown(ctx: dict[str, Any]) -> None:
     """Shutdown hook for the core worker fleet."""

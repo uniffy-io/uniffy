@@ -1,0 +1,13 @@
+{% extends "base.html.j2" %}
+{% block title %}Test email{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">Mail delivery is working.</p>
+<p style="margin:0 0 12px 0;">This is a test message dispatched from the Uniffy admin panel.</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:8px;font-size:13px;color:#4b5563;">
+  <tr><td style="padding:2px 12px 2px 0;"><strong>Sent at:</strong></td><td>{{ sent_at }}</td></tr>
+  <tr><td style="padding:2px 12px 2px 0;"><strong>Source:</strong></td><td>{{ config_source }}</td></tr>
+  {% if org_name is defined and org_name %}
+  <tr><td style="padding:2px 12px 2px 0;"><strong>Organization:</strong></td><td>{{ org_name }}</td></tr>
+  {% endif %}
+</table>
+{% endblock %}

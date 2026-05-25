@@ -24,9 +24,9 @@ from uniffy.workers.tasks.base import (
 from uniffy.workers.tasks.chat_mute import auto_unmute_channels
 from uniffy.workers.tasks.content_extraction import extract_document_content
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
+from uniffy.workers.tasks.mail import send_email
 from uniffy.workers.tasks.multipart_reaper import reap_expired_multipart_uploads
 from uniffy.workers.tasks.notifications import (
-    deliver_email_notification,
     deliver_push_notification,
     process_notification_event,
     send_email_digest,
@@ -58,7 +58,7 @@ CORE_TASKS = (
     extract_document_content,
     process_notification_event,
     deliver_push_notification,
-    deliver_email_notification,
+    send_email,
     send_email_digest,
     reindex_tag_urns,
     reindex_tag_doc,
@@ -86,7 +86,6 @@ __all__ = [
     "core_on_startup",
     "delete_run_stream",
     "delete_s3_object",
-    "deliver_email_notification",
     "deliver_push_notification",
     "egress_on_shutdown",
     "egress_on_startup",
@@ -110,6 +109,7 @@ __all__ = [
     "respond_to_chat_message",
     "run_agent_session",
     "save_realtime_snapshot",
+    "send_email",
     "send_email_digest",
     "transcode_video_to_mp4",
 ]

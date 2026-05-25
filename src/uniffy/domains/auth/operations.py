@@ -26,6 +26,16 @@ from uniffy.domains.auth.types import AuthResult
 from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
 
+def is_public_registration_enabled() -> bool:
+    """Return True when the public ``Register`` RPC is allowed to create users.
+
+    Production deploys gate this off so the only path to a new user is an
+    accepted invitation; self-hosters / dev environments flip it on with
+    ``ALLOW_PUBLIC_REGISTRATION=true``.
+    """
+    return os.getenv("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower() == "true"
+
+
 class AuthOperations:
     """Authentication operations handler."""
 
@@ -193,6 +203,21 @@ class AuthOperations:
 
         """
         try:
+            if not is_public_registration_enabled():
+                await write_audit_event(
+                    self._session,
+                    organization_id=None,
+                    actor_user_id=None,
+                    action=Action.AUTH_REGISTER_REJECTED,
+                    resource_type=None,
+                    resource_id=None,
+                    details={"email_attempted": email},
+                )
+                await self._session.commit()
+                raise RegistrationError(
+                    "Public registration is disabled. You must be invited."
+                )
+
             # Check if email already exists
             existing_user = await self._get_user_by_email(email)
             if existing_user:

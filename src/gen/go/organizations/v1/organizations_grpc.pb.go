@@ -30,6 +30,12 @@ const (
 	OrganizationsService_AddMember_FullMethodName                  = "/organizations.v1.OrganizationsService/AddMember"
 	OrganizationsService_UpdateMemberRole_FullMethodName           = "/organizations.v1.OrganizationsService/UpdateMemberRole"
 	OrganizationsService_RemoveMember_FullMethodName               = "/organizations.v1.OrganizationsService/RemoveMember"
+	OrganizationsService_InviteMember_FullMethodName               = "/organizations.v1.OrganizationsService/InviteMember"
+	OrganizationsService_ListInvitations_FullMethodName            = "/organizations.v1.OrganizationsService/ListInvitations"
+	OrganizationsService_RevokeInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/RevokeInvitation"
+	OrganizationsService_ResendInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/ResendInvitation"
+	OrganizationsService_GetSecuritySettings_FullMethodName        = "/organizations.v1.OrganizationsService/GetSecuritySettings"
+	OrganizationsService_UpdateSecuritySettings_FullMethodName     = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
 	OrganizationsService_GetPermissionDefaults_FullMethodName      = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
 	OrganizationsService_UpdatePermissionDefaults_FullMethodName   = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
 	OrganizationsService_GetOrganizationSettings_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationSettings"
@@ -60,6 +66,12 @@ type OrganizationsServiceClient interface {
 	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error)
 	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error)
 	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
+	InviteMember(ctx context.Context, in *InviteMemberRequest, opts ...grpc.CallOption) (*InviteMemberResponse, error)
+	ListInvitations(ctx context.Context, in *ListInvitationsRequest, opts ...grpc.CallOption) (*ListInvitationsResponse, error)
+	RevokeInvitation(ctx context.Context, in *RevokeInvitationRequest, opts ...grpc.CallOption) (*RevokeInvitationResponse, error)
+	ResendInvitation(ctx context.Context, in *ResendInvitationRequest, opts ...grpc.CallOption) (*ResendInvitationResponse, error)
+	GetSecuritySettings(ctx context.Context, in *GetSecuritySettingsRequest, opts ...grpc.CallOption) (*GetSecuritySettingsResponse, error)
+	UpdateSecuritySettings(ctx context.Context, in *UpdateSecuritySettingsRequest, opts ...grpc.CallOption) (*UpdateSecuritySettingsResponse, error)
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*GetPermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*UpdatePermissionDefaultsResponse, error)
@@ -195,6 +207,66 @@ func (c *organizationsServiceClient) RemoveMember(ctx context.Context, in *Remov
 	return out, nil
 }
 
+func (c *organizationsServiceClient) InviteMember(ctx context.Context, in *InviteMemberRequest, opts ...grpc.CallOption) (*InviteMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InviteMemberResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_InviteMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ListInvitations(ctx context.Context, in *ListInvitationsRequest, opts ...grpc.CallOption) (*ListInvitationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInvitationsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ListInvitations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) RevokeInvitation(ctx context.Context, in *RevokeInvitationRequest, opts ...grpc.CallOption) (*RevokeInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_RevokeInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ResendInvitation(ctx context.Context, in *ResendInvitationRequest, opts ...grpc.CallOption) (*ResendInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResendInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ResendInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) GetSecuritySettings(ctx context.Context, in *GetSecuritySettingsRequest, opts ...grpc.CallOption) (*GetSecuritySettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSecuritySettingsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_GetSecuritySettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) UpdateSecuritySettings(ctx context.Context, in *UpdateSecuritySettingsRequest, opts ...grpc.CallOption) (*UpdateSecuritySettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSecuritySettingsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_UpdateSecuritySettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *organizationsServiceClient) GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*GetPermissionDefaultsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetPermissionDefaultsResponse)
@@ -304,6 +376,12 @@ type OrganizationsServiceServer interface {
 	AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error)
 	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error)
 	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
+	InviteMember(context.Context, *InviteMemberRequest) (*InviteMemberResponse, error)
+	ListInvitations(context.Context, *ListInvitationsRequest) (*ListInvitationsResponse, error)
+	RevokeInvitation(context.Context, *RevokeInvitationRequest) (*RevokeInvitationResponse, error)
+	ResendInvitation(context.Context, *ResendInvitationRequest) (*ResendInvitationResponse, error)
+	GetSecuritySettings(context.Context, *GetSecuritySettingsRequest) (*GetSecuritySettingsResponse, error)
+	UpdateSecuritySettings(context.Context, *UpdateSecuritySettingsRequest) (*UpdateSecuritySettingsResponse, error)
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*GetPermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*UpdatePermissionDefaultsResponse, error)
@@ -361,6 +439,24 @@ func (UnimplementedOrganizationsServiceServer) UpdateMemberRole(context.Context,
 }
 func (UnimplementedOrganizationsServiceServer) RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveMember not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) InviteMember(context.Context, *InviteMemberRequest) (*InviteMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InviteMember not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ListInvitations(context.Context, *ListInvitationsRequest) (*ListInvitationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInvitations not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) RevokeInvitation(context.Context, *RevokeInvitationRequest) (*RevokeInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeInvitation not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ResendInvitation(context.Context, *ResendInvitationRequest) (*ResendInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResendInvitation not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) GetSecuritySettings(context.Context, *GetSecuritySettingsRequest) (*GetSecuritySettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSecuritySettings not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) UpdateSecuritySettings(context.Context, *UpdateSecuritySettingsRequest) (*UpdateSecuritySettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSecuritySettings not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*GetPermissionDefaultsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPermissionDefaults not implemented")
@@ -608,6 +704,114 @@ func _OrganizationsService_RemoveMember_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_InviteMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InviteMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).InviteMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_InviteMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).InviteMember(ctx, req.(*InviteMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ListInvitations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInvitationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ListInvitations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ListInvitations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ListInvitations(ctx, req.(*ListInvitationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_RevokeInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).RevokeInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_RevokeInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).RevokeInvitation(ctx, req.(*RevokeInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ResendInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResendInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ResendInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ResendInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ResendInvitation(ctx, req.(*ResendInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_GetSecuritySettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSecuritySettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).GetSecuritySettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_GetSecuritySettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).GetSecuritySettings(ctx, req.(*GetSecuritySettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_UpdateSecuritySettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSecuritySettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).UpdateSecuritySettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_UpdateSecuritySettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).UpdateSecuritySettings(ctx, req.(*UpdateSecuritySettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrganizationsService_GetPermissionDefaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetPermissionDefaultsRequest)
 	if err := dec(in); err != nil {
@@ -820,6 +1024,30 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveMember",
 			Handler:    _OrganizationsService_RemoveMember_Handler,
+		},
+		{
+			MethodName: "InviteMember",
+			Handler:    _OrganizationsService_InviteMember_Handler,
+		},
+		{
+			MethodName: "ListInvitations",
+			Handler:    _OrganizationsService_ListInvitations_Handler,
+		},
+		{
+			MethodName: "RevokeInvitation",
+			Handler:    _OrganizationsService_RevokeInvitation_Handler,
+		},
+		{
+			MethodName: "ResendInvitation",
+			Handler:    _OrganizationsService_ResendInvitation_Handler,
+		},
+		{
+			MethodName: "GetSecuritySettings",
+			Handler:    _OrganizationsService_GetSecuritySettings_Handler,
+		},
+		{
+			MethodName: "UpdateSecuritySettings",
+			Handler:    _OrganizationsService_UpdateSecuritySettings_Handler,
 		},
 		{
 			MethodName: "GetPermissionDefaults",

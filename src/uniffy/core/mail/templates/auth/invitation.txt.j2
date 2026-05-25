@@ -1,0 +1,11 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+You have been invited to join {{ org_name }}.
+
+{{ inviter_name }} has invited you to collaborate in {{ org_name }} on Uniffy as a {{ role }}.
+
+Accept the invitation:
+  {{ accept_url }}
+
+This invitation expires in {{ expires_in_days }} days. If you did not expect this email you can ignore it.
+{% endblock %}

@@ -1,61 +1,130 @@
-"""Email delivery adapter.
+"""Email notification delivery adapter.
 
-Sends notification emails via SMTP. Supports both instant delivery
-and digest aggregation (hourly/daily).
-
-This is a placeholder -- actual SMTP integration is deferred to Phase 6.
+Bridges the in-app ``NotificationEvent`` fan-out into the ``send_email``
+ARQ task. For ``email_frequency = "instant"`` users this enqueues an
+immediate per-event email; for ``"hourly"`` / ``"daily"`` users it
+returns ``True`` without enqueueing because ``send_email_digest``
+aggregates those into a periodic summary.
 """
 
+from __future__ import annotations
+
+import json
+import os
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.mail import MailConfig
+from uniffy.core.mail.config import MAIL_NAMESPACE
+from uniffy.core.models.login.user import User
+from uniffy.core.models.settings.org_setting import OrgSetting
+from uniffy.core.models.settings.settings_profile import SettingsProfile
+from uniffy.core.valkey.queue import get_queue
+from uniffy.db import open_session
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
+from uniffy.domains.settings.defaults import NOTIFICATIONS_DEFAULTS
+
+
+async def _resolve_email_frequency(session: AsyncSession, user_id: UUID) -> str:
+    """Return the user's effective email_frequency, defaulting to ``instant``."""
+    result = await session.execute(
+        select(SettingsProfile.notifications).where(
+            SettingsProfile.user_id == user_id,
+            SettingsProfile.is_default == True,  # noqa: E712
+        )
+    )
+    overrides = result.scalar_one_or_none()
+    if not overrides:
+        return NOTIFICATIONS_DEFAULTS.email_frequency
+    freq = overrides.get("email_frequency")
+    if not isinstance(freq, str) or freq not in ("instant", "hourly", "daily"):
+        return NOTIFICATIONS_DEFAULTS.email_frequency
+    return freq
 
 
 class EmailAdapter(DeliveryAdapter):
-    """
-    Email notification delivery via SMTP.
-
-    For users with email_frequency="instant", sends immediately.
-    For "hourly" or "daily" users, notifications are aggregated
-    by the send_email_digest cron job instead.
-    """
+    """Bridge ``NotificationEvent`` -> ``send_email`` ARQ task."""
 
     @property
     def channel_name(self) -> str:
-        """Return channel identifier."""
         return "email"
 
-    async def deliver(
-        self,
-        user_id: UUID,
-        event: NotificationEvent,
-    ) -> bool:
+    async def startup(self) -> None:
+        """In production, fail fast if no mail config can be resolved.
+
+        Checks for a viable system env config OR at least one
+        ``org_settings`` row under ``namespace='mail'``. A deployment
+        with neither is misconfigured: the worker would silently skip
+        every email.
         """
-        Send an email notification to a user.
+        if os.getenv("ENVIRONMENT", "development").lower() != "production":
+            return
 
-        Parameters
-        ----------
-        user_id : UUID
-            Recipient user ID.
-        event : NotificationEvent
-            The notification event.
+        if MailConfig.from_env() is not None:
+            return
 
-        Returns
-        -------
-        bool
-            True if the email was sent (or queued for digest).
+        async with open_session() as session:
+            row = (
+                await session.execute(
+                    select(OrgSetting)
+                    .where(OrgSetting.namespace == MAIL_NAMESPACE)
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if row is not None:
+                return
 
-        """
-        # Phase 6: full SMTP integration
-        # 1. Look up user email and email_frequency preference
-        # 2. If frequency == "instant":
-        #      - Render HTML template with event data
-        #      - Send via aiosmtplib
-        # 3. If frequency == "hourly" or "daily":
-        #      - Skip (the send_email_digest cron aggregates these)
-        #      - Return True to indicate "handled"
-        logger.debug(f"Email delivery deferred: user={user_id} title={event.title}")
-        return False
+        raise RuntimeError(
+            "EmailAdapter.startup: no MAIL_* env config and zero org_settings mail rows; "
+            "configure system mail or add at least one per-org row before booting."
+        )
+
+    async def deliver(self, user_id: UUID, event: NotificationEvent) -> bool:
+        """Enqueue an instant email; skip for digest-frequency users."""
+        async with open_session() as session:
+            frequency = await _resolve_email_frequency(session, user_id)
+            if frequency != "instant":
+                return True
+
+            user = await session.get(User, user_id)
+            if user is None or not user.email or not user.email_verified:
+                return False
+            recipient = user.email
+            display_name = user.full_name or user.username
+
+        context = {
+            "user_name": display_name,
+            "title": event.title,
+            "body": event.body,
+            "source_urn": event.source_urn,
+            "notification_type": event.notification_type.value,
+        }
+        idempotency_key = (
+            f"notification/{event.notification_type.value}/{user_id}/"
+            f"{event.source_urn or 'noop'}"
+        )
+
+        try:
+            queue = get_queue("core")
+        except RuntimeError:
+            logger.warning(
+                "email enqueue skipped: core queue not initialised",
+                component="mail",
+                user_id=str(user_id),
+            )
+            return False
+
+        await queue.enqueue_job(
+            "send_email",
+            recipient,
+            "notifications/instant",
+            json.dumps(context),
+            organization_id=str(event.organization_id),
+            idempotency_key=idempotency_key,
+            user_id=str(user_id),
+        )
+        return True

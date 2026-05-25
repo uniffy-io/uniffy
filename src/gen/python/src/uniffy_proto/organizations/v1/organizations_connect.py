@@ -51,6 +51,24 @@ class OrganizationsService(Protocol):
     async def remove_member(self, request: organizations_dot_v1_dot_organizations__pb2.RemoveMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def invite_member(self, request: organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_invitations(self, request: organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revoke_invitation(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def resend_invitation(self, request: organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_security_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_security_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -193,6 +211,66 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.remove_member,
+                ),
+                "/organizations.v1.OrganizationsService/InviteMember": Endpoint.unary(
+                    method=MethodInfo(
+                        name="InviteMember",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.invite_member,
+                ),
+                "/organizations.v1.OrganizationsService/ListInvitations": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListInvitations",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_invitations,
+                ),
+                "/organizations.v1.OrganizationsService/RevokeInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/ResendInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResendInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.resend_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/GetSecuritySettings": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSecuritySettings",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_security_settings,
+                ),
+                "/organizations.v1.OrganizationsService/UpdateSecuritySettings": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateSecuritySettings",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_security_settings,
                 ),
                 "/organizations.v1.OrganizationsService/GetPermissionDefaults": Endpoint.unary(
                     method=MethodInfo(
@@ -518,6 +596,126 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def invite_member(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="InviteMember",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_invitations(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListInvitations",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_invitation(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def resend_invitation(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResendInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_security_settings(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSecuritySettings",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_security_settings(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateSecuritySettings",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_permission_defaults(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest,
@@ -725,6 +923,18 @@ class OrganizationsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_member(self, request: organizations_dot_v1_dot_organizations__pb2.RemoveMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def invite_member(self, request: organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_invitations(self, request: organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revoke_invitation(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def resend_invitation(self, request: organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_security_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_security_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
@@ -858,6 +1068,66 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.remove_member,
+                ),
+                "/organizations.v1.OrganizationsService/InviteMember": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="InviteMember",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.invite_member,
+                ),
+                "/organizations.v1.OrganizationsService/ListInvitations": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListInvitations",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_invitations,
+                ),
+                "/organizations.v1.OrganizationsService/RevokeInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/ResendInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResendInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.resend_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/GetSecuritySettings": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSecuritySettings",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_security_settings,
+                ),
+                "/organizations.v1.OrganizationsService/UpdateSecuritySettings": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateSecuritySettings",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_security_settings,
                 ),
                 "/organizations.v1.OrganizationsService/GetPermissionDefaults": EndpointSync.unary(
                     method=MethodInfo(
@@ -1177,6 +1447,126 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.RemoveMemberRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.RemoveMemberResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def invite_member(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="InviteMember",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.InviteMemberRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.InviteMemberResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_invitations(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListInvitations",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ListInvitationsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ListInvitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revoke_invitation(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RevokeInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def resend_invitation(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResendInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ResendInvitationRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ResendInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_security_settings(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSecuritySettings",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.GetSecuritySettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_security_settings(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateSecuritySettings",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.UpdateSecuritySettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

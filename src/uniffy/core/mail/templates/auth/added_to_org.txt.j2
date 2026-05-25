@@ -1,0 +1,11 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+You are now a member of {{ org_name }}.
+
+{{ inviter_name }} added you to {{ org_name }} on Uniffy as a {{ role }}. Your existing Uniffy account already has access -- no setup needed.
+
+Open Uniffy:
+  {{ app_url }}
+
+If this looks unexpected, contact your organization administrator.
+{% endblock %}

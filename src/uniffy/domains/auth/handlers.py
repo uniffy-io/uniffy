@@ -8,10 +8,16 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.auth.v1.auth_pb2 import (
+    AcceptInvitationRequest,
+    AcceptInvitationResponse,
+    GetAuthConfigRequest,
+    GetAuthConfigResponse,
     GetCacheKeySeedRequest,
     GetCacheKeySeedResponse,
     GetCurrentUserRequest,
     GetCurrentUserResponse,
+    GetInvitationRequest,
+    GetInvitationResponse,
     ListSessionsRequest,
     ListSessionsResponse,
     LoginRequest,
@@ -22,15 +28,26 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     RefreshTokenResponse,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     RevokeOtherSessionsRequest,
     RevokeOtherSessionsResponse,
     RevokeSessionRequest,
     RevokeSessionResponse,
     RotateCacheKeySeedRequest,
     RotateCacheKeySeedResponse,
+    SendPasswordResetRequest,
+    SendPasswordResetResponse,
+    VerifyPasswordResetTokenRequest,
+    VerifyPasswordResetTokenResponse,
 )
 
-from uniffy.core.converters import domain_type_to_proto
+from uniffy.core.audit import audit_ip_var
+from uniffy.core.converters import (
+    datetime_to_timestamp,
+    domain_type_to_proto,
+    org_role_to_proto,
+)
 from uniffy.core.models.shared import DomainType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
@@ -44,9 +61,27 @@ from uniffy.domains.auth.errors import (
     RegistrationError,
     TokenError,
 )
-from uniffy.domains.auth.operations import AuthOperations
+from uniffy.domains.auth.operations import (
+    AuthOperations,
+    is_public_registration_enabled,
+)
+from uniffy.domains.auth.password_reset import (
+    PasswordResetError,
+    PasswordResetOperations,
+    PasswordResetTokenExpiredError,
+    PasswordResetTokenNotFoundError,
+    PasswordResetTokenUsedError,
+)
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.domains.auth.types import AuthResult
+from uniffy.domains.invitations.errors import (
+    InvitationAlreadyUsedError,
+    InvitationEmailConflictError,
+    InvitationExpiredError,
+    InvitationNotFoundError,
+    InvitationRevokedError,
+)
+from uniffy.domains.invitations.operations import InvitationOperations
 
 
 def _domain_admins_to_proto(result: AuthResult) -> list[int]:
@@ -357,4 +392,163 @@ class AuthHandlers:
                 return RotateCacheKeySeedResponse(new_cache_key_seed=new_seed)
         except Exception as e:
             logger.error(f"Error rotating cache key seed: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_auth_config(
+        self,
+        request: GetAuthConfigRequest,
+        ctx: RequestContext,
+    ) -> GetAuthConfigResponse:
+        """Public auth configuration the login / register pages need."""
+        return GetAuthConfigResponse(
+            public_registration_enabled=is_public_registration_enabled(),
+        )
+
+    async def get_invitation(
+        self,
+        request: GetInvitationRequest,
+        ctx: RequestContext,
+    ) -> GetInvitationResponse:
+        """Preview an invitation by token (un-authenticated)."""
+        if not request.token:
+            raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                preview = await ops.get_for_token(request.token)
+                response = GetInvitationResponse(
+                    email=preview.invitation.email,
+                    organization_id=str(preview.organization.id),
+                    organization_name=preview.organization.name,
+                    organization_slug=preview.organization.slug,
+                    role=org_role_to_proto(preview.invitation.role),
+                    expires_at=datetime_to_timestamp(preview.invitation.expires_at),
+                )
+                if preview.inviter_display_name:
+                    response.inviter_display_name = preview.inviter_display_name
+                return response
+        except InvitationNotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (
+            InvitationExpiredError,
+            InvitationRevokedError,
+            InvitationAlreadyUsedError,
+        ) as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except Exception as e:
+            logger.error(f"Error fetching invitation: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def accept_invitation(
+        self,
+        request: AcceptInvitationRequest,
+        ctx: RequestContext,
+    ) -> AcceptInvitationResponse:
+        """Consume an invitation token; creates the user + membership and logs them in."""
+        if not request.token:
+            raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
+        user_agent = get_user_agent_from_context(ctx)
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                result = await ops.accept(
+                    raw_token=request.token,
+                    username=request.username,
+                    password=request.password,
+                    full_name=(
+                        request.full_name if request.HasField("full_name") else None
+                    ),
+                    user_agent=user_agent,
+                )
+                return AcceptInvitationResponse(
+                    access_token=result.access_token,
+                    refresh_token=result.refresh_token,
+                    token_type="bearer",
+                    user_id=str(result.user_id),
+                    organization_id=(
+                        str(result.organization_id) if result.organization_id else ""
+                    ),
+                    organization_role=result.organization_role or "",
+                    session_id=str(result.session_id) if result.session_id else "",
+                    domain_admin_domains=_domain_admins_to_proto(result),
+                )
+        except InvitationNotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (
+            InvitationExpiredError,
+            InvitationRevokedError,
+            InvitationAlreadyUsedError,
+            InvitationEmailConflictError,
+        ) as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except Exception as e:
+            logger.error(f"Error accepting invitation: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def send_password_reset(
+        self,
+        request: SendPasswordResetRequest,
+        ctx: RequestContext,
+    ) -> SendPasswordResetResponse:
+        """Trigger a password reset email; always returns success."""
+        try:
+            async with open_session() as session:
+                ops = PasswordResetOperations(session)
+                await ops.request(
+                    email=request.email,
+                    requested_ip=audit_ip_var.get(),
+                )
+        except Exception as e:
+            # Never leak; log for ops + still return success.
+            logger.warning(f"Password reset request error: {e}", exc_info=True)
+        return SendPasswordResetResponse()
+
+    async def verify_password_reset_token(
+        self,
+        request: VerifyPasswordResetTokenRequest,
+        ctx: RequestContext,
+    ) -> VerifyPasswordResetTokenResponse:
+        """Preview a reset token without consuming it."""
+        if not request.token:
+            raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
+        try:
+            async with open_session() as session:
+                ops = PasswordResetOperations(session)
+                preview = await ops.verify(request.token)
+                return VerifyPasswordResetTokenResponse(
+                    email=preview.email,
+                    expires_at=datetime_to_timestamp(preview.expires_at),
+                )
+        except PasswordResetTokenNotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (PasswordResetTokenExpiredError, PasswordResetTokenUsedError) as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except PasswordResetError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+
+    async def reset_password(
+        self,
+        request: ResetPasswordRequest,
+        ctx: RequestContext,
+    ) -> ResetPasswordResponse:
+        """Apply a new password using a single-use reset token."""
+        if not request.token:
+            raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
+        try:
+            async with open_session() as session:
+                ops = PasswordResetOperations(session)
+                await ops.consume(request.token, request.new_password)
+                return ResetPasswordResponse(success=True)
+        except PasswordResetTokenNotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (PasswordResetTokenExpiredError, PasswordResetTokenUsedError) as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PasswordResetError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except Exception as e:
+            logger.error(f"Error resetting password: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

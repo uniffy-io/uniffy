@@ -30,6 +30,9 @@ if (import.meta.env.DEV) {
 // Auth pages
 const AuthForms = lazyImport(() => import('@/features/auth/components/AuthForms'), 'AuthForms');
 const OrganizationPicker = lazyImport(() => import('@/features/auth/components/OrganizationPicker'), 'OrganizationPicker');
+const AcceptInvitePage = lazyImport(() => import('@/features/auth/pages/AcceptInvitePage'), 'AcceptInvitePage');
+const ForgotPasswordPage = lazyImport(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage');
+const ResetPasswordPage = lazyImport(() => import('@/features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
 
 // Dashboard
 const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashboard'), 'Dashboard');
@@ -41,6 +44,8 @@ const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'),
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
 const EncryptionPage = lazyImport(() => import('@/features/admin/pages/EncryptionPage'), 'EncryptionPage');
+const EmailPage = lazyImport(() => import('@/features/admin/pages/EmailPage'), 'EmailPage');
+const SecurityPage = lazyImport(() => import('@/features/admin/pages/SecurityPage'), 'SecurityPage');
 const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsPage'), 'AuditLogsPage');
 const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
@@ -212,6 +217,33 @@ export function App() {
                         />
 
                         <Route
+                            path="/auth/accept-invite"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><AcceptInvitePage /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/auth/forgot-password"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><ForgotPasswordPage /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/auth/reset-password"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><ResetPasswordPage /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
+
+                        <Route
                             path="/select-org"
                             element={
                                 <AuthLayout>
@@ -236,7 +268,9 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
+                            <Route path="security" element={<LazyRoute><SecurityPage /></LazyRoute>} />
                             <Route path="encryption" element={<LazyRoute><EncryptionPage /></LazyRoute>} />
+                            <Route path="email" element={<LazyRoute><EmailPage /></LazyRoute>} />
                             <Route path="audit-logs" element={<LazyRoute><AuditLogsPage /></LazyRoute>} />
                             <Route path="agents" element={<LazyRoute><AdminAgentsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />

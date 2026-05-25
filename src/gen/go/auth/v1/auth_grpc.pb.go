@@ -19,16 +19,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName            = "/auth.v1.AuthService/Register"
-	AuthService_Login_FullMethodName               = "/auth.v1.AuthService/Login"
-	AuthService_RefreshToken_FullMethodName        = "/auth.v1.AuthService/RefreshToken"
-	AuthService_GetCurrentUser_FullMethodName      = "/auth.v1.AuthService/GetCurrentUser"
-	AuthService_Logout_FullMethodName              = "/auth.v1.AuthService/Logout"
-	AuthService_ListSessions_FullMethodName        = "/auth.v1.AuthService/ListSessions"
-	AuthService_RevokeSession_FullMethodName       = "/auth.v1.AuthService/RevokeSession"
-	AuthService_RevokeOtherSessions_FullMethodName = "/auth.v1.AuthService/RevokeOtherSessions"
-	AuthService_GetCacheKeySeed_FullMethodName     = "/auth.v1.AuthService/GetCacheKeySeed"
-	AuthService_RotateCacheKeySeed_FullMethodName  = "/auth.v1.AuthService/RotateCacheKeySeed"
+	AuthService_Register_FullMethodName                 = "/auth.v1.AuthService/Register"
+	AuthService_Login_FullMethodName                    = "/auth.v1.AuthService/Login"
+	AuthService_RefreshToken_FullMethodName             = "/auth.v1.AuthService/RefreshToken"
+	AuthService_GetCurrentUser_FullMethodName           = "/auth.v1.AuthService/GetCurrentUser"
+	AuthService_Logout_FullMethodName                   = "/auth.v1.AuthService/Logout"
+	AuthService_ListSessions_FullMethodName             = "/auth.v1.AuthService/ListSessions"
+	AuthService_RevokeSession_FullMethodName            = "/auth.v1.AuthService/RevokeSession"
+	AuthService_RevokeOtherSessions_FullMethodName      = "/auth.v1.AuthService/RevokeOtherSessions"
+	AuthService_GetCacheKeySeed_FullMethodName          = "/auth.v1.AuthService/GetCacheKeySeed"
+	AuthService_RotateCacheKeySeed_FullMethodName       = "/auth.v1.AuthService/RotateCacheKeySeed"
+	AuthService_GetAuthConfig_FullMethodName            = "/auth.v1.AuthService/GetAuthConfig"
+	AuthService_GetInvitation_FullMethodName            = "/auth.v1.AuthService/GetInvitation"
+	AuthService_AcceptInvitation_FullMethodName         = "/auth.v1.AuthService/AcceptInvitation"
+	AuthService_SendPasswordReset_FullMethodName        = "/auth.v1.AuthService/SendPasswordReset"
+	AuthService_VerifyPasswordResetToken_FullMethodName = "/auth.v1.AuthService/VerifyPasswordResetToken"
+	AuthService_ResetPassword_FullMethodName            = "/auth.v1.AuthService/ResetPassword"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -60,6 +66,18 @@ type AuthServiceClient interface {
 	GetCacheKeySeed(ctx context.Context, in *GetCacheKeySeedRequest, opts ...grpc.CallOption) (*GetCacheKeySeedResponse, error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(ctx context.Context, in *RotateCacheKeySeedRequest, opts ...grpc.CallOption) (*RotateCacheKeySeedResponse, error)
+	// Public auth configuration (e.g. whether registration is open).
+	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
+	// Preview an invitation by token (un-authenticated).
+	GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error)
+	// Accept an invitation by token; creates the user + membership and logs them in.
+	AcceptInvitation(ctx context.Context, in *AcceptInvitationRequest, opts ...grpc.CallOption) (*AcceptInvitationResponse, error)
+	// Request a password reset link (always returns success; no enumeration).
+	SendPasswordReset(ctx context.Context, in *SendPasswordResetRequest, opts ...grpc.CallOption) (*SendPasswordResetResponse, error)
+	// Preview a password reset token before showing the form.
+	VerifyPasswordResetToken(ctx context.Context, in *VerifyPasswordResetTokenRequest, opts ...grpc.CallOption) (*VerifyPasswordResetTokenResponse, error)
+	// Consume a password reset token to set a new password.
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 }
 
 type authServiceClient struct {
@@ -170,6 +188,66 @@ func (c *authServiceClient) RotateCacheKeySeed(ctx context.Context, in *RotateCa
 	return out, nil
 }
 
+func (c *authServiceClient) GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuthConfigResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetAuthConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AcceptInvitation(ctx context.Context, in *AcceptInvitationRequest, opts ...grpc.CallOption) (*AcceptInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthService_AcceptInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) SendPasswordReset(ctx context.Context, in *SendPasswordResetRequest, opts ...grpc.CallOption) (*SendPasswordResetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendPasswordResetResponse)
+	err := c.cc.Invoke(ctx, AuthService_SendPasswordReset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) VerifyPasswordResetToken(ctx context.Context, in *VerifyPasswordResetTokenRequest, opts ...grpc.CallOption) (*VerifyPasswordResetTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyPasswordResetTokenResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifyPasswordResetToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_ResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -199,6 +277,18 @@ type AuthServiceServer interface {
 	GetCacheKeySeed(context.Context, *GetCacheKeySeedRequest) (*GetCacheKeySeedResponse, error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error)
+	// Public auth configuration (e.g. whether registration is open).
+	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
+	// Preview an invitation by token (un-authenticated).
+	GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error)
+	// Accept an invitation by token; creates the user + membership and logs them in.
+	AcceptInvitation(context.Context, *AcceptInvitationRequest) (*AcceptInvitationResponse, error)
+	// Request a password reset link (always returns success; no enumeration).
+	SendPasswordReset(context.Context, *SendPasswordResetRequest) (*SendPasswordResetResponse, error)
+	// Preview a password reset token before showing the form.
+	VerifyPasswordResetToken(context.Context, *VerifyPasswordResetTokenRequest) (*VerifyPasswordResetTokenResponse, error)
+	// Consume a password reset token to set a new password.
+	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -238,6 +328,24 @@ func (UnimplementedAuthServiceServer) GetCacheKeySeed(context.Context, *GetCache
 }
 func (UnimplementedAuthServiceServer) RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RotateCacheKeySeed not implemented")
+}
+func (UnimplementedAuthServiceServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuthConfig not implemented")
+}
+func (UnimplementedAuthServiceServer) GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInvitation not implemented")
+}
+func (UnimplementedAuthServiceServer) AcceptInvitation(context.Context, *AcceptInvitationRequest) (*AcceptInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptInvitation not implemented")
+}
+func (UnimplementedAuthServiceServer) SendPasswordReset(context.Context, *SendPasswordResetRequest) (*SendPasswordResetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendPasswordReset not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifyPasswordResetToken(context.Context, *VerifyPasswordResetTokenRequest) (*VerifyPasswordResetTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyPasswordResetToken not implemented")
+}
+func (UnimplementedAuthServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -440,6 +548,114 @@ func _AuthService_RotateCacheKeySeed_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetAuthConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuthConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetAuthConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetAuthConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetAuthConfig(ctx, req.(*GetAuthConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetInvitation(ctx, req.(*GetInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AcceptInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AcceptInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AcceptInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AcceptInvitation(ctx, req.(*AcceptInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_SendPasswordReset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendPasswordResetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SendPasswordReset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SendPasswordReset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SendPasswordReset(ctx, req.(*SendPasswordResetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_VerifyPasswordResetToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyPasswordResetTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifyPasswordResetToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifyPasswordResetToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifyPasswordResetToken(ctx, req.(*VerifyPasswordResetTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -486,6 +702,30 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RotateCacheKeySeed",
 			Handler:    _AuthService_RotateCacheKeySeed_Handler,
+		},
+		{
+			MethodName: "GetAuthConfig",
+			Handler:    _AuthService_GetAuthConfig_Handler,
+		},
+		{
+			MethodName: "GetInvitation",
+			Handler:    _AuthService_GetInvitation_Handler,
+		},
+		{
+			MethodName: "AcceptInvitation",
+			Handler:    _AuthService_AcceptInvitation_Handler,
+		},
+		{
+			MethodName: "SendPasswordReset",
+			Handler:    _AuthService_SendPasswordReset_Handler,
+		},
+		{
+			MethodName: "VerifyPasswordResetToken",
+			Handler:    _AuthService_VerifyPasswordResetToken_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _AuthService_ResetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

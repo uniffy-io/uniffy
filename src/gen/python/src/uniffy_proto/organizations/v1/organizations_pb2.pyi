@@ -3,12 +3,26 @@ import datetime
 from common.v1 import common_pb2 as _common_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class InvitationStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    INVITATION_STATUS_UNSPECIFIED: _ClassVar[InvitationStatus]
+    INVITATION_STATUS_PENDING: _ClassVar[InvitationStatus]
+    INVITATION_STATUS_ACCEPTED: _ClassVar[InvitationStatus]
+    INVITATION_STATUS_REVOKED: _ClassVar[InvitationStatus]
+    INVITATION_STATUS_EXPIRED: _ClassVar[InvitationStatus]
+INVITATION_STATUS_UNSPECIFIED: InvitationStatus
+INVITATION_STATUS_PENDING: InvitationStatus
+INVITATION_STATUS_ACCEPTED: InvitationStatus
+INVITATION_STATUS_REVOKED: InvitationStatus
+INVITATION_STATUS_EXPIRED: InvitationStatus
 
 class ListMyOrganizationsRequest(_message.Message):
     __slots__ = ()
@@ -379,3 +393,117 @@ class RotateEncryptionKeyResponse(_message.Message):
     previous_version: int
     rotated_at: _timestamp_pb2.Timestamp
     def __init__(self, new_version: _Optional[int] = ..., previous_version: _Optional[int] = ..., rotated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class Invitation(_message.Message):
+    __slots__ = ("id", "organization_id", "email", "role", "expires_at", "created_at", "accepted_at", "revoked_at", "invited_by_user_id", "invited_by_display_name", "status")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    ACCEPTED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVOKED_AT_FIELD_NUMBER: _ClassVar[int]
+    INVITED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    INVITED_BY_DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    organization_id: str
+    email: str
+    role: _common_pb2.OrganizationRole
+    expires_at: _timestamp_pb2.Timestamp
+    created_at: _timestamp_pb2.Timestamp
+    accepted_at: _timestamp_pb2.Timestamp
+    revoked_at: _timestamp_pb2.Timestamp
+    invited_by_user_id: str
+    invited_by_display_name: str
+    status: InvitationStatus
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., email: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., accepted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., revoked_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., invited_by_user_id: _Optional[str] = ..., invited_by_display_name: _Optional[str] = ..., status: _Optional[_Union[InvitationStatus, str]] = ...) -> None: ...
+
+class InviteMemberRequest(_message.Message):
+    __slots__ = ("organization_id", "email", "role")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    email: str
+    role: _common_pb2.OrganizationRole
+    def __init__(self, organization_id: _Optional[str] = ..., email: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ...) -> None: ...
+
+class InviteMemberResponse(_message.Message):
+    __slots__ = ("added_member", "invitation")
+    ADDED_MEMBER_FIELD_NUMBER: _ClassVar[int]
+    INVITATION_FIELD_NUMBER: _ClassVar[int]
+    added_member: _common_pb2.MemberInfo
+    invitation: Invitation
+    def __init__(self, added_member: _Optional[_Union[_common_pb2.MemberInfo, _Mapping]] = ..., invitation: _Optional[_Union[Invitation, _Mapping]] = ...) -> None: ...
+
+class ListInvitationsRequest(_message.Message):
+    __slots__ = ("organization_id", "status")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    status: InvitationStatus
+    def __init__(self, organization_id: _Optional[str] = ..., status: _Optional[_Union[InvitationStatus, str]] = ...) -> None: ...
+
+class ListInvitationsResponse(_message.Message):
+    __slots__ = ("invitations",)
+    INVITATIONS_FIELD_NUMBER: _ClassVar[int]
+    invitations: _containers.RepeatedCompositeFieldContainer[Invitation]
+    def __init__(self, invitations: _Optional[_Iterable[_Union[Invitation, _Mapping]]] = ...) -> None: ...
+
+class RevokeInvitationRequest(_message.Message):
+    __slots__ = ("invitation_id",)
+    INVITATION_ID_FIELD_NUMBER: _ClassVar[int]
+    invitation_id: str
+    def __init__(self, invitation_id: _Optional[str] = ...) -> None: ...
+
+class RevokeInvitationResponse(_message.Message):
+    __slots__ = ("invitation",)
+    INVITATION_FIELD_NUMBER: _ClassVar[int]
+    invitation: Invitation
+    def __init__(self, invitation: _Optional[_Union[Invitation, _Mapping]] = ...) -> None: ...
+
+class ResendInvitationRequest(_message.Message):
+    __slots__ = ("invitation_id",)
+    INVITATION_ID_FIELD_NUMBER: _ClassVar[int]
+    invitation_id: str
+    def __init__(self, invitation_id: _Optional[str] = ...) -> None: ...
+
+class ResendInvitationResponse(_message.Message):
+    __slots__ = ("invitation",)
+    INVITATION_FIELD_NUMBER: _ClassVar[int]
+    invitation: Invitation
+    def __init__(self, invitation: _Optional[_Union[Invitation, _Mapping]] = ...) -> None: ...
+
+class SecuritySettings(_message.Message):
+    __slots__ = ("password_reset_enabled",)
+    PASSWORD_RESET_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    password_reset_enabled: bool
+    def __init__(self, password_reset_enabled: _Optional[bool] = ...) -> None: ...
+
+class GetSecuritySettingsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetSecuritySettingsResponse(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: SecuritySettings
+    def __init__(self, settings: _Optional[_Union[SecuritySettings, _Mapping]] = ...) -> None: ...
+
+class UpdateSecuritySettingsRequest(_message.Message):
+    __slots__ = ("organization_id", "password_reset_enabled")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    PASSWORD_RESET_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    password_reset_enabled: bool
+    def __init__(self, organization_id: _Optional[str] = ..., password_reset_enabled: _Optional[bool] = ...) -> None: ...
+
+class UpdateSecuritySettingsResponse(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: SecuritySettings
+    def __init__(self, settings: _Optional[_Union[SecuritySettings, _Mapping]] = ...) -> None: ...

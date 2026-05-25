@@ -37,6 +37,7 @@ from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplic
 from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
 from uniffy_proto.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
+from uniffy_proto.mail.v1.mail_connect import OrgMailServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
@@ -97,6 +98,7 @@ from uniffy.domains.comments.service import CommentsServiceImpl
 from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
+from uniffy.domains.mail.service import OrgMailServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
@@ -481,6 +483,12 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/audit.v1.AuditService",
         AuditServiceASGIApplication(AuditServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/mail.v1.OrgMailService",
+        OrgMailServiceASGIApplication(
+            OrgMailServiceImpl(), interceptors=[logging_interceptor]
+        ),
     )
     dispatcher.add_service(
         "/comments.v1.CommentsService",

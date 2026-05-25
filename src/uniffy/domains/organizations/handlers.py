@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy import select
 from uniffy_proto.common.v1.common_pb2 import (
     PaginationResponse,
 )
@@ -24,12 +25,19 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     GetOrganizationSettingsResponse,
     GetPermissionDefaultsRequest,
     GetPermissionDefaultsResponse,
+    GetSecuritySettingsRequest,
+    GetSecuritySettingsResponse,
     GetUserDomainAdminsRequest,
     GetUserDomainAdminsResponse,
     GrantDomainAdminRequest,
     GrantDomainAdminResponse,
+    InvitationStatus,
+    InviteMemberRequest,
+    InviteMemberResponse,
     ListDomainAdminsRequest,
     ListDomainAdminsResponse,
+    ListInvitationsRequest,
+    ListInvitationsResponse,
     ListMembersRequest,
     ListMembersResponse,
     ListMyOrganizationsRequest,
@@ -38,8 +46,12 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     ListOrganizationsResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
+    ResendInvitationRequest,
+    ResendInvitationResponse,
     RevokeDomainAdminRequest,
     RevokeDomainAdminResponse,
+    RevokeInvitationRequest,
+    RevokeInvitationResponse,
     RotateEncryptionKeyRequest,
     RotateEncryptionKeyResponse,
     UpdateMemberRoleRequest,
@@ -50,6 +62,11 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     UpdateOrganizationSettingsResponse,
     UpdatePermissionDefaultsRequest,
     UpdatePermissionDefaultsResponse,
+    UpdateSecuritySettingsRequest,
+    UpdateSecuritySettingsResponse,
+)
+from uniffy_proto.organizations.v1.organizations_pb2 import (
+    SecuritySettings as SecuritySettingsProto,
 )
 
 from uniffy.core.converters import (
@@ -68,8 +85,18 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.models.login.user import User
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.invitations.converters import invitation_to_proto
+from uniffy.domains.invitations.errors import (
+    InvitationAlreadyUsedError,
+    InvitationRevokedError,
+)
+from uniffy.domains.invitations.operations import (
+    InvitationOperations,
+    InviteOutcome,
+)
 from uniffy.domains.organizations.converters import (
     my_organization_to_proto,
     organization_detail_to_proto,
@@ -78,6 +105,7 @@ from uniffy.domains.organizations.converters import (
     permission_defaults_to_proto,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.security.operations import SecurityOperations
 
 
 class OrganizationsHandlers:
@@ -892,4 +920,209 @@ class OrganizationsHandlers:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
             logger.error(f"Error rotating encryption key: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def invite_member(
+        self,
+        request: InviteMemberRequest,
+        ctx: RequestContext,
+    ) -> InviteMemberResponse:
+        """Invite an email to join the organization (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        role = org_role_from_proto(request.role) or OrganizationRole.MEMBER
+
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                result = await ops.invite(
+                    org_id=org_id,
+                    email=request.email,
+                    role=role,
+                    inviter_id=user_id,
+                )
+                if result.outcome == InviteOutcome.ADDED:
+                    assert result.member is not None and result.member_user is not None
+                    return InviteMemberResponse(
+                        added_member=member_info_to_proto(
+                            result.member_user, result.member
+                        )
+                    )
+                assert result.invitation is not None
+                inviter_row = (
+                    await session.execute(
+                        select(User).where(User.id == user_id)
+                    )
+                ).scalar_one_or_none()
+                return InviteMemberResponse(
+                    invitation=invitation_to_proto(result.invitation, inviter_row)
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except Exception as e:
+            logger.error(f"Error inviting member: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_invitations(
+        self,
+        request: ListInvitationsRequest,
+        ctx: RequestContext,
+    ) -> ListInvitationsResponse:
+        """List invitations for the organization (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                rows = await ops.list_for_org(org_id, actor_id=user_id)
+                protos = [invitation_to_proto(inv, inviter) for inv, inviter in rows]
+                if request.HasField("status"):
+                    wanted: InvitationStatus.ValueType = request.status
+                    protos = [p for p in protos if p.status == wanted]
+                return ListInvitationsResponse(invitations=protos)
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error listing invitations: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def revoke_invitation(
+        self,
+        request: RevokeInvitationRequest,
+        ctx: RequestContext,
+    ) -> RevokeInvitationResponse:
+        """Revoke a pending invitation (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            invitation_id = UUID(request.invitation_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid invitation_id")
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                invitation = await ops.revoke(invitation_id, actor_id=user_id)
+                inviter = (
+                    await session.execute(
+                        select(User).where(User.id == invitation.invited_by_user_id)
+                    )
+                ).scalar_one_or_none()
+                return RevokeInvitationResponse(
+                    invitation=invitation_to_proto(invitation, inviter)
+                )
+        except InvitationAlreadyUsedError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error revoking invitation: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def resend_invitation(
+        self,
+        request: ResendInvitationRequest,
+        ctx: RequestContext,
+    ) -> ResendInvitationResponse:
+        """Regenerate the token + re-send the invitation email."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            invitation_id = UUID(request.invitation_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid invitation_id")
+        try:
+            async with open_session() as session:
+                ops = InvitationOperations(session)
+                invitation = await ops.resend(invitation_id, actor_id=user_id)
+                inviter = (
+                    await session.execute(
+                        select(User).where(User.id == invitation.invited_by_user_id)
+                    )
+                ).scalar_one_or_none()
+                return ResendInvitationResponse(
+                    invitation=invitation_to_proto(invitation, inviter)
+                )
+        except (InvitationAlreadyUsedError, InvitationRevokedError) as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error resending invitation: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_security_settings(
+        self,
+        request: GetSecuritySettingsRequest,
+        ctx: RequestContext,
+    ) -> GetSecuritySettingsResponse:
+        """Return the org's security policy (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        try:
+            async with open_session() as session:
+                org_ops = OrganizationOperations(session)
+                await org_ops.require_org_admin(user_id, org_id)
+                settings = await SecurityOperations(session).get(org_id)
+                return GetSecuritySettingsResponse(
+                    settings=SecuritySettingsProto(
+                        password_reset_enabled=settings.password_reset_enabled,
+                    ),
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error getting security settings: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def update_security_settings(
+        self,
+        request: UpdateSecuritySettingsRequest,
+        ctx: RequestContext,
+    ) -> UpdateSecuritySettingsResponse:
+        """Update the org's security policy (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        try:
+            async with open_session() as session:
+                org_ops = OrganizationOperations(session)
+                await org_ops.require_org_admin(user_id, org_id)
+                settings = await SecurityOperations(session).set_password_reset_enabled(
+                    organization_id=org_id,
+                    enabled=request.password_reset_enabled,
+                    actor_user_id=user_id,
+                )
+                return UpdateSecuritySettingsResponse(
+                    settings=SecuritySettingsProto(
+                        password_reset_enabled=settings.password_reset_enabled,
+                    ),
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error updating security settings: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

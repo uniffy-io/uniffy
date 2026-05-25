@@ -32,7 +32,7 @@ export function EncryptionSection() {
     };
 
     return (
-        <div className="flex flex-col gap-6 max-w-3xl">
+        <div className="flex flex-col gap-6 max-w-3xl w-full mx-auto">
             <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                     <ShieldCheck size={22} weight="duotone" className="text-primary" />

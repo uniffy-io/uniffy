@@ -48,6 +48,24 @@ class AuthService(Protocol):
     async def rotate_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_auth_config(self, request: auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_invitation(self, request: auth_dot_v1_dot_auth__pb2.GetInvitationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def accept_invitation(self, request: auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def send_password_reset(self, request: auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def verify_password_reset_token(self, request: auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def reset_password(self, request: auth_dot_v1_dot_auth__pb2.ResetPasswordRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.ResetPasswordResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
     def __init__(self, service: AuthService | AsyncGenerator[AuthService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -153,6 +171,66 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.rotate_cache_key_seed,
+                ),
+                "/auth.v1.AuthService/GetAuthConfig": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetAuthConfig",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_auth_config,
+                ),
+                "/auth.v1.AuthService/GetInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetInvitation",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_invitation,
+                ),
+                "/auth.v1.AuthService/AcceptInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AcceptInvitation",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.accept_invitation,
+                ),
+                "/auth.v1.AuthService/SendPasswordReset": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SendPasswordReset",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+                        output=auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.send_password_reset,
+                ),
+                "/auth.v1.AuthService/VerifyPasswordResetToken": Endpoint.unary(
+                    method=MethodInfo(
+                        name="VerifyPasswordResetToken",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+                        output=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.verify_password_reset_token,
+                ),
+                "/auth.v1.AuthService/ResetPassword": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResetPassword",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+                        output=auth_dot_v1_dot_auth__pb2.ResetPasswordResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reset_password,
                 ),
             },
             interceptors=interceptors,
@@ -368,6 +446,126 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_auth_config(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAuthConfig",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_invitation(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetInvitation",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def accept_invitation(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AcceptInvitation",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+                output=auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def send_password_reset(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SendPasswordReset",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+                output=auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def verify_password_reset_token(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="VerifyPasswordResetToken",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+                output=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def reset_password(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.ResetPasswordResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResetPassword",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+                output=auth_dot_v1_dot_auth__pb2.ResetPasswordResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -392,6 +590,18 @@ class AuthServiceSync(Protocol):
     def get_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def rotate_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_auth_config(self, request: auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_invitation(self, request: auth_dot_v1_dot_auth__pb2.GetInvitationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def accept_invitation(self, request: auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def send_password_reset(self, request: auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def verify_password_reset_token(self, request: auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def reset_password(self, request: auth_dot_v1_dot_auth__pb2.ResetPasswordRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.ResetPasswordResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -498,6 +708,66 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.rotate_cache_key_seed,
+                ),
+                "/auth.v1.AuthService/GetAuthConfig": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetAuthConfig",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_auth_config,
+                ),
+                "/auth.v1.AuthService/GetInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetInvitation",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_invitation,
+                ),
+                "/auth.v1.AuthService/AcceptInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AcceptInvitation",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.accept_invitation,
+                ),
+                "/auth.v1.AuthService/SendPasswordReset": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SendPasswordReset",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+                        output=auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.send_password_reset,
+                ),
+                "/auth.v1.AuthService/VerifyPasswordResetToken": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="VerifyPasswordResetToken",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+                        output=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.verify_password_reset_token,
+                ),
+                "/auth.v1.AuthService/ResetPassword": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResetPassword",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+                        output=auth_dot_v1_dot_auth__pb2.ResetPasswordResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reset_password,
                 ),
             },
             interceptors=interceptors,
@@ -707,6 +977,126 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
                 output=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_auth_config(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAuthConfig",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetAuthConfigRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetAuthConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_invitation(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetInvitation",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetInvitationRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def accept_invitation(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AcceptInvitation",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.AcceptInvitationRequest,
+                output=auth_dot_v1_dot_auth__pb2.AcceptInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def send_password_reset(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SendPasswordReset",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.SendPasswordResetRequest,
+                output=auth_dot_v1_dot_auth__pb2.SendPasswordResetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def verify_password_reset_token(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="VerifyPasswordResetToken",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenRequest,
+                output=auth_dot_v1_dot_auth__pb2.VerifyPasswordResetTokenResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def reset_password(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.ResetPasswordResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResetPassword",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.ResetPasswordRequest,
+                output=auth_dot_v1_dot_auth__pb2.ResetPasswordResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

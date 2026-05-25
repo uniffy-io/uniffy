@@ -44,11 +44,14 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
+from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.sso_configuration import SSOConfiguration, SSOProvider
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
+from uniffy.core.models.mail.suppression import EmailSuppression, EmailSuppressionReason
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
@@ -61,6 +64,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.shared import (
     AccessMode,
@@ -97,6 +101,13 @@ __all__ = [
     "SSOConfiguration",
     "SSOProvider",
     "UserSession",
+    "PasswordResetToken",
+    "Invitation",
+    # Mail
+    "EmailSuppression",
+    "EmailSuppressionReason",
+    # Org settings (KV)
+    "OrgSetting",
     # Notes models
     "Note",
     # Projects models

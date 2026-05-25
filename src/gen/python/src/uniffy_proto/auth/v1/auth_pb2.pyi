@@ -1,4 +1,7 @@
+import datetime
+
 from common.v1 import common_pb2 as _common_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -210,3 +213,107 @@ class RotateCacheKeySeedResponse(_message.Message):
     NEW_CACHE_KEY_SEED_FIELD_NUMBER: _ClassVar[int]
     new_cache_key_seed: bytes
     def __init__(self, new_cache_key_seed: _Optional[bytes] = ...) -> None: ...
+
+class GetAuthConfigRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetAuthConfigResponse(_message.Message):
+    __slots__ = ("public_registration_enabled",)
+    PUBLIC_REGISTRATION_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    public_registration_enabled: bool
+    def __init__(self, public_registration_enabled: _Optional[bool] = ...) -> None: ...
+
+class GetInvitationRequest(_message.Message):
+    __slots__ = ("token",)
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    token: str
+    def __init__(self, token: _Optional[str] = ...) -> None: ...
+
+class GetInvitationResponse(_message.Message):
+    __slots__ = ("email", "organization_id", "organization_name", "organization_slug", "inviter_display_name", "role", "expires_at")
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_NAME_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    INVITER_DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    organization_id: str
+    organization_name: str
+    organization_slug: str
+    inviter_display_name: str
+    role: _common_pb2.OrganizationRole
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, email: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_name: _Optional[str] = ..., organization_slug: _Optional[str] = ..., inviter_display_name: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class AcceptInvitationRequest(_message.Message):
+    __slots__ = ("token", "username", "password", "full_name")
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    FULL_NAME_FIELD_NUMBER: _ClassVar[int]
+    token: str
+    username: str
+    password: str
+    full_name: str
+    def __init__(self, token: _Optional[str] = ..., username: _Optional[str] = ..., password: _Optional[str] = ..., full_name: _Optional[str] = ...) -> None: ...
+
+class AcceptInvitationResponse(_message.Message):
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
+    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
+    access_token: str
+    refresh_token: str
+    token_type: str
+    user_id: str
+    organization_id: str
+    organization_role: str
+    session_id: str
+    domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+
+class SendPasswordResetRequest(_message.Message):
+    __slots__ = ("email",)
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    def __init__(self, email: _Optional[str] = ...) -> None: ...
+
+class SendPasswordResetResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class VerifyPasswordResetTokenRequest(_message.Message):
+    __slots__ = ("token",)
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    token: str
+    def __init__(self, token: _Optional[str] = ...) -> None: ...
+
+class VerifyPasswordResetTokenResponse(_message.Message):
+    __slots__ = ("email", "expires_at")
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, email: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ResetPasswordRequest(_message.Message):
+    __slots__ = ("token", "new_password")
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    NEW_PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    token: str
+    new_password: str
+    def __init__(self, token: _Optional[str] = ..., new_password: _Optional[str] = ...) -> None: ...
+
+class ResetPasswordResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: _Optional[bool] = ...) -> None: ...

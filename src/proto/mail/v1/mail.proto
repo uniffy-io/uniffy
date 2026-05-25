@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package mail.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/mail/v1;mailv1";
+
+// Per-organization mail configuration. SMTP-only; for Resend use its
+// SMTP relay (smtp.resend.com:587, username=resend, password=API key).
+service OrgMailService {
+  // Read the org's effective mail config plus an env-default snapshot
+  // so the admin UI can show a "currently using" badge and a side-by-
+  // side preview when the org row is missing.
+  rpc GetMailConfig(GetMailConfigRequest) returns (GetMailConfigResponse) {}
+
+  // Upsert the org's mail config. Secrets in the request are encrypted
+  // server-side via OrgCipher and stored in org_settings under
+  // namespace='mail'. An empty smtp_password means "leave current
+  // value untouched"; explicit clear is via ClearMailConfig.
+  rpc UpdateMailConfig(UpdateMailConfigRequest) returns (UpdateMailConfigResponse) {}
+
+  // Delete every mail.* row for the org. Subsequent sends fall back
+  // to the system env default.
+  rpc ClearMailConfig(ClearMailConfigRequest) returns (ClearMailConfigResponse) {}
+
+  // Send a one-shot test message using the org's currently-resolved
+  // config (per-org if present, env fallback otherwise). Recorded on
+  // the OrgMailConfigSummary as last_test_at / last_test_status.
+  rpc SendTestMail(SendTestMailRequest) returns (SendTestMailResponse) {}
+}
+
+// Non-secret view of an organization's mail config. Secrets are
+// represented as presence booleans (e.g. smtp_password_set) so admin
+// UI can render "Set (********)" without round-tripping plaintext.
+message OrgMailConfigView {
+  // Empty string when the org has no per-org row.
+  string from_address = 1;
+  string from_name = 2;
+  string reply_to = 3;
+  string smtp_host = 4;
+  int32 smtp_port = 5;
+  string smtp_username = 6;
+  bool smtp_password_set = 7;
+  bool smtp_use_tls = 8;
+  int32 rate_limit_per_min = 9;
+
+  // True when the org row exists. False means "env config is active".
+  bool has_org_config = 10;
+
+  // Source of the effective config: 'org' or 'env'.
+  string effective_source = 11;
+
+  // Test-send metadata. Populated after SendTestMail succeeds/fails.
+  optional google.protobuf.Timestamp verified_at = 12;
+  optional google.protobuf.Timestamp last_test_at = 13;
+  optional string last_test_status = 14; // 'ok' | 'failed'
+  optional string last_test_error = 15;
+}
+
+message GetMailConfigRequest {
+  string organization_id = 1;
+}
+
+message GetMailConfigResponse {
+  OrgMailConfigView config = 1;
+}
+
+message UpdateMailConfigRequest {
+  string organization_id = 1;
+  string from_address = 2;
+  string from_name = 3;
+  string reply_to = 4;
+  string smtp_host = 5;
+  int32 smtp_port = 6;
+  string smtp_username = 7;
+  // Empty string = leave existing password untouched. Use
+  // ClearMailConfig to wipe the whole config (or send a non-empty
+  // string to overwrite).
+  string smtp_password = 8;
+  bool smtp_use_tls = 9;
+  int32 rate_limit_per_min = 10;
+}
+
+message UpdateMailConfigResponse {
+  OrgMailConfigView config = 1;
+}
+
+message ClearMailConfigRequest {
+  string organization_id = 1;
+}
+
+message ClearMailConfigResponse {
+  // Number of org_settings rows under namespace='mail' that were
+  // deleted (typically 8-10 depending on which optional keys were set).
+  int32 deleted_keys = 1;
+}
+
+message SendTestMailRequest {
+  string organization_id = 1;
+  string recipient_email = 2;
+}
+
+message SendTestMailResponse {
+  bool success = 1;
+  // 'ok' on success; provider error message otherwise.
+  string status = 2;
+  optional string provider_message_id = 3;
+  optional string error = 4;
+}

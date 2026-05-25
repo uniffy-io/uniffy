@@ -14,6 +14,7 @@ import {
     Warning,
     HardDrives,
     Wallet,
+    UserPlus,
 } from '@phosphor-icons/react';
 import { createClient } from '@connectrpc/connect';
 import { toast } from 'sonner';
@@ -24,8 +25,11 @@ import { unaryTransport } from '@/config/api';
 import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAgentQuotaDialog } from '@/features/admin/components/members/MemberAgentQuotaDialog';
+import { InviteMemberDialog } from '@/features/admin/components/members/InviteMemberDialog';
+import { InvitationsTable } from '@/features/admin/components/members/InvitationsTable';
 import {
     Table,
     TableHeader,
@@ -257,9 +261,14 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
 
 export function MembersSection() {
     const currentUser = useAppSelector((state) => state.auth.user);
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+    const currentRole = useAppSelector((state) => state.auth.currentOrganizationRole);
+    const isOrgAdmin = currentRole === 'OWNER' || currentRole === 'ADMIN';
     const { members, loading, totalCount, error, refresh, updateRole, remove } = useOrgMembers();
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState<number | undefined>(undefined);
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [invitationsRefreshKey, setInvitationsRefreshKey] = useState(0);
 
     // Track previous values to detect actual changes vs initial mount
     const prevSearchRef = useRef<string | undefined>(undefined);
@@ -335,7 +344,7 @@ export function MembersSection() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
                 {/* Search */}
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -356,6 +365,17 @@ export function MembersSection() {
                     options={ROLE_FILTER_OPTIONS}
                     placeholder="All roles"
                 />
+
+                {isOrgAdmin && (
+                    <Button
+                        variant="default"
+                        onClick={() => setInviteOpen(true)}
+                        className="sm:ml-auto"
+                    >
+                        <UserPlus size={16} weight="bold" />
+                        Invite member
+                    </Button>
+                )}
             </div>
 
             {/* Error */}
@@ -403,6 +423,24 @@ export function MembersSection() {
                     )}
                 </TableBody>
             </Table>
+
+            {isOrgAdmin && organizationId && (
+                <InvitationsTable
+                    organizationId={organizationId}
+                    refreshKey={invitationsRefreshKey}
+                />
+            )}
+
+            {inviteOpen && organizationId && (
+                <InviteMemberDialog
+                    organizationId={organizationId}
+                    onClose={() => setInviteOpen(false)}
+                    onInvited={() => {
+                        setInvitationsRefreshKey((n) => n + 1);
+                        refresh({ search: search || undefined, roleFilter });
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -60,6 +60,24 @@ const (
 	// AuthServiceRotateCacheKeySeedProcedure is the fully-qualified name of the AuthService's
 	// RotateCacheKeySeed RPC.
 	AuthServiceRotateCacheKeySeedProcedure = "/auth.v1.AuthService/RotateCacheKeySeed"
+	// AuthServiceGetAuthConfigProcedure is the fully-qualified name of the AuthService's GetAuthConfig
+	// RPC.
+	AuthServiceGetAuthConfigProcedure = "/auth.v1.AuthService/GetAuthConfig"
+	// AuthServiceGetInvitationProcedure is the fully-qualified name of the AuthService's GetInvitation
+	// RPC.
+	AuthServiceGetInvitationProcedure = "/auth.v1.AuthService/GetInvitation"
+	// AuthServiceAcceptInvitationProcedure is the fully-qualified name of the AuthService's
+	// AcceptInvitation RPC.
+	AuthServiceAcceptInvitationProcedure = "/auth.v1.AuthService/AcceptInvitation"
+	// AuthServiceSendPasswordResetProcedure is the fully-qualified name of the AuthService's
+	// SendPasswordReset RPC.
+	AuthServiceSendPasswordResetProcedure = "/auth.v1.AuthService/SendPasswordReset"
+	// AuthServiceVerifyPasswordResetTokenProcedure is the fully-qualified name of the AuthService's
+	// VerifyPasswordResetToken RPC.
+	AuthServiceVerifyPasswordResetTokenProcedure = "/auth.v1.AuthService/VerifyPasswordResetToken"
+	// AuthServiceResetPasswordProcedure is the fully-qualified name of the AuthService's ResetPassword
+	// RPC.
+	AuthServiceResetPasswordProcedure = "/auth.v1.AuthService/ResetPassword"
 )
 
 // AuthServiceClient is a client for the auth.v1.AuthService service.
@@ -84,6 +102,18 @@ type AuthServiceClient interface {
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
+	// Public auth configuration (e.g. whether registration is open).
+	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// Preview an invitation by token (un-authenticated).
+	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
+	// Accept an invitation by token; creates the user + membership and logs them in.
+	AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error)
+	// Request a password reset link (always returns success; no enumeration).
+	SendPasswordReset(context.Context, *connect.Request[v1.SendPasswordResetRequest]) (*connect.Response[v1.SendPasswordResetResponse], error)
+	// Preview a password reset token before showing the form.
+	VerifyPasswordResetToken(context.Context, *connect.Request[v1.VerifyPasswordResetTokenRequest]) (*connect.Response[v1.VerifyPasswordResetTokenResponse], error)
+	// Consume a password reset token to set a new password.
+	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the auth.v1.AuthService service. By default, it uses
@@ -157,21 +187,63 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RotateCacheKeySeed")),
 			connect.WithClientOptions(opts...),
 		),
+		getAuthConfig: connect.NewClient[v1.GetAuthConfigRequest, v1.GetAuthConfigResponse](
+			httpClient,
+			baseURL+AuthServiceGetAuthConfigProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		getInvitation: connect.NewClient[v1.GetInvitationRequest, v1.GetInvitationResponse](
+			httpClient,
+			baseURL+AuthServiceGetInvitationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetInvitation")),
+			connect.WithClientOptions(opts...),
+		),
+		acceptInvitation: connect.NewClient[v1.AcceptInvitationRequest, v1.AcceptInvitationResponse](
+			httpClient,
+			baseURL+AuthServiceAcceptInvitationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("AcceptInvitation")),
+			connect.WithClientOptions(opts...),
+		),
+		sendPasswordReset: connect.NewClient[v1.SendPasswordResetRequest, v1.SendPasswordResetResponse](
+			httpClient,
+			baseURL+AuthServiceSendPasswordResetProcedure,
+			connect.WithSchema(authServiceMethods.ByName("SendPasswordReset")),
+			connect.WithClientOptions(opts...),
+		),
+		verifyPasswordResetToken: connect.NewClient[v1.VerifyPasswordResetTokenRequest, v1.VerifyPasswordResetTokenResponse](
+			httpClient,
+			baseURL+AuthServiceVerifyPasswordResetTokenProcedure,
+			connect.WithSchema(authServiceMethods.ByName("VerifyPasswordResetToken")),
+			connect.WithClientOptions(opts...),
+		),
+		resetPassword: connect.NewClient[v1.ResetPasswordRequest, v1.ResetPasswordResponse](
+			httpClient,
+			baseURL+AuthServiceResetPasswordProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ResetPassword")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	register            *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
-	login               *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	refreshToken        *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
-	getCurrentUser      *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
-	logout              *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	listSessions        *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
-	revokeSession       *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
-	revokeOtherSessions *connect.Client[v1.RevokeOtherSessionsRequest, v1.RevokeOtherSessionsResponse]
-	getCacheKeySeed     *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
-	rotateCacheKeySeed  *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
+	register                 *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
+	login                    *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	refreshToken             *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
+	getCurrentUser           *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
+	logout                   *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	listSessions             *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
+	revokeSession            *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
+	revokeOtherSessions      *connect.Client[v1.RevokeOtherSessionsRequest, v1.RevokeOtherSessionsResponse]
+	getCacheKeySeed          *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
+	rotateCacheKeySeed       *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
+	getAuthConfig            *connect.Client[v1.GetAuthConfigRequest, v1.GetAuthConfigResponse]
+	getInvitation            *connect.Client[v1.GetInvitationRequest, v1.GetInvitationResponse]
+	acceptInvitation         *connect.Client[v1.AcceptInvitationRequest, v1.AcceptInvitationResponse]
+	sendPasswordReset        *connect.Client[v1.SendPasswordResetRequest, v1.SendPasswordResetResponse]
+	verifyPasswordResetToken *connect.Client[v1.VerifyPasswordResetTokenRequest, v1.VerifyPasswordResetTokenResponse]
+	resetPassword            *connect.Client[v1.ResetPasswordRequest, v1.ResetPasswordResponse]
 }
 
 // Register calls auth.v1.AuthService.Register.
@@ -224,6 +296,36 @@ func (c *authServiceClient) RotateCacheKeySeed(ctx context.Context, req *connect
 	return c.rotateCacheKeySeed.CallUnary(ctx, req)
 }
 
+// GetAuthConfig calls auth.v1.AuthService.GetAuthConfig.
+func (c *authServiceClient) GetAuthConfig(ctx context.Context, req *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error) {
+	return c.getAuthConfig.CallUnary(ctx, req)
+}
+
+// GetInvitation calls auth.v1.AuthService.GetInvitation.
+func (c *authServiceClient) GetInvitation(ctx context.Context, req *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error) {
+	return c.getInvitation.CallUnary(ctx, req)
+}
+
+// AcceptInvitation calls auth.v1.AuthService.AcceptInvitation.
+func (c *authServiceClient) AcceptInvitation(ctx context.Context, req *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error) {
+	return c.acceptInvitation.CallUnary(ctx, req)
+}
+
+// SendPasswordReset calls auth.v1.AuthService.SendPasswordReset.
+func (c *authServiceClient) SendPasswordReset(ctx context.Context, req *connect.Request[v1.SendPasswordResetRequest]) (*connect.Response[v1.SendPasswordResetResponse], error) {
+	return c.sendPasswordReset.CallUnary(ctx, req)
+}
+
+// VerifyPasswordResetToken calls auth.v1.AuthService.VerifyPasswordResetToken.
+func (c *authServiceClient) VerifyPasswordResetToken(ctx context.Context, req *connect.Request[v1.VerifyPasswordResetTokenRequest]) (*connect.Response[v1.VerifyPasswordResetTokenResponse], error) {
+	return c.verifyPasswordResetToken.CallUnary(ctx, req)
+}
+
+// ResetPassword calls auth.v1.AuthService.ResetPassword.
+func (c *authServiceClient) ResetPassword(ctx context.Context, req *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error) {
+	return c.resetPassword.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the auth.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Register a new user account
@@ -246,6 +348,18 @@ type AuthServiceHandler interface {
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
+	// Public auth configuration (e.g. whether registration is open).
+	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// Preview an invitation by token (un-authenticated).
+	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
+	// Accept an invitation by token; creates the user + membership and logs them in.
+	AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error)
+	// Request a password reset link (always returns success; no enumeration).
+	SendPasswordReset(context.Context, *connect.Request[v1.SendPasswordResetRequest]) (*connect.Response[v1.SendPasswordResetResponse], error)
+	// Preview a password reset token before showing the form.
+	VerifyPasswordResetToken(context.Context, *connect.Request[v1.VerifyPasswordResetTokenRequest]) (*connect.Response[v1.VerifyPasswordResetTokenResponse], error)
+	// Consume a password reset token to set a new password.
+	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -315,6 +429,42 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RotateCacheKeySeed")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceGetAuthConfigHandler := connect.NewUnaryHandler(
+		AuthServiceGetAuthConfigProcedure,
+		svc.GetAuthConfig,
+		connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceGetInvitationHandler := connect.NewUnaryHandler(
+		AuthServiceGetInvitationProcedure,
+		svc.GetInvitation,
+		connect.WithSchema(authServiceMethods.ByName("GetInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceAcceptInvitationHandler := connect.NewUnaryHandler(
+		AuthServiceAcceptInvitationProcedure,
+		svc.AcceptInvitation,
+		connect.WithSchema(authServiceMethods.ByName("AcceptInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceSendPasswordResetHandler := connect.NewUnaryHandler(
+		AuthServiceSendPasswordResetProcedure,
+		svc.SendPasswordReset,
+		connect.WithSchema(authServiceMethods.ByName("SendPasswordReset")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceVerifyPasswordResetTokenHandler := connect.NewUnaryHandler(
+		AuthServiceVerifyPasswordResetTokenProcedure,
+		svc.VerifyPasswordResetToken,
+		connect.WithSchema(authServiceMethods.ByName("VerifyPasswordResetToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceResetPasswordHandler := connect.NewUnaryHandler(
+		AuthServiceResetPasswordProcedure,
+		svc.ResetPassword,
+		connect.WithSchema(authServiceMethods.ByName("ResetPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceRegisterProcedure:
@@ -337,6 +487,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceGetCacheKeySeedHandler.ServeHTTP(w, r)
 		case AuthServiceRotateCacheKeySeedProcedure:
 			authServiceRotateCacheKeySeedHandler.ServeHTTP(w, r)
+		case AuthServiceGetAuthConfigProcedure:
+			authServiceGetAuthConfigHandler.ServeHTTP(w, r)
+		case AuthServiceGetInvitationProcedure:
+			authServiceGetInvitationHandler.ServeHTTP(w, r)
+		case AuthServiceAcceptInvitationProcedure:
+			authServiceAcceptInvitationHandler.ServeHTTP(w, r)
+		case AuthServiceSendPasswordResetProcedure:
+			authServiceSendPasswordResetHandler.ServeHTTP(w, r)
+		case AuthServiceVerifyPasswordResetTokenProcedure:
+			authServiceVerifyPasswordResetTokenHandler.ServeHTTP(w, r)
+		case AuthServiceResetPasswordProcedure:
+			authServiceResetPasswordHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -384,4 +546,28 @@ func (UnimplementedAuthServiceHandler) GetCacheKeySeed(context.Context, *connect
 
 func (UnimplementedAuthServiceHandler) RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.RotateCacheKeySeed is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetAuthConfig is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetInvitation is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.AcceptInvitation is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) SendPasswordReset(context.Context, *connect.Request[v1.SendPasswordResetRequest]) (*connect.Response[v1.SendPasswordResetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.SendPasswordReset is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) VerifyPasswordResetToken(context.Context, *connect.Request[v1.VerifyPasswordResetTokenRequest]) (*connect.Response[v1.VerifyPasswordResetTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.VerifyPasswordResetToken is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.ResetPassword is not implemented"))
 }

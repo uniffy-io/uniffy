@@ -3,6 +3,7 @@ syntax = "proto3";
 package auth.v1;
 
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
 
@@ -42,6 +43,24 @@ service AuthService {
 
   // Rotate cache key seed (invalidates all device caches)
   rpc RotateCacheKeySeed(RotateCacheKeySeedRequest) returns (RotateCacheKeySeedResponse);
+
+  // Public auth configuration (e.g. whether registration is open).
+  rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
+
+  // Preview an invitation by token (un-authenticated).
+  rpc GetInvitation(GetInvitationRequest) returns (GetInvitationResponse);
+
+  // Accept an invitation by token; creates the user + membership and logs them in.
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse);
+
+  // Request a password reset link (always returns success; no enumeration).
+  rpc SendPasswordReset(SendPasswordResetRequest) returns (SendPasswordResetResponse);
+
+  // Preview a password reset token before showing the form.
+  rpc VerifyPasswordResetToken(VerifyPasswordResetTokenRequest) returns (VerifyPasswordResetTokenResponse);
+
+  // Consume a password reset token to set a new password.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
 }
 
 // Request Messages
@@ -188,4 +207,73 @@ message RotateCacheKeySeedRequest {
 // Response containing the new cache key seed after rotation
 message RotateCacheKeySeedResponse {
   bytes new_cache_key_seed = 1; // New 32-byte seed
+}
+
+// Request public auth configuration (no auth required)
+message GetAuthConfigRequest {}
+
+// Public auth configuration the login / register pages need
+message GetAuthConfigResponse {
+  bool public_registration_enabled = 1;
+}
+
+// Preview an invitation before showing the accept form
+message GetInvitationRequest {
+  string token = 1;
+}
+
+message GetInvitationResponse {
+  string email = 1;
+  string organization_id = 2;
+  string organization_name = 3;
+  string organization_slug = 4;
+  optional string inviter_display_name = 5;
+  common.v1.OrganizationRole role = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}
+
+// Accept an invitation; this creates the user + membership and returns auth tokens.
+message AcceptInvitationRequest {
+  string token = 1;
+  string username = 2;
+  string password = 3; // Min 8 characters
+  optional string full_name = 4;
+}
+
+message AcceptInvitationResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3; // Always "bearer"
+  string user_id = 4;
+  string organization_id = 5;
+  string organization_role = 6; // MEMBER / ADMIN / OWNER
+  string session_id = 7;
+  repeated common.v1.DomainType domain_admin_domains = 8;
+}
+
+message SendPasswordResetRequest {
+  string email = 1;
+}
+
+// Intentionally empty -- the RPC never reveals whether the email exists.
+message SendPasswordResetResponse {}
+
+message VerifyPasswordResetTokenRequest {
+  string token = 1;
+}
+
+message VerifyPasswordResetTokenResponse {
+  string email = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2; // Min 8 characters
+}
+
+message ResetPasswordResponse {
+  // The reset bumps token_version so every existing session is gone;
+  // the client should redirect the user to /auth to sign in fresh.
+  bool success = 1;
 }

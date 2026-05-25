@@ -66,6 +66,24 @@ const (
 	// OrganizationsServiceRemoveMemberProcedure is the fully-qualified name of the
 	// OrganizationsService's RemoveMember RPC.
 	OrganizationsServiceRemoveMemberProcedure = "/organizations.v1.OrganizationsService/RemoveMember"
+	// OrganizationsServiceInviteMemberProcedure is the fully-qualified name of the
+	// OrganizationsService's InviteMember RPC.
+	OrganizationsServiceInviteMemberProcedure = "/organizations.v1.OrganizationsService/InviteMember"
+	// OrganizationsServiceListInvitationsProcedure is the fully-qualified name of the
+	// OrganizationsService's ListInvitations RPC.
+	OrganizationsServiceListInvitationsProcedure = "/organizations.v1.OrganizationsService/ListInvitations"
+	// OrganizationsServiceRevokeInvitationProcedure is the fully-qualified name of the
+	// OrganizationsService's RevokeInvitation RPC.
+	OrganizationsServiceRevokeInvitationProcedure = "/organizations.v1.OrganizationsService/RevokeInvitation"
+	// OrganizationsServiceResendInvitationProcedure is the fully-qualified name of the
+	// OrganizationsService's ResendInvitation RPC.
+	OrganizationsServiceResendInvitationProcedure = "/organizations.v1.OrganizationsService/ResendInvitation"
+	// OrganizationsServiceGetSecuritySettingsProcedure is the fully-qualified name of the
+	// OrganizationsService's GetSecuritySettings RPC.
+	OrganizationsServiceGetSecuritySettingsProcedure = "/organizations.v1.OrganizationsService/GetSecuritySettings"
+	// OrganizationsServiceUpdateSecuritySettingsProcedure is the fully-qualified name of the
+	// OrganizationsService's UpdateSecuritySettings RPC.
+	OrganizationsServiceUpdateSecuritySettingsProcedure = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
 	// OrganizationsServiceGetPermissionDefaultsProcedure is the fully-qualified name of the
 	// OrganizationsService's GetPermissionDefaults RPC.
 	OrganizationsServiceGetPermissionDefaultsProcedure = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
@@ -112,6 +130,12 @@ type OrganizationsServiceClient interface {
 	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error)
 	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
+	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
+	ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error)
+	RevokeInvitation(context.Context, *connect.Request[v1.RevokeInvitationRequest]) (*connect.Response[v1.RevokeInvitationResponse], error)
+	ResendInvitation(context.Context, *connect.Request[v1.ResendInvitationRequest]) (*connect.Response[v1.ResendInvitationResponse], error)
+	GetSecuritySettings(context.Context, *connect.Request[v1.GetSecuritySettingsRequest]) (*connect.Response[v1.GetSecuritySettingsResponse], error)
+	UpdateSecuritySettings(context.Context, *connect.Request[v1.UpdateSecuritySettingsRequest]) (*connect.Response[v1.UpdateSecuritySettingsResponse], error)
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.GetPermissionDefaultsResponse], error)
 	UpdatePermissionDefaults(context.Context, *connect.Request[v1.UpdatePermissionDefaultsRequest]) (*connect.Response[v1.UpdatePermissionDefaultsResponse], error)
@@ -206,6 +230,42 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(organizationsServiceMethods.ByName("RemoveMember")),
 			connect.WithClientOptions(opts...),
 		),
+		inviteMember: connect.NewClient[v1.InviteMemberRequest, v1.InviteMemberResponse](
+			httpClient,
+			baseURL+OrganizationsServiceInviteMemberProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("InviteMember")),
+			connect.WithClientOptions(opts...),
+		),
+		listInvitations: connect.NewClient[v1.ListInvitationsRequest, v1.ListInvitationsResponse](
+			httpClient,
+			baseURL+OrganizationsServiceListInvitationsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("ListInvitations")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeInvitation: connect.NewClient[v1.RevokeInvitationRequest, v1.RevokeInvitationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceRevokeInvitationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("RevokeInvitation")),
+			connect.WithClientOptions(opts...),
+		),
+		resendInvitation: connect.NewClient[v1.ResendInvitationRequest, v1.ResendInvitationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceResendInvitationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("ResendInvitation")),
+			connect.WithClientOptions(opts...),
+		),
+		getSecuritySettings: connect.NewClient[v1.GetSecuritySettingsRequest, v1.GetSecuritySettingsResponse](
+			httpClient,
+			baseURL+OrganizationsServiceGetSecuritySettingsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("GetSecuritySettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSecuritySettings: connect.NewClient[v1.UpdateSecuritySettingsRequest, v1.UpdateSecuritySettingsResponse](
+			httpClient,
+			baseURL+OrganizationsServiceUpdateSecuritySettingsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("UpdateSecuritySettings")),
+			connect.WithClientOptions(opts...),
+		),
 		getPermissionDefaults: connect.NewClient[v1.GetPermissionDefaultsRequest, v1.GetPermissionDefaultsResponse](
 			httpClient,
 			baseURL+OrganizationsServiceGetPermissionDefaultsProcedure,
@@ -276,6 +336,12 @@ type organizationsServiceClient struct {
 	addMember                  *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
 	updateMemberRole           *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
 	removeMember               *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
+	inviteMember               *connect.Client[v1.InviteMemberRequest, v1.InviteMemberResponse]
+	listInvitations            *connect.Client[v1.ListInvitationsRequest, v1.ListInvitationsResponse]
+	revokeInvitation           *connect.Client[v1.RevokeInvitationRequest, v1.RevokeInvitationResponse]
+	resendInvitation           *connect.Client[v1.ResendInvitationRequest, v1.ResendInvitationResponse]
+	getSecuritySettings        *connect.Client[v1.GetSecuritySettingsRequest, v1.GetSecuritySettingsResponse]
+	updateSecuritySettings     *connect.Client[v1.UpdateSecuritySettingsRequest, v1.UpdateSecuritySettingsResponse]
 	getPermissionDefaults      *connect.Client[v1.GetPermissionDefaultsRequest, v1.GetPermissionDefaultsResponse]
 	updatePermissionDefaults   *connect.Client[v1.UpdatePermissionDefaultsRequest, v1.UpdatePermissionDefaultsResponse]
 	getOrganizationSettings    *connect.Client[v1.GetOrganizationSettingsRequest, v1.GetOrganizationSettingsResponse]
@@ -342,6 +408,36 @@ func (c *organizationsServiceClient) RemoveMember(ctx context.Context, req *conn
 	return c.removeMember.CallUnary(ctx, req)
 }
 
+// InviteMember calls organizations.v1.OrganizationsService.InviteMember.
+func (c *organizationsServiceClient) InviteMember(ctx context.Context, req *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
+	return c.inviteMember.CallUnary(ctx, req)
+}
+
+// ListInvitations calls organizations.v1.OrganizationsService.ListInvitations.
+func (c *organizationsServiceClient) ListInvitations(ctx context.Context, req *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error) {
+	return c.listInvitations.CallUnary(ctx, req)
+}
+
+// RevokeInvitation calls organizations.v1.OrganizationsService.RevokeInvitation.
+func (c *organizationsServiceClient) RevokeInvitation(ctx context.Context, req *connect.Request[v1.RevokeInvitationRequest]) (*connect.Response[v1.RevokeInvitationResponse], error) {
+	return c.revokeInvitation.CallUnary(ctx, req)
+}
+
+// ResendInvitation calls organizations.v1.OrganizationsService.ResendInvitation.
+func (c *organizationsServiceClient) ResendInvitation(ctx context.Context, req *connect.Request[v1.ResendInvitationRequest]) (*connect.Response[v1.ResendInvitationResponse], error) {
+	return c.resendInvitation.CallUnary(ctx, req)
+}
+
+// GetSecuritySettings calls organizations.v1.OrganizationsService.GetSecuritySettings.
+func (c *organizationsServiceClient) GetSecuritySettings(ctx context.Context, req *connect.Request[v1.GetSecuritySettingsRequest]) (*connect.Response[v1.GetSecuritySettingsResponse], error) {
+	return c.getSecuritySettings.CallUnary(ctx, req)
+}
+
+// UpdateSecuritySettings calls organizations.v1.OrganizationsService.UpdateSecuritySettings.
+func (c *organizationsServiceClient) UpdateSecuritySettings(ctx context.Context, req *connect.Request[v1.UpdateSecuritySettingsRequest]) (*connect.Response[v1.UpdateSecuritySettingsResponse], error) {
+	return c.updateSecuritySettings.CallUnary(ctx, req)
+}
+
 // GetPermissionDefaults calls organizations.v1.OrganizationsService.GetPermissionDefaults.
 func (c *organizationsServiceClient) GetPermissionDefaults(ctx context.Context, req *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.GetPermissionDefaultsResponse], error) {
 	return c.getPermissionDefaults.CallUnary(ctx, req)
@@ -406,6 +502,12 @@ type OrganizationsServiceHandler interface {
 	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.AddMemberResponse], error)
 	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
+	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
+	ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error)
+	RevokeInvitation(context.Context, *connect.Request[v1.RevokeInvitationRequest]) (*connect.Response[v1.RevokeInvitationResponse], error)
+	ResendInvitation(context.Context, *connect.Request[v1.ResendInvitationRequest]) (*connect.Response[v1.ResendInvitationResponse], error)
+	GetSecuritySettings(context.Context, *connect.Request[v1.GetSecuritySettingsRequest]) (*connect.Response[v1.GetSecuritySettingsResponse], error)
+	UpdateSecuritySettings(context.Context, *connect.Request[v1.UpdateSecuritySettingsRequest]) (*connect.Response[v1.UpdateSecuritySettingsResponse], error)
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.GetPermissionDefaultsResponse], error)
 	UpdatePermissionDefaults(context.Context, *connect.Request[v1.UpdatePermissionDefaultsRequest]) (*connect.Response[v1.UpdatePermissionDefaultsResponse], error)
@@ -496,6 +598,42 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		connect.WithSchema(organizationsServiceMethods.ByName("RemoveMember")),
 		connect.WithHandlerOptions(opts...),
 	)
+	organizationsServiceInviteMemberHandler := connect.NewUnaryHandler(
+		OrganizationsServiceInviteMemberProcedure,
+		svc.InviteMember,
+		connect.WithSchema(organizationsServiceMethods.ByName("InviteMember")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceListInvitationsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceListInvitationsProcedure,
+		svc.ListInvitations,
+		connect.WithSchema(organizationsServiceMethods.ByName("ListInvitations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceRevokeInvitationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceRevokeInvitationProcedure,
+		svc.RevokeInvitation,
+		connect.WithSchema(organizationsServiceMethods.ByName("RevokeInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceResendInvitationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceResendInvitationProcedure,
+		svc.ResendInvitation,
+		connect.WithSchema(organizationsServiceMethods.ByName("ResendInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceGetSecuritySettingsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceGetSecuritySettingsProcedure,
+		svc.GetSecuritySettings,
+		connect.WithSchema(organizationsServiceMethods.ByName("GetSecuritySettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceUpdateSecuritySettingsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceUpdateSecuritySettingsProcedure,
+		svc.UpdateSecuritySettings,
+		connect.WithSchema(organizationsServiceMethods.ByName("UpdateSecuritySettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	organizationsServiceGetPermissionDefaultsHandler := connect.NewUnaryHandler(
 		OrganizationsServiceGetPermissionDefaultsProcedure,
 		svc.GetPermissionDefaults,
@@ -574,6 +712,18 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 			organizationsServiceUpdateMemberRoleHandler.ServeHTTP(w, r)
 		case OrganizationsServiceRemoveMemberProcedure:
 			organizationsServiceRemoveMemberHandler.ServeHTTP(w, r)
+		case OrganizationsServiceInviteMemberProcedure:
+			organizationsServiceInviteMemberHandler.ServeHTTP(w, r)
+		case OrganizationsServiceListInvitationsProcedure:
+			organizationsServiceListInvitationsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceRevokeInvitationProcedure:
+			organizationsServiceRevokeInvitationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceResendInvitationProcedure:
+			organizationsServiceResendInvitationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceGetSecuritySettingsProcedure:
+			organizationsServiceGetSecuritySettingsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceUpdateSecuritySettingsProcedure:
+			organizationsServiceUpdateSecuritySettingsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetPermissionDefaultsProcedure:
 			organizationsServiceGetPermissionDefaultsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceUpdatePermissionDefaultsProcedure:
@@ -643,6 +793,30 @@ func (UnimplementedOrganizationsServiceHandler) UpdateMemberRole(context.Context
 
 func (UnimplementedOrganizationsServiceHandler) RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.RemoveMember is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.InviteMember is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ListInvitations is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) RevokeInvitation(context.Context, *connect.Request[v1.RevokeInvitationRequest]) (*connect.Response[v1.RevokeInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.RevokeInvitation is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) ResendInvitation(context.Context, *connect.Request[v1.ResendInvitationRequest]) (*connect.Response[v1.ResendInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ResendInvitation is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) GetSecuritySettings(context.Context, *connect.Request[v1.GetSecuritySettingsRequest]) (*connect.Response[v1.GetSecuritySettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetSecuritySettings is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) UpdateSecuritySettings(context.Context, *connect.Request[v1.UpdateSecuritySettingsRequest]) (*connect.Response[v1.UpdateSecuritySettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.UpdateSecuritySettings is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) GetPermissionDefaults(context.Context, *connect.Request[v1.GetPermissionDefaultsRequest]) (*connect.Response[v1.GetPermissionDefaultsResponse], error) {

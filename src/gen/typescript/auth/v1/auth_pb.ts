@@ -4,15 +4,17 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { DomainType } from "../../common/v1/common_pb.js";
+import type { DomainType, OrganizationRole } from "../../common/v1/common_pb.js";
 import { file_common_v1_common } from "../../common/v1/common_pb.js";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file auth/v1/auth.proto.
  */
 export const file_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEioAEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCRIWCglmdWxsX25hbWUYBCABKAlIAIgBARIeChFvcmdhbml6YXRpb25fc2x1ZxgFIAEoCUgBiAEBQgwKCl9mdWxsX25hbWVCFAoSX29yZ2FuaXphdGlvbl9zbHVnImUKDExvZ2luUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRIeChFvcmdhbml6YXRpb25fc2x1ZxgDIAEoCUgAiAEBQhQKEl9vcmdhbml6YXRpb25fc2x1ZyJiChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSHgoRb3JnYW5pemF0aW9uX3NsdWcYAiABKAlIAIgBAUIUChJfb3JnYW5pemF0aW9uX3NsdWciFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0Ij0KDUxvZ291dFJlcXVlc3QSGgoNcmVmcmVzaF90b2tlbhgBIAEoCUgAiAEBQhAKDl9yZWZyZXNoX3Rva2VuIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiKgoUUmV2b2tlU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSIcChpSZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdCKpAgoQUmVnaXN0ZXJSZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCKmAgoNTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCKtAgoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGVCEgoQX29yZ2FuaXphdGlvbl9pZEIUChJfb3JnYW5pemF0aW9uX3JvbGVCDQoLX3Nlc3Npb25faWQiwQIKFkdldEN1cnJlbnRVc2VyUmVzcG9uc2USCgoCaWQYASABKAkSDQoFZW1haWwYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSFgoJZnVsbF9uYW1lGAQgASgJSACIAQESEQoJaXNfYWN0aXZlGAUgASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgGIAEoCBIWCg5lbWFpbF92ZXJpZmllZBgHIAEoCBIZCgxhY2NlbnRfY29sb3IYCCABKAlIAYgBARIYCgtmb250X2ZhbWlseRgJIAEoCUgCiAEBEhcKCmF2YXRhcl91cmwYCiABKAlIA4gBARISCgpoYXNfYXZhdGFyGAsgASgIQgwKCl9mdWxsX25hbWVCDwoNX2FjY2VudF9jb2xvckIOCgxfZm9udF9mYW1pbHlCDQoLX2F2YXRhcl91cmwiIQoOTG9nb3V0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKCAQoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCRIVCg1sYXN0X2FjdGl2aXR5GAUgASgJEhIKCmlzX2N1cnJlbnQYBiABKAgiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5hdXRoLnYxLlNlc3Npb25JbmZvIigKFVJldm9rZVNlc3Npb25SZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIjQKG1Jldm9rZU90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgFIhgKFkdldENhY2hlS2V5U2VlZFJlcXVlc3QiMQoXR2V0Q2FjaGVLZXlTZWVkUmVzcG9uc2USFgoOY2FjaGVfa2V5X3NlZWQYASABKAwiSwoZUm90YXRlQ2FjaGVLZXlTZWVkUmVxdWVzdBIbCg50YXJnZXRfdXNlcl9pZBgBIAEoCUgAiAEBQhEKD190YXJnZXRfdXNlcl9pZCI4ChpSb3RhdGVDYWNoZUtleVNlZWRSZXNwb25zZRIaChJuZXdfY2FjaGVfa2V5X3NlZWQYASABKAwylQYKC0F1dGhTZXJ2aWNlEj8KCFJlZ2lzdGVyEhguYXV0aC52MS5SZWdpc3RlclJlcXVlc3QaGS5hdXRoLnYxLlJlZ2lzdGVyUmVzcG9uc2USNgoFTG9naW4SFS5hdXRoLnYxLkxvZ2luUmVxdWVzdBoWLmF1dGgudjEuTG9naW5SZXNwb25zZRJLCgxSZWZyZXNoVG9rZW4SHC5hdXRoLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaHS5hdXRoLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlElEKDkdldEN1cnJlbnRVc2VyEh4uYXV0aC52MS5HZXRDdXJyZW50VXNlclJlcXVlc3QaHy5hdXRoLnYxLkdldEN1cnJlbnRVc2VyUmVzcG9uc2USOQoGTG9nb3V0EhYuYXV0aC52MS5Mb2dvdXRSZXF1ZXN0GhcuYXV0aC52MS5Mb2dvdXRSZXNwb25zZRJLCgxMaXN0U2Vzc2lvbnMSHC5hdXRoLnYxLkxpc3RTZXNzaW9uc1JlcXVlc3QaHS5hdXRoLnYxLkxpc3RTZXNzaW9uc1Jlc3BvbnNlEk4KDVJldm9rZVNlc3Npb24SHS5hdXRoLnYxLlJldm9rZVNlc3Npb25SZXF1ZXN0Gh4uYXV0aC52MS5SZXZva2VTZXNzaW9uUmVzcG9uc2USYAoTUmV2b2tlT3RoZXJTZXNzaW9ucxIjLmF1dGgudjEuUmV2b2tlT3RoZXJTZXNzaW9uc1JlcXVlc3QaJC5hdXRoLnYxLlJldm9rZU90aGVyU2Vzc2lvbnNSZXNwb25zZRJUCg9HZXRDYWNoZUtleVNlZWQSHy5hdXRoLnYxLkdldENhY2hlS2V5U2VlZFJlcXVlc3QaIC5hdXRoLnYxLkdldENhY2hlS2V5U2VlZFJlc3BvbnNlEl0KElJvdGF0ZUNhY2hlS2V5U2VlZBIiLmF1dGgudjEuUm90YXRlQ2FjaGVLZXlTZWVkUmVxdWVzdBojLmF1dGgudjEuUm90YXRlQ2FjaGVLZXlTZWVkUmVzcG9uc2VCN1o1Z2l0aHViLmNvbS9BdGhlbm5hTWluZC91bmlmZnktcHJvdG8tZ28vYXV0aC92MTthdXRodjFiBnByb3RvMw", [file_common_v1_common]);
+  fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEioAEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCRIWCglmdWxsX25hbWUYBCABKAlIAIgBARIeChFvcmdhbml6YXRpb25fc2x1ZxgFIAEoCUgBiAEBQgwKCl9mdWxsX25hbWVCFAoSX29yZ2FuaXphdGlvbl9zbHVnImUKDExvZ2luUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRIeChFvcmdhbml6YXRpb25fc2x1ZxgDIAEoCUgAiAEBQhQKEl9vcmdhbml6YXRpb25fc2x1ZyJiChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSHgoRb3JnYW5pemF0aW9uX3NsdWcYAiABKAlIAIgBAUIUChJfb3JnYW5pemF0aW9uX3NsdWciFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0Ij0KDUxvZ291dFJlcXVlc3QSGgoNcmVmcmVzaF90b2tlbhgBIAEoCUgAiAEBQhAKDl9yZWZyZXNoX3Rva2VuIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiKgoUUmV2b2tlU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSIcChpSZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdCKpAgoQUmVnaXN0ZXJSZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCKmAgoNTG9naW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCKtAgoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGVCEgoQX29yZ2FuaXphdGlvbl9pZEIUChJfb3JnYW5pemF0aW9uX3JvbGVCDQoLX3Nlc3Npb25faWQiwQIKFkdldEN1cnJlbnRVc2VyUmVzcG9uc2USCgoCaWQYASABKAkSDQoFZW1haWwYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSFgoJZnVsbF9uYW1lGAQgASgJSACIAQESEQoJaXNfYWN0aXZlGAUgASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgGIAEoCBIWCg5lbWFpbF92ZXJpZmllZBgHIAEoCBIZCgxhY2NlbnRfY29sb3IYCCABKAlIAYgBARIYCgtmb250X2ZhbWlseRgJIAEoCUgCiAEBEhcKCmF2YXRhcl91cmwYCiABKAlIA4gBARISCgpoYXNfYXZhdGFyGAsgASgIQgwKCl9mdWxsX25hbWVCDwoNX2FjY2VudF9jb2xvckIOCgxfZm9udF9mYW1pbHlCDQoLX2F2YXRhcl91cmwiIQoOTG9nb3V0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKCAQoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCRIVCg1sYXN0X2FjdGl2aXR5GAUgASgJEhIKCmlzX2N1cnJlbnQYBiABKAgiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5hdXRoLnYxLlNlc3Npb25JbmZvIigKFVJldm9rZVNlc3Npb25SZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIjQKG1Jldm9rZU90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgFIhgKFkdldENhY2hlS2V5U2VlZFJlcXVlc3QiMQoXR2V0Q2FjaGVLZXlTZWVkUmVzcG9uc2USFgoOY2FjaGVfa2V5X3NlZWQYASABKAwiSwoZUm90YXRlQ2FjaGVLZXlTZWVkUmVxdWVzdBIbCg50YXJnZXRfdXNlcl9pZBgBIAEoCUgAiAEBQhEKD190YXJnZXRfdXNlcl9pZCI4ChpSb3RhdGVDYWNoZUtleVNlZWRSZXNwb25zZRIaChJuZXdfY2FjaGVfa2V5X3NlZWQYASABKAwiFgoUR2V0QXV0aENvbmZpZ1JlcXVlc3QiPAoVR2V0QXV0aENvbmZpZ1Jlc3BvbnNlEiMKG3B1YmxpY19yZWdpc3RyYXRpb25fZW5hYmxlZBgBIAEoCCIlChRHZXRJbnZpdGF0aW9uUmVxdWVzdBINCgV0b2tlbhgBIAEoCSKMAgoVR2V0SW52aXRhdGlvblJlc3BvbnNlEg0KBWVtYWlsGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIZChFvcmdhbml6YXRpb25fbmFtZRgDIAEoCRIZChFvcmdhbml6YXRpb25fc2x1ZxgEIAEoCRIhChRpbnZpdGVyX2Rpc3BsYXlfbmFtZRgFIAEoCUgAiAEBEikKBHJvbGUYBiABKA4yGy5jb21tb24udjEuT3JnYW5pemF0aW9uUm9sZRIuCgpleHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIXChVfaW52aXRlcl9kaXNwbGF5X25hbWUicgoXQWNjZXB0SW52aXRhdGlvblJlcXVlc3QSDQoFdG9rZW4YASABKAkSEAoIdXNlcm5hbWUYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSFgoJZnVsbF9uYW1lGAQgASgJSACIAQFCDAoKX2Z1bGxfbmFtZSLpAQoYQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhIKCnRva2VuX3R5cGUYAyABKAkSDwoHdXNlcl9pZBgEIAEoCRIXCg9vcmdhbml6YXRpb25faWQYBSABKAkSGQoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAkSEgoKc2Vzc2lvbl9pZBgHIAEoCRIzChRkb21haW5fYWRtaW5fZG9tYWlucxgIIAMoDjIVLmNvbW1vbi52MS5Eb21haW5UeXBlIikKGFNlbmRQYXNzd29yZFJlc2V0UmVxdWVzdBINCgVlbWFpbBgBIAEoCSIbChlTZW5kUGFzc3dvcmRSZXNldFJlc3BvbnNlIjAKH1ZlcmlmeVBhc3N3b3JkUmVzZXRUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkiYQogVmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuUmVzcG9uc2USDQoFZW1haWwYASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOwoUUmVzZXRQYXNzd29yZFJlcXVlc3QSDQoFdG9rZW4YASABKAkSFAoMbmV3X3Bhc3N3b3JkGAIgASgJIigKFVJlc2V0UGFzc3dvcmRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIMqsKCgtBdXRoU2VydmljZRI/CghSZWdpc3RlchIYLmF1dGgudjEuUmVnaXN0ZXJSZXF1ZXN0GhkuYXV0aC52MS5SZWdpc3RlclJlc3BvbnNlEjYKBUxvZ2luEhUuYXV0aC52MS5Mb2dpblJlcXVlc3QaFi5hdXRoLnYxLkxvZ2luUmVzcG9uc2USSwoMUmVmcmVzaFRva2VuEhwuYXV0aC52MS5SZWZyZXNoVG9rZW5SZXF1ZXN0Gh0uYXV0aC52MS5SZWZyZXNoVG9rZW5SZXNwb25zZRJRCg5HZXRDdXJyZW50VXNlchIeLmF1dGgudjEuR2V0Q3VycmVudFVzZXJSZXF1ZXN0Gh8uYXV0aC52MS5HZXRDdXJyZW50VXNlclJlc3BvbnNlEjkKBkxvZ291dBIWLmF1dGgudjEuTG9nb3V0UmVxdWVzdBoXLmF1dGgudjEuTG9nb3V0UmVzcG9uc2USSwoMTGlzdFNlc3Npb25zEhwuYXV0aC52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0Gh0uYXV0aC52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZRJOCg1SZXZva2VTZXNzaW9uEh0uYXV0aC52MS5SZXZva2VTZXNzaW9uUmVxdWVzdBoeLmF1dGgudjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlEmAKE1Jldm9rZU90aGVyU2Vzc2lvbnMSIy5hdXRoLnYxLlJldm9rZU90aGVyU2Vzc2lvbnNSZXF1ZXN0GiQuYXV0aC52MS5SZXZva2VPdGhlclNlc3Npb25zUmVzcG9uc2USVAoPR2V0Q2FjaGVLZXlTZWVkEh8uYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXF1ZXN0GiAuYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXNwb25zZRJdChJSb3RhdGVDYWNoZUtleVNlZWQSIi5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlcXVlc3QaIy5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlc3BvbnNlEk4KDUdldEF1dGhDb25maWcSHS5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0Gh4uYXV0aC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2USTgoNR2V0SW52aXRhdGlvbhIdLmF1dGgudjEuR2V0SW52aXRhdGlvblJlcXVlc3QaHi5hdXRoLnYxLkdldEludml0YXRpb25SZXNwb25zZRJXChBBY2NlcHRJbnZpdGF0aW9uEiAuYXV0aC52MS5BY2NlcHRJbnZpdGF0aW9uUmVxdWVzdBohLmF1dGgudjEuQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlEloKEVNlbmRQYXNzd29yZFJlc2V0EiEuYXV0aC52MS5TZW5kUGFzc3dvcmRSZXNldFJlcXVlc3QaIi5hdXRoLnYxLlNlbmRQYXNzd29yZFJlc2V0UmVzcG9uc2USbwoYVmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuEiguYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXF1ZXN0GikuYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXNwb25zZRJOCg1SZXNldFBhc3N3b3JkEh0uYXV0aC52MS5SZXNldFBhc3N3b3JkUmVxdWVzdBoeLmF1dGgudjEuUmVzZXRQYXNzd29yZFJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL2F1dGgvdjE7YXV0aHYxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Request to register a new user
@@ -664,6 +666,313 @@ export const RotateCacheKeySeedResponseSchema: GenMessage<RotateCacheKeySeedResp
   messageDesc(file_auth_v1_auth, 20);
 
 /**
+ * Request public auth configuration (no auth required)
+ *
+ * @generated from message auth.v1.GetAuthConfigRequest
+ */
+export type GetAuthConfigRequest = Message<"auth.v1.GetAuthConfigRequest"> & {
+};
+
+/**
+ * Describes the message auth.v1.GetAuthConfigRequest.
+ * Use `create(GetAuthConfigRequestSchema)` to create a new message.
+ */
+export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 21);
+
+/**
+ * Public auth configuration the login / register pages need
+ *
+ * @generated from message auth.v1.GetAuthConfigResponse
+ */
+export type GetAuthConfigResponse = Message<"auth.v1.GetAuthConfigResponse"> & {
+  /**
+   * @generated from field: bool public_registration_enabled = 1;
+   */
+  publicRegistrationEnabled: boolean;
+};
+
+/**
+ * Describes the message auth.v1.GetAuthConfigResponse.
+ * Use `create(GetAuthConfigResponseSchema)` to create a new message.
+ */
+export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 22);
+
+/**
+ * Preview an invitation before showing the accept form
+ *
+ * @generated from message auth.v1.GetInvitationRequest
+ */
+export type GetInvitationRequest = Message<"auth.v1.GetInvitationRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message auth.v1.GetInvitationRequest.
+ * Use `create(GetInvitationRequestSchema)` to create a new message.
+ */
+export const GetInvitationRequestSchema: GenMessage<GetInvitationRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 23);
+
+/**
+ * @generated from message auth.v1.GetInvitationResponse
+ */
+export type GetInvitationResponse = Message<"auth.v1.GetInvitationResponse"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string organization_name = 3;
+   */
+  organizationName: string;
+
+  /**
+   * @generated from field: string organization_slug = 4;
+   */
+  organizationSlug: string;
+
+  /**
+   * @generated from field: optional string inviter_display_name = 5;
+   */
+  inviterDisplayName?: string | undefined;
+
+  /**
+   * @generated from field: common.v1.OrganizationRole role = 6;
+   */
+  role: OrganizationRole;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message auth.v1.GetInvitationResponse.
+ * Use `create(GetInvitationResponseSchema)` to create a new message.
+ */
+export const GetInvitationResponseSchema: GenMessage<GetInvitationResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 24);
+
+/**
+ * Accept an invitation; this creates the user + membership and returns auth tokens.
+ *
+ * @generated from message auth.v1.AcceptInvitationRequest
+ */
+export type AcceptInvitationRequest = Message<"auth.v1.AcceptInvitationRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string username = 2;
+   */
+  username: string;
+
+  /**
+   * Min 8 characters
+   *
+   * @generated from field: string password = 3;
+   */
+  password: string;
+
+  /**
+   * @generated from field: optional string full_name = 4;
+   */
+  fullName?: string | undefined;
+};
+
+/**
+ * Describes the message auth.v1.AcceptInvitationRequest.
+ * Use `create(AcceptInvitationRequestSchema)` to create a new message.
+ */
+export const AcceptInvitationRequestSchema: GenMessage<AcceptInvitationRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 25);
+
+/**
+ * @generated from message auth.v1.AcceptInvitationResponse
+ */
+export type AcceptInvitationResponse = Message<"auth.v1.AcceptInvitationResponse"> & {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+
+  /**
+   * Always "bearer"
+   *
+   * @generated from field: string token_type = 3;
+   */
+  tokenType: string;
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string organization_id = 5;
+   */
+  organizationId: string;
+
+  /**
+   * MEMBER / ADMIN / OWNER
+   *
+   * @generated from field: string organization_role = 6;
+   */
+  organizationRole: string;
+
+  /**
+   * @generated from field: string session_id = 7;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
+   */
+  domainAdminDomains: DomainType[];
+};
+
+/**
+ * Describes the message auth.v1.AcceptInvitationResponse.
+ * Use `create(AcceptInvitationResponseSchema)` to create a new message.
+ */
+export const AcceptInvitationResponseSchema: GenMessage<AcceptInvitationResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 26);
+
+/**
+ * @generated from message auth.v1.SendPasswordResetRequest
+ */
+export type SendPasswordResetRequest = Message<"auth.v1.SendPasswordResetRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+};
+
+/**
+ * Describes the message auth.v1.SendPasswordResetRequest.
+ * Use `create(SendPasswordResetRequestSchema)` to create a new message.
+ */
+export const SendPasswordResetRequestSchema: GenMessage<SendPasswordResetRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 27);
+
+/**
+ * Intentionally empty -- the RPC never reveals whether the email exists.
+ *
+ * @generated from message auth.v1.SendPasswordResetResponse
+ */
+export type SendPasswordResetResponse = Message<"auth.v1.SendPasswordResetResponse"> & {
+};
+
+/**
+ * Describes the message auth.v1.SendPasswordResetResponse.
+ * Use `create(SendPasswordResetResponseSchema)` to create a new message.
+ */
+export const SendPasswordResetResponseSchema: GenMessage<SendPasswordResetResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 28);
+
+/**
+ * @generated from message auth.v1.VerifyPasswordResetTokenRequest
+ */
+export type VerifyPasswordResetTokenRequest = Message<"auth.v1.VerifyPasswordResetTokenRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message auth.v1.VerifyPasswordResetTokenRequest.
+ * Use `create(VerifyPasswordResetTokenRequestSchema)` to create a new message.
+ */
+export const VerifyPasswordResetTokenRequestSchema: GenMessage<VerifyPasswordResetTokenRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 29);
+
+/**
+ * @generated from message auth.v1.VerifyPasswordResetTokenResponse
+ */
+export type VerifyPasswordResetTokenResponse = Message<"auth.v1.VerifyPasswordResetTokenResponse"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 2;
+   */
+  expiresAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message auth.v1.VerifyPasswordResetTokenResponse.
+ * Use `create(VerifyPasswordResetTokenResponseSchema)` to create a new message.
+ */
+export const VerifyPasswordResetTokenResponseSchema: GenMessage<VerifyPasswordResetTokenResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 30);
+
+/**
+ * @generated from message auth.v1.ResetPasswordRequest
+ */
+export type ResetPasswordRequest = Message<"auth.v1.ResetPasswordRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * Min 8 characters
+   *
+   * @generated from field: string new_password = 2;
+   */
+  newPassword: string;
+};
+
+/**
+ * Describes the message auth.v1.ResetPasswordRequest.
+ * Use `create(ResetPasswordRequestSchema)` to create a new message.
+ */
+export const ResetPasswordRequestSchema: GenMessage<ResetPasswordRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 31);
+
+/**
+ * @generated from message auth.v1.ResetPasswordResponse
+ */
+export type ResetPasswordResponse = Message<"auth.v1.ResetPasswordResponse"> & {
+  /**
+   * The reset bumps token_version so every existing session is gone;
+   * the client should redirect the user to /auth to sign in fresh.
+   *
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+};
+
+/**
+ * Describes the message auth.v1.ResetPasswordResponse.
+ * Use `create(ResetPasswordResponseSchema)` to create a new message.
+ */
+export const ResetPasswordResponseSchema: GenMessage<ResetPasswordResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 32);
+
+/**
  * AuthService handles user authentication (login, register, token refresh).
  * For user management, see users.v1.UsersService.
  * For organization management, see organizations.v1.OrganizationsService.
@@ -771,6 +1080,66 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RotateCacheKeySeedRequestSchema;
     output: typeof RotateCacheKeySeedResponseSchema;
+  },
+  /**
+   * Public auth configuration (e.g. whether registration is open).
+   *
+   * @generated from rpc auth.v1.AuthService.GetAuthConfig
+   */
+  getAuthConfig: {
+    methodKind: "unary";
+    input: typeof GetAuthConfigRequestSchema;
+    output: typeof GetAuthConfigResponseSchema;
+  },
+  /**
+   * Preview an invitation by token (un-authenticated).
+   *
+   * @generated from rpc auth.v1.AuthService.GetInvitation
+   */
+  getInvitation: {
+    methodKind: "unary";
+    input: typeof GetInvitationRequestSchema;
+    output: typeof GetInvitationResponseSchema;
+  },
+  /**
+   * Accept an invitation by token; creates the user + membership and logs them in.
+   *
+   * @generated from rpc auth.v1.AuthService.AcceptInvitation
+   */
+  acceptInvitation: {
+    methodKind: "unary";
+    input: typeof AcceptInvitationRequestSchema;
+    output: typeof AcceptInvitationResponseSchema;
+  },
+  /**
+   * Request a password reset link (always returns success; no enumeration).
+   *
+   * @generated from rpc auth.v1.AuthService.SendPasswordReset
+   */
+  sendPasswordReset: {
+    methodKind: "unary";
+    input: typeof SendPasswordResetRequestSchema;
+    output: typeof SendPasswordResetResponseSchema;
+  },
+  /**
+   * Preview a password reset token before showing the form.
+   *
+   * @generated from rpc auth.v1.AuthService.VerifyPasswordResetToken
+   */
+  verifyPasswordResetToken: {
+    methodKind: "unary";
+    input: typeof VerifyPasswordResetTokenRequestSchema;
+    output: typeof VerifyPasswordResetTokenResponseSchema;
+  },
+  /**
+   * Consume a password reset token to set a new password.
+   *
+   * @generated from rpc auth.v1.AuthService.ResetPassword
+   */
+  resetPassword: {
+    methodKind: "unary";
+    input: typeof ResetPasswordRequestSchema;
+    output: typeof ResetPasswordResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_auth_v1_auth, 0);

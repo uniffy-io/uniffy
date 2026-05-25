@@ -1,0 +1,10 @@
+{% extends "base.html.j2" %}
+{% block title %}You were added to {{ org_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">You are now a member of {{ org_name }}.</p>
+<p style="margin:0 0 16px 0;">{{ inviter_name }} added you to <strong>{{ org_name }}</strong> on Uniffy as a <strong>{{ role }}</strong>. Your existing Uniffy account already has access -- no setup needed.</p>
+<p style="margin:0 0 24px 0;">
+  <a href="{{ app_url }}" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">Open Uniffy</a>
+</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">If this looks unexpected, contact your organization administrator.</p>
+{% endblock %}

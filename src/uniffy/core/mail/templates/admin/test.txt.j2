@@ -1,0 +1,12 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+Mail delivery is working.
+
+This is a test message dispatched from the Uniffy admin panel.
+
+  Sent at: {{ sent_at }}
+  Source:  {{ config_source }}
+{% if org_name is defined and org_name %}
+  Organization: {{ org_name }}
+{% endif %}
+{% endblock %}

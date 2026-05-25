@@ -27,6 +27,11 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'auth.token_revoked', label: 'Token revoked' },
             { value: 'auth.password_changed', label: 'Password changed' },
             { value: 'auth.session_terminated', label: 'Session terminated' },
+            { value: 'auth.register_rejected', label: 'Registration rejected' },
+            { value: 'auth.invitation_accepted', label: 'Invitation accepted' },
+            { value: 'auth.password_reset_requested', label: 'Password reset requested' },
+            { value: 'auth.password_reset_completed', label: 'Password reset completed' },
+            { value: 'auth.password_reset_blocked', label: 'Password reset blocked' },
         ],
     },
     {
@@ -55,6 +60,11 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'organization.member_removed', label: 'Member removed' },
             { value: 'organization.member_role_changed', label: 'Member role changed' },
             { value: 'organization.deleted', label: 'Deleted' },
+            { value: 'organization.member_invited', label: 'Member invited' },
+            { value: 'organization.member_added_via_invite', label: 'Member added via invite' },
+            { value: 'organization.invitation_revoked', label: 'Invitation revoked' },
+            { value: 'organization.invitation_resent', label: 'Invitation resent' },
+            { value: 'organization.security_settings_changed', label: 'Security settings changed' },
         ],
     },
     {
@@ -205,6 +215,19 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
             { value: 'chat_channel.member_removed', label: 'Channel member removed' },
             { value: 'chat_channel.member_kicked', label: 'Channel member kicked' },
             { value: 'chat_message.deleted_by_admin', label: 'Message deleted by admin' },
+        ],
+    },
+    {
+        domain: 'mail',
+        label: 'Email',
+        badgeClass:
+            'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+        actions: [
+            { value: 'mail.sent', label: 'Sent' },
+            { value: 'mail.send_failed', label: 'Send failed' },
+            { value: 'mail.suppressed', label: 'Suppressed' },
+            { value: 'mail.config_updated', label: 'Config updated' },
+            { value: 'mail.config_cleared', label: 'Config cleared' },
         ],
     },
     {

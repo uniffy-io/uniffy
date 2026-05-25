@@ -201,55 +201,6 @@ async def deliver_push_notification(
     return {"status": "success" if ok else "skipped"}
 
 
-async def deliver_email_notification(
-    ctx: dict[str, Any],
-    user_id: str,
-    title: str,
-    body: str,
-    source_urn: str | None = None,
-) -> dict[str, Any]:
-    """
-    Deliver an email notification to a user.
-
-    Standalone ARQ job for retryable email delivery.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context dictionary.
-    user_id : str
-        Recipient user ID.
-    title : str
-        Notification title.
-    body : str
-        Notification body.
-    source_urn : str | None
-        URN of the related content.
-
-    Returns
-    -------
-    dict
-        Delivery result.
-
-    """
-    email_adapter = DELIVERY_ADAPTERS.get("email")
-    if not email_adapter:
-        return {"status": "skipped", "reason": "no_email_adapter"}
-
-    uid = UUID(user_id)
-    event = NotificationEvent(
-        notification_type=NotificationType.SYSTEM_ANNOUNCEMENT,
-        organization_id=UUID("00000000-0000-0000-0000-000000000000"),
-        actor_id=uid,
-        title=title,
-        body=body,
-        source_urn=source_urn,
-    )
-
-    ok = await email_adapter.deliver(uid, event)
-    return {"status": "success" if ok else "deferred"}
-
-
 async def send_email_digest(ctx: dict[str, Any]) -> dict[str, Any]:
     """
     Periodic cron job: aggregate unread notifications and send email digests.

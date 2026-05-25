@@ -48,6 +48,11 @@ class Action:
     AUTH_TOKEN_REVOKED = "auth.token_revoked"
     AUTH_PASSWORD_CHANGED = "auth.password_changed"
     AUTH_SESSION_TERMINATED = "auth.session_terminated"
+    AUTH_REGISTER_REJECTED = "auth.register_rejected"
+    AUTH_INVITATION_ACCEPTED = "auth.invitation_accepted"
+    AUTH_PASSWORD_RESET_REQUESTED = "auth.password_reset_requested"
+    AUTH_PASSWORD_RESET_COMPLETED = "auth.password_reset_completed"
+    AUTH_PASSWORD_RESET_BLOCKED = "auth.password_reset_blocked"
 
     # Users
     USER_INVITED = "user.invited"
@@ -65,6 +70,11 @@ class Action:
     ORGANIZATION_MEMBER_ROLE_CHANGED = "organization.member_role_changed"
     ORGANIZATION_DELETED = "organization.deleted"
     ORGANIZATION_ENCRYPTION_KEY_ROTATED = "organization.encryption_key_rotated"
+    ORGANIZATION_MEMBER_INVITED = "organization.member_invited"
+    ORGANIZATION_MEMBER_ADDED_VIA_INVITE = "organization.member_added_via_invite"
+    ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
+    ORGANIZATION_INVITATION_RESENT = "organization.invitation_resent"
+    ORGANIZATION_SECURITY_SETTINGS_CHANGED = "organization.security_settings_changed"
 
     # Permissions (sourced via core/content/members.py emissions)
     PERMISSIONS_MEMBER_ADDED = "permissions.member_added"
@@ -167,6 +177,13 @@ class Action:
     CHAT_CHANNEL_MEMBER_REMOVED = "chat_channel.member_removed"
     CHAT_CHANNEL_MEMBER_KICKED = "chat_channel.member_kicked"
     CHAT_MESSAGE_DELETED_BY_ADMIN = "chat_message.deleted_by_admin"
+
+    # Mail
+    MAIL_SENT = "mail.sent"
+    MAIL_SEND_FAILED = "mail.send_failed"
+    MAIL_SUPPRESSED = "mail.suppressed"
+    MAIL_CONFIG_UPDATED = "mail.config_updated"
+    MAIL_CONFIG_CLEARED = "mail.config_cleared"
 
     # Rooms
     ROOM_CREATED = "room.created"

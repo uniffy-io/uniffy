@@ -4,6 +4,32 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 
 ---
 
+## Two Product Targets (NON-NEGOTIABLE)
+
+Every feature must work in BOTH deployment modes. The same codebase ships as:
+
+1. **`cloud.uniffy.io`** - our hosted multi-tenant SaaS. We run the infra, the database, the mail relay, the storage. Tenants share a single deployment. Platform admins (Uniffy operators) exist as a distinct role from tenant org admins.
+2. **Self-hosted** - paid license, customer runs their own deployment. Usually single-tenant (one org), occasionally multi-tenant. The customer is the operator AND the org owner; there is no Uniffy in the loop.
+
+### Implications for every change
+
+- **No cloud-only assumptions.** Anything that requires an external service must either (a) be optional with a sane local fallback, or (b) be configurable via env so a self-hoster can point it at their own infra (their SMTP, their S3-compatible storage, their LLM provider keys). Never hardcode a vendor.
+- **No self-hosted-only assumptions either.** A new flow must not break on multi-tenant. Anything that touches shared resources needs an `organization_id` scope from day one.
+- **Configuration tiers are layered, not branched.** Patterns we already use, repeat them in new work:
+  - Env tier (deploy-time default, used by self-hosters and as the cloud fallback)
+  - Per-org tier in DB (cloud tenants override; self-hosters may use it but usually do not need to)
+  - Resolution chain: per-org row -> env default -> typed error. See `core/mail/resolver.py`.
+- **Admin surfaces are scoped:** `/admin/*` = org admin (one tenant). `/platform/*` = platform admin (cloud operator, cross-tenant). Build new admin pages under the correct surface; do not mix them. Platform admins must not casually see tenant content - separation is enforced via `PlatformLayout` + permission gates, not by hiding nav entries.
+- **Privacy posture on cloud.** Platform operators do not auto-bypass `PermissionChecker`. Access to tenant content goes through a time-bound, audit-logged `SupportSession` that the org owner can see live and revoke. Never add a code path that lets `is_system_admin=true` read a tenant's content without one. See `.claude/plans/platform-admin-surface.md`.
+- **Secrets at rest belong to the tenant.** Per-org secrets (SMTP password, agent provider keys, future webhooks) encrypt with `OrgCipher`, never with a shared key. Self-hosters get the same envelope encryption as cloud tenants - the only difference is who holds the master KEK.
+- **Telemetry / phone-home is off by default.** Self-hosters must be able to run fully air-gapped. Any analytics, error reporting, or CDN asset fetch is forbidden at runtime (see rule 25 below) and any optional opt-in must be off in defaults.
+- **Migrations and seed data assume neither.** Bootstrap flows must work for "fresh deploy, one org, one admin" (self-hosted day one) AND for "fresh deploy, no orgs yet" (cloud day one). Do not seed cloud-only fixtures into the migration runner.
+- **Docs and ops UX must cover both.** When you add a setting, add it to `.env.example` (self-hosters read this) AND surface it in the relevant admin page (cloud operators do not edit env). When you ship a flow that needs configuration before it works, document both paths.
+
+When a design decision pulls in opposite directions (e.g. "ship Resend SDK for great cloud deliverability" vs "use generic SMTP so self-hosters can plug in Postfix"), pick the option that satisfies both unless one is impossible - then make the more general path the default and gate the specialized path behind a flag. Recent example: we dropped the Resend SDK in favor of SMTP (Resend ships an SMTP relay) so one backend covers every provider on both products.
+
+---
+
 ## Commands
 
 ```bash

@@ -29,6 +29,14 @@ service OrganizationsService {
   rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
   rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
 
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+  rpc ResendInvitation(ResendInvitationRequest) returns (ResendInvitationResponse);
+
+  rpc GetSecuritySettings(GetSecuritySettingsRequest) returns (GetSecuritySettingsResponse);
+  rpc UpdateSecuritySettings(UpdateSecuritySettingsRequest) returns (UpdateSecuritySettingsResponse);
+
   // Permission defaults (Org Admin)
   rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (GetPermissionDefaultsResponse);
   rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (UpdatePermissionDefaultsResponse);
@@ -301,4 +309,88 @@ message RotateEncryptionKeyResponse {
   int32 previous_version = 2;
   // When the rotation finished.
   google.protobuf.Timestamp rotated_at = 3;
+}
+
+// Invitation status surfaced to the admin UI. Computed from row state, not stored.
+enum InvitationStatus {
+  INVITATION_STATUS_UNSPECIFIED = 0;
+  INVITATION_STATUS_PENDING = 1;
+  INVITATION_STATUS_ACCEPTED = 2;
+  INVITATION_STATUS_REVOKED = 3;
+  INVITATION_STATUS_EXPIRED = 4;
+}
+
+message Invitation {
+  string id = 1;
+  string organization_id = 2;
+  string email = 3;
+  common.v1.OrganizationRole role = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  google.protobuf.Timestamp created_at = 6;
+  optional google.protobuf.Timestamp accepted_at = 7;
+  optional google.protobuf.Timestamp revoked_at = 8;
+  optional string invited_by_user_id = 9;
+  optional string invited_by_display_name = 10;
+  InvitationStatus status = 11;
+}
+
+message InviteMemberRequest {
+  string organization_id = 1;
+  string email = 2;
+  common.v1.OrganizationRole role = 3;
+}
+
+// Two-shape response: existing user becomes a member immediately;
+// a brand-new email gets a pending invitation row to accept.
+message InviteMemberResponse {
+  oneof result {
+    common.v1.MemberInfo added_member = 1;
+    Invitation invitation = 2;
+  }
+}
+
+message ListInvitationsRequest {
+  string organization_id = 1;
+  optional InvitationStatus status = 2;
+}
+
+message ListInvitationsResponse {
+  repeated Invitation invitations = 1;
+}
+
+message RevokeInvitationRequest {
+  string invitation_id = 1;
+}
+
+message RevokeInvitationResponse {
+  Invitation invitation = 1;
+}
+
+message ResendInvitationRequest {
+  string invitation_id = 1;
+}
+
+message ResendInvitationResponse {
+  Invitation invitation = 1;
+}
+
+message SecuritySettings {
+  bool password_reset_enabled = 1;
+}
+
+message GetSecuritySettingsRequest {
+  string organization_id = 1;
+}
+
+message GetSecuritySettingsResponse {
+  SecuritySettings settings = 1;
+}
+
+message UpdateSecuritySettingsRequest {
+  string organization_id = 1;
+  bool password_reset_enabled = 2;
+}
+
+message UpdateSecuritySettingsResponse {
+  SecuritySettings settings = 1;
 }
