@@ -34,10 +34,13 @@ from uniffy.domains.platform.support_session.errors import (
     SupportSessionTransitionError,
 )
 from uniffy.domains.platform.support_session.operations import (
-    DEFAULT_DURATION_MINUTES,
-    MAX_DURATION_MINUTES,
     SupportSessionOperations,
     _clamp_duration,
+)
+from uniffy.domains.platform.support_session.policy import (
+    DEFAULT_DURATION_FLOOR_MINUTES,
+    deployment_default_duration_minutes,
+    deployment_max_duration_minutes,
 )
 
 
@@ -47,16 +50,20 @@ def _run(coro):
 
 class TestClampDuration:
     def test_zero_falls_to_default(self) -> None:
-        assert _clamp_duration(0) == DEFAULT_DURATION_MINUTES
+        assert _clamp_duration(0) == deployment_default_duration_minutes()
 
     def test_negative_falls_to_default(self) -> None:
-        assert _clamp_duration(-5) == DEFAULT_DURATION_MINUTES
+        assert _clamp_duration(-5) == deployment_default_duration_minutes()
 
     def test_above_max_clamps(self) -> None:
-        assert _clamp_duration(MAX_DURATION_MINUTES + 10) == MAX_DURATION_MINUTES
+        ceiling = deployment_max_duration_minutes()
+        assert _clamp_duration(ceiling + 10) == ceiling
 
     def test_inside_range_passes_through(self) -> None:
         assert _clamp_duration(45) == 45
+
+    def test_below_floor_clamps_up_to_floor(self) -> None:
+        assert _clamp_duration(1) == DEFAULT_DURATION_FLOOR_MINUTES
 
 
 class TestTtlUntil:
@@ -317,7 +324,14 @@ class TestAuditWriterMerge:
         finally:
             active_support_session_var.reset(token)
 
-    def test_merge_does_not_clobber_explicit_actor_kind(self) -> None:
+    def test_merge_overwrites_explicit_actor_kind_under_session(self) -> None:
+        """A session tag is a fact about the request, not a caller opinion.
+
+        The merger now overwrites ``actor_kind`` unconditionally and
+        moves the caller's prior value to ``actor_kind_pre`` so audit
+        readers can still see the inner attribution (agent / system
+        action originator).
+        """
         from uniffy.core.audit.writer import _merge_support_session_tag
 
         org_id = uuid4()
@@ -332,7 +346,9 @@ class TestAuditWriterMerge:
         try:
             details: dict = {"actor_kind": "agent"}
             _merge_support_session_tag(details, org_id)
-            assert details["actor_kind"] == "agent"
-            assert "support_session_id" not in details
+            assert details["actor_kind"] == "support"
+            assert details["actor_kind_pre"] == "agent"
+            assert details["support_session_id"]
+            assert details["scope"] == "READ_ONLY"
         finally:
             active_support_session_var.reset(token)

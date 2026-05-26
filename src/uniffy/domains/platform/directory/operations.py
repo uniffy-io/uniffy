@@ -48,11 +48,45 @@ from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.domains.auth.revocation import mark_token_version_revoked
 from uniffy.domains.users.operations import UserOperations
+
+
+async def _safe_publish_token_revoke(user_id: UUID, version: int) -> None:
+    """Publish the realtime token-revoke ping with a warning on failure.
+
+    The Valkey ``min_tkv`` watermark is the authoritative gate now
+    (set before this is called); the realtime publish is a UX-only
+    nudge so live WebSockets close immediately. Surfacing the failure
+    keeps a Valkey pubsub outage visible in logs rather than silent.
+    """
+    try:
+        await publish_token_revoke(user_id, version)
+    except Exception:
+        logger.warning(
+            "platform: realtime token_revoke publish failed; "
+            "the min_tkv watermark still enforces revocation on next request",
+            user_id=str(user_id),
+            version=version,
+        )
+
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
 PURGE_GRACE_DAYS = 30
+
+# Per-operator throughput caps on platform mutations. Cheap insurance
+# against a compromised operator account or a runaway script
+# fan-out: the limits are well above legitimate hand-driven use.
+_PLATFORM_MUTATION_LIMIT = 20
+_PLATFORM_MUTATION_WINDOW_SECONDS = 60
+_PLATFORM_SUSPEND_LIMIT = 10
+_PLATFORM_SUSPEND_WINDOW_SECONDS = 60
+
+
+def _operator_mutation_key(user_id: UUID, scope: str) -> str:
+    return f"rl:platform:{scope}:{user_id}"
 
 
 class PlatformOrgSummary(NamedTuple):
@@ -291,6 +325,12 @@ class PlatformDirectoryOperations:
     ) -> PlatformOrgDetail:
         """Block sign-in + revoke every member's existing JWTs."""
         await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "suspend"),
+            limit=_PLATFORM_SUSPEND_LIMIT,
+            window_seconds=_PLATFORM_SUSPEND_WINDOW_SECONDS,
+            resource="platform organization suspensions",
+        )
         reason = reason.strip()
         if not reason:
             raise ValidationError("reason", "reason is required")
@@ -379,6 +419,12 @@ class PlatformDirectoryOperations:
     ) -> PlatformOrgDetail:
         """Soft-delete: stamp ``deleted_at``. ARQ purges 30d later."""
         await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "delete_org"),
+            limit=_PLATFORM_SUSPEND_LIMIT,
+            window_seconds=_PLATFORM_SUSPEND_WINDOW_SECONDS,
+            resource="platform organization deletions",
+        )
         reason = reason.strip()
         if not reason:
             raise ValidationError("reason", "reason is required")
@@ -568,6 +614,12 @@ class PlatformDirectoryOperations:
     ) -> None:
         """Bump ``token_version`` on one user. Kills every existing JWT."""
         await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "force_logout"),
+            limit=_PLATFORM_MUTATION_LIMIT,
+            window_seconds=_PLATFORM_MUTATION_WINDOW_SECONDS,
+            resource="platform force-logout",
+        )
         reason = reason.strip()
         if not reason:
             raise ValidationError("reason", "reason is required")
@@ -588,8 +640,9 @@ class PlatformDirectoryOperations:
         )
         await self._session.commit()
 
+        await mark_token_version_revoked(target.id, new_version)
         await invalidate_user_profile(target.id)
-        await publish_token_revoke(target.id, new_version)
+        await _safe_publish_token_revoke(target.id, new_version)
 
     async def set_system_admin(
         self,
@@ -599,8 +652,24 @@ class PlatformDirectoryOperations:
         is_system_admin: bool,
         reason: str,
     ) -> PlatformUserDetail:
-        """Toggle ``is_system_admin``. Operators cannot demote themselves."""
+        """Toggle ``is_system_admin``.
+
+        Two safety rails:
+
+        * Operators cannot demote themselves (locks them out instantly).
+        * The last remaining active sysadmin cannot be demoted - the
+          deployment must keep at least one operator who can manage the
+          platform surface. Without this guard, two operators racing on
+          each other's demotion can leave the platform with zero
+          sysadmins and only DB-level recovery to fix.
+        """
         await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "set_system_admin"),
+            limit=_PLATFORM_MUTATION_LIMIT,
+            window_seconds=_PLATFORM_MUTATION_WINDOW_SECONDS,
+            resource="platform sysadmin role changes",
+        )
         reason = reason.strip()
         if not reason:
             raise ValidationError("reason", "reason is required")
@@ -615,6 +684,21 @@ class PlatformDirectoryOperations:
             return await self.get_user(
                 user_id=user_id, target_user_id=target_user_id
             )
+
+        if not is_system_admin and target.is_system_admin:
+            other_admins = (
+                await self._session.execute(
+                    select(func.count())
+                    .select_from(User)
+                    .where(User.is_system_admin.is_(True))
+                    .where(User.is_active.is_(True))
+                    .where(User.id != target.id)
+                )
+            ).scalar_one()
+            if int(other_admins) == 0:
+                raise PermissionDeniedError(
+                    "Cannot revoke the last remaining system admin"
+                )
 
         target.is_system_admin = is_system_admin
         target.token_version += 1
@@ -637,8 +721,9 @@ class PlatformDirectoryOperations:
         )
         await self._session.commit()
 
+        await mark_token_version_revoked(target.id, new_version)
         await invalidate_user_profile(target.id)
-        await publish_token_revoke(target.id, new_version)
+        await _safe_publish_token_revoke(target.id, new_version)
 
         return await self.get_user(
             user_id=user_id, target_user_id=target_user_id
@@ -874,7 +959,8 @@ class PlatformDirectoryOperations:
             )
         ).all()
         for uid, version in users:
-            await publish_token_revoke(uid, int(version))
+            await mark_token_version_revoked(uid, int(version))
+            await _safe_publish_token_revoke(uid, int(version))
 
     async def _enqueue_org_deleted_emails(
         self, org: Organization, reason: str

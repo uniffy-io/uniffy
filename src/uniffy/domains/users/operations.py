@@ -301,6 +301,9 @@ class UserOperations:
         await invalidate_user_profile(user_id)
 
         if token_revoked:
+            from uniffy.domains.auth.revocation import mark_token_version_revoked
+
+            await mark_token_version_revoked(user_id, user.token_version)
             await publish_token_revoke(user_id, user.token_version)
 
         return user

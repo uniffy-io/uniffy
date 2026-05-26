@@ -136,15 +136,20 @@ def _merge_support_session_tag(
 ) -> None:
     """Stamp ``actor_kind``/``support_session_id``/``scope`` when active.
 
-    Lookup is best-effort: the ContextVar is set by
-    :meth:`PermissionChecker._support_session_role` when it finds an
-    active session for the request's (user, org). Audit writes that
-    happen elsewhere in the same request inherit the tag automatically
-    so the org owner can filter their audit log for support access.
+    The ContextVar is populated by
+    :meth:`PermissionChecker._ensure_support_session_context` on every
+    request that touches an active session, regardless of perm-cache
+    state. Audit writes that happen elsewhere in the same request
+    inherit the tag automatically so the org owner can filter their
+    audit log for support access.
 
-    Skips silently when no session is active, when the writer targets
-    a different org than the one under session, or when the caller has
-    already set ``actor_kind`` explicitly (don't clobber).
+    Skips silently when no session is active or when the writer targets
+    a different org than the one under session.
+
+    The ``actor_kind`` field is overwritten unconditionally: a session
+    tag is a fact about the request, not a hint the caller can elect to
+    drop. The caller's value (if any) is moved to ``actor_kind_pre`` so
+    no information is lost.
     """
     from uniffy.domains.platform.support_session.context import (
         get_active_support_session,
@@ -155,8 +160,9 @@ def _merge_support_session_tag(
         return
     if organization_id is not None and active.organization_id != organization_id:
         return
-    if "actor_kind" in details:
-        return
+    prior = details.get("actor_kind")
+    if prior is not None and prior != "support":
+        details["actor_kind_pre"] = prior
     details["actor_kind"] = "support"
     details["support_session_id"] = str(active.session_id)
     details["scope"] = active.scope

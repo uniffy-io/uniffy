@@ -109,6 +109,7 @@ from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
+from uniffy.domains.auth.interceptors import AuthRevocationInterceptor
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
@@ -452,199 +453,205 @@ def create_app() -> FastAPI:
 def _create_api_dispatcher() -> ConnectRPCDispatcher:
     """Create the API dispatcher with all ConnectRPC services and HTTP routes."""
     logging_interceptor = LoggingInterceptor()
+    # AuthRevocationInterceptor runs FIRST so a revoked access token
+    # never reaches handler code. LoggingInterceptor still gets the
+    # access log line because ConnectRPC unwinds interceptors in
+    # reverse order on raise.
+    auth_revocation_interceptor = AuthRevocationInterceptor()
+    interceptors = [auth_revocation_interceptor, logging_interceptor]
     dispatcher = ConnectRPCDispatcher()
 
     # ConnectRPC services
     dispatcher.add_service(
         "/auth.v1.AuthService",
-        AuthServiceASGIApplication(AuthServiceImpl(), interceptors=[logging_interceptor]),
+        AuthServiceASGIApplication(AuthServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/notes.v1.NotesService",
-        NotesServiceASGIApplication(NotesServiceImpl(), interceptors=[logging_interceptor]),
+        NotesServiceASGIApplication(NotesServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/search.v1.SearchService",
-        SearchServiceASGIApplication(SearchServiceImpl(), interceptors=[logging_interceptor]),
+        SearchServiceASGIApplication(SearchServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/settings.v1.SettingsService",
-        SettingsServiceASGIApplication(SettingsServiceImpl(), interceptors=[logging_interceptor]),
+        SettingsServiceASGIApplication(SettingsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/bookmarks.v1.BookmarksService",
-        BookmarksServiceASGIApplication(BookmarksServiceImpl(), interceptors=[logging_interceptor]),
+        BookmarksServiceASGIApplication(BookmarksServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/tags.v1.TagsService",
-        TagsServiceASGIApplication(TagsServiceImpl(), interceptors=[logging_interceptor]),
+        TagsServiceASGIApplication(TagsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/chat.v1.ChatService",
-        ChatServiceASGIApplication(ChatServiceImpl(), interceptors=[logging_interceptor]),
+        ChatServiceASGIApplication(ChatServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/chat.v1.ChatStreamService",
         StreamDisconnectMiddleware(
             ChatStreamServiceASGIApplication(
-                ChatStreamServiceImpl(), interceptors=[logging_interceptor]
+                ChatStreamServiceImpl(), interceptors=interceptors
             )
         ),
     )
     dispatcher.add_service(
         "/permissions.v1.MembersService",
-        MembersServiceASGIApplication(MembersServiceImpl(), interceptors=[logging_interceptor]),
+        MembersServiceASGIApplication(MembersServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/presence.v1.PresenceService",
-        PresenceServiceASGIApplication(PresenceServiceImpl(), interceptors=[logging_interceptor]),
+        PresenceServiceASGIApplication(PresenceServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/users.v1.UsersService",
-        UsersServiceASGIApplication(UsersServiceImpl(), interceptors=[logging_interceptor]),
+        UsersServiceASGIApplication(UsersServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/organizations.v1.OrganizationsService",
         OrganizationsServiceASGIApplication(
-            OrganizationsServiceImpl(), interceptors=[logging_interceptor]
+            OrganizationsServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/groups.v1.GroupsService",
-        GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=[logging_interceptor]),
+        GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/cal.v1.CalendarService",
-        CalendarServiceASGIApplication(CalendarServiceImpl(), interceptors=[logging_interceptor]),
+        CalendarServiceASGIApplication(CalendarServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/files.v1.FilesService",
-        FilesServiceASGIApplication(FilesServiceImpl(), interceptors=[logging_interceptor]),
+        FilesServiceASGIApplication(FilesServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/attachments.v1.AttachmentsService",
         AttachmentsServiceASGIApplication(
-            AttachmentsServiceImpl(), interceptors=[logging_interceptor]
+            AttachmentsServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/audit.v1.AuditService",
-        AuditServiceASGIApplication(AuditServiceImpl(), interceptors=[logging_interceptor]),
+        AuditServiceASGIApplication(AuditServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/mail.v1.OrgMailService",
         OrgMailServiceASGIApplication(
-            OrgMailServiceImpl(), interceptors=[logging_interceptor]
+            OrgMailServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemMailService",
         SystemMailServiceASGIApplication(
-            SystemMailServiceImpl(), interceptors=[logging_interceptor]
+            SystemMailServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemEncryptionService",
         SystemEncryptionServiceASGIApplication(
-            SystemEncryptionServiceImpl(), interceptors=[logging_interceptor]
+            SystemEncryptionServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemConfigService",
         SystemConfigServiceASGIApplication(
-            SystemConfigServiceImpl(), interceptors=[logging_interceptor]
+            SystemConfigServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemOrganizationsService",
         SystemOrganizationsServiceASGIApplication(
-            SystemOrganizationsServiceImpl(), interceptors=[logging_interceptor]
+            SystemOrganizationsServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemUsersService",
         SystemUsersServiceASGIApplication(
-            SystemUsersServiceImpl(), interceptors=[logging_interceptor]
+            SystemUsersServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.SupportService",
         SupportServiceASGIApplication(
-            SupportServiceImpl(), interceptors=[logging_interceptor]
+            SupportServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/superadmin.v1.PlatformAuditService",
         PlatformAuditServiceASGIApplication(
-            PlatformAuditServiceImpl(), interceptors=[logging_interceptor]
+            PlatformAuditServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/comments.v1.CommentsService",
-        CommentsServiceASGIApplication(CommentsServiceImpl(), interceptors=[logging_interceptor]),
+        CommentsServiceASGIApplication(CommentsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/notifications.v1.NotificationsService",
         StreamDisconnectMiddleware(
             NotificationsServiceASGIApplication(
-                NotificationsServiceImpl(), interceptors=[logging_interceptor]
+                NotificationsServiceImpl(), interceptors=interceptors
             )
         ),
     )
     dispatcher.add_service(
         "/projects.v1.ProjectsService",
-        ProjectsServiceASGIApplication(ProjectsServiceImpl(), interceptors=[logging_interceptor]),
+        ProjectsServiceASGIApplication(ProjectsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/rooms.v1.RoomsService",
-        RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=[logging_interceptor]),
+        RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.ProvidersService",
-        ProvidersServiceASGIApplication(ProvidersServiceImpl(), interceptors=[logging_interceptor]),
+        ProvidersServiceASGIApplication(ProvidersServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.SessionsService",
-        SessionsServiceASGIApplication(SessionsServiceImpl(), interceptors=[logging_interceptor]),
+        SessionsServiceASGIApplication(SessionsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.AgentsService",
-        AgentsServiceASGIApplication(AgentsServiceImpl(), interceptors=[logging_interceptor]),
+        AgentsServiceASGIApplication(AgentsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.SkillsService",
-        SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=[logging_interceptor]),
+        SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.PromptsService",
-        PromptsServiceASGIApplication(PromptsServiceImpl(), interceptors=[logging_interceptor]),
+        PromptsServiceASGIApplication(PromptsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.MemoriesService",
-        MemoriesServiceASGIApplication(MemoriesServiceImpl(), interceptors=[logging_interceptor]),
+        MemoriesServiceASGIApplication(MemoriesServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.CronService",
-        CronServiceASGIApplication(CronServiceImpl(), interceptors=[logging_interceptor]),
+        CronServiceASGIApplication(CronServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.BudgetsService",
-        BudgetsServiceASGIApplication(BudgetsServiceImpl(), interceptors=[logging_interceptor]),
+        BudgetsServiceASGIApplication(BudgetsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.PricingService",
-        PricingServiceASGIApplication(PricingServiceImpl(), interceptors=[logging_interceptor]),
+        PricingServiceASGIApplication(PricingServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.RateLimitsService",
         RateLimitsServiceASGIApplication(
-            RateLimitsServiceImpl(), interceptors=[logging_interceptor]
+            RateLimitsServiceImpl(), interceptors=interceptors
         ),
     )
     dispatcher.add_service(
         "/agents.v1.RuntimeService",
         StreamDisconnectMiddleware(
-            RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=[logging_interceptor])
+            RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=interceptors)
         ),
     )
 

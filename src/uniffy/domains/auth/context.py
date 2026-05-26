@@ -15,8 +15,11 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
     """
     Extract user ID from request context.
 
-    Extracts and validates the JWT token from the Authorization header,
-    then returns the user ID from the token payload.
+    Validates the JWT signature only. The cluster-wide revocation
+    watermark is checked once per RPC by
+    :class:`AuthRevocationInterceptor`; HTTP routes call
+    :func:`uniffy.domains.auth.http_deps.get_current_user_id` which
+    performs the same check inline.
 
     Parameters
     ----------

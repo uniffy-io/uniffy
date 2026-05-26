@@ -72,16 +72,19 @@ def deployment_max_duration_minutes() -> int:
 
 
 def clamp_duration(requested_minutes: int) -> int:
-    """Clamp a requested duration to ``[floor, deployment_max]``.
+    """Clamp a requested duration into ``[floor, deployment_max]``.
 
     Zero or negative requests fall back to the deployment default.
+    A positive request below the floor clamps UP to the floor; a
+    request above the ceiling clamps DOWN to the ceiling. This keeps
+    the operator's intent visible (a 1-minute request becomes a
+    5-minute floor, not a silent jump to the 30-minute default).
     """
     if requested_minutes <= 0:
         return deployment_default_duration_minutes()
     ceiling = deployment_max_duration_minutes()
-    if requested_minutes < DEFAULT_DURATION_FLOOR_MINUTES:
-        return min(deployment_default_duration_minutes(), ceiling)
-    return min(requested_minutes, ceiling)
+    floor = DEFAULT_DURATION_FLOOR_MINUTES
+    return max(floor, min(requested_minutes, ceiling))
 
 
 async def org_override(

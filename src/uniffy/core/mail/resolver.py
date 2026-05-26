@@ -15,17 +15,27 @@ The deployment tier lets a self-hoster ship the stack with zero mail
 env vars and configure SMTP from the platform UI after first boot --
 matching the landing-page promise that mail is post-install editable.
 
-Resolved configs are cached in Valkey under ``mail:cfg:{org_id|"system"}``
-for 60 seconds. Decrypted SMTP passwords therefore land in Valkey under
-that key for the cache lifetime -- the trade-off is throughput vs blast
-radius (deliberate; see plan). Writes through any of the three tiers
-call ``MailConfigResolver.invalidate`` (org_id for the org tier,
+Caching
+-------
+
+Non-secret fields are cached in Valkey under
+``mail:cfg:{org_id|"system"}`` for 60 seconds together with the
+provenance of the password (``org`` / ``deployment`` / ``env`` /
+``none``). The plaintext password is NEVER written to Valkey - on a
+cache hit the password is re-resolved from PG (per-org row or
+deployment row) through the matching cipher, or read from env. This
+preserves the bulk of the PG-avoidance the cache exists for while
+keeping decrypted secrets out of shared infra.
+
+Writes through any of the three tiers call
+``MailConfigResolver.invalidate`` (org_id for the org tier,
 ``invalidate_system`` for the deployment tier) so admin edits take
 effect immediately.
 """
 
 from __future__ import annotations
 
+import os
 from uuid import UUID
 
 from sqlalchemy import select
@@ -44,6 +54,7 @@ from uniffy.core.valkey.cache import (
 )
 
 _CACHE_TTL_SECONDS = 60
+_PASSWORD_SOURCE_KEY = "_password_source"
 
 
 def _cache_key(scope: str) -> str:
@@ -52,6 +63,18 @@ def _cache_key(scope: str) -> str:
 
 def _cache_tag(scope: str) -> str:
     return f"mail:cfg:scope:{scope}"
+
+
+def _password_source_for(config: MailConfig) -> str:
+    """Map an unresolved ``MailConfig`` to the tier its password lives in.
+
+    Returned values: ``"org"`` / ``"deployment"`` / ``"env"`` / ``"none"``.
+    A config with ``smtp_password=None`` records ``"none"`` so the
+    cache hit short-circuits the re-resolve.
+    """
+    if config.smtp_password is None or config.smtp_password == "":
+        return "none"
+    return config.source
 
 
 class MailConfigResolver:
@@ -65,16 +88,86 @@ class MailConfigResolver:
         scope = str(organization_id) if organization_id is not None else "system"
         cached = await cache_get(_cache_key(scope))
         if cached is not CACHE_MISS and cached is not None:
-            return MailConfig.model_validate(cached)
+            password_source = cached.pop(_PASSWORD_SOURCE_KEY, "none")
+            config = MailConfig.model_validate(cached)
+            return await self._rehydrate_password(
+                config, organization_id, password_source
+            )
 
         config = await self._load(organization_id)
+        password_source = _password_source_for(config)
+        payload = config.model_dump(mode="json")
+        # Plaintext SMTP password must never enter Valkey. Strip it
+        # and record where the cache hit should fetch it from.
+        payload["smtp_password"] = None
+        payload[_PASSWORD_SOURCE_KEY] = password_source
         await cache_set(
             _cache_key(scope),
-            config.model_dump(mode="json"),
+            payload,
             ttl=_CACHE_TTL_SECONDS,
             tags=[_cache_tag(scope)],
         )
         return config
+
+    async def _rehydrate_password(
+        self,
+        config: MailConfig,
+        organization_id: UUID | None,
+        password_source: str,
+    ) -> MailConfig:
+        """Re-fetch the SMTP password for a cached config or raise.
+
+        ``password_source`` is one of ``"org"``, ``"deployment"``,
+        ``"env"``, ``"none"``. When the underlying row no longer exists
+        (race with a concurrent edit that has already invalidated the
+        cache key in a tight enough window) we fall through to a fresh
+        ``_load`` so the caller never sees an inconsistent config.
+        """
+        if password_source == "none":
+            return config
+        if password_source == "env":
+            env_password = os.getenv("SMTP_PASSWORD") or None
+            return config.model_copy(update={"smtp_password": env_password})
+        if password_source == "org" and organization_id is not None:
+            password = await self._load_org_password(organization_id)
+            if password is None:
+                return await self._load(organization_id)
+            return config.model_copy(update={"smtp_password": password})
+        if password_source == "deployment":
+            password = await self._load_deployment_password()
+            if password is None:
+                return await self._load(organization_id)
+            return config.model_copy(update={"smtp_password": password})
+        return config
+
+    async def _load_org_password(self, organization_id: UUID) -> str | None:
+        row = (
+            await self._session.execute(
+                select(OrgSetting).where(
+                    OrgSetting.organization_id == organization_id,
+                    OrgSetting.namespace == MAIL_NAMESPACE,
+                    OrgSetting.key == "smtp_password",
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None or not row.value_encrypted:
+            return None
+        return await OrgCipher(self._session).decrypt(
+            organization_id, row.value_encrypted
+        )
+
+    async def _load_deployment_password(self) -> str | None:
+        row = (
+            await self._session.execute(
+                select(DeploymentSetting).where(
+                    DeploymentSetting.namespace == MAIL_NAMESPACE,
+                    DeploymentSetting.key == "smtp_password",
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None or not row.value_encrypted:
+            return None
+        return await DeploymentCipher(self._session).decrypt(row.value_encrypted)
 
     async def _load(self, organization_id: UUID | None) -> MailConfig:
         if organization_id is not None:
