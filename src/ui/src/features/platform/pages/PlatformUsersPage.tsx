@@ -31,7 +31,12 @@ import { friendlyErrorMessage } from '@/config';
 import { useAppSelector } from '@/app/hooks';
 import { platformUsersApi } from '@/features/platform/api/systemDirectoryApi';
 import { PlatformUserDetailPanel } from '@/features/platform/components/PlatformUserDetailPanel';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import type { PlatformUserSummary } from '@uniffy/proto/superadmin/v1/system_directory_pb';
+
+type PendingUserAction =
+    | { kind: 'force-logout'; user: PlatformUserSummary }
+    | { kind: 'toggle-admin'; user: PlatformUserSummary };
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -121,6 +126,8 @@ export function PlatformUsersPage() {
     const [page, setPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [pending, setPending] = useState<PendingUserAction | null>(null);
+    const [pendingBusy, setPendingBusy] = useState(false);
 
     const fetchRows = useCallback(async () => {
         setLoading(true);
@@ -146,38 +153,33 @@ export function PlatformUsersPage() {
         fetchRows();
     }, [fetchRows]);
 
-    const handleForceLogout = async (u: PlatformUserSummary) => {
-        const reason = window.prompt(`Reason to force-logout ${u.email}?`);
-        if (!reason) return;
+    const runPending = async (reason: string) => {
+        if (!pending) return;
+        setPendingBusy(true);
         try {
-            await platformUsersApi.forceLogout({ userId: u.id, reason });
-            toast.success(`Forced logout: ${u.email}`);
+            if (pending.kind === 'force-logout') {
+                await platformUsersApi.forceLogout({ userId: pending.user.id, reason });
+                toast.success(`Forced logout: ${pending.user.email}`);
+            } else {
+                const wasAdmin = pending.user.isSystemAdmin;
+                await platformUsersApi.setSystemAdmin({
+                    userId: pending.user.id,
+                    isSystemAdmin: !wasAdmin,
+                    reason,
+                });
+                toast.success(
+                    wasAdmin
+                        ? `Revoked system admin from ${pending.user.email}`
+                        : `Granted system admin to ${pending.user.email}`,
+                );
+            }
+            setPending(null);
             fetchRows();
         } catch (error) {
             const message = friendlyErrorMessage((error as Error).message);
             if (message) toast.error(message);
-        }
-    };
-
-    const handleToggleSystemAdmin = async (u: PlatformUserSummary) => {
-        const action = u.isSystemAdmin ? 'revoke' : 'grant';
-        const reason = window.prompt(`Reason to ${action} system admin for ${u.email}?`);
-        if (!reason) return;
-        try {
-            await platformUsersApi.setSystemAdmin({
-                userId: u.id,
-                isSystemAdmin: !u.isSystemAdmin,
-                reason,
-            });
-            toast.success(
-                u.isSystemAdmin
-                    ? `Revoked system admin from ${u.email}`
-                    : `Granted system admin to ${u.email}`,
-            );
-            fetchRows();
-        } catch (error) {
-            const message = friendlyErrorMessage((error as Error).message);
-            if (message) toast.error(message);
+        } finally {
+            setPendingBusy(false);
         }
     };
 
@@ -334,8 +336,12 @@ export function PlatformUsersPage() {
                                     <RowActions
                                         user={u}
                                         isSelf={u.id === selfId}
-                                        onForceLogout={() => handleForceLogout(u)}
-                                        onToggleSystemAdmin={() => handleToggleSystemAdmin(u)}
+                                        onForceLogout={() =>
+                                            setPending({ kind: 'force-logout', user: u })
+                                        }
+                                        onToggleSystemAdmin={() =>
+                                            setPending({ kind: 'toggle-admin', user: u })
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
@@ -383,6 +389,47 @@ export function PlatformUsersPage() {
                     </div>
                 </aside>
             )}
+
+            <ReasonDialog
+                isOpen={!!pending}
+                onClose={() => {
+                    if (!pendingBusy) setPending(null);
+                }}
+                onConfirm={runPending}
+                title={
+                    pending?.kind === 'force-logout'
+                        ? `Force-logout ${pending.user.email}?`
+                        : pending?.kind === 'toggle-admin'
+                          ? pending.user.isSystemAdmin
+                                ? `Revoke system admin from ${pending.user.email}?`
+                                : `Grant system admin to ${pending.user.email}?`
+                          : ''
+                }
+                description={
+                    pending?.kind === 'force-logout'
+                        ? 'Bumps the token version and invalidates every active JWT for this user.'
+                        : pending?.kind === 'toggle-admin'
+                          ? pending.user.isSystemAdmin
+                                ? 'User loses access to /platform/* and is logged out everywhere.'
+                                : 'User gains access to /platform/* and is logged out everywhere.'
+                          : undefined
+                }
+                confirmLabel={
+                    pending?.kind === 'force-logout'
+                        ? 'Force logout'
+                        : pending?.kind === 'toggle-admin'
+                          ? pending.user.isSystemAdmin
+                                ? 'Revoke'
+                                : 'Grant'
+                          : 'Confirm'
+                }
+                variant={
+                    pending?.kind === 'toggle-admin' && !pending.user.isSystemAdmin
+                        ? 'warning'
+                        : 'danger'
+                }
+                loading={pendingBusy}
+            />
 
             {showDrawerPanel && (
                 <Drawer

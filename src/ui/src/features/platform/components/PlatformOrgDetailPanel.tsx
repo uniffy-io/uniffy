@@ -25,7 +25,10 @@ import { formatProtoDateTime, formatRelativeTime } from '@/shared/utils/dateForm
 import { friendlyErrorMessage } from '@/config';
 import { platformOrgsApi } from '@/features/platform/api/systemDirectoryApi';
 import { RequestSupportSessionDialog } from '@/features/platform/components/RequestSupportSessionDialog';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import type { PlatformOrganizationDetail } from '@uniffy/proto/superadmin/v1/system_directory_pb';
+
+type PendingOrgAction = 'suspend' | 'unsuspend' | 'restore' | 'delete';
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -50,6 +53,7 @@ export function PlatformOrgDetailPanel({ organizationId, onClose, onChanged }: P
     const [submitting, setSubmitting] = useState(false);
     const [tab, setTab] = useState<Tab>('info');
     const [supportOpen, setSupportOpen] = useState(false);
+    const [pending, setPending] = useState<PendingOrgAction | null>(null);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -82,54 +86,34 @@ export function PlatformOrgDetailPanel({ organizationId, onClose, onChanged }: P
         }
     };
 
-    const handleSuspend = () => {
-        if (!detail?.summary) return;
-        const reason = window.prompt(`Reason to suspend ${detail.summary.name}?`);
-        if (!reason) return;
-        guardedRun(async () => {
-            await platformOrgsApi.suspend({ organizationId, reason });
-            toast.success('Workspace suspended');
-        });
-    };
+    const handleSuspend = () => setPending('suspend');
+    const handleUnsuspend = () => setPending('unsuspend');
+    const handleRestore = () => setPending('restore');
+    const handleDelete = () => setPending('delete');
 
-    const handleUnsuspend = () => {
-        if (!detail?.summary) return;
-        const reason = window.prompt(`Reason to unsuspend ${detail.summary.name}?`);
-        if (!reason) return;
-        guardedRun(async () => {
-            await platformOrgsApi.unsuspend({ organizationId, reason });
-            toast.success('Workspace unsuspended');
-        });
-    };
-
-    const handleRestore = () => {
-        if (!detail?.summary) return;
-        const reason = window.prompt(`Reason to restore ${detail.summary.name}?`);
-        if (!reason) return;
-        guardedRun(async () => {
-            await platformOrgsApi.restore({ organizationId, reason });
-            toast.success('Workspace restored');
-        });
-    };
-
-    const handleDelete = () => {
-        if (!detail?.summary) return;
+    const runPending = (reason: string) => {
+        if (!detail?.summary || !pending) return;
+        const kind = pending;
         const slug = detail.summary.slug;
-        const confirm = window.prompt(`Type the slug "${slug}" to confirm deletion.`);
-        if (confirm === null) return;
-        if (confirm !== slug) {
-            toast.error('Slug did not match');
-            return;
-        }
-        const reason = window.prompt('Reason for deletion?');
-        if (!reason) return;
+        setPending(null);
         guardedRun(async () => {
-            await platformOrgsApi.delete({
-                organizationId,
-                confirmSlug: confirm,
-                reason,
-            });
-            toast.success('Workspace deleted. Owners notified.');
+            if (kind === 'suspend') {
+                await platformOrgsApi.suspend({ organizationId, reason });
+                toast.success('Workspace suspended');
+            } else if (kind === 'unsuspend') {
+                await platformOrgsApi.unsuspend({ organizationId, reason });
+                toast.success('Workspace unsuspended');
+            } else if (kind === 'restore') {
+                await platformOrgsApi.restore({ organizationId, reason });
+                toast.success('Workspace restored');
+            } else {
+                await platformOrgsApi.delete({
+                    organizationId,
+                    confirmSlug: slug,
+                    reason,
+                });
+                toast.success('Workspace deleted. Owners notified.');
+            }
         });
     };
 
@@ -440,6 +424,55 @@ export function PlatformOrgDetailPanel({ organizationId, onClose, onChanged }: P
                     }}
                 />
             )}
+
+            <ReasonDialog
+                isOpen={!!pending && !!summary}
+                onClose={() => {
+                    if (!submitting) setPending(null);
+                }}
+                onConfirm={runPending}
+                title={
+                    !summary
+                        ? ''
+                        : pending === 'suspend'
+                          ? `Suspend ${summary.name}?`
+                          : pending === 'unsuspend'
+                            ? `Unsuspend ${summary.name}?`
+                            : pending === 'restore'
+                              ? `Restore ${summary.name}?`
+                              : `Delete ${summary.name}?`
+                }
+                description={
+                    pending === 'suspend'
+                        ? 'Bumps token_version for every member. Existing JWTs invalidated; new logins blocked.'
+                        : pending === 'unsuspend'
+                          ? 'Members can log in again. Their JWTs were invalidated at suspend time.'
+                          : pending === 'restore'
+                            ? 'Clears the scheduled purge. The workspace becomes accessible again.'
+                            : pending === 'delete'
+                              ? 'Soft-deletes the workspace. Restorable for 30 days; owners are notified.'
+                              : undefined
+                }
+                confirmSlug={
+                    pending === 'delete' && summary
+                        ? {
+                              slug: summary.slug,
+                              helperText: 'Workspace stays restorable for 30 days after this point.',
+                          }
+                        : undefined
+                }
+                confirmLabel={
+                    pending === 'suspend'
+                        ? 'Suspend'
+                        : pending === 'unsuspend'
+                          ? 'Unsuspend'
+                          : pending === 'restore'
+                            ? 'Restore'
+                            : 'Delete'
+                }
+                variant={pending === 'unsuspend' || pending === 'restore' ? 'warning' : 'danger'}
+                loading={submitting}
+            />
         </div>
     );
 }

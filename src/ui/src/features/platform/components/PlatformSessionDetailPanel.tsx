@@ -17,6 +17,7 @@ import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { formatProtoDateTime, formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
 import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import {
     SupportSessionState,
     type SupportSession,
@@ -39,13 +40,16 @@ interface Props {
 export function PlatformSessionDetailPanel({ session, onClose, onChanged }: Props) {
     const { isMobileOrTablet } = useBreakpoint();
     const [submitting, setSubmitting] = useState(false);
+    const [revokeOpen, setRevokeOpen] = useState(false);
 
-    const handleRevoke = async () => {
-        const reason = window.prompt('Reason to revoke? (optional)') ?? '';
+    const handleRevoke = () => setRevokeOpen(true);
+
+    const submitRevoke = async (reason: string) => {
         setSubmitting(true);
         try {
             await supportSessionsApi.revoke({ sessionId: session.id, reason });
             toast.success('Support session revoked');
+            setRevokeOpen(false);
             onChanged();
             onClose();
         } catch (error) {
@@ -282,6 +286,20 @@ export function PlatformSessionDetailPanel({ session, onClose, onChanged }: Prop
                     </Button>
                 </div>
             )}
+
+            <ReasonDialog
+                isOpen={revokeOpen}
+                onClose={() => {
+                    if (!submitting) setRevokeOpen(false);
+                }}
+                onConfirm={submitRevoke}
+                title="Revoke support session?"
+                description="Ends operator access immediately. The org owner sees the revoke in the audit log."
+                reasonRequired={false}
+                confirmLabel="Revoke"
+                variant="danger"
+                loading={submitting}
+            />
         </div>
     );
 }

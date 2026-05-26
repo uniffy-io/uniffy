@@ -19,10 +19,13 @@ import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { formatProtoDateTime, formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
 import { platformUsersApi } from '@/features/platform/api/systemDirectoryApi';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import type {
     PlatformUserDetail,
     PlatformUserMembership,
 } from '@uniffy/proto/superadmin/v1/system_directory_pb';
+
+type PendingUserAction = 'force-logout' | 'toggle-admin';
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -47,6 +50,7 @@ export function PlatformUserDetailPanel({ userId, onClose, onChanged, selfId }: 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [tab, setTab] = useState<Tab>('info');
+    const [pending, setPending] = useState<PendingUserAction | null>(null);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -79,32 +83,26 @@ export function PlatformUserDetailPanel({ userId, onClose, onChanged, selfId }: 
         }
     };
 
-    const handleForceLogout = () => {
-        if (!detail?.summary) return;
-        const reason = window.prompt(`Reason to force-logout ${detail.summary.email}?`);
-        if (!reason) return;
-        guardedRun(async () => {
-            await platformUsersApi.forceLogout({ userId, reason });
-            toast.success('Logout forced');
-        });
-    };
+    const handleForceLogout = () => setPending('force-logout');
+    const handleToggleSystemAdmin = () => setPending('toggle-admin');
 
-    const handleToggleSystemAdmin = () => {
-        if (!detail?.summary) return;
+    const runPending = (reason: string) => {
+        if (!detail?.summary || !pending) return;
         const isAdmin = detail.summary.isSystemAdmin;
-        const reason = window.prompt(
-            isAdmin
-                ? `Reason to revoke system admin from ${detail.summary.email}?`
-                : `Reason to grant system admin to ${detail.summary.email}?`,
-        );
-        if (!reason) return;
+        const kind = pending;
+        setPending(null);
         guardedRun(async () => {
-            await platformUsersApi.setSystemAdmin({
-                userId,
-                isSystemAdmin: !isAdmin,
-                reason,
-            });
-            toast.success(isAdmin ? 'System admin revoked' : 'System admin granted');
+            if (kind === 'force-logout') {
+                await platformUsersApi.forceLogout({ userId, reason });
+                toast.success('Logout forced');
+            } else {
+                await platformUsersApi.setSystemAdmin({
+                    userId,
+                    isSystemAdmin: !isAdmin,
+                    reason,
+                });
+                toast.success(isAdmin ? 'System admin revoked' : 'System admin granted');
+            }
         });
     };
 
@@ -360,6 +358,43 @@ export function PlatformUserDetailPanel({ userId, onClose, onChanged, selfId }: 
             )}
 
             <div className="flex-1 overflow-y-auto p-4">{renderContent()}</div>
+
+            <ReasonDialog
+                isOpen={!!pending && !!summary}
+                onClose={() => {
+                    if (!submitting) setPending(null);
+                }}
+                onConfirm={runPending}
+                title={
+                    !summary
+                        ? ''
+                        : pending === 'force-logout'
+                          ? `Force-logout ${summary.email}?`
+                          : summary.isSystemAdmin
+                            ? `Revoke system admin from ${summary.email}?`
+                            : `Grant system admin to ${summary.email}?`
+                }
+                description={
+                    pending === 'force-logout'
+                        ? 'Bumps the token version and invalidates every active JWT for this user.'
+                        : summary?.isSystemAdmin
+                          ? 'User loses access to /platform/* and is logged out everywhere.'
+                          : 'User gains access to /platform/* and is logged out everywhere.'
+                }
+                confirmLabel={
+                    pending === 'force-logout'
+                        ? 'Force logout'
+                        : summary?.isSystemAdmin
+                          ? 'Revoke'
+                          : 'Grant'
+                }
+                variant={
+                    pending === 'toggle-admin' && summary && !summary.isSystemAdmin
+                        ? 'warning'
+                        : 'danger'
+                }
+                loading={submitting}
+            />
         </div>
     );
 }
