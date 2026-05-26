@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { friendlyErrorMessage } from '@/config';
 import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
 import { SupportSessionApprovalDialog } from '@/features/admin/components/support/SupportSessionApprovalDialog';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import {
     SupportSessionState,
     type SupportSession,
@@ -38,6 +39,7 @@ export function SupportSessionBanner() {
     const [sessions, setSessions] = useState<SupportSession[]>([]);
     const [pendingDialog, setPendingDialog] = useState<SupportSession | null>(null);
     const [revoking, setRevoking] = useState<string | null>(null);
+    const [revokeTarget, setRevokeTarget] = useState<SupportSession | null>(null);
     const [tick, setTick] = useState(0);
 
     const refresh = useCallback(async () => {
@@ -85,12 +87,15 @@ export function SupportSessionBanner() {
         [sessions],
     );
 
-    const handleRevoke = async (session: SupportSession) => {
-        const reason = window.prompt('Reason to revoke? (optional)') ?? '';
-        setRevoking(session.id);
+    const handleRevoke = (session: SupportSession) => setRevokeTarget(session);
+
+    const submitRevoke = async (reason: string) => {
+        if (!revokeTarget) return;
+        setRevoking(revokeTarget.id);
         try {
-            await supportSessionsApi.revoke({ sessionId: session.id, reason });
+            await supportSessionsApi.revoke({ sessionId: revokeTarget.id, reason });
             toast.success('Support session revoked');
+            setRevokeTarget(null);
             refresh();
         } catch (error) {
             const message = friendlyErrorMessage((error as Error).message);
@@ -103,12 +108,29 @@ export function SupportSessionBanner() {
     if (!organizationId) return null;
     if (!active && !pending) return null;
 
+    const revokeDialog = (
+        <ReasonDialog
+            isOpen={!!revokeTarget}
+            onClose={() => {
+                if (!revoking) setRevokeTarget(null);
+            }}
+            onConfirm={submitRevoke}
+            title="Revoke support session?"
+            description="Ends operator access immediately. The revoke is recorded in the audit log."
+            reasonRequired={false}
+            confirmLabel="Revoke"
+            variant="danger"
+            loading={!!revoking}
+        />
+    );
+
     if (active) {
         const expires = protoToDate(active.expiresAt);
         const countdown = expires ? formatCountdown(expires) : '-';
         // Use `tick` so this re-renders every second for the countdown.
         void tick;
         return (
+            <>
             <div
                 role="banner"
                 className="relative border-b border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
@@ -141,10 +163,13 @@ export function SupportSessionBanner() {
                     </div>
                 </div>
             </div>
+            {revokeDialog}
+            </>
         );
     }
 
     return (
+        <>
         <div
             role="banner"
             className="relative border-b border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
@@ -178,5 +203,7 @@ export function SupportSessionBanner() {
                 />
             )}
         </div>
+        {revokeDialog}
+        </>
     );
 }

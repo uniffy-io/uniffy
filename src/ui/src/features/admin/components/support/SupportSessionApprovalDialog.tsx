@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { formatProtoDateTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
 import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import type { SupportSession } from '@uniffy/proto/superadmin/v1/support_session_pb';
 
 interface Props {
@@ -31,6 +32,7 @@ function protoToDate(ts: ProtoTimestamp | undefined): Date | undefined {
 
 export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Props) {
     const [submitting, setSubmitting] = useState(false);
+    const [rejectOpen, setRejectOpen] = useState(false);
 
     const requestedAt = protoToDate(session.requestedAt);
     const expiresAt = protoToDate(session.expiresAt);
@@ -57,12 +59,14 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
         }
     };
 
-    const handleReject = async () => {
-        const reason = window.prompt('Reason to reject? (optional)') ?? '';
+    const handleReject = () => setRejectOpen(true);
+
+    const submitReject = async (reason: string) => {
         setSubmitting(true);
         try {
             await supportSessionsApi.reject({ sessionId: session.id, reason });
             toast.success('Support session rejected');
+            setRejectOpen(false);
             onChanged();
             onClose();
         } catch (error) {
@@ -74,6 +78,7 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
     };
 
     return (
+        <>
         <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
             <div className="flex items-start gap-3 p-4 border-b border-border">
                 <div className="p-2 rounded-lg bg-amber-500/15 shrink-0">
@@ -197,5 +202,19 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
                 </Button>
             </div>
         </Modal>
+        <ReasonDialog
+            isOpen={rejectOpen}
+            onClose={() => {
+                if (!submitting) setRejectOpen(false);
+            }}
+            onConfirm={submitReject}
+            title="Reject support access?"
+            description="The operator is notified. Tell them why so they can come back with a tighter scope."
+            reasonRequired={false}
+            confirmLabel="Reject"
+            variant="danger"
+            loading={submitting}
+        />
+        </>
     );
 }

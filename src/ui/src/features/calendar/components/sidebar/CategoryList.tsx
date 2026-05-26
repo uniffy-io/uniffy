@@ -2,6 +2,7 @@
  * CategoryList - List of event categories for filtering
  */
 
+import { useState } from 'react';
 import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
@@ -11,6 +12,7 @@ import {
   deleteCategory,
 } from '@/features/calendar/store';
 import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
 
 export function CategoryList() {
@@ -29,16 +31,23 @@ export function CategoryList() {
     dispatch(openEditCategoryModal(categoryId));
   };
 
-  const handleDelete = async (categoryId: string, categoryName: string, e: React.MouseEvent) => {
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (categoryId: string, categoryName: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setPendingDelete({ id: categoryId, name: categoryName });
+  };
 
-    if (!window.confirm(`Are you sure you want to delete the "${categoryName}" category?`)) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await dispatch(deleteCategory(categoryId)).unwrap();
+      await dispatch(deleteCategory(pendingDelete.id)).unwrap();
+      setPendingDelete(null);
     } catch {
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -106,6 +115,23 @@ export function CategoryList() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!pendingDelete}
+        onClose={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete category?"
+        message={
+          pendingDelete
+            ? `Delete the "${pendingDelete.name}" category? Events keep their data but lose this label.`
+            : ''
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+      />
     </SidebarSection>
   );
 }
