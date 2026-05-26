@@ -12,6 +12,7 @@ import {
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Drawer } from '@/components/ui/drawer';
 import { PortalMenu } from '@/components/ui/portal-menu';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -220,28 +221,22 @@ export function PlatformUsersPage() {
                         className="w-full bg-input border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
-                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={onlySystemAdmins}
-                        onChange={(e) => {
-                            setOnlySystemAdmins(e.target.checked);
-                            setPage(0);
-                        }}
-                    />
-                    System admins only
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={includeInactive}
-                        onChange={(e) => {
-                            setIncludeInactive(e.target.checked);
-                            setPage(0);
-                        }}
-                    />
-                    Include inactive
-                </label>
+                <Checkbox
+                    label="System admins only"
+                    checked={onlySystemAdmins}
+                    onChange={(e) => {
+                        setOnlySystemAdmins(e.target.checked);
+                        setPage(0);
+                    }}
+                />
+                <Checkbox
+                    label="Include inactive"
+                    checked={includeInactive}
+                    onChange={(e) => {
+                        setIncludeInactive(e.target.checked);
+                        setPage(0);
+                    }}
+                />
             </div>
 
             <Table>

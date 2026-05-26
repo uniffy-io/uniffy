@@ -15,6 +15,7 @@ import {
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Table,
@@ -317,15 +318,11 @@ function SystemConfigTab() {
                     onChange={(v) => setDraft({ ...draft, rateLimitPerMin: v })}
                     placeholder="100"
                 />
-                <label className="flex items-center gap-2 text-sm text-foreground py-1">
-                    <input
-                        type="checkbox"
-                        checked={draft.smtpUseTls}
-                        onChange={(e) => setDraft({ ...draft, smtpUseTls: e.target.checked })}
-                        className="rounded border-border"
-                    />
-                    Use TLS (STARTTLS)
-                </label>
+                <Checkbox
+                    label="Use TLS (STARTTLS)"
+                    checked={draft.smtpUseTls}
+                    onChange={(e) => setDraft({ ...draft, smtpUseTls: e.target.checked })}
+                />
 
                 <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
                     <Button
@@ -497,18 +494,14 @@ function OrgConfigsTab() {
                 }}
                 onReload={load}
             >
-                <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                        type="checkbox"
-                        checked={onlyWithOrgConfig}
-                        onChange={(e) => {
-                            setOnlyWithOrgConfig(e.target.checked);
-                            setPage(0);
-                        }}
-                        className="rounded border-border"
-                    />
-                    Only with per-org config
-                </label>
+                <Checkbox
+                    label="Only with per-org config"
+                    checked={onlyWithOrgConfig}
+                    onChange={(e) => {
+                        setOnlyWithOrgConfig(e.target.checked);
+                        setPage(0);
+                    }}
+                />
             </FiltersBar>
 
             <Table>

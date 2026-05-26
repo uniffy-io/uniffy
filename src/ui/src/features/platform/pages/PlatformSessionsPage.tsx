@@ -46,12 +46,12 @@ function protoToDate(ts: ProtoTimestamp | undefined): Date | undefined {
 type StateFilter = 'all' | 'pending' | 'active' | 'expired' | 'revoked' | 'rejected';
 
 const STATE_FILTER_TO_PROTO: Record<StateFilter, SupportSessionState> = {
-    all: SupportSessionState.SUPPORT_SESSION_STATE_UNSPECIFIED,
-    pending: SupportSessionState.SUPPORT_SESSION_STATE_PENDING,
-    active: SupportSessionState.SUPPORT_SESSION_STATE_ACTIVE,
-    expired: SupportSessionState.SUPPORT_SESSION_STATE_EXPIRED,
-    revoked: SupportSessionState.SUPPORT_SESSION_STATE_REVOKED,
-    rejected: SupportSessionState.SUPPORT_SESSION_STATE_REJECTED,
+    all: SupportSessionState.UNSPECIFIED,
+    pending: SupportSessionState.PENDING,
+    active: SupportSessionState.ACTIVE,
+    expired: SupportSessionState.EXPIRED,
+    revoked: SupportSessionState.REVOKED,
+    rejected: SupportSessionState.REJECTED,
 };
 
 const STATE_FILTERS: { id: StateFilter; label: string }[] = [
@@ -65,27 +65,27 @@ const STATE_FILTERS: { id: StateFilter; label: string }[] = [
 
 function StateBadge({ state }: { state: SupportSessionState }) {
     const map: Record<number, { label: string; cls: string; Icon: typeof CheckCircle }> = {
-        [SupportSessionState.SUPPORT_SESSION_STATE_PENDING]: {
+        [SupportSessionState.PENDING]: {
             label: 'Pending',
             cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
             Icon: Hourglass,
         },
-        [SupportSessionState.SUPPORT_SESSION_STATE_ACTIVE]: {
+        [SupportSessionState.ACTIVE]: {
             label: 'Active',
             cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
             Icon: CheckCircle,
         },
-        [SupportSessionState.SUPPORT_SESSION_STATE_EXPIRED]: {
+        [SupportSessionState.EXPIRED]: {
             label: 'Expired',
             cls: 'bg-muted text-muted-foreground',
             Icon: Clock,
         },
-        [SupportSessionState.SUPPORT_SESSION_STATE_REVOKED]: {
+        [SupportSessionState.REVOKED]: {
             label: 'Revoked',
             cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
             Icon: Prohibit,
         },
-        [SupportSessionState.SUPPORT_SESSION_STATE_REJECTED]: {
+        [SupportSessionState.REJECTED]: {
             label: 'Rejected',
             cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
             Icon: XCircle,

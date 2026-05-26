@@ -57,8 +57,8 @@ export function PlatformSessionDetailPanel({ session, onClose, onChanged }: Prop
     };
 
     const canRevoke =
-        session.state === SupportSessionState.SUPPORT_SESSION_STATE_PENDING ||
-        session.state === SupportSessionState.SUPPORT_SESSION_STATE_ACTIVE;
+        session.state === SupportSessionState.PENDING ||
+        session.state === SupportSessionState.ACTIVE;
 
     return (
         <div className="h-full flex flex-col bg-card">
@@ -165,9 +165,7 @@ export function PlatformSessionDetailPanel({ session, onClose, onChanged }: Prop
                             State
                         </label>
                         <p className="text-sm p-2 rounded-md bg-muted/50 capitalize">
-                            {SupportSessionState[session.state]
-                                ?.replace('SUPPORT_SESSION_STATE_', '')
-                                .toLowerCase() || '-'}
+                            {SupportSessionState[session.state]?.toLowerCase() || '-'}
                         </p>
                     </div>
                 </div>

@@ -73,14 +73,14 @@ export function SupportSessionBanner() {
     const active = useMemo(
         () =>
             sessions.find(
-                (s) => s.state === SupportSessionState.SUPPORT_SESSION_STATE_ACTIVE,
+                (s) => s.state === SupportSessionState.ACTIVE,
             ),
         [sessions],
     );
     const pending = useMemo(
         () =>
             sessions.find(
-                (s) => s.state === SupportSessionState.SUPPORT_SESSION_STATE_PENDING,
+                (s) => s.state === SupportSessionState.PENDING,
             ),
         [sessions],
     );

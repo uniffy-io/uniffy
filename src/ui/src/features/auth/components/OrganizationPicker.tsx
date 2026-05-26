@@ -37,6 +37,7 @@ import {
   ArrowRight,
   Plus,
   CircleNotch,
+  ShieldWarning,
 } from "@phosphor-icons/react";
 
 /**
@@ -311,16 +312,61 @@ export function OrganizationPicker() {
               </div>
               <p className="text-foreground font-medium mb-1">No workspaces yet</p>
               <p className="text-sm text-muted-foreground mb-6">
-                You are not a member of any organization.
+                {user?.isSystemAdmin
+                  ? 'You are a platform operator with no tenant membership. Open the platform console to manage the deployment.'
+                  : 'You are not a member of any organization.'}
               </p>
-              <Button variant="outline" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create New Organization
-              </Button>
+              {user?.isSystemAdmin ? (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    onClick={() => navigate('/platform')}
+                  >
+                    <ShieldWarning className="h-4 w-4" weight="duotone" />
+                    Open platform console
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create New Organization
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create New Organization
+                </Button>
+              )}
             </div>
           ) : (
             /* Organization list */
             <div className="space-y-2">
+              {user?.isSystemAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/platform')}
+                  className="w-full text-left rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 group cursor-pointer opacity-0"
+                  style={{ animation: 'org-slide-up 0.4s ease-out 0.1s forwards' }}
+                >
+                  <div className="flex items-center gap-4 p-4">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                      <ShieldWarning
+                        className="h-5 w-5 text-amber-700 dark:text-amber-300"
+                        weight="duotone"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-foreground">
+                        Platform console
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Cross-tenant operator view (no org context)
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
+                  </div>
+                </button>
+              )}
               {organizations.map((myOrg, index) => {
                 const slug = myOrg.organization?.slug || '';
                 const isSelecting = selectingSlug === slug;

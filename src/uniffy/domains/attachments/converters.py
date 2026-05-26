@@ -14,10 +14,6 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import ContentType
 
-# ─────────────────────────────────────────────────────────────
-# ContentType Enum Mappings
-# ─────────────────────────────────────────────────────────────
-
 CONTENT_TYPE_TO_PROTO = {
     ContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
     ContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
@@ -47,11 +43,6 @@ def content_type_to_proto(content_type: ContentType) -> ProtoContentType:
 def content_type_from_proto(proto_type: ProtoContentType) -> ContentType | None:
     """Convert proto ContentType to domain enum."""
     return CONTENT_TYPE_FROM_PROTO.get(proto_type)
-
-
-# ─────────────────────────────────────────────────────────────
-# Attachment Converters
-# ─────────────────────────────────────────────────────────────
 
 
 def attachment_to_proto(

@@ -406,8 +406,8 @@ landing_deploy() {
     echo "Run 'pnpm --filter uniffy-landing exec wrangler login' first, or export CLOUDFLARE_API_TOKEN."
   fi
   landing_build
-  echo "Deploying to Cloudflare Pages (project: uniffy-landing)..."
-  (cd src/landing && pnpm exec wrangler pages deploy dist --project-name uniffy-landing)
+  echo "Deploying to Cloudflare Pages (project: uniffy-landing, branch: main = production)..."
+  (cd src/landing && pnpm exec wrangler pages deploy dist --project-name uniffy-landing --branch main --commit-dirty=true)
   echo "Deploy complete. Geo-block active: only requests with cf-ipcountry=BG are served."
 }
 

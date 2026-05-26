@@ -15,6 +15,7 @@ import {
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Drawer } from '@/components/ui/drawer';
 import { PortalMenu } from '@/components/ui/portal-menu';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -337,28 +338,22 @@ export function PlatformOrganizationsPage() {
                         className="w-full bg-input border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
-                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={onlySuspended}
-                        onChange={(e) => {
-                            setOnlySuspended(e.target.checked);
-                            setPage(0);
-                        }}
-                    />
-                    Suspended only
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={includeDeleted}
-                        onChange={(e) => {
-                            setIncludeDeleted(e.target.checked);
-                            setPage(0);
-                        }}
-                    />
-                    Include deleted
-                </label>
+                <Checkbox
+                    label="Suspended only"
+                    checked={onlySuspended}
+                    onChange={(e) => {
+                        setOnlySuspended(e.target.checked);
+                        setPage(0);
+                    }}
+                />
+                <Checkbox
+                    label="Include deleted"
+                    checked={includeDeleted}
+                    onChange={(e) => {
+                        setIncludeDeleted(e.target.checked);
+                        setPage(0);
+                    }}
+                />
             </div>
 
             <Table>

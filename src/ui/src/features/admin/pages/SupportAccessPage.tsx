@@ -19,9 +19,9 @@ import {
 
 function modeLabel(mode: SupportConsentMode): string {
     switch (mode) {
-        case SupportConsentMode.SUPPORT_CONSENT_MODE_OWNER_APPROVED:
+        case SupportConsentMode.OWNER_APPROVED:
             return 'Owner approval required';
-        case SupportConsentMode.SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED:
+        case SupportConsentMode.OPERATOR_JUSTIFIED:
             return 'Operator-justified';
         default:
             return 'Not set';
@@ -30,9 +30,9 @@ function modeLabel(mode: SupportConsentMode): string {
 
 function modeDescription(mode: SupportConsentMode): string {
     switch (mode) {
-        case SupportConsentMode.SUPPORT_CONSENT_MODE_OWNER_APPROVED:
+        case SupportConsentMode.OWNER_APPROVED:
             return 'Platform operators cannot enter your workspace without an org admin clicking Approve first. Recommended for most workspaces.';
-        case SupportConsentMode.SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED:
+        case SupportConsentMode.OPERATOR_JUSTIFIED:
             return 'Sessions go ACTIVE immediately when an operator opens one, with an in-app banner + email letting you revoke at any time. Faster for single-operator self-hosted setups.';
         default:
             return 'Falls back to the deployment-wide policy.';
@@ -92,10 +92,10 @@ export function SupportAccessPage() {
 
     const locked = view.lockedByDeployment;
     const ownerApprovedValue =
-        SupportConsentMode.SUPPORT_CONSENT_MODE_OWNER_APPROVED;
+        SupportConsentMode.OWNER_APPROVED;
     const operatorJustifiedValue =
-        SupportConsentMode.SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED;
-    const unspecified = SupportConsentMode.SUPPORT_CONSENT_MODE_UNSPECIFIED;
+        SupportConsentMode.OPERATOR_JUSTIFIED;
+    const unspecified = SupportConsentMode.UNSPECIFIED;
 
     return (
         <div className="flex flex-col gap-6 max-w-3xl">

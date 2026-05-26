@@ -39,7 +39,7 @@ export function RequestSupportSessionDialog({
             await supportSessionsApi.request({
                 organizationId,
                 reason: trimmed,
-                scope: SupportSessionScope.SUPPORT_SESSION_SCOPE_READ_ONLY,
+                scope: SupportSessionScope.READ_ONLY,
                 durationMinutes: duration,
             });
             toast.success(
