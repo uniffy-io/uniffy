@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { friendlyErrorMessage } from '@/config';
 import { auditApi } from '@/features/admin/api/auditApi';
-import type { AuditFilter } from '@/features/admin/store/auditSlice';
+import type { AuditFilter } from '@/components/audit';
 
 interface ExportArgs {
     organizationId: string;

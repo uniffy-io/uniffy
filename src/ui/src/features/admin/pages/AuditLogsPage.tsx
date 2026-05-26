@@ -1,13 +1,5 @@
-/**
- * AuditLogsPage
- *
- * Org-admin facing view of the central audit log. Two-column layout
- * mirroring `/files` and `/notes`: full-width table card on the left,
- * inline right filter sidebar on lg+, Drawer on tablet / mobile.
- * Virtualized infinite scroll, inline row expansion, CSV / JSON export.
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import {
     CaretDoubleLeft,
     CaretDoubleRight,
@@ -17,9 +9,7 @@ import {
     SlidersHorizontal,
     X,
 } from '@phosphor-icons/react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Drawer } from '@/components/ui/drawer';
@@ -27,116 +17,136 @@ import { useAdminAccess } from '@/features/admin/hooks/useAdminHooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
-import {
-    fetchNewestEvents,
-    fetchOlderEvents,
-    jumpToDate,
-    setFilter,
-    type AuditFilter,
-    type AuditSortDir,
-    type SerializedAuditEvent,
-} from '@/features/admin/store/auditSlice';
-import { AuditFilterRail } from '@/features/admin/pages/audit/AuditFilterRail';
-import { AuditEventRow } from '@/features/admin/pages/audit/AuditEventRow';
-import { AuditTableHeader } from '@/features/admin/pages/audit/AuditTableHeader';
-import {
-    auditGridTemplate,
-} from '@/features/admin/pages/audit/columnWidths';
-import {
-    DEFAULT_LOOKBACK_DAYS,
-    defaultAuditFilter,
-    filterToSearchParams,
-    searchParamsToFilter,
-} from '@/features/admin/pages/audit/filterUrl';
-import { actionLabel } from '@/features/admin/pages/audit/actionCatalog';
+import { friendlyErrorMessage } from '@/config';
+import { auditApi } from '@/features/admin/api/auditApi';
 import { exportCurrentView } from '@/features/admin/pages/audit/exportClient';
+import {
+    ACTION_GROUPS,
+    RESOURCE_TYPES,
+    actionLabel,
+} from '@/features/admin/pages/audit/actionCatalog';
+import {
+    AuditActionFilter,
+    AuditEventTable,
+    AuditFilterRail,
+    EMPTY_AUDIT_FILTER,
+    type ActionGroup,
+    type AuditEvent,
+    type AuditFilter,
+    type AuditFilterFields,
+} from '@/components/audit';
+import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { SortOrder, type AuditEvent as ProtoAuditEvent } from '@uniffy/proto/audit/v1/audit_pb';
+import { toast } from 'sonner';
 
-interface VirtuosoTableContext {
-    sortDir: AuditSortDir;
-    onToggleSort: () => void;
-    gridTemplate: string;
-    showIp: boolean;
-    loadingOlder: boolean;
-    hasMore: boolean;
-    fromTime: string | null;
-    onExtendRange: () => void;
+const PAGE_SIZE = 50;
+const DEFAULT_LOOKBACK_DAYS = 7;
+
+const ORG_FILTER_FIELDS: AuditFilterFields = {
+    dateRange: true,
+    actor: true,
+    actions: false,
+    resourceType: true,
+    resourceUrn: true,
+    organization: false,
+};
+
+const ORG_ACTION_GROUPS: ActionGroup[] = ACTION_GROUPS.map((g) => ({
+    domain: g.domain,
+    label: g.label,
+    actions: g.actions.map((a) => ({ value: a.value, label: a.label })),
+}));
+
+type ProtoTimestamp = { seconds: number | bigint; nanos: number };
+
+function protoToIso(ts: ProtoTimestamp | undefined): string {
+    if (!ts) return '';
+    const ms = typeof ts.seconds === 'bigint' ? Number(ts.seconds) * 1000 : ts.seconds * 1000;
+    return new Date(ms).toISOString();
 }
 
-function VirtuosoStickyHeader({ context }: { context?: VirtuosoTableContext }) {
-    if (!context) return null;
-    return (
-        <div className="sticky top-0 z-10 bg-card">
-            <AuditTableHeader
-                sortDir={context.sortDir}
-                onToggleSort={context.onToggleSort}
-                gridTemplate={context.gridTemplate}
-                showIp={context.showIp}
-            />
-        </div>
-    );
+function toAuditEvent(row: ProtoAuditEvent): AuditEvent {
+    return {
+        id: row.id,
+        createdAt: protoToIso(row.createdAt),
+        action: row.action,
+        actorUserId: row.actorUserId ?? null,
+        actorEmail: null,
+        actorOrgRole: row.actorOrgRole ?? null,
+        organizationId: row.organizationId || null,
+        organizationName: null,
+        resourceType: row.resourceType ?? null,
+        resourceId: row.resourceId ?? null,
+        detailsJson: row.detailsJson || '{}',
+        ipAddress: row.ipAddress ?? null,
+        userAgent: row.userAgent ?? null,
+        onBehalfOfUserId: row.onBehalfOfUserId ?? null,
+    };
 }
 
-function VirtuosoFooter({ context }: { context?: VirtuosoTableContext }) {
-    if (!context) return null;
-    if (context.loadingOlder) {
-        return (
-            <div className="py-6 text-center text-xs text-muted-foreground">
-                Loading older events...
-            </div>
-        );
-    }
-    if (!context.hasMore) {
-        if (context.fromTime) {
-            const since = new Date(context.fromTime).toLocaleDateString();
-            return (
-                <div className="py-6 flex flex-col items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                        End of window (showing events since {since})
-                    </p>
-                    <button
-                        type="button"
-                        onClick={context.onExtendRange}
-                        className={cn(
-                            'inline-flex items-center gap-1 px-3 py-1.5 rounded-md',
-                            'text-xs font-medium border border-border',
-                            'text-foreground bg-muted/40 hover:bg-muted hover:border-border/80',
-                            'transition-colors',
-                        )}
-                    >
-                        Load {DEFAULT_LOOKBACK_DAYS} more days
-                    </button>
-                </div>
-            );
-        }
-        return (
-            <div className="py-6 text-center text-xs text-muted-foreground">
-                End of audit log
-            </div>
-        );
-    }
-    return null;
+const PARAM = {
+    ACTOR: 'actor',
+    ACTIONS: 'actions',
+    RESOURCE_TYPE: 'resourceType',
+    RESOURCE_ID: 'resourceId',
+    FROM: 'from',
+    TO: 'to',
+} as const;
+
+function filterToSearchParams(filter: AuditFilter): URLSearchParams {
+    const params = new URLSearchParams();
+    if (filter.actorUserId) params.set(PARAM.ACTOR, filter.actorUserId);
+    if (filter.actions.length > 0) params.set(PARAM.ACTIONS, filter.actions.join(','));
+    if (filter.resourceType) params.set(PARAM.RESOURCE_TYPE, filter.resourceType);
+    if (filter.resourceId) params.set(PARAM.RESOURCE_ID, filter.resourceId);
+    if (filter.fromTime) params.set(PARAM.FROM, filter.fromTime);
+    if (filter.toTime) params.set(PARAM.TO, filter.toTime);
+    return params;
+}
+
+function searchParamsToFilter(params: URLSearchParams): AuditFilter {
+    const actions = params.get(PARAM.ACTIONS);
+    return {
+        ...EMPTY_AUDIT_FILTER,
+        actorUserId: params.get(PARAM.ACTOR) || null,
+        actions: actions ? actions.split(',').filter(Boolean) : [],
+        resourceType: params.get(PARAM.RESOURCE_TYPE) || null,
+        resourceId: params.get(PARAM.RESOURCE_ID) || null,
+        fromTime: params.get(PARAM.FROM) || null,
+        toTime: params.get(PARAM.TO) || null,
+    };
 }
 
 export function AuditLogsPage() {
     useDocumentTitle('Audit Log');
-    const dispatch = useAppDispatch();
     const { canAccessAdmin } = useAdminAccess();
-    const { isMobile, isDesktop, isWide } = useBreakpoint();
+    const { isDesktop, isWide } = useBreakpoint();
     const sidebarInline = isDesktop || isWide;
-    const showIp = !isMobile;
     const [searchParams, setSearchParams] = useSearchParams();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-    const organizationSlug = useAppSelector(
-        (state) => state.auth.currentOrganizationSlug,
-    );
-    const events = useAppSelector((state) => state.audit.events);
-    const hasMore = useAppSelector((state) => state.audit.hasMore);
-    const loading = useAppSelector((state) => state.audit.loading);
-    const error = useAppSelector((state) => state.audit.error);
-    const filter = useAppSelector((state) => state.audit.filter);
+    const organizationSlug = useAppSelector((state) => state.auth.currentOrganizationSlug);
 
-    const virtuosoRef = useRef<VirtuosoHandle>(null);
-    const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+    const filter = useMemo(() => searchParamsToFilter(searchParams), [searchParams]);
+
+    const initializedRef = useRef(false);
+    useEffect(() => {
+        if (initializedRef.current) return;
+        initializedRef.current = true;
+        if (searchParams.toString() !== '') return;
+        const start = new Date();
+        start.setDate(start.getDate() - DEFAULT_LOOKBACK_DAYS);
+        const seeded: AuditFilter = {
+            ...EMPTY_AUDIT_FILTER,
+            fromTime: start.toISOString(),
+        };
+        setSearchParams(filterToSearchParams(seeded), { replace: true });
+    }, [searchParams, setSearchParams]);
+
+    const [events, setEvents] = useState<ProtoAuditEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [pageTokens, setPageTokens] = useState<(string | null)[]>([null]);
+    const [pageIndex, setPageIndex] = useState(0);
+    const [nextToken, setNextToken] = useState<string | null>(null);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [jumpDate, setJumpDate] = useState('');
     const [exporting, setExporting] = useState<'csv' | 'json' | null>(null);
@@ -144,7 +154,6 @@ export function AuditLogsPage() {
         if (typeof window === 'undefined') return true;
         return window.localStorage.getItem('audit:sidebar-collapsed') !== '1';
     });
-    const gridTemplate = useMemo(() => auditGridTemplate(showIp), [showIp]);
 
     const toggleSidebar = useCallback(() => {
         setSidebarExpanded((prev) => {
@@ -161,63 +170,85 @@ export function AuditLogsPage() {
         });
     }, []);
 
-    const urlFilter = useMemo(() => searchParamsToFilter(searchParams), [searchParams]);
-    const activeFilterChips = useMemo(() => describeFilterChips(filter), [filter]);
+    const fetchPage = useCallback(
+        async (token: string | null) => {
+            if (!organizationId) return;
+            setLoading(true);
+            try {
+                const response = await auditApi.listEvents({
+                    organizationId,
+                    actorUserId: filter.actorUserId ?? undefined,
+                    actions: filter.actions,
+                    resourceType: filter.resourceType ?? undefined,
+                    resourceId: filter.resourceId ?? undefined,
+                    fromTime: filter.fromTime
+                        ? timestampFromDate(new Date(filter.fromTime))
+                        : undefined,
+                    toTime: filter.toTime
+                        ? timestampFromDate(new Date(filter.toTime))
+                        : undefined,
+                    pageSize: PAGE_SIZE,
+                    pageToken: token ?? undefined,
+                    order: SortOrder.TIME_DESC,
+                });
+                setEvents(response.events);
+                setNextToken(response.nextPageToken ?? null);
+            } catch (error) {
+                const message = friendlyErrorMessage((error as Error).message);
+                if (message) toast.error(message);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [organizationId, filter],
+    );
 
     useEffect(() => {
-        if (!organizationId) return;
-        if (!canAccessAdmin) return;
-        dispatch(setFilter(urlFilter));
-        dispatch(fetchNewestEvents({ organizationId, filter: urlFilter }));
-    }, [dispatch, organizationId, canAccessAdmin, urlFilter]);
+        // Reset pagination state when filter changes.
+        setPageTokens([null]);
+        setPageIndex(0);
+        fetchPage(null);
+    }, [fetchPage]);
+
+    const auditEvents = useMemo(() => events.map(toAuditEvent), [events]);
+    const activeFilterChips = useMemo(() => describeFilterChips(filter), [filter]);
+    const activeFilterCount = activeFilterChips.length;
 
     const applyFilter = useCallback(
         (next: AuditFilter) => {
-            const params = filterToSearchParams(next);
-            setSearchParams(params, { replace: false });
-            setExpanded(new Set());
+            setSearchParams(filterToSearchParams(next), { replace: false });
         },
         [setSearchParams],
     );
 
     const clearFilter = useCallback(() => {
-        applyFilter(defaultAuditFilter());
+        applyFilter({ ...EMPTY_AUDIT_FILTER });
     }, [applyFilter]);
 
-    const extendRange = useCallback(() => {
-        const anchor = filter.fromTime ? new Date(filter.fromTime) : new Date();
-        anchor.setDate(anchor.getDate() - DEFAULT_LOOKBACK_DAYS);
-        applyFilter({ ...filter, fromTime: anchor.toISOString() });
-    }, [applyFilter, filter]);
-
-    const handleToggleSort = useCallback(() => {
-        const nextDir: 'desc' | 'asc' = filter.sortDir === 'desc' ? 'asc' : 'desc';
-        applyFilter({ ...filter, sortDir: nextDir });
-    }, [applyFilter, filter]);
-
-    const handleLoadOlder = useCallback(() => {
-        if (loading !== 'idle' || !hasMore) return;
-        dispatch(fetchOlderEvents());
-    }, [dispatch, hasMore, loading]);
-
-    const handleJumpToDate = useCallback(() => {
-        if (!jumpDate || !organizationId) return;
-        const toTime = new Date(`${jumpDate}T23:59:59`).toISOString();
-        dispatch(jumpToDate({ organizationId, filter, toTime }));
-        virtuosoRef.current?.scrollToIndex({ index: 0 });
-    }, [dispatch, jumpDate, organizationId, filter]);
-
-    const toggleExpanded = useCallback((id: string) => {
-        setExpanded((prev) => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
+    const handleNext = () => {
+        if (!nextToken) return;
+        const newIndex = pageIndex + 1;
+        setPageTokens((prev) => {
+            const copy = prev.slice(0, newIndex);
+            copy.push(nextToken);
+            return copy;
         });
-    }, []);
+        setPageIndex(newIndex);
+        fetchPage(nextToken);
+    };
+
+    const handlePrev = () => {
+        if (pageIndex <= 0) return;
+        const newIndex = pageIndex - 1;
+        setPageIndex(newIndex);
+        fetchPage(pageTokens[newIndex] ?? null);
+    };
+
+    const handleJumpToDate = () => {
+        if (!jumpDate) return;
+        const toTime = new Date(`${jumpDate}T23:59:59`).toISOString();
+        applyFilter({ ...filter, toTime });
+    };
 
     const handleExport = useCallback(
         async (format: 'csv' | 'json') => {
@@ -241,6 +272,8 @@ export function AuditLogsPage() {
         return <Navigate to="/" replace />;
     }
 
+    const showFiltersButton = !sidebarInline;
+
     return (
         <div className="space-y-6 pb-12">
             <PageHeader
@@ -250,90 +283,59 @@ export function AuditLogsPage() {
                 onExport={handleExport}
                 exporting={exporting}
                 onOpenFilters={() => setFilterDrawerOpen(true)}
-                activeFilterCount={activeFilterChips.length}
-                showFiltersButton={!sidebarInline}
+                activeFilterCount={activeFilterCount}
+                showFiltersButton={showFiltersButton}
+            />
+
+            <AuditActionFilter
+                filter={filter}
+                onChange={applyFilter}
+                groups={ORG_ACTION_GROUPS}
             />
 
             {activeFilterChips.length > 0 && (
                 <ActiveFilterBar
                     chips={activeFilterChips}
-                    onRemove={(key) =>
-                        applyFilter(removeChip(filter, key))
-                    }
+                    onRemove={(key) => applyFilter(removeChip(filter, key))}
                     onClear={clearFilter}
                 />
             )}
 
             <div className="flex gap-6">
                 <div className="flex-1 min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                    {loading === 'fetching-newest' && events.length === 0 ? (
-                        <>
-                            <AuditTableHeader
-                                sortDir={filter.sortDir}
-                                onToggleSort={handleToggleSort}
-                                gridTemplate={gridTemplate}
-                                showIp={showIp}
-                            />
-                            <LoadingState />
-                        </>
-                    ) : error ? (
-                        <>
-                            <AuditTableHeader
-                                sortDir={filter.sortDir}
-                                onToggleSort={handleToggleSort}
-                                gridTemplate={gridTemplate}
-                                showIp={showIp}
-                            />
-                            <ErrorState message={error} />
-                        </>
-                    ) : events.length === 0 ? (
-                        <>
-                            <AuditTableHeader
-                                sortDir={filter.sortDir}
-                                onToggleSort={handleToggleSort}
-                                gridTemplate={gridTemplate}
-                                showIp={showIp}
-                            />
-                            <EmptyState
-                                onClear={clearFilter}
-                                hasFilter={activeFilterChips.length > 0}
-                            />
-                        </>
-                    ) : (
-                        <Virtuoso<SerializedAuditEvent, VirtuosoTableContext>
-                            ref={virtuosoRef}
-                            data={events}
-                            style={{
-                                height: 'calc(100dvh - 16rem)',
-                                minHeight: '480px',
-                            }}
-                            endReached={handleLoadOlder}
-                            overscan={400}
-                            context={{
-                                sortDir: filter.sortDir,
-                                onToggleSort: handleToggleSort,
-                                gridTemplate,
-                                showIp,
-                                loadingOlder: loading === 'fetching-older',
-                                hasMore,
-                                fromTime: filter.fromTime,
-                                onExtendRange: extendRange,
-                            }}
-                            itemContent={(_, event) => (
-                                <AuditEventRow
-                                    event={event}
-                                    expanded={expanded.has(event.id)}
-                                    onToggleExpanded={() => toggleExpanded(event.id)}
-                                    gridTemplate={gridTemplate}
-                                    showIp={showIp}
-                                />
-                            )}
-                            components={{
-                                Header: VirtuosoStickyHeader,
-                                Footer: VirtuosoFooter,
-                            }}
-                        />
-                    )}
+                    <AuditEventTable
+                        events={auditEvents}
+                        loading={loading}
+                        emptyDescription="No audit events recorded yet."
+                        filteredEmptyDescription="Adjust filters to surface more activity."
+                        hasActiveFilters={activeFilterCount > 0}
+                    />
+                    <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
+                        <span>
+                            {events.length > 0
+                                ? `Showing ${events.length} on page ${pageIndex + 1}`
+                                : '0'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="xs"
+                                disabled={pageIndex <= 0}
+                                onClick={handlePrev}
+                            >
+                                Prev
+                            </Button>
+                            <span>Page {pageIndex + 1}</span>
+                            <Button
+                                variant="ghost"
+                                size="xs"
+                                disabled={!nextToken}
+                                onClick={handleNext}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 {sidebarInline && sidebarExpanded && (
@@ -345,7 +347,7 @@ export function AuditLogsPage() {
                                     <h2 className="text-sm font-semibold">Filters</h2>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {activeFilterChips.length > 0 && (
+                                    {activeFilterCount > 0 && (
                                         <button
                                             type="button"
                                             onClick={clearFilter}
@@ -366,7 +368,13 @@ export function AuditLogsPage() {
                                 </div>
                             </div>
                             <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto">
-                                <AuditFilterRail filter={filter} onChange={applyFilter} />
+                                <AuditFilterRail
+                                    filter={filter}
+                                    onChange={applyFilter}
+                                    fields={ORG_FILTER_FIELDS}
+                                    actionGroups={ORG_ACTION_GROUPS}
+                                    resourceTypes={RESOURCE_TYPES}
+                                />
                             </div>
                         </div>
                     </aside>
@@ -389,8 +397,8 @@ export function AuditLogsPage() {
                                 onClick={toggleSidebar}
                                 className="w-full p-3 flex flex-col items-center gap-2 hover:bg-muted/60 transition-colors"
                                 title={
-                                    activeFilterChips.length > 0
-                                        ? `Filters (${activeFilterChips.length})`
+                                    activeFilterCount > 0
+                                        ? `Filters (${activeFilterCount})`
                                         : 'Filters'
                                 }
                             >
@@ -399,14 +407,14 @@ export function AuditLogsPage() {
                                         size={20}
                                         weight="duotone"
                                         className={cn(
-                                            activeFilterChips.length > 0
+                                            activeFilterCount > 0
                                                 ? 'text-primary'
                                                 : 'text-muted-foreground',
                                         )}
                                     />
-                                    {activeFilterChips.length > 0 && (
+                                    {activeFilterCount > 0 && (
                                         <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-[10px] font-semibold text-primary-foreground flex items-center justify-center">
-                                            {activeFilterChips.length}
+                                            {activeFilterCount}
                                         </span>
                                     )}
                                 </div>
@@ -433,7 +441,14 @@ export function AuditLogsPage() {
                             <h2 className="text-base font-semibold">Filters</h2>
                         </div>
                     </div>
-                    <AuditFilterRail filter={filter} onChange={applyFilter} compact />
+                    <AuditFilterRail
+                        filter={filter}
+                        onChange={applyFilter}
+                        fields={ORG_FILTER_FIELDS}
+                        actionGroups={ORG_ACTION_GROUPS}
+                        resourceTypes={RESOURCE_TYPES}
+                        compact
+                    />
                 </Drawer>
             )}
         </div>
@@ -543,45 +558,6 @@ function PageHeader({
     );
 }
 
-interface ActiveFilterBarProps {
-    chips: FilterChip[];
-    onRemove: (key: FilterChipKey) => void;
-    onClear: () => void;
-}
-
-function ActiveFilterBar({ chips, onRemove, onClear }: ActiveFilterBarProps) {
-    return (
-        <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                Filters
-            </span>
-            {chips.map((chip) => (
-                <button
-                    key={chip.key}
-                    type="button"
-                    onClick={() => onRemove(chip.key)}
-                    className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
-                        'border border-border bg-muted/60 text-foreground',
-                        'hover:bg-muted hover:border-border/80 transition-colors',
-                    )}
-                >
-                    <span className="font-medium text-muted-foreground">{chip.label}</span>
-                    <span className="text-foreground">{chip.value}</span>
-                    <X size={10} weight="bold" />
-                </button>
-            ))}
-            <button
-                type="button"
-                onClick={onClear}
-                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-            >
-                Clear all
-            </button>
-        </div>
-    );
-}
-
 type FilterChipKey =
     | 'actor'
     | 'fromTime'
@@ -606,18 +582,10 @@ function describeFilterChips(filter: AuditFilter): FilterChip[] {
         });
     }
     if (filter.fromTime) {
-        chips.push({
-            key: 'fromTime',
-            label: 'From',
-            value: filter.fromTime.slice(0, 10),
-        });
+        chips.push({ key: 'fromTime', label: 'From', value: filter.fromTime.slice(0, 10) });
     }
     if (filter.toTime) {
-        chips.push({
-            key: 'toTime',
-            label: 'To',
-            value: filter.toTime.slice(0, 10),
-        });
+        chips.push({ key: 'toTime', label: 'To', value: filter.toTime.slice(0, 10) });
     }
     if (filter.resourceType) {
         chips.push({
@@ -656,50 +624,43 @@ function removeChip(filter: AuditFilter, key: FilterChipKey): AuditFilter {
     return filter;
 }
 
-function LoadingState() {
-    return (
-        <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
-            <p className="text-sm text-muted-foreground">Loading audit events...</p>
-        </div>
-    );
-}
-
-interface EmptyStateProps {
+function ActiveFilterBar({
+    chips,
+    onRemove,
+    onClear,
+}: {
+    chips: FilterChip[];
+    onRemove: (key: FilterChipKey) => void;
     onClear: () => void;
-    hasFilter: boolean;
-}
-
-function EmptyState({ onClear, hasFilter }: EmptyStateProps) {
+}) {
     return (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <ClipboardText
-                size={48}
-                weight="duotone"
-                className="text-muted-foreground/50"
-            />
-            <p className="text-sm font-medium text-foreground">
-                No events match the current filters
-            </p>
-            <p className="text-xs text-muted-foreground">
-                Adjust the date range, actor, or action filter to surface more activity.
-            </p>
-            {hasFilter && (
-                <Button variant="secondary" size="sm" onClick={onClear}>
-                    Clear filters
-                </Button>
-            )}
-        </div>
-    );
-}
-
-function ErrorState({ message }: { message: string }) {
-    return (
-        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-            <p className="text-sm font-medium text-destructive">
-                Could not load audit events
-            </p>
-            <p className="text-xs text-muted-foreground">{message}</p>
+        <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Filters
+            </span>
+            {chips.map((chip) => (
+                <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => onRemove(chip.key)}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
+                        'border border-border bg-muted/60 text-foreground',
+                        'hover:bg-muted hover:border-border/80 transition-colors',
+                    )}
+                >
+                    <span className="font-medium text-muted-foreground">{chip.label}</span>
+                    <span className="text-foreground">{chip.value}</span>
+                    <X size={10} weight="bold" />
+                </button>
+            ))}
+            <button
+                type="button"
+                onClick={onClear}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            >
+                Clear all
+            </button>
         </div>
     );
 }
