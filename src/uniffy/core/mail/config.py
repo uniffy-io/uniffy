@@ -45,7 +45,7 @@ class MailConfig(BaseModel):
     smtp_password: str | None = None
     smtp_use_tls: bool = True
     rate_limit_per_min: int = 100
-    source: Literal["env", "org"] = "env"
+    source: Literal["env", "deployment", "org"] = "env"
 
     @classmethod
     def from_env(cls) -> MailConfig | None:
@@ -70,6 +70,42 @@ class MailConfig(BaseModel):
             smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes"),
             rate_limit_per_min=int(os.getenv("MAIL_RATE_LIMIT_PER_MIN", "100")),
             source="env",
+        )
+
+    @classmethod
+    async def from_deployment_settings(
+        cls,
+        settings: dict[str, OrgSettingRow],
+        decryptor: Callable[[str], Awaitable[str]],
+    ) -> MailConfig | None:
+        """Assemble a deployment-scope config from ``deployment_settings`` rows.
+
+        Same contract as :meth:`from_org_settings` but the decryptor is
+        the :class:`DeploymentCipher` (no org id needed). Returns
+        ``None`` when ``from_address`` / ``smtp_host`` are absent so the
+        resolver can fall back to env without raising.
+        """
+        from_address = _plain(settings.get("from_address"))
+        smtp_host = _plain(settings.get("smtp_host"))
+        if not from_address or not smtp_host:
+            return None
+
+        password: str | None = None
+        password_row = settings.get("smtp_password")
+        if password_row is not None and password_row.value_encrypted:
+            password = await decryptor(password_row.value_encrypted)
+
+        return cls(
+            from_address=str(from_address),
+            from_name=str(_plain(settings.get("from_name")) or "Uniffy"),
+            reply_to=_str_or_none(_plain(settings.get("reply_to"))),
+            smtp_host=str(smtp_host),
+            smtp_port=int(_plain(settings.get("smtp_port")) or 587),
+            smtp_username=_str_or_none(_plain(settings.get("smtp_username"))),
+            smtp_password=password,
+            smtp_use_tls=_bool(_plain(settings.get("smtp_use_tls")), default=True),
+            rate_limit_per_min=int(_plain(settings.get("rate_limit_per_min")) or 100),
+            source="deployment",
         )
 
     @classmethod

@@ -4,10 +4,13 @@
  * System-wide server configuration (for system admins).
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useTheme } from "@/config/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
+import { friendlyErrorMessage } from "@/config";
+import { systemConfigApi } from "@/features/platform/api/systemConfigApi";
 import {
     HardDrives,
     ShieldCheck,
@@ -60,9 +63,10 @@ interface SettingItemProps {
     enabled: boolean;
     onChange: (enabled: boolean) => void;
     badge?: string;
+    disabled?: boolean;
 }
 
-function SettingItem({ icon: Icon, title, description, enabled, onChange, badge }: SettingItemProps) {
+function SettingItem({ icon: Icon, title, description, enabled, onChange, badge, disabled }: SettingItemProps) {
     return (
         <div className="group relative overflow-hidden rounded-xl border border-border bg-card hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:shadow-primary/5">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -83,7 +87,7 @@ function SettingItem({ icon: Icon, title, description, enabled, onChange, badge 
                         <div className="text-sm text-muted-foreground mt-1">{description}</div>
                     </div>
                 </div>
-                <ToggleSwitch enabled={enabled} onChange={onChange} />
+                <ToggleSwitch enabled={enabled} onChange={onChange} disabled={disabled} />
             </div>
         </div>
     );
@@ -93,31 +97,119 @@ export function ServerSettingsPage() {
     useDocumentTitle('Server Settings');
     const { themeMode, availableModes, setTheme } = useTheme();
 
-    // Settings state
+    // Wired flags resolved through `superadmin.v1.SystemConfigService`:
+    // deployment_settings row > env default > coded default.
+    const [publicRegistration, setPublicRegistrationState] = useState(false);
+    const [publicRegistrationSource, setPublicRegistrationSource] = useState<string>('default');
+    const [publicRegistrationLoading, setPublicRegistrationLoading] = useState(true);
+    const [publicRegistrationSaving, setPublicRegistrationSaving] = useState(false);
+
+    // Placeholder toggles -- visual only until wired the same way as
+    // public registration. Local state matches the rendered switch but is
+    // not persisted anywhere yet.
     const [maintenanceMode, setMaintenanceMode] = useState(false);
-    const [publicRegistration, setPublicRegistration] = useState(true);
     const [emailNotifications, setEmailNotifications] = useState(true);
-    const [twoFactorRequired, setTwoFactorRequired] = useState(false);
     const [auditLogging, setAuditLogging] = useState(true);
     const [apiRateLimiting, setApiRateLimiting] = useState(true);
 
+    // MFA platform policy -- backed by SystemConfigService.GetMfaPolicy.
+    const [mfaRequiredForAdmins, setMfaRequiredForAdmins] = useState(false);
+    const [mfaPolicyLoading, setMfaPolicyLoading] = useState(true);
+    const [mfaPolicySaving, setMfaPolicySaving] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            setPublicRegistrationLoading(true);
+            setMfaPolicyLoading(true);
+            try {
+                const [systemResponse, mfaResponse] = await Promise.all([
+                    systemConfigApi.getSystemConfig({}),
+                    systemConfigApi.getMfaPolicy({}),
+                ]);
+                const flag = systemResponse.config?.publicRegistration;
+                if (!cancelled && flag) {
+                    setPublicRegistrationState(flag.enabled);
+                    setPublicRegistrationSource(flag.source || 'default');
+                }
+                const policy = mfaResponse.policy;
+                if (!cancelled && policy) {
+                    setMfaRequiredForAdmins(policy.requiredForSystemAdmins);
+                }
+            } catch (err) {
+                const friendly = friendlyErrorMessage((err as Error).message);
+                if (friendly) toast.error(friendly);
+            } finally {
+                if (!cancelled) {
+                    setPublicRegistrationLoading(false);
+                    setMfaPolicyLoading(false);
+                }
+            }
+        };
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const updateMfaPolicy = useCallback(
+        async (requiredForSystemAdmins: boolean) => {
+            setMfaPolicySaving(true);
+            try {
+                const response = await systemConfigApi.setMfaPolicy({
+                    requiredForSystemAdmins,
+                });
+                const policy = response.policy;
+                if (policy) {
+                    setMfaRequiredForAdmins(policy.requiredForSystemAdmins);
+                }
+                toast.success(
+                    requiredForSystemAdmins
+                        ? 'MFA now required for platform admins'
+                        : 'MFA no longer required for platform admins',
+                );
+            } catch (err) {
+                const friendly = friendlyErrorMessage((err as Error).message);
+                if (friendly) toast.error(friendly);
+            } finally {
+                setMfaPolicySaving(false);
+            }
+        },
+        [],
+    );
+
+    const handlePublicRegistrationChange = useCallback(async (enabled: boolean) => {
+        const previous = publicRegistration;
+        setPublicRegistrationState(enabled);
+        setPublicRegistrationSaving(true);
+        try {
+            const response = await systemConfigApi.setPublicRegistration({ enabled });
+            const flag = response.config?.publicRegistration;
+            if (flag) {
+                setPublicRegistrationState(flag.enabled);
+                setPublicRegistrationSource(flag.source || 'default');
+            }
+            toast.success(`Public registration ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (err) {
+            setPublicRegistrationState(previous);
+            const friendly = friendlyErrorMessage((err as Error).message);
+            if (friendly) toast.error(friendly);
+        } finally {
+            setPublicRegistrationSaving(false);
+        }
+    }, [publicRegistration]);
+
     return (
-        <div className="space-y-8 pb-12">
-            {/* Header Section */}
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-primary p-2.5 md:p-3 shadow-lg shrink-0">
-                        <HardDrives size={24} weight="duotone" className="text-primary-foreground md:hidden" />
-                        <HardDrives size={28} weight="duotone" className="text-primary-foreground hidden md:block" />
-                    </div>
-                    <div className="min-w-0">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                            Server Settings
-                        </h1>
-                        <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-                            Configure global system behavior and preferences
-                        </p>
-                    </div>
+        <div className="flex flex-col gap-6 max-w-3xl w-full mx-auto">
+            <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                    <HardDrives size={22} weight="duotone" className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-semibold text-foreground">Server settings</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Configure global system behavior and preferences.
+                    </p>
                 </div>
             </div>
 
@@ -184,16 +276,20 @@ export function ServerSettingsPage() {
                     <SettingItem
                         icon={UsersThree}
                         title="Public Registration"
-                        description="Allow new users to create accounts without admin approval"
+                        description="Allow new users to create accounts without an invite"
                         enabled={publicRegistration}
-                        onChange={setPublicRegistration}
+                        onChange={(value) => void handlePublicRegistrationChange(value)}
+                        disabled={publicRegistrationLoading || publicRegistrationSaving}
+                        badge={publicRegistrationLoading ? 'Loading' : publicRegistrationSource}
                     />
                     <SettingItem
                         icon={Key}
-                        title="Require Two-Factor Authentication"
-                        description="Enforce 2FA for all user accounts to enhance security"
-                        enabled={twoFactorRequired}
-                        onChange={setTwoFactorRequired}
+                        title="Require two factor authentication for platform admins"
+                        description="Every platform admin must enrol an authenticator app. Takes effect on the next sign in."
+                        enabled={mfaRequiredForAdmins}
+                        onChange={(value) => void updateMfaPolicy(value)}
+                        disabled={mfaPolicyLoading || mfaPolicySaving}
+                        badge={mfaPolicyLoading ? 'Loading' : undefined}
                     />
                 </div>
             </div>

@@ -1,0 +1,12 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ org_name }} has been scheduled for deletion.
+
+A platform operator marked your workspace for deletion on {{ deleted_at }}. The data will remain restorable for {{ grace_days }} days, until {{ purge_at }}, after which it will be permanently removed.
+
+{% if reason %}Reason recorded by the operator: {{ reason }}
+{% endif %}
+If this was unexpected, contact support immediately. You can restore the workspace from your platform admin contact while it is still within the grace window.
+
+This action was performed by a platform operator and is recorded in your workspace audit log.
+{% endblock %}

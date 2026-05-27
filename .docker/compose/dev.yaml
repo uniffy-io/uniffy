@@ -115,7 +115,7 @@ services:
         container_name: uniffy-dev-landing
         pull_policy: never
         restart: unless-stopped
-        command: pnpm --filter uniffy-landing dev -- --host 0.0.0.0
+        command: pnpm --config.verify-deps-before-run=false --filter uniffy-landing exec astro dev --host 0.0.0.0
         environment:
             PNPM_FILTER: "uniffy-landing..."
             CI: "true"

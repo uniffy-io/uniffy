@@ -7,7 +7,8 @@ import { CopySimple, Plus, PencilSimple, Trash } from '@phosphor-icons/react';
 import { openCreateTemplateModal, openEditTemplateModal, openEventModal } from '@/features/calendar/store';
 import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
 import { listEventTemplates, deleteEventTemplate } from '@/features/calendar/store/calendarThunks';
-import { useEffect } from 'react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useEffect, useState } from 'react';
 
 export function TemplateList() {
   const dispatch = useAppDispatch();
@@ -42,10 +43,22 @@ export function TemplateList() {
     dispatch(openEditTemplateModal(templateId));
   };
 
-  const handleDelete = async (e: React.MouseEvent, templateId: string, title: string) => {
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (e: React.MouseEvent, templateId: string, title: string) => {
     e.stopPropagation();
-    if (window.confirm(`Delete template "${title}"?`)) {
-        await dispatch(deleteEventTemplate(templateId));
+    setPendingDelete({ id: templateId, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteEventTemplate(pendingDelete.id));
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -105,6 +118,23 @@ export function TemplateList() {
             </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!pendingDelete}
+        onClose={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete template?"
+        message={
+          pendingDelete
+            ? `Delete the "${pendingDelete.title}" template? Events created from it are not affected.`
+            : ''
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+      />
     </SidebarSection>
   );
 }

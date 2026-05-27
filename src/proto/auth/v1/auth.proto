@@ -120,16 +120,53 @@ message RegisterResponse {
   repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
 }
 
-// Authentication response with tokens (Login)
+// Login outcome. One of three variants:
+//
+// * ``auth_result`` -- password ok, MFA not required, real session
+//   tokens returned (today's behaviour).
+// * ``mfa_challenge`` -- password ok, user has MFA enabled. Client
+//   must complete ``MfaService.VerifyMfa`` with the challenge token.
+// * ``enrollment_required`` -- password ok, org/platform policy
+//   requires MFA but the user has not enrolled yet AND the grace
+//   window has expired. Client must complete enrollment with the
+//   short-lived ``enrollment_token`` and try login again.
 message LoginResponse {
+  oneof result {
+    AuthResult auth_result = 1;
+    MfaChallenge mfa_challenge = 2;
+    EnrollmentRequired enrollment_required = 3;
+  }
+}
+
+// Successful authentication tokens. Used as the success variant of
+// ``LoginResponse`` and (for clarity) the shape every other auth-path
+// response carries inline.
+message AuthResult {
   string access_token = 1;
   string refresh_token = 2;
   string token_type = 3; // Always "bearer"
   string user_id = 4;
-  optional string organization_id = 5; // If authenticated into specific org
-  optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
-  optional string session_id = 7; // Server-side session identifier
-  repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
+  optional string organization_id = 5;
+  optional string organization_role = 6; // MEMBER / ADMIN / OWNER
+  optional string session_id = 7;
+  repeated common.v1.DomainType domain_admin_domains = 8;
+}
+
+// Mid-login state when password was correct but MFA is enabled.
+// ``challenge_token`` is a 5-min JWT (``type=mfa_challenge``) that
+// only ``MfaService.VerifyMfa`` accepts.
+message MfaChallenge {
+  string challenge_token = 1;
+  repeated string methods = 2; // "totp", "recovery_code"
+}
+
+// Mid-login state when policy requires MFA and the user has not
+// enrolled. ``enrollment_token`` is a 30-min JWT (``type=enrollment_only``)
+// that authorises only the three MFA enrollment RPCs.
+// ``grace_expires_at`` is null when the requirement is hard.
+message EnrollmentRequired {
+  string enrollment_token = 1;
+  optional google.protobuf.Timestamp grace_expires_at = 2;
 }
 
 // Authentication response with tokens (RefreshToken)

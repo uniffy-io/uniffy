@@ -3045,6 +3045,11 @@ func (x *ResendInvitationResponse) GetInvitation() *Invitation {
 type SecuritySettings struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	PasswordResetEnabled bool                   `protobuf:"varint,1,opt,name=password_reset_enabled,json=passwordResetEnabled,proto3" json:"password_reset_enabled,omitempty"`
+	// When true, every member of this organization must have MFA
+	// enabled to access org content (subject to the per-user grace).
+	MfaRequiredForMembers bool `protobuf:"varint,2,opt,name=mfa_required_for_members,json=mfaRequiredForMembers,proto3" json:"mfa_required_for_members,omitempty"`
+	// When true, OWNER / ADMIN role members must have MFA enabled.
+	MfaRequiredForAdmins bool `protobuf:"varint,3,opt,name=mfa_required_for_admins,json=mfaRequiredForAdmins,proto3" json:"mfa_required_for_admins,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -3082,6 +3087,20 @@ func (*SecuritySettings) Descriptor() ([]byte, []int) {
 func (x *SecuritySettings) GetPasswordResetEnabled() bool {
 	if x != nil {
 		return x.PasswordResetEnabled
+	}
+	return false
+}
+
+func (x *SecuritySettings) GetMfaRequiredForMembers() bool {
+	if x != nil {
+		return x.MfaRequiredForMembers
+	}
+	return false
+}
+
+func (x *SecuritySettings) GetMfaRequiredForAdmins() bool {
+	if x != nil {
+		return x.MfaRequiredForAdmins
 	}
 	return false
 }
@@ -3174,12 +3193,17 @@ func (x *GetSecuritySettingsResponse) GetSettings() *SecuritySettings {
 	return nil
 }
 
+// Partial update: only fields that are explicitly set in the request
+// (proto3 “optional“ semantics) are written. Omit a field to leave
+// it untouched. Each field that changes emits its own audit row.
 type UpdateSecuritySettingsRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId       string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	PasswordResetEnabled bool                   `protobuf:"varint,2,opt,name=password_reset_enabled,json=passwordResetEnabled,proto3" json:"password_reset_enabled,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId        string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	PasswordResetEnabled  *bool                  `protobuf:"varint,2,opt,name=password_reset_enabled,json=passwordResetEnabled,proto3,oneof" json:"password_reset_enabled,omitempty"`
+	MfaRequiredForMembers *bool                  `protobuf:"varint,3,opt,name=mfa_required_for_members,json=mfaRequiredForMembers,proto3,oneof" json:"mfa_required_for_members,omitempty"`
+	MfaRequiredForAdmins  *bool                  `protobuf:"varint,4,opt,name=mfa_required_for_admins,json=mfaRequiredForAdmins,proto3,oneof" json:"mfa_required_for_admins,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *UpdateSecuritySettingsRequest) Reset() {
@@ -3220,8 +3244,22 @@ func (x *UpdateSecuritySettingsRequest) GetOrganizationId() string {
 }
 
 func (x *UpdateSecuritySettingsRequest) GetPasswordResetEnabled() bool {
-	if x != nil {
-		return x.PasswordResetEnabled
+	if x != nil && x.PasswordResetEnabled != nil {
+		return *x.PasswordResetEnabled
+	}
+	return false
+}
+
+func (x *UpdateSecuritySettingsRequest) GetMfaRequiredForMembers() bool {
+	if x != nil && x.MfaRequiredForMembers != nil {
+		return *x.MfaRequiredForMembers
+	}
+	return false
+}
+
+func (x *UpdateSecuritySettingsRequest) GetMfaRequiredForAdmins() bool {
+	if x != nil && x.MfaRequiredForAdmins != nil {
+		return *x.MfaRequiredForAdmins
 	}
 	return false
 }
@@ -3502,16 +3540,23 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x18ResendInvitationResponse\x12<\n" +
 	"\n" +
 	"invitation\x18\x01 \x01(\v2\x1c.organizations.v1.InvitationR\n" +
-	"invitation\"H\n" +
+	"invitation\"\xb8\x01\n" +
 	"\x10SecuritySettings\x124\n" +
-	"\x16password_reset_enabled\x18\x01 \x01(\bR\x14passwordResetEnabled\"E\n" +
+	"\x16password_reset_enabled\x18\x01 \x01(\bR\x14passwordResetEnabled\x127\n" +
+	"\x18mfa_required_for_members\x18\x02 \x01(\bR\x15mfaRequiredForMembers\x125\n" +
+	"\x17mfa_required_for_admins\x18\x03 \x01(\bR\x14mfaRequiredForAdmins\"E\n" +
 	"\x1aGetSecuritySettingsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"]\n" +
 	"\x1bGetSecuritySettingsResponse\x12>\n" +
-	"\bsettings\x18\x01 \x01(\v2\".organizations.v1.SecuritySettingsR\bsettings\"~\n" +
+	"\bsettings\x18\x01 \x01(\v2\".organizations.v1.SecuritySettingsR\bsettings\"\xd1\x02\n" +
 	"\x1dUpdateSecuritySettingsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x124\n" +
-	"\x16password_reset_enabled\x18\x02 \x01(\bR\x14passwordResetEnabled\"`\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\x16password_reset_enabled\x18\x02 \x01(\bH\x00R\x14passwordResetEnabled\x88\x01\x01\x12<\n" +
+	"\x18mfa_required_for_members\x18\x03 \x01(\bH\x01R\x15mfaRequiredForMembers\x88\x01\x01\x12:\n" +
+	"\x17mfa_required_for_admins\x18\x04 \x01(\bH\x02R\x14mfaRequiredForAdmins\x88\x01\x01B\x19\n" +
+	"\x17_password_reset_enabledB\x1b\n" +
+	"\x19_mfa_required_for_membersB\x1a\n" +
+	"\x18_mfa_required_for_admins\"`\n" +
 	"\x1eUpdateSecuritySettingsResponse\x12>\n" +
 	"\bsettings\x18\x01 \x01(\v2\".organizations.v1.SecuritySettingsR\bsettings*\xb2\x01\n" +
 	"\x10InvitationStatus\x12!\n" +
@@ -3779,6 +3824,7 @@ func file_organizations_v1_organizations_proto_init() {
 		(*InviteMemberResponse_Invitation)(nil),
 	}
 	file_organizations_v1_organizations_proto_msgTypes[50].OneofWrappers = []any{}
+	file_organizations_v1_organizations_proto_msgTypes[59].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

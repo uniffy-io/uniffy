@@ -15,8 +15,12 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
     """
     Extract user ID from request context.
 
-    Extracts and validates the JWT token from the Authorization header,
-    then returns the user ID from the token payload.
+    Validates the JWT signature and requires ``type == "access"`` so
+    that the short-lived MFA challenge / enrollment-only tokens cannot
+    authorize normal RPCs. The cluster-wide revocation watermark is
+    checked once per RPC by :class:`AuthRevocationInterceptor`; HTTP
+    routes call :func:`uniffy.domains.auth.http_deps.get_current_user_id`
+    which performs the same check inline.
 
     Parameters
     ----------
@@ -31,7 +35,8 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
     Raises
     ------
     ConnectError
-        If authorization token is missing, invalid, or expired.
+        If authorization token is missing, invalid, expired, or of the
+        wrong type.
 
     """
     headers = ctx.request_headers()
@@ -47,11 +52,46 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
 
     try:
         payload = decode_access_token(token)
+        if payload.get("type") != "access":
+            raise ConnectError(
+                Code.UNAUTHENTICATED,
+                "Wrong token type for this endpoint",
+            )
         user_id = UUID(payload["sub"])
         return user_id
+    except ConnectError:
+        raise
     except Exception as e:
         logger.error(f"JWT decode error: {e}")
         raise ConnectError(Code.UNAUTHENTICATED, f"Invalid or expired token: {e}")
+
+
+def get_user_id_from_enrollment_context(ctx: RequestContext) -> UUID:
+    """Extract user ID from an MFA enrollment-only bearer token.
+
+    Used exclusively by the whitelisted MFA enrollment RPCs
+    (``BeginEnrollment``, ``ConfirmEnrollment``, ``GetMfaStatus``) so a
+    user who is mid-enrollment under ``EnrollmentRequired`` policy can
+    complete setup without holding a regular access token.
+    """
+    from uniffy.domains.auth.mfa.challenge import decode_enrollment_only_token
+
+    headers = ctx.request_headers()
+    auth_header = headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise ConnectError(
+            Code.UNAUTHENTICATED,
+            "Missing or invalid authorization header",
+        )
+    token = auth_header[7:]
+    try:
+        payload = decode_enrollment_only_token(token)
+        return UUID(payload["sub"])
+    except Exception as e:
+        logger.debug(f"Enrollment token decode error: {e}")
+        raise ConnectError(
+            Code.UNAUTHENTICATED, "Invalid or expired enrollment token"
+        )
 
 
 def get_sender_info_from_context(ctx: RequestContext) -> tuple[str, str]:

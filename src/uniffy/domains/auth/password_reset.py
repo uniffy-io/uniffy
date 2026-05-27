@@ -54,7 +54,7 @@ def _hash_token(raw: str) -> str:
 
 
 def _frontend_base_url() -> str:
-    return os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    return os.getenv("UNIFFY_BASE_URL", "http://localhost:5173").rstrip("/")
 
 
 def _reset_url(raw_token: str) -> str:
@@ -206,6 +206,12 @@ class PasswordResetOperations:
         )
         await self._session.commit()
         await self._session.refresh(user)
+
+        from uniffy.core.realtime.publisher import publish_token_revoke
+        from uniffy.domains.auth.revocation import mark_token_version_revoked
+
+        await mark_token_version_revoked(user.id, user.token_version)
+        await publish_token_revoke(user.id, user.token_version)
         return user
 
     async def _load_active_token(

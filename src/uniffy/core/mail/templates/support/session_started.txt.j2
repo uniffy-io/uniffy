@@ -1,0 +1,15 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+A support session is now active in {{ org_name }}.
+
+{{ operator_email }} has read-only access until {{ expires_at }}.
+
+{% if reason %}Reason: {{ reason }}
+{% endif %}
+Every action they take while the session is active is recorded in your audit log under the tag actor_kind=support.
+
+Open Admin:
+  {{ app_url }}/admin
+
+You can revoke the session at any time from the in-app banner.
+{% endblock %}

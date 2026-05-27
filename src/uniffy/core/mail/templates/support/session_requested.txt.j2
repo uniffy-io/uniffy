@@ -1,0 +1,14 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+A platform operator is requesting temporary access to {{ org_name }}.
+
+{{ operator_email }} would like to enter your workspace for up to {{ duration_minutes }} minutes to assist with support.
+
+Scope: {{ scope }} (read-only)
+{% if reason %}Reason given: {{ reason }}
+{% endif %}
+Review request:
+  {{ app_url }}/admin
+
+The operator cannot access your data until you approve. If you do nothing, the request expires automatically. You can revoke access at any time after approval.
+{% endblock %}

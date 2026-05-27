@@ -3,6 +3,11 @@
 One row in ``org_settings`` per (org, key) under ``namespace='security'``:
 
 * ``password_reset_enabled`` -- bool, default ``True`` when no row exists.
+* ``mfa_required_for_members`` -- bool, default ``False``. When true,
+  every member of the org must have MFA enabled to access org content
+  (subject to the user-level grace window).
+* ``mfa_required_for_admins`` -- bool, default ``False``. Same shape,
+  but only applies to OWNER / ADMIN role memberships.
 
 Future keys land here as new entries; absence always means the documented
 default. The toggle is read on every password-reset request, so we keep
@@ -23,8 +28,12 @@ from uniffy.domains.org_settings.operations import OrgSettingsOperations
 
 SECURITY_NAMESPACE = "security"
 _KEY_PASSWORD_RESET_ENABLED = "password_reset_enabled"
+_KEY_MFA_REQUIRED_FOR_MEMBERS = "mfa_required_for_members"
+_KEY_MFA_REQUIRED_FOR_ADMINS = "mfa_required_for_admins"
 
 _DEFAULT_PASSWORD_RESET_ENABLED = True
+_DEFAULT_MFA_REQUIRED_FOR_MEMBERS = False
+_DEFAULT_MFA_REQUIRED_FOR_ADMINS = False
 
 
 @dataclass(frozen=True)
@@ -32,6 +41,14 @@ class SecuritySettings:
     """Effective security policy for one organization."""
 
     password_reset_enabled: bool
+    mfa_required_for_members: bool
+    mfa_required_for_admins: bool
+
+
+def _bool_or_default(row, default: bool) -> bool:
+    if row is None or row.value is None:
+        return default
+    return bool(row.value)
 
 
 class SecurityOperations:
@@ -48,12 +65,18 @@ class SecurityOperations:
     async def get(self, organization_id: UUID) -> SecuritySettings:
         """Return the effective settings; missing keys take the default."""
         rows = await self._settings.get_namespace(organization_id, SECURITY_NAMESPACE)
-        password_reset_row = rows.get(_KEY_PASSWORD_RESET_ENABLED)
         return SecuritySettings(
-            password_reset_enabled=(
-                bool(password_reset_row.value)
-                if password_reset_row is not None and password_reset_row.value is not None
-                else _DEFAULT_PASSWORD_RESET_ENABLED
+            password_reset_enabled=_bool_or_default(
+                rows.get(_KEY_PASSWORD_RESET_ENABLED),
+                _DEFAULT_PASSWORD_RESET_ENABLED,
+            ),
+            mfa_required_for_members=_bool_or_default(
+                rows.get(_KEY_MFA_REQUIRED_FOR_MEMBERS),
+                _DEFAULT_MFA_REQUIRED_FOR_MEMBERS,
+            ),
+            mfa_required_for_admins=_bool_or_default(
+                rows.get(_KEY_MFA_REQUIRED_FOR_ADMINS),
+                _DEFAULT_MFA_REQUIRED_FOR_ADMINS,
             ),
         )
 
@@ -90,4 +113,73 @@ class SecurityOperations:
             },
         )
         await self._session.commit()
-        return SecuritySettings(password_reset_enabled=enabled)
+        return await self.get(organization_id)
+
+    async def set_mfa_required_for_members(
+        self,
+        organization_id: UUID,
+        required: bool,
+        actor_user_id: UUID,
+    ) -> SecuritySettings:
+        """Flip ``mfa_required_for_members``. Audit row written same txn."""
+        return await self._set_bool_with_audit(
+            organization_id=organization_id,
+            actor_user_id=actor_user_id,
+            key=_KEY_MFA_REQUIRED_FOR_MEMBERS,
+            new_value=required,
+            previous_value=lambda s: s.mfa_required_for_members,
+            action=Action.AUTH_MFA_POLICY_CHANGED,
+        )
+
+    async def set_mfa_required_for_admins(
+        self,
+        organization_id: UUID,
+        required: bool,
+        actor_user_id: UUID,
+    ) -> SecuritySettings:
+        """Flip ``mfa_required_for_admins``. Audit row written same txn."""
+        return await self._set_bool_with_audit(
+            organization_id=organization_id,
+            actor_user_id=actor_user_id,
+            key=_KEY_MFA_REQUIRED_FOR_ADMINS,
+            new_value=required,
+            previous_value=lambda s: s.mfa_required_for_admins,
+            action=Action.AUTH_MFA_POLICY_CHANGED,
+        )
+
+    async def _set_bool_with_audit(
+        self,
+        *,
+        organization_id: UUID,
+        actor_user_id: UUID,
+        key: str,
+        new_value: bool,
+        previous_value,
+        action: Action,
+    ) -> SecuritySettings:
+        previous = await self.get(organization_id)
+        if previous_value(previous) == new_value:
+            return previous
+        await self._settings.set(
+            organization_id=organization_id,
+            namespace=SECURITY_NAMESPACE,
+            key=key,
+            value=new_value,
+            is_secret=False,
+            updated_by_user_id=actor_user_id,
+        )
+        await write_audit_event(
+            self._session,
+            organization_id=organization_id,
+            actor_user_id=actor_user_id,
+            action=action,
+            resource_type="ORGANIZATION",
+            resource_id=organization_id,
+            details={
+                "key": key,
+                "previous": previous_value(previous),
+                "new": new_value,
+            },
+        )
+        await self._session.commit()
+        return await self.get(organization_id)

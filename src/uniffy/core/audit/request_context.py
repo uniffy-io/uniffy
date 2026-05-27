@@ -14,10 +14,6 @@ Worker / cron / ARQ paths that emit audit rows leave both ContextVars
 unset; the writer treats unset values as ``None`` (system-initiated
 events).
 
-ContextVars copy with :class:`asyncio.Task` by default (Python 3.13
-behaviour), so ``asyncio.gather`` fan-out inside a request - notably
-the agent tool executor's parallel read-tool pool - inherits the
-captured IP / UA without any extra glue.
 """
 
 import os
@@ -34,28 +30,48 @@ audit_user_agent_var: ContextVar[str | None] = ContextVar(
 _MAX_UA_LENGTH: Final[int] = 512
 
 
-def _load_trusted_proxies() -> frozenset[str]:
-    """Parse ``TRUSTED_PROXIES`` env var into a set of IP strings."""
-    raw = os.getenv("TRUSTED_PROXIES", "")
-    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+def _load_trusted_proxy_hops() -> int:
+    """Parse ``TRUSTED_PROXY_HOPS`` env var. Negative or invalid -> 0."""
+    raw = os.getenv("TRUSTED_PROXY_HOPS", "0").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 0
+    return max(0, value)
 
 
-_TRUSTED_PROXIES: frozenset[str] = _load_trusted_proxies()
+_TRUSTED_PROXY_HOPS: int = _load_trusted_proxy_hops()
 
 
 def _extract_ip(scope: Scope) -> str | None:
-    """Pull the client IP from an ASGI scope, honouring trusted proxies."""
+    """Pull the client IP from an ASGI scope, honouring trusted proxy hops.
+
+    With ``TRUSTED_PROXY_HOPS=0`` (default) the raw socket peer wins -
+    appropriate for direct-connect deployments and the safe default
+    behind an unknown LB. With ``N>0`` we take the entry ``N`` from the
+    right of ``X-Forwarded-For``, which matches how nginx / Caddy / ALB
+    / Cloudflare each append their view of the immediate caller. Common
+    settings:
+      * 0 - dev / docker-compose / direct connect
+      * 1 - behind one reverse proxy (nginx, Caddy, Traefik, ALB)
+      * 2 - behind a CDN + LB (Cloudflare -> ALB -> app)
+    Malformed XFF (fewer entries than configured hops) falls back to
+    the socket peer so a misconfiguration cannot suppress audit IPs.
+    """
     client = scope.get("client")
     direct_ip: str | None = client[0] if client else None
 
-    if direct_ip is not None and direct_ip in _TRUSTED_PROXIES:
-        headers = dict(scope.get("headers", []))
-        xff = headers.get(b"x-forwarded-for")
-        if xff:
-            first = xff.decode("latin-1").split(",")[0].strip()
-            return first or direct_ip
+    if _TRUSTED_PROXY_HOPS <= 0:
+        return direct_ip
 
-    return direct_ip
+    headers = dict(scope.get("headers", []))
+    xff = headers.get(b"x-forwarded-for")
+    if not xff:
+        return direct_ip
+    parts = [p.strip() for p in xff.decode("latin-1").split(",") if p.strip()]
+    if len(parts) < _TRUSTED_PROXY_HOPS:
+        return direct_ip
+    return parts[-_TRUSTED_PROXY_HOPS] or direct_ip
 
 
 def _extract_user_agent(scope: Scope) -> str | None:

@@ -1,0 +1,8 @@
+{% extends "base.html.j2" %}
+{% block title %}Support session ended for {{ org_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">The support session for {{ org_name }} has ended.</p>
+<p style="margin:0 0 16px 0;">Operator: <strong>{{ operator_email }}</strong></p>
+<p style="margin:0 0 16px 0;">Reason: {{ revoke_reason or "ended by " + revoked_by }}</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">The full session record (request, approval, every action taken) remains in your audit log.</p>
+{% endblock %}

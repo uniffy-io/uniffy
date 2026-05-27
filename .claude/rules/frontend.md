@@ -52,7 +52,7 @@ src/gen/typescript/     # @uniffy/proto workspace package
 
 ## Responsive Design
 
-**Every page, layout, and component MUST be responsive across three tiers:**
+**Every page, layout, and component is responsive across three tiers:**
 
 | Tier | Breakpoint | Priority | Expectation |
 |------|-----------|----------|-------------|
@@ -86,12 +86,12 @@ const { isMobile, isTablet, isMobileOrTablet, isDesktop } = useBreakpoint();
 
 **Rules:**
 
-1. Never build a page or layout that only works on desktop - always consider all three tiers
-2. Use `useBreakpoint()` for JS-level responsive logic (drawer vs inline, different component structure)
-3. Use Tailwind responsive classes (`sm:`, `md:`, `lg:`) for CSS-level responsive styling
-4. Touch targets must be at least 44x44px on mobile (use `p-2` or larger on interactive elements)
-5. Never rely solely on hover for critical actions - provide tap alternatives on touch devices
-6. Test layouts at 768px (tablet portrait), 1024px (tablet landscape), and 375px (mobile) widths
+1. New pages and layouts work across all three tiers - desktop-only experiences tend to feel broken on tablet.
+2. `useBreakpoint()` carries JS-level responsive logic (drawer vs inline, different component structure).
+3. Tailwind responsive classes (`sm:`, `md:`, `lg:`) carry CSS-level responsive styling.
+4. Touch targets land at 44x44px or larger on mobile (use `p-2` or larger on interactive elements).
+5. Hover-only critical actions tend to break on touch devices - provide tap alternatives.
+6. Testing layouts at 768px (tablet portrait), 1024px (tablet landscape), and 375px (mobile) catches most regressions.
 
 ## Adding a New Frontend Feature
 
@@ -163,19 +163,19 @@ features/{feature}/
 
 ## Import Rules
 
-**CRITICAL: Always use absolute imports with the `@/` alias. Never use relative imports.**
+**Absolute `@/` imports tend to read better and survive file moves; relative imports tend to rot when files move.**
 
 ```typescript
-// CORRECT - Always use absolute imports
+// Good - absolute imports
 import { cn } from '@/shared/utils/cn';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { filesApi } from '@/features/files/api/filesApi';
 import { useAppDispatch } from '@/app/hooks';
 
-// WRONG - Never use relative imports
-import { cn } from '../../../shared/utils/cn';        // NO!
-import { filesApi } from '../api/filesApi';           // NO!
-import { useNotesHooks } from './useNotesHooks';      // NO!
+// Less ideal - relative imports break on refactor
+import { cn } from '../../../shared/utils/cn';
+import { filesApi } from '../api/filesApi';
+import { useNotesHooks } from './useNotesHooks';
 ```
 
 **Path alias:** `@/` maps to `src/` directory.
@@ -195,11 +195,11 @@ import { useNotesHooks } from './useNotesHooks';      // NO!
 
 ## React Hooks Patterns
 
-### NEVER call setState synchronously in useEffect
+### Avoid setState synchronously in useEffect
 
-The linter enforces `react-hooks/set-state-in-effect`. Effects are for syncing with external systems, not for deriving state.
+The linter enforces `react-hooks/set-state-in-effect`. Effects are a good fit for syncing with external systems; deriving state from props or one-time reads belongs elsewhere.
 
-**BAD - setState in effect:**
+**Less ideal - setState in effect:**
 ```typescript
 const [color, setColor] = useState('default');
 
@@ -209,7 +209,7 @@ useEffect(() => {
 }, []);
 ```
 
-**GOOD - useState initializer for one-time reads:**
+**Better - useState initializer for one-time reads:**
 ```typescript
 const [color] = useState(() => {
     const computed = getComputedStyle(document.documentElement);
@@ -217,7 +217,7 @@ const [color] = useState(() => {
 });
 ```
 
-**GOOD - useMemo for derived values:**
+**Better - useMemo for derived values:**
 ```typescript
 const color = useMemo(() => {
     return someCondition ? 'blue' : 'red';
@@ -236,19 +236,19 @@ useEffect(() => {
 }, [file.id]);
 ```
 
-### NEVER access refs during render
+### Avoid accessing refs during render
 
-Refs should only be accessed in effects or event handlers, not during the render phase.
+Refs read reliably in effects or event handlers; during the render phase the value is unstable.
 
-**BAD - ref access during render:**
+**Less ideal - ref access during render:**
 ```typescript
 const containerRef = useRef<HTMLDivElement>(null);
 
-// This runs during render - BAD
+// This runs during render - unreliable
 const width = containerRef.current?.clientWidth ?? 0;
 ```
 
-**GOOD - track dimensions in state with ResizeObserver:**
+**Better - track dimensions in state with ResizeObserver:**
 ```typescript
 const containerRef = useRef<HTMLDivElement>(null);
 const [size, setSize] = useState({ width: 0, height: 0 });
@@ -269,7 +269,7 @@ useEffect(() => {
 
 ## Theme System
 
-**IMPORTANT: All new components MUST use the theme engine for colors and styling.**
+**New components reach for the theme engine for colors and styling - this keeps dark/light parity automatic and respects user-customizable accents.**
 
 The theme system (`src/config/theme/`) provides user-customizable accent colors with automatic text contrast calculation.
 
@@ -287,11 +287,11 @@ The theme system (`src/config/theme/`) provides user-customizable accent colors 
 
 **Component styling rules:**
 
-1. **Always use theme variables** - Never hardcode colors like `bg-zinc-900` or `bg-white`
-2. **Cards and popovers** - Use `bg-card text-card-foreground border-border`
-3. **Subtle backgrounds** - Use `bg-muted text-muted-foreground`
-4. **Interactive elements** - Use `bg-primary text-primary-foreground` for buttons
-5. **Borders** - Always use `border-border`, never `border-gray-200`
+1. **Reach for theme variables** - hardcoded colors like `bg-zinc-900` or `bg-white` break dark/light parity
+2. **Cards and popovers** - `bg-card text-card-foreground border-border` is a good fit
+3. **Subtle backgrounds** - `bg-muted text-muted-foreground` reads well
+4. **Interactive elements** - `bg-primary text-primary-foreground` for buttons
+5. **Borders** - `border-border` keeps theme behavior consistent; `border-gray-200` tends to clash
 
 **Status colors (exception - use specific colors, NOT theme):**
 - Success: `bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400`
@@ -300,7 +300,7 @@ The theme system (`src/config/theme/`) provides user-customizable accent colors 
 
 **URN Type Colors** (`@/config/theme/urnColors.ts`):
 
-Each URN type has a consistent color used across the app. **Never define URN colors inline.**
+Each URN type has a consistent color used across the app. **Defining URN colors inline tends to drift; the centralized helpers keep them aligned.**
 
 ```typescript
 import {
@@ -362,14 +362,14 @@ function MyComponent() {
 ```
 
 **Rules:**
-- Always use `/favicon.svg` as the source (not separate dark/light files)
-- Apply `filter: invert(1)` on light theme to make the logo black
+- `/favicon.svg` is the canonical source (rather than separate dark/light files)
+- Apply `filter: invert(1)` on light theme to render the logo black
 - On dark theme, display the logo as-is (white)
-- Never hardcode a specific logo color variant
+- Hardcoding a specific logo color variant tends to drift from the theme
 
 ## Document Titles
 
-All pages MUST set a proper document title using `useDocumentTitle`. Format: `{Title} | Uniffy`
+All pages set their document title via `useDocumentTitle`. Format: `{Title} | Uniffy`
 
 ```typescript
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -385,10 +385,10 @@ useDocumentTitle();  // "Uniffy"
 ```
 
 **Requirements:**
-1. Every page component MUST call `useDocumentTitle()`
-2. Content pages should show dynamic titles when viewing a specific item
-3. List/dashboard views should show the domain name
-4. Home page should show just "Uniffy"
+1. Every page component calls `useDocumentTitle()` so the tab stays accurate
+2. Content pages show dynamic titles when viewing a specific item
+3. List/dashboard views show the domain name
+4. Home page shows just "Uniffy"
 
 ## URN Utilities and Components
 
@@ -447,7 +447,7 @@ const shortcut = useFormattedKeybinding('editor.save'); // "⌘S" on Mac
 
 ## Bookmarks System (Frontend)
 
-Use shared bookmarks - **never add `is_pinned`/`is_starred` fields** to content models.
+Reach for shared bookmarks - **adding `is_pinned`/`is_starred` fields to content models tends to duplicate the bookmarks system.**
 
 ```typescript
 import { useBookmarks, useIsBookmarked, useToggleBookmark } from '@/features/bookmarks';
@@ -458,7 +458,7 @@ const { toggle, isLoading } = useToggleBookmark();
 
 ## Shared Formatting Utilities
 
-Use the centralized formatting utilities instead of defining local helpers. Never duplicate date, time, file size, or mention parsing functions.
+Reach for the centralized formatting utilities rather than defining local helpers - duplicate date, time, file size, or mention parsing functions tend to drift.
 
 **Key Files:**
 
@@ -489,13 +489,13 @@ Use the centralized formatting utilities instead of defining local helpers. Neve
 | `extractFallbackLabel(urn)` | Short label from URN: "note:abcdef12" |
 
 **Rules:**
-- Never define local `formatDate`, `formatRelativeTime`, `formatFileSize`, `getInitials`, `extractMentions`, or `isOverdue` functions
-- Never use inline `toLocaleDateString()` calls - use the shared formatters
-- For proto timestamps, use `formatProtoDate` / `formatProtoDateTime` instead of manual `new Date(seconds * 1000)`
+- Local `formatDate`, `formatRelativeTime`, `formatFileSize`, `getInitials`, `extractMentions`, or `isOverdue` functions tend to drift from the canonical versions
+- Inline `toLocaleDateString()` calls bypass the shared formatters and tend to render inconsistently
+- For proto timestamps, `formatProtoDate` / `formatProtoDateTime` is a better fit than manual `new Date(seconds * 1000)`
 
 ## Subject Components (Users and Groups)
 
-Use the shared subject components (`src/ui/src/components/subject/`) for all user/group display and selection. Never build inline avatar circles, initials helpers, or member search dropdowns.
+Reach for the shared subject components (`src/ui/src/components/subject/`) for user/group display and selection. Inline avatar circles, initials helpers, or member search dropdowns tend to drift from the shared ones.
 
 **Key Files:**
 
@@ -512,14 +512,14 @@ Use the shared subject components (`src/ui/src/components/subject/`) for all use
 | `src/ui/src/components/subject/index.ts` | Public barrel exports |
 
 **Rules:**
-- Always import `getInitials` from `@/components/subject/utils` - never define it locally
-- Use `SubjectAvatar` / `SubjectAvatarStack` for displaying user/group avatars - never build inline avatar circles
-- Use `SubjectPicker` for user/group selection - never build inline member search dropdowns
-- Use `SubjectChip` for removable user/group pills - never build inline chip components
+- Import `getInitials` from `@/components/subject/utils`; local copies tend to diverge
+- `SubjectAvatar` / `SubjectAvatarStack` cover user/group avatars - inline avatar circles tend to drift visually
+- `SubjectPicker` covers user/group selection - inline member search dropdowns duplicate behavior
+- `SubjectChip` covers removable user/group pills
 
 ## Zen Mode
 
-All domain layouts MUST support Zen Mode (`Ctrl+\`).
+All domain layouts support Zen Mode (`Ctrl+\`).
 
 ```typescript
 const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -536,7 +536,7 @@ showSidebar={!isZenMode && isSidebarOpen}
 
 ## Error Handling
 
-**IMPORTANT: Never write custom error handling or toast calls in thunks or components. Use the centralized error system.**
+**Reach for the centralized error system rather than writing custom error handling or toast calls in thunks or components - duplicates tend to drift from canonical copy.**
 
 The app has a global error-toast pipeline that automatically catches rejected async thunks, translates raw API/network errors into user-friendly messages, and displays toast notifications. No per-feature error handling is needed.
 
@@ -568,8 +568,8 @@ The middleware handles both `rejectWithValue` payloads and thrown error messages
 
 **Rules:**
 
-1. **Do NOT call `toast.error()` manually in thunks** - the middleware handles it automatically
-2. **Do NOT write custom error messages in thunks** - use `rejectWithValue(error.message)` and let `friendlyErrorMessage()` translate it
+1. **Skip manual `toast.error()` calls in thunks** - the middleware handles it automatically
+2. **Skip custom error messages in thunks** - `rejectWithValue(error.message)` plus `friendlyErrorMessage()` covers translation
 3. **To add new error mappings**, update `src/ui/src/config/errorMessages.ts` (add to `STATUS_CODE_MESSAGES`, `HTTP_STATUS_MESSAGES`, or `MESSAGE_PATTERNS`)
 4. **To suppress an error**, return `null` from `friendlyErrorMessage()` by adding it to the suppression list
 5. **For manual toast calls outside Redux** (rare), import `friendlyErrorMessage` from `@/config` and use it:
@@ -583,7 +583,7 @@ The middleware handles both `rejectWithValue` payloads and thrown error messages
 
 ## Lazy Loading and Error Boundaries
 
-All route-level page components MUST be lazy-loaded using `React.lazy` via the `lazyImport` utility, and wrapped with `Suspense` + `ErrorBoundary` via the `<LazyRoute>` wrapper.
+Route-level page components are lazy-loaded using `React.lazy` via the `lazyImport` utility, and wrapped with `Suspense` + `ErrorBoundary` via the `<LazyRoute>` wrapper. This keeps the initial bundle small and isolates page-level crashes.
 
 **Key Files:**
 
@@ -603,7 +603,7 @@ All route-level page components MUST be lazy-loaded using `React.lazy` via the `
 
 **Adding a new lazy-loaded page:**
 
-1. Create the page with a **named export** (never `export default`):
+1. Create the page with a **named export** (`export default` makes refactors less predictable):
    ```typescript
    export function MyPage() { ... }
    ```
@@ -624,10 +624,10 @@ All route-level page components MUST be lazy-loaded using `React.lazy` via the `
 
 **Rules:**
 
-1. **Always import page files directly** in lazy imports (e.g., `@/features/notes/pages/NotesPage`), never from barrel files (`@/features/notes`). Importing from barrels defeats code splitting by pulling in the entire feature module.
-2. **Global components stay eagerly imported** - modals, search overlays, toasters, and auth guards (`ProtectedRoute`, `AdminRoute`) must be ready instantly and are NOT lazy-loaded.
-3. **Every lazy-loaded route MUST be wrapped in `<LazyRoute>`** which provides both `Suspense` fallback and `ErrorBoundary`.
-4. The `ErrorBoundary` component can also be used around risky sub-trees within pages (e.g., third-party integrations):
+1. **Import page files directly** in lazy imports (e.g., `@/features/notes/pages/NotesPage`) rather than from barrel files (`@/features/notes`). Barrel imports defeat code splitting by pulling in the entire feature module.
+2. **Global components stay eagerly imported** - modals, search overlays, toasters, and auth guards (`ProtectedRoute`, `AdminRoute`) need to be ready instantly and are not lazy-loaded.
+3. **Wrap every lazy-loaded route in `<LazyRoute>`** for both `Suspense` fallback and `ErrorBoundary`.
+4. The `ErrorBoundary` component also works around risky sub-trees within pages (e.g., third-party integrations):
    ```typescript
    import { ErrorBoundary } from '@/components/feedback';
 
@@ -638,12 +638,12 @@ All route-level page components MUST be lazy-loaded using `React.lazy` via the `
 
 **Adding a new Redux slice reducer:**
 
-Always use named exports for reducers:
+Named exports for reducers compose well with the store wiring:
 ```typescript
-// CORRECT
+// Good
 export const myFeatureReducer = myFeatureSlice.reducer;
 
-// WRONG - never use export default for reducers
+// Less ideal - export default for reducers
 export default myFeatureSlice.reducer;
 ```
 
@@ -658,13 +658,13 @@ export default myFeatureSlice.reducer;
 | `src/ui/src/components/auth/ProtectedRoute.tsx` | Route guard (redirects unauthenticated users) |
 
 **Important Patterns:**
-- Access tokens are NEVER persisted (memory only via `memoryAccessToken` in `api.ts`)
+- Access tokens MUST NOT be persisted (memory only via `memoryAccessToken` in `api.ts`) - this is a security boundary
 - Auth interceptor auto-refreshes expiring tokens before API calls
-- Organization context must be preserved separately from tokens
+- Organization context is preserved separately from tokens
 
 **Logout Cleanup:**
 
-On logout, ALL user/org-specific state must be cleared:
+On logout, all user/org-specific state is cleared:
 
 ```typescript
 import { clearMemoryAccessToken } from "@/config";

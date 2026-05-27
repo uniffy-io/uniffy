@@ -13,6 +13,7 @@ import {
   rotateAndClearAll,
   isStorageEncryptionReady,
 } from '@/shared/crypto/storageEncryption';
+import { MfaSettingsCard } from '@/features/mfa/components/MfaSettingsCard';
 import { SessionsSection } from '@/features/settings/components/SessionsSection';
 import { toast } from 'sonner';
 
@@ -61,6 +62,8 @@ export function SecuritySection() {
           Manage client-side data encryption and cached content.
         </p>
       </div>
+
+      <MfaSettingsCard />
 
       {/* Encryption Status */}
       <section className="space-y-4">

@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Cross-tenant audit feed for platform operators. Server-side
+// whitelist enforces that this RPC surfaces ONLY platform-scope
+// actions: auth.* / organization.* / user.* / support_session.* /
+// system.* / deployment.* / mail.system_*. Tenant content audit
+// (notes/files/chat/calendar/permissions/etc) is excluded by
+// construction so a cloud operator cannot read tenant activity
+// from this surface. Every RPC requires ``User.is_system_admin=true``.
+service PlatformAuditService {
+  // Paginated feed across every tenant, scoped to the platform
+  // action whitelist. Filters narrow further within that scope.
+  rpc ListPlatformAudit(ListPlatformAuditRequest) returns (ListPlatformAuditResponse) {}
+
+  // Enumerate the action whitelist so the UI can populate the
+  // filter dropdown without hardcoding the list (and risk drift).
+  rpc ListPlatformActions(ListPlatformActionsRequest) returns (ListPlatformActionsResponse) {}
+}
+
+message PlatformAuditEvent {
+  string id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string action = 3;
+  optional string organization_id = 4;
+  optional string organization_name = 5;
+  optional string actor_user_id = 6;
+  optional string actor_email = 7;
+  optional string actor_org_role = 8;
+  optional string resource_type = 9;
+  optional string resource_id = 10;
+  // JSON-encoded details blob. UI renders selected keys; the full
+  // blob is shown collapsed by default.
+  string details_json = 11;
+}
+
+message ListPlatformAuditRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  // Optional org id filter (empty = every org).
+  string organization_id = 3;
+  // Optional actor user id filter.
+  string actor_user_id = 4;
+  // Optional list of specific actions to include. Must be a subset
+  // of the whitelist; unknown actions are dropped silently.
+  repeated string actions = 5;
+  // Optional date range (inclusive).
+  optional google.protobuf.Timestamp from_ts = 6;
+  optional google.protobuf.Timestamp to_ts = 7;
+}
+
+message ListPlatformAuditResponse {
+  repeated PlatformAuditEvent events = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListPlatformActionsRequest {}
+
+message PlatformActionEntry {
+  // Dotted action identifier (e.g. ``support_session.requested``).
+  string action = 1;
+  // Top-level group (auth / organization / support_session / ...).
+  string group = 2;
+}
+
+message ListPlatformActionsResponse {
+  repeated PlatformActionEntry actions = 1;
+}

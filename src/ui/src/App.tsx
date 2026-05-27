@@ -7,6 +7,7 @@ import { rehydrateAuth } from '@/config';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';
+import { PlatformRoute } from '@/features/platform/components/PlatformRoute';
 import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
@@ -33,6 +34,7 @@ const OrganizationPicker = lazyImport(() => import('@/features/auth/components/O
 const AcceptInvitePage = lazyImport(() => import('@/features/auth/pages/AcceptInvitePage'), 'AcceptInvitePage');
 const ForgotPasswordPage = lazyImport(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 const ResetPasswordPage = lazyImport(() => import('@/features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
+const EnrollmentPage = lazyImport(() => import('@/features/mfa/pages/EnrollmentPage'), 'EnrollmentPage');
 
 // Dashboard
 const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashboard'), 'Dashboard');
@@ -43,15 +45,24 @@ const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
+const SupportAccessPage = lazyImport(() => import('@/features/admin/pages/SupportAccessPage'), 'SupportAccessPage');
 const EncryptionPage = lazyImport(() => import('@/features/admin/pages/EncryptionPage'), 'EncryptionPage');
 const EmailPage = lazyImport(() => import('@/features/admin/pages/EmailPage'), 'EmailPage');
 const SecurityPage = lazyImport(() => import('@/features/admin/pages/SecurityPage'), 'SecurityPage');
 const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsPage'), 'AuditLogsPage');
 const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
-const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
-const UsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
-const ServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
 const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'), 'StoragePage');
+
+// Platform (cross-tenant operator surface)
+const PlatformLayout = lazyImport(() => import('@/features/platform/layouts/PlatformLayout'), 'PlatformLayout');
+const PlatformOverviewPage = lazyImport(() => import('@/features/platform/pages/PlatformOverviewPage'), 'PlatformOverviewPage');
+const PlatformOrganizationsPage = lazyImport(() => import('@/features/platform/pages/PlatformOrganizationsPage'), 'PlatformOrganizationsPage');
+const PlatformUsersPage = lazyImport(() => import('@/features/platform/pages/PlatformUsersPage'), 'PlatformUsersPage');
+const PlatformServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
+const PlatformMailPage = lazyImport(() => import('@/features/platform/pages/PlatformMailPage'), 'PlatformMailPage');
+const PlatformEncryptionPage = lazyImport(() => import('@/features/platform/pages/PlatformEncryptionPage'), 'PlatformEncryptionPage');
+const PlatformAuditPage = lazyImport(() => import('@/features/platform/pages/PlatformAuditPage'), 'PlatformAuditPage');
+const PlatformSessionsPage = lazyImport(() => import('@/features/platform/pages/PlatformSessionsPage'), 'PlatformSessionsPage');
 
 // Content pages
 const NotesPage = lazyImport(() => import('@/features/notes/pages/NotesPage'), 'NotesPage');
@@ -164,18 +175,16 @@ function AdminIndexRedirect() {
     const currentOrganizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
     const isSystemAdmin = useAppSelector((state) => state.auth.user?.isSystemAdmin);
 
-    // If org admin, go to members page first
     const isOrgAdmin = ['ADMIN', 'OWNER'].includes(currentOrganizationRole ?? '');
-    if (isOrgAdmin || isSystemAdmin) {
+    if (isOrgAdmin) {
         return <Navigate to="/admin/members" replace />;
     }
 
-    // System admin without org context goes to organizations
+    // Pure platform admin without org admin context belongs on /platform.
     if (isSystemAdmin) {
-        return <Navigate to="/admin/organizations" replace />;
+        return <Navigate to="/platform" replace />;
     }
 
-    // Fallback - this shouldn't happen since AdminRoute blocks non-admins
     return <Navigate to="/" replace />;
 }
 
@@ -244,6 +253,15 @@ export function App() {
                         />
 
                         <Route
+                            path="/auth/enroll-mfa"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><EnrollmentPage /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
+
+                        <Route
                             path="/select-org"
                             element={
                                 <AuthLayout>
@@ -268,6 +286,7 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
+                            <Route path="support-access" element={<LazyRoute><SupportAccessPage /></LazyRoute>} />
                             <Route path="security" element={<LazyRoute><SecurityPage /></LazyRoute>} />
                             <Route path="encryption" element={<LazyRoute><EncryptionPage /></LazyRoute>} />
                             <Route path="email" element={<LazyRoute><EmailPage /></LazyRoute>} />
@@ -278,16 +297,34 @@ export function App() {
                             {/* Storage Management */}
                             <Route path="storage" element={<LazyRoute><StoragePage /></LazyRoute>} />
 
-                            {/* Server Admin Pages */}
-                            <Route path="organizations" element={<LazyRoute><OrganizationsPage /></LazyRoute>} />
-                            <Route path="users" element={<LazyRoute><UsersPage /></LazyRoute>} />
-                            <Route path="server-settings" element={<LazyRoute><ServerSettingsPage /></LazyRoute>} />
-
-                            {/* Legacy route redirects */}
-                            <Route path="settings" element={<Navigate to="/admin/server-settings" replace />} />
+                            {/* Legacy redirects to the platform surface */}
+                            <Route path="organizations" element={<Navigate to="/platform/organizations" replace />} />
+                            <Route path="users" element={<Navigate to="/platform/users" replace />} />
+                            <Route path="server-settings" element={<Navigate to="/platform/server-settings" replace />} />
+                            <Route path="settings" element={<Navigate to="/platform/server-settings" replace />} />
 
                             {/* 404 for admin */}
                             <Route path="*" element={<NotFoundPage compact heading="Admin Page Not Found" />} />
+                        </Route>
+
+                        {/* Platform Routes - Cross-tenant operator surface (system admins only) */}
+                        <Route
+                            path="/platform"
+                            element={
+                                <PlatformRoute>
+                                    <LazyRoute><PlatformLayout /></LazyRoute>
+                                </PlatformRoute>
+                            }
+                        >
+                            <Route index element={<LazyRoute><PlatformOverviewPage /></LazyRoute>} />
+                            <Route path="organizations" element={<LazyRoute><PlatformOrganizationsPage /></LazyRoute>} />
+                            <Route path="users" element={<LazyRoute><PlatformUsersPage /></LazyRoute>} />
+                            <Route path="sessions" element={<LazyRoute><PlatformSessionsPage /></LazyRoute>} />
+                            <Route path="mail" element={<LazyRoute><PlatformMailPage /></LazyRoute>} />
+                            <Route path="encryption" element={<LazyRoute><PlatformEncryptionPage /></LazyRoute>} />
+                            <Route path="audit" element={<LazyRoute><PlatformAuditPage /></LazyRoute>} />
+                            <Route path="server-settings" element={<LazyRoute><PlatformServerSettingsPage /></LazyRoute>} />
+                            <Route path="*" element={<NotFoundPage compact heading="Platform Page Not Found" />} />
                         </Route>
 
                         <Route

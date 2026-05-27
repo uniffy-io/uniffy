@@ -1,0 +1,55 @@
+---
+const pillars = [
+  {
+    kicker: "One codebase",
+    title: "Cloud and self hosted are the same product",
+    body: "Every commit ships to both. No \"Community Edition\" with features stripped out, no enterprise tier locked behind a license check, no private fork for paying customers. If it works on cloud.uniffy.io, it works on your own servers. And the other way around.",
+  },
+  {
+    kicker: "Layered config",
+    title: "Deployment defaults, organization overrides",
+    body: "If you run Uniffy yourself, you configure things once when you install. If you are a cloud tenant, you configure things per organization through your admin pages. Same flow, same code. No \"if cloud\" branch hiding anywhere.",
+  },
+  {
+    kicker: "Two admin surfaces",
+    title: "Operator and tenant are separate roles",
+    body: "The admin pages belong to the org owner. That is your tenant, your settings. The platform pages belong to the deployment operator. That is billing, support sessions, cross tenant health. On cloud those are different people. On self hosted you usually wear both hats, on the same two surfaces.",
+  },
+  {
+    kicker: "Privacy posture",
+    title: "Operators do not read tenant content",
+    body: "Platform admins do not bypass the permission system. When an operator needs to see tenant content to support an incident, they request a time bound, audit logged support session that the org owner sees live and can revoke at any time. Same code path on cloud and on self hosted. There is no operator backdoor we keep for ourselves.",
+  },
+];
+---
+
+<section id="principles" class="section-separator-bottom bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <h2 class="section-heading">
+      We refuse to fork the product
+    </h2>
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      Most workspace tools ship two products. A polished SaaS for their cloud,
+      and a stripped down community build for everyone else. We ship one.
+      Cloud and self hosted run the same code, the same migrations, the same
+      admin pages. That choice makes the admin surface more complex than what
+      our competitors offer. You get an org admin view and a platform operator
+      view, even if you are the same person wearing both hats. We think that
+      is the right tradeoff. You should not have to trust a fork you cannot
+      read.
+    </p>
+
+    <div class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-night-hairline bg-night-hairline sm:grid-cols-2 md:mt-16">
+      {
+        pillars.map((p) => (
+          <article class="bg-night-soft p-6 sm:p-8 md:p-10">
+            <p class="font-mono text-xs uppercase tracking-wider text-accent">{p.kicker}</p>
+            <h3 class="mt-4 font-sans text-2xl font-semibold tracking-tight text-night-text">{p.title}</h3>
+            <p class="mt-3 leading-relaxed text-night-soft-text">{p.body}</p>
+          </article>
+        ))
+      }
+    </div>
+
+  </div>
+</section>

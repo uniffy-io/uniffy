@@ -87,6 +87,16 @@ class RegisterResponse(_message.Message):
     def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
 
 class LoginResponse(_message.Message):
+    __slots__ = ("auth_result", "mfa_challenge", "enrollment_required")
+    AUTH_RESULT_FIELD_NUMBER: _ClassVar[int]
+    MFA_CHALLENGE_FIELD_NUMBER: _ClassVar[int]
+    ENROLLMENT_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    auth_result: AuthResult
+    mfa_challenge: MfaChallenge
+    enrollment_required: EnrollmentRequired
+    def __init__(self, auth_result: _Optional[_Union[AuthResult, _Mapping]] = ..., mfa_challenge: _Optional[_Union[MfaChallenge, _Mapping]] = ..., enrollment_required: _Optional[_Union[EnrollmentRequired, _Mapping]] = ...) -> None: ...
+
+class AuthResult(_message.Message):
     __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
@@ -105,6 +115,22 @@ class LoginResponse(_message.Message):
     session_id: str
     domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
     def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+
+class MfaChallenge(_message.Message):
+    __slots__ = ("challenge_token", "methods")
+    CHALLENGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    METHODS_FIELD_NUMBER: _ClassVar[int]
+    challenge_token: str
+    methods: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, challenge_token: _Optional[str] = ..., methods: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class EnrollmentRequired(_message.Message):
+    __slots__ = ("enrollment_token", "grace_expires_at")
+    ENROLLMENT_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    GRACE_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    enrollment_token: str
+    grace_expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, enrollment_token: _Optional[str] = ..., grace_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class RefreshTokenResponse(_message.Message):
     __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")

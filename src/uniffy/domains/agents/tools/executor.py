@@ -8,6 +8,7 @@ from loguru import logger
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
     ToolContext,
@@ -246,6 +247,16 @@ class ToolExecutor:
             }
             if self._context.agent_id is not None:
                 details["agent_id"] = str(self._context.agent_id)
+                try:
+                    agent = await fetch_agent_row(
+                        self._context.session,
+                        self._context.agent_id,
+                        self._context.organization_id,
+                    )
+                    if agent is not None:
+                        details["agent_name"] = agent.name
+                except Exception:  # noqa: BLE001
+                    pass
             if self._context.session_id is not None:
                 details["agent_session_id"] = str(self._context.session_id)
             if error_reason is not None:

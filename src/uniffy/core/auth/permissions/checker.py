@@ -81,6 +81,11 @@ class PermissionChecker:
         self._org_defaults_cache: dict[
             tuple[UUID, ContentType], tuple[AccessMode | None, ContentRole | None]
         ] = {}
+        # Per-request memoization for the support-session context
+        # bootstrapper. Reset each request because PermissionChecker is
+        # request-scoped. Value is the resolved session row or None.
+        self._support_ctx_seen: set[tuple[UUID, UUID]] = set()
+        self._is_system_admin_cache: dict[UUID, bool] = {}
 
     async def effective_role(
         self,
@@ -126,6 +131,13 @@ class PermissionChecker:
 
         """
 
+        # Set the support-session ContextVar BEFORE consulting the
+        # cached role. Otherwise OrgCipher.decrypt and the audit-tag
+        # merger silently observe "no session" on every cache hit and
+        # the privacy contract degrades to "default-deny fires once
+        # per role TTL window".
+        await self._ensure_support_session_context(user_id, organization_id)
+
         async def _compute() -> ContentRole | None:
             if await self._is_org_admin(user_id, organization_id):
                 return ContentRole.OWNER
@@ -134,6 +146,12 @@ class PermissionChecker:
                 user_id, organization_id, content_type
             ):
                 return ContentRole.ADMIN
+
+            support_role = await self._support_session_role(
+                user_id, organization_id
+            )
+            if support_role is not None:
+                return support_role
 
             if owner_id == user_id:
                 return ContentRole.OWNER
@@ -354,6 +372,112 @@ class PermissionChecker:
     ) -> bool:
         """Return True if the user has an active membership in the org."""
         return await self._get_user_org_role(user_id, organization_id) is not None
+
+    async def _is_system_admin(self, user_id: UUID) -> bool:
+        """Per-request memoized ``User.is_system_admin`` probe."""
+        cached = self._is_system_admin_cache.get(user_id)
+        if cached is not None:
+            return cached
+        from uniffy.core.models.login.user import User
+
+        is_admin = bool(
+            (
+                await self.session.execute(
+                    select(User.is_system_admin).where(User.id == user_id)
+                )
+            ).scalar_one_or_none()
+        )
+        self._is_system_admin_cache[user_id] = is_admin
+        return is_admin
+
+    async def _ensure_support_session_context(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """Set the support-session ContextVar for ``(user, org)``.
+
+        Idempotent per ``PermissionChecker`` instance: the first call
+        for a ``(user, org)`` pair queries Valkey (then PG on miss),
+        the rest are no-ops. Lives outside the cached role compute so
+        the ContextVar is populated on every request regardless of
+        whether the role itself is served from Valkey.
+        """
+        from uniffy.domains.platform.support_session.context import (
+            ActiveSupportSession,
+            active_support_session_var,
+            get_active_support_session,
+        )
+        from uniffy.domains.platform.support_session.operations import (
+            SupportSessionOperations,
+        )
+
+        key = (user_id, organization_id)
+        if key in self._support_ctx_seen:
+            return
+        self._support_ctx_seen.add(key)
+
+        if get_active_support_session() is not None:
+            return
+        if not await self._is_system_admin(user_id):
+            return
+
+        ops = SupportSessionOperations(self.session)
+        session = await ops.active_session_for(
+            user_id=user_id, organization_id=organization_id
+        )
+        if session is None:
+            return
+
+        active_support_session_var.set(
+            ActiveSupportSession(
+                session_id=session.id,
+                organization_id=session.organization_id,
+                support_user_id=session.support_user_id,
+                scope=session.scope.value,
+            )
+        )
+
+    async def _support_session_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> ContentRole | None:
+        """Return the role granted by an active support session, if any.
+
+        Only meaningful for ``is_system_admin=true`` users. The session
+        confers ``VIEWER`` (READ_ONLY) in v1; READ_WRITE is planned but
+        not wired yet. Operators with an active session sit between the
+        org/domain admin bypass and the owner_id check so existing
+        explicit grants are ignored during the session - the session is
+        the single audit-attributable access path.
+
+        The ContextVar that drives :class:`OrgCipher` and the audit
+        merger is populated by :meth:`_ensure_support_session_context`,
+        which runs unconditionally at the top of ``effective_role`` so
+        the role cache cannot mask the session from downstream
+        consumers.
+        """
+        from uniffy.core.models.platform.support_session import (
+            SupportSessionScope,
+        )
+        from uniffy.domains.platform.support_session.operations import (
+            SupportSessionOperations,
+        )
+
+        if not await self._is_system_admin(user_id):
+            return None
+
+        ops = SupportSessionOperations(self.session)
+        session = await ops.active_session_for(
+            user_id=user_id, organization_id=organization_id
+        )
+        if session is None:
+            return None
+
+        if session.scope == SupportSessionScope.READ_WRITE:
+            return ContentRole.EDITOR
+        return ContentRole.VIEWER
 
     async def _is_domain_admin_for_content(
         self,

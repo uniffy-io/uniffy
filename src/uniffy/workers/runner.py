@@ -1,9 +1,5 @@
 """Shared ARQ worker runner with auto-restart on Valkey connection loss.
 
-The ``--worker-core`` and ``--worker-egress`` modes of ``uniffy.main``
-delegate to :func:`run_worker_with_restart`. The runner owns
-observability setup, the metrics server, and the exponential-backoff
-restart loop so the CLI dispatch stays tiny.
 """
 
 import asyncio

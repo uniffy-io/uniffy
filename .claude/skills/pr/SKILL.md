@@ -43,28 +43,12 @@ Create or update a GitHub Pull Request for the current branch.
 
    - <1-3 bullet points covering the main changes across ALL commits>
 
-   ## Commits
-
-   - **<commit subject>**: <brief description from commit body, or one-line summary if body is empty>
-   - ...
-
-   ## Changes
-
-   **Backend:**
-   - <list key backend changes, if any>
-
-   **Frontend:**
-   - <list key frontend changes, if any>
-
    ```
 
    Rules for the description:
    - The summary should cover ALL commits on the branch, not just the latest.
-   - The Commits section lists each commit with its subject and a condensed version of its body/description. If a commit has no body, summarize it in a few words. Preserve the chronological order (oldest first).
-   - Be specific about what changed; avoid vague statements.
    - Test plan items should be concrete and testable.
    - Never use emojis.
-   - Omit the Backend or Frontend section if there are no changes in that layer.
 
 8. **Create or update the PR:**
    - **If a PR exists:** Update its body using `gh pr edit <number> --body "<body>"`. Keep the existing title unless it is clearly wrong.

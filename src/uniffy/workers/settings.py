@@ -2,15 +2,6 @@
 
 Two worker classes, two queues, one Valkey instance:
 
-- ``CoreWorkerSettings`` runs on ``uniffy:queue:core`` with default
-  ARQ tuning (``max_jobs=10``). Owns thumbnail / extraction /
-  notification / reminder / storage / chat-mute work plus the cron
-  jobs whose downstream effects land on the core queue.
-- ``EgressWorkerSettings`` runs on ``uniffy:queue:egress`` with a
-  larger pool (``max_jobs=50`` default) and tighter ``poll_delay``
-  (50ms) so agent-runtime time-to-first-token stays low. Owns
-  agent runtime / compaction / cron tasks.
-
 Run with one of:
     arq uniffy.workers.settings.CoreWorkerSettings
     arq uniffy.workers.settings.EgressWorkerSettings
@@ -28,6 +19,7 @@ from uniffy.observability import ObservabilityConfig, setup_observability
 _environment = os.getenv("ENVIRONMENT", "development")
 _log_level = os.getenv("LOG_LEVEL", "info").upper()
 
+# TODO: Fix version inject
 setup_observability(
     config=ObservabilityConfig(
         app_name="uniffy-worker",
@@ -49,7 +41,9 @@ from uniffy.workers.tasks import (
     egress_on_shutdown,
     egress_on_startup,
     execute_agent_cron_tasks,
+    expire_support_sessions,
     flush_chat_read_cursors,
+    notify_pending_org_purges,
     on_job_end,
     on_job_start,
     reap_expired_multipart_uploads,
@@ -76,6 +70,8 @@ class CoreWorkerSettings:
         cron(auto_unmute_channels, minute=None, second={0}),
         cron(recalculate_all_storage_usage, hour=3, minute=0),
         cron(reap_expired_multipart_uploads, minute={0}),
+        cron(notify_pending_org_purges, hour=2, minute=15),
+        cron(expire_support_sessions, minute=None),
     ]
     on_startup = core_on_startup
     on_shutdown = core_on_shutdown

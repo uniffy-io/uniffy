@@ -6,19 +6,6 @@ Every mutation call site that needs to record an audit event calls
 transaction commits both its domain mutation and the audit row in
 lock-step, or rolls back both together.
 
-Behaviour:
-
-- The actor's ``OrganizationRole`` is captured via a single
-  ``SELECT`` against ``login_organization_members``. No cache. Missing
-  membership snapshots as ``NULL`` and the write proceeds.
-- The client IP / User-Agent come from the request-context
-  ``ContextVar`` populated by :class:`RequestContextMiddleware`.
-  Worker / cron / system paths leave both fields ``NULL``.
-- Exceptions are **never** swallowed. A writer failure rolls back the
-  caller's mutation; the product treats audit gaps as bugs.
-- ``dedupe_key`` is honoured via a Valkey ``SET NX`` lock keyed
-  ``audit:debounce:{action}:{dedupe_key}`` with the caller-supplied
-  TTL. On lock miss the writer returns without inserting.
 """
 
 from __future__ import annotations
@@ -112,6 +99,9 @@ async def write_audit_event(
         session, organization_id, actor_user_id
     )
 
+    merged_details = dict(details or {})
+    _merge_support_session_tag(merged_details, organization_id)
+
     event = AuditEvent(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
@@ -120,12 +110,49 @@ async def write_audit_event(
         action=action,
         resource_type=resource_type,
         resource_id=resource_id,
-        details=details or {},
+        details=merged_details,
         ip_address=audit_ip_var.get(),
         user_agent=audit_user_agent_var.get(),
     )
     session.add(event)
     return event
+
+
+def _merge_support_session_tag(
+    details: dict, organization_id: UUID | None
+) -> None:
+    """Stamp ``actor_kind``/``support_session_id``/``scope`` when active.
+
+    The ContextVar is populated by
+    :meth:`PermissionChecker._ensure_support_session_context` on every
+    request that touches an active session, regardless of perm-cache
+    state. Audit writes that happen elsewhere in the same request
+    inherit the tag automatically so the org owner can filter their
+    audit log for support access.
+
+    Skips silently when no session is active or when the writer targets
+    a different org than the one under session.
+
+    The ``actor_kind`` field is overwritten unconditionally: a session
+    tag is a fact about the request, not a hint the caller can elect to
+    drop. The caller's value (if any) is moved to ``actor_kind_pre`` so
+    no information is lost.
+    """
+    from uniffy.domains.platform.support_session.context import (
+        get_active_support_session,
+    )
+
+    active = get_active_support_session()
+    if active is None:
+        return
+    if organization_id is not None and active.organization_id != organization_id:
+        return
+    prior = details.get("actor_kind")
+    if prior is not None and prior != "support":
+        details["actor_kind_pre"] = prior
+    details["actor_kind"] = "support"
+    details["support_session_id"] = str(active.session_id)
+    details["scope"] = active.scope
 
 
 async def _snapshot_actor_role(

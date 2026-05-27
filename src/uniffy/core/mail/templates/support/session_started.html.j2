@@ -1,0 +1,14 @@
+{% extends "base.html.j2" %}
+{% block title %}Support session started for {{ org_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">A support session is now active in {{ org_name }}.</p>
+<p style="margin:0 0 16px 0;"><strong>{{ operator_email }}</strong> has read-only access until <strong>{{ expires_at }}</strong>.</p>
+{% if reason %}
+<p style="margin:0 0 16px 0;"><strong>Reason:</strong> {{ reason }}</p>
+{% endif %}
+<p style="margin:0 0 16px 0;">Every action they take while the session is active is recorded in your audit log under the tag <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;">actor_kind=support</code>.</p>
+<p style="margin:0 0 24px 0;">
+  <a href="{{ app_url }}/admin" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">Open Admin</a>
+</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">You can revoke the session at any time from the in-app banner.</p>
+{% endblock %}

@@ -98,7 +98,11 @@ def _patch_queue():
 def _patch_security(*, password_reset_enabled: bool):
     inner = MagicMock()
     inner.get = AsyncMock(
-        return_value=SecuritySettings(password_reset_enabled=password_reset_enabled),
+        return_value=SecuritySettings(
+            password_reset_enabled=password_reset_enabled,
+            mfa_required_for_members=False,
+            mfa_required_for_admins=False,
+        ),
     )
     return patch(
         "uniffy.domains.auth.password_reset.SecurityOperations",

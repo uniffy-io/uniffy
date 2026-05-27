@@ -376,6 +376,11 @@ message ResendInvitationResponse {
 
 message SecuritySettings {
   bool password_reset_enabled = 1;
+  // When true, every member of this organization must have MFA
+  // enabled to access org content (subject to the per-user grace).
+  bool mfa_required_for_members = 2;
+  // When true, OWNER / ADMIN role members must have MFA enabled.
+  bool mfa_required_for_admins = 3;
 }
 
 message GetSecuritySettingsRequest {
@@ -386,9 +391,14 @@ message GetSecuritySettingsResponse {
   SecuritySettings settings = 1;
 }
 
+// Partial update: only fields that are explicitly set in the request
+// (proto3 ``optional`` semantics) are written. Omit a field to leave
+// it untouched. Each field that changes emits its own audit row.
 message UpdateSecuritySettingsRequest {
   string organization_id = 1;
-  bool password_reset_enabled = 2;
+  optional bool password_reset_enabled = 2;
+  optional bool mfa_required_for_members = 3;
+  optional bool mfa_required_for_admins = 4;
 }
 
 message UpdateSecuritySettingsResponse {

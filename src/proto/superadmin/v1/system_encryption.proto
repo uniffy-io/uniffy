@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Platform-operator view + control of the deployment-scope encryption
+// key (DEK wrapped by the master KEK). Every RPC requires the caller
+// to have ``User.is_system_admin=true``. Read RPCs are safe to poll;
+// the rotation RPC re-encrypts every registered deployment-scope
+// secret under a fresh DEK and is audit-logged.
+service SystemEncryptionService {
+  // Snapshot the active + retired deployment DEK rows.
+  rpc GetDeploymentEncryptionStatus(GetDeploymentEncryptionStatusRequest) returns (GetDeploymentEncryptionStatusResponse) {}
+
+  // Bump the active DEK to a fresh version and re-encrypt every
+  // registered ``DeploymentReEncryptingConsumer`` row under it.
+  // Publishes a cross-pod cache invalidation so peers drop the
+  // retired Fernet immediately. Returns the new active version.
+  rpc RotateDeploymentDek(RotateDeploymentDekRequest) returns (RotateDeploymentDekResponse) {}
+}
+
+message DeploymentEncryptionStatus {
+  // Active DEK version (>=1), or 0 when no DEK has been provisioned yet
+  // (i.e. the deployment has never encrypted a secret).
+  int32 active_version = 1;
+  // When the active DEK row was inserted (provisioning or last rotation).
+  optional google.protobuf.Timestamp active_created_at = 2;
+  // Total rows in ``deployment_encryption_keys`` -- active + retired.
+  int32 total_versions = 3;
+}
+
+message GetDeploymentEncryptionStatusRequest {}
+
+message GetDeploymentEncryptionStatusResponse {
+  DeploymentEncryptionStatus status = 1;
+}
+
+message RotateDeploymentDekRequest {
+  // Free-text reason. Recorded in the audit row.
+  string reason = 1;
+}
+
+message RotateDeploymentDekResponse {
+  int32 new_active_version = 1;
+}

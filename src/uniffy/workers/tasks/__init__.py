@@ -32,9 +32,11 @@ from uniffy.workers.tasks.notifications import (
     send_email_digest,
 )
 from uniffy.workers.tasks.permissions_reindex import reindex_org_content_for_defaults
+from uniffy.workers.tasks.platform_org_purge import notify_pending_org_purges
 from uniffy.workers.tasks.realtime import save_realtime_snapshot
 from uniffy.workers.tasks.reminders import check_calendar_reminders
 from uniffy.workers.tasks.storage_recalculation import recalculate_all_storage_usage
+from uniffy.workers.tasks.support_session_expiry import expire_support_sessions
 from uniffy.workers.tasks.tags_reindex import reindex_tag_doc, reindex_tag_urns
 from uniffy.workers.tasks.task_reminders import check_task_due_dates
 from uniffy.workers.tasks.thumbnails import (
@@ -91,6 +93,7 @@ __all__ = [
     "egress_on_startup",
     "execute_agent_cron_tasks",
     "execute_single_agent_cron_task",
+    "expire_support_sessions",
     "extract_audio_metadata",
     "extract_document_content",
     "extract_image_metadata",
@@ -98,6 +101,7 @@ __all__ = [
     "generate_image_thumbnail",
     "generate_pdf_thumbnail",
     "generate_video_thumbnail",
+    "notify_pending_org_purges",
     "on_job_end",
     "on_job_start",
     "process_notification_event",

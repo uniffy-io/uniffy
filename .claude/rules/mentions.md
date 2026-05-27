@@ -15,21 +15,21 @@ paths:
 
 Universal `@`-mentions are first-class citizens in Uniffy. Anywhere a user can type Markdown they can drop a URN reference and the chip renders a live, type-aware preview of the target. The chip stays in sync with the underlying content for as long as it is visible.
 
-This rule defines the architecture so changes here stay coherent. **Read the whole file before editing anything under the paths above.**
+This rule defines the architecture so changes here stay coherent. **Reading the whole file before editing anything under the paths above tends to save rework.**
 
 ---
 
 ## The contract
 
-Every mention chip MUST satisfy these properties:
+Every mention chip satisfies these properties:
 
 1. **Live**: when the referenced content changes (rename, status flip, member add, folder rename, …) every visible chip pointing to it updates without a page refresh.
-2. **Snapshot-safe**: when the reference target is deleted or no longer accessible, the chip renders a tombstone -- never a half-broken card or a generic "Note content" placeholder.
-3. **Pure-Meili reads**: the resolve path runs zero database queries. Everything a chip displays is denormalized into the Meilisearch document at index time. If a chip needs a new field, add it to the index, not to a resolve-time enrichment hook.
+2. **Snapshot-safe**: when the reference target is deleted or no longer accessible, the chip renders a tombstone - a half-broken card or a generic "Note content" placeholder reads as a bug.
+3. **Pure-Meili reads**: the resolve path runs zero database queries. Everything a chip displays is denormalized into the Meilisearch document at index time. If a chip needs a new field, add it to the index rather than to a resolve-time enrichment hook.
 4. **Same look everywhere**: chips render identically in chat messages, search results, comments, and the note editor. There is one chip component, not three.
-5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). It never grows from inline-pill to block-card after the fetch completes.
+5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). Growing from inline-pill to block-card after the fetch lands tends to feel janky.
 
-If a change you are about to make breaks one of these, stop and reconsider the design.
+If a change you are about to make breaks one of these, it is a good moment to reconsider the design.
 
 ---
 
@@ -80,7 +80,7 @@ Every domain whose content can be `@`-mentioned extends `BaseContentOperations` 
 | Hook | Purpose |
 |------|---------|
 | `_get_search_title(model)` | Document `title` |
-| `_get_search_description(model)` | Snippet shown in the expanded card body. Always strip Markdown / mention syntax before slicing -- never store raw `[[[label\|urn]]]` syntax in the index. |
+| `_get_search_description(model)` | Snippet shown in the expanded card body. Strip Markdown / mention syntax before slicing - raw `[[[label\|urn]]]` syntax in the index renders incorrectly downstream. |
 | `_get_search_tags(model)` | Tags array |
 | `_get_search_metadata(model)` | Sync hook: cheap-to-compute fields that need no DB lookup (e.g. `mime_type`). |
 | `_get_search_metadata_async(model)` | Async hook for fields that require a session (parent folder name, category title, member count). Default delegates to the sync version. |
@@ -89,33 +89,33 @@ Use snake_case keys (`parent_label`, `member_count`, `processing_status`). The f
 
 ### Re-index on every state mutation
 
-If a field appears in the index document, every code path that changes it MUST re-index. This includes:
+If a field appears in the index document, every code path that changes it re-indexes. This includes:
 
 - The model's own `create` / `update` / `restore` / `autosave`
 - Child propagation: a folder rename re-indexes every direct child; a category rename re-indexes every channel in the category.
-- Any bulk path (`empty_trash`, batch member add) -- snapshot affected ids before the mutation, re-index after the commit.
+- Any bulk path (`empty_trash`, batch member add) - snapshot affected ids before the mutation, re-index after the commit.
 
-If you forget this step the chip displays stale data. The user will notice. Do not paper over it with cache invalidation.
+Skipping this step leaves the chip with stale data. The user will notice. Cache invalidation is not a substitute.
 
 ### Live updates: `publish_mention_state`
 
-Re-indexing alone is not enough -- already-rendered chips do not poll. After every re-index call `publish_mention_state(organization_id, urn, changes)` to push the patch to subscribers.
+Re-indexing alone is not enough - already-rendered chips do not poll. After every re-index call `publish_mention_state(organization_id, urn, changes)` to push the patch to subscribers.
 
 Conventions:
 
-- The `changes` payload is a `dict[str, str]` with snake_case keys -- same shape as the index metadata, plus virtual keys `title`, `description`, `urn_status`.
-- Send the **full** denormalized payload, not a diff. Diffing across callers is fragile; the payload is small.
-- The publish call is idempotent -- safe to retry, safe to no-op when there are no listeners (Valkey-down case).
+- The `changes` payload is a `dict[str, str]` with snake_case keys - same shape as the index metadata, plus virtual keys `title`, `description`, `urn_status`.
+- Send the **full** denormalized payload rather than a diff. Diffing across callers tends to be fragile; the payload is small.
+- The publish call is idempotent - safe to retry, safe to no-op when there are no listeners (Valkey-down case).
 
 ### Resolve path (read-only, no DB!)
 
 `SearchOperations.resolve_urns` is the public read path. It:
 
 1. Fetches `UrnMetadata` documents from Meilisearch (permission-filtered there).
-2. **Synthesizes tombstone results** for every input URN missing from the index. Tombstones carry `urn_status="DELETED"` so the chip renders a deleted-state instead of a generic fallback. We do NOT distinguish `DELETED` / `NOT_FOUND` / `FORBIDDEN` -- "missing from index" is treated uniformly.
-3. Returns one `SearchResult` per input URN (never silently drops).
+2. **Synthesizes tombstone results** for every input URN missing from the index. Tombstones carry `urn_status="DELETED"` so the chip renders a deleted-state rather than a generic fallback. We do not distinguish `DELETED` / `NOT_FOUND` / `FORBIDDEN` - "missing from index" is treated uniformly.
+3. Returns one `SearchResult` per input URN (silent drops are a bug).
 
-**Do not add new database queries to `resolve_urns` or to `_enrich_*` helpers.** If a chip needs a new field, push it into the index from the writing domain. The single `_enrich_channels` helper that survives is intentionally a no-op left in place to document that decision.
+**Adding new database queries to `resolve_urns` or to `_enrich_*` helpers tends to regress the design.** If a chip needs a new field, push it into the index from the writing domain. The single `_enrich_channels` helper that survives is intentionally a no-op left in place to document that decision.
 
 ### Cascade-removal on parent delete
 
@@ -130,7 +130,7 @@ Two patterns:
 
 The filter approach requires the child to carry a parent id in its search metadata **and** that field be declared in `filterable_attributes` (`core/search/meilisearch.py`). Today: `metadata.channel_id` (chat messages), `metadata.project_id` (tasks), `metadata.folder_id` (files).
 
-When you add a new parent/child relationship that reaches search, add the parent id to the child's `_get_search_metadata` and to the filterable list, then wire the cascade. Skipping the cascade is the default failure mode -- the index keeps growing and "deleted" content stays searchable.
+When you add a new parent/child relationship that reaches search, add the parent id to the child's `_get_search_metadata` and to the filterable list, then wire the cascade. Skipping the cascade is the default failure mode - the index keeps growing and "deleted" content stays searchable.
 
 ### Tombstones
 
@@ -139,7 +139,7 @@ A URN is missing from Meilisearch if any of:
 - the document was never indexed (data corruption / new content type rollout)
 - the requesting user lacks permission
 
-All three look identical to the resolver. The frontend renders them as a dashed, strikethrough "Deleted X" chip. There is no recovery flow -- the chip is dead, the reader knows it is dead, that is the whole behaviour.
+All three look identical to the resolver. The frontend renders them as a dashed, strikethrough "Deleted X" chip. There is no recovery flow - the chip is dead, the reader knows it is dead, that is the whole behaviour.
 
 To mark a URN as DELETED for visible chips in real time: emit `publish_mention_state(..., changes={"urn_status": "DELETED"})` from your `delete()` path **and** call `SearchIndexer.remove`.
 
@@ -149,7 +149,7 @@ To mark a URN as DELETED for visible chips in real time: emit `publish_mention_s
 
 ### Single source of truth: `MentionLiveState`
 
-`src/ui/src/components/mention/types.ts` defines the typed shape every chip consumer reads. Generic fields (`title`, `description`, `parentLabel`, `status`) live at the top; type-specific groups follow. **Never read raw metadata dict keys from a render component** -- if you need a new field, add it to `MentionLiveState` and wire the translator.
+`src/ui/src/components/mention/types.ts` defines the typed shape every chip consumer reads. Generic fields (`title`, `description`, `parentLabel`, `status`) live at the top; type-specific groups follow. **Reading raw metadata dict keys from a render component tends to break silently** - if you need a new field, add it to `MentionLiveState` and wire the translator.
 
 ### Two translators, one shape
 
@@ -170,7 +170,7 @@ When you add a new field, update **all three** translators. They drift in propor
 | `MentionStateProvider` | `MainLayout` (one per app tree) | Real `register` / `unregister`, batches via `searchApi.resolveUrns`, listens to the stream, writes through to the module-level emitter. |
 | `MentionDisplayBridge` | Each ProseMirror NodeView (per-chip React root in the editor) | Provides the `mentionDisplay` setting; `register` / `unregister` are noops. State arrives through the module-level emitter only. |
 
-Outside the main React tree (editor NodeViews), `useMentionState` detects the absent provider and triggers `resolveUrnBatched` itself. The flush calls `publishMentionState`, the emitter wakes up the listening chip. **Do not add a second resolver** -- the global batch resolver is the one shared cache.
+Outside the main React tree (editor NodeViews), `useMentionState` detects the absent provider and triggers `resolveUrnBatched` itself. The flush calls `publishMentionState`, the emitter wakes up the listening chip. **A second resolver tends to fragment the cache** - the global batch resolver is the one shared cache.
 
 ### Module-level emitter
 
@@ -188,7 +188,7 @@ If your code resolves a URN outside the main provider, finish with `publishMenti
 
 ### Stream merge: snake_case translation is mandatory
 
-Stream payloads arrive as proto `map<string, string>` -- snake_case keys, string values. **Never spread the raw dict into `MentionLiveState`**: chip components read camelCase fields, the merge silently fails, the live update never lands. Always run the dict through `streamChangesToLiveState` first.
+Stream payloads arrive as proto `map<string, string>` - snake_case keys, string values. **Spreading the raw dict into `MentionLiveState` silently fails**: chip components read camelCase fields, the merge does not match, the live update never lands. Run the dict through `streamChangesToLiveState` first.
 
 If you publish a new key from the backend, add a `case` to `streamChangesToLiveState`. Without it the patch is dropped on the floor.
 
@@ -226,15 +226,15 @@ The expanded card header has a fixed slot order in its meta row:
               📁 ParentLabel  ·  TypeLabel  ·  TypeMeta1  ·  TypeMeta2 …
 ```
 
-`ParentLabel` (folder / category / parent note) is always **first** in the meta row, rendered via the shared `<ParentBadge>` component (`previews/ParentBadge.tsx`). `<MetaSeparator>` is the canonical middle-dot. Do not roll your own breadcrumb -- a fragmented look here is exactly the bug we keep cleaning up.
+`ParentLabel` (folder / category / parent note) is always **first** in the meta row, rendered via the shared `<ParentBadge>` component (`previews/ParentBadge.tsx`). `<MetaSeparator>` is the canonical middle-dot. Rolling your own breadcrumb here tends to fragment the visual language - it is the bug we keep cleaning up.
 
-When you add a new mention type or extend an existing preview, place new metadata to the **right** of the existing row, never inside it.
+When you add a new mention type or extend an existing preview, place new metadata to the **right** of the existing row rather than inside it.
 
 ### Tombstone rendering
 
-`MentionLiveState.status === 'deleted'` short-circuits the render before any other branch. The chip renders `MentionTombstoneChip` (compact) or `MentionTombstoneCard` (expanded). Hover, click, expand, and live indicators are all suppressed -- there is nothing to navigate to.
+`MentionLiveState.status === 'deleted'` short-circuits the render before any other branch. The chip renders `MentionTombstoneChip` (compact) or `MentionTombstoneCard` (expanded). Hover, click, expand, and live indicators are all suppressed - there is nothing to navigate to.
 
-Do not try to recover or re-fetch a tombstone. The state is final.
+Recovery or re-fetch of a tombstone is not part of the contract. The state is final.
 
 ---
 
@@ -261,15 +261,15 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 
 ---
 
-## Anti-patterns (do not commit these)
+## Anti-patterns (worth a second look before committing)
 
-- DB queries inside `resolve_urns` or any `_enrich_*` helper. The pattern is dead, every new addition is a regression.
+- DB queries inside `resolve_urns` or any `_enrich_*` helper. The pattern is retired; every new addition is a regression.
 - Reading raw metadata-dict keys (`liveState.metadata?.member_count`) from a render component. Translators exist for a reason.
 - A re-index call without a matching `publish_mention_state` (or vice versa). The two together are the contract.
 - A new chip variant with bespoke layout instead of using `<ParentBadge>` / `<MetaSeparator>`.
-- Skipping the `if channel.channel_type != ChannelType.PUBLIC` style guard "for performance" -- PUBLIC channels live in the index and need re-indexing on every mutation.
-- Dispatching `setMentionState` without `publishMentionState`. Outside-context chips never wake up; the bug is invisible until someone opens the editor.
-- A diff-based publish payload. Send the full denormalized state -- always.
+- Skipping the `if channel.channel_type != ChannelType.PUBLIC` style guard "for performance" - PUBLIC channels live in the index and need re-indexing on every mutation.
+- Dispatching `setMentionState` without `publishMentionState`. Outside-context chips never wake up; the bug stays invisible until someone opens the editor.
+- A diff-based publish payload. The full denormalized state is the contract.
 
 ---
 

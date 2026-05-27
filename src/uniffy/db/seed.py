@@ -131,7 +131,21 @@ async def _seed_initial_data_locked() -> None:
         logger.info("No organizations found. Seeding initial data...")
 
         try:
-            # 1. Create System Admin User
+            # 1. Bootstrap users.
+            #
+            # Two logical roles, optionally collapsed into one identity:
+            #   - Org owner of the default organization (admin user).
+            #   - Platform operator with ``is_system_admin=True`` and NO
+            #     org membership (sysadmin user).
+            #
+            # When ``INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL``
+            # (case-insensitive) we provision a single user that holds
+            # both roles -- the self-hosted single-tenant pattern where
+            # the operator IS the org owner.
+            #
+            # Otherwise we provision two users: ``admin`` owns the default
+            # org (NOT a sysadmin), ``platform`` is sysadmin-only with no
+            # org membership -- the cloud + multi-tenant pattern.
             admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
             if not admin_password:
                 logger.warning(
@@ -141,6 +155,18 @@ async def _seed_initial_data_locked() -> None:
                 admin_password = "admin"
 
             admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "admin@uniffy.io")
+            # Unset platform email falls back to the admin email -- self-
+            # hosted default collapses to one combined user. Set the env
+            # to a distinct email to provision two users (cloud pattern).
+            platform_email = (
+                os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
+            )
+            platform_password = (
+                os.getenv("INITIAL_PLATFORM_ADMIN_PASSWORD", "").strip()
+                or admin_password
+            )
+
+            collapsed = admin_email.strip().lower() == platform_email.strip().lower()
 
             admin_user = User(
                 email=admin_email,
@@ -148,13 +174,36 @@ async def _seed_initial_data_locked() -> None:
                 full_name="System Administrator",
                 hashed_password=hash_password(admin_password),
                 is_active=True,
-                is_system_admin=True,
+                is_system_admin=collapsed,
                 email_verified=True,
             )
             session.add(admin_user)
             await session.flush()
             await session.refresh(admin_user)
-            logger.info(f"Created system admin user: {admin_user.username}")
+
+            if collapsed:
+                logger.info(
+                    f"Created combined admin + platform user: {admin_user.email} "
+                    "(single identity, sysadmin AND org owner)"
+                )
+            else:
+                logger.info(f"Created org-owner user: {admin_user.email}")
+                platform_user = User(
+                    email=platform_email,
+                    username="platform",
+                    full_name="Platform Operator",
+                    hashed_password=hash_password(platform_password),
+                    is_active=True,
+                    is_system_admin=True,
+                    email_verified=True,
+                )
+                session.add(platform_user)
+                await session.flush()
+                await session.refresh(platform_user)
+                logger.info(
+                    f"Created platform-admin-only user: {platform_user.email} "
+                    "(no org membership; can only access /platform/*)"
+                )
 
             # 2. Create Default Organization
             # (includes membership, chat, presets, permission defaults)

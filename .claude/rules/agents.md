@@ -9,7 +9,7 @@ paths:
 
 # Agents Domain Documentation
 
-The agents domain provides AI assistants that can converse with users and take actions on their behalf within the Uniffy workspace. Agents are LLM-powered (Anthropic, OpenAI, Google) and interact with other domains (notes, calendar, projects, tasks, search) through a built-in tool system. Agents never have their own identity for data access -- they always act as the human user, inheriting the exact same permissions the user has in the UI.
+The agents domain provides AI assistants that can converse with users and take actions on their behalf within the Uniffy workspace. Agents are LLM-powered (Anthropic, OpenAI, Google) and interact with other domains (notes, calendar, projects, tasks, search) through a built-in tool system. Agents do not have their own identity for data access - they always act as the human user, inheriting the exact same permissions the user has in the UI.
 
 ---
 
@@ -86,24 +86,24 @@ All 5 services are mounted in `factory.py`.
 
 ### Agent Identity for Data Access
 
-**Agents do NOT have their own identity for accessing data.** When an agent executes a tool, it uses the **human user's** `user_id` and `organization_id`. The agent acts on behalf of the user, with the exact same permissions the user has in the UI.
+**Agents do not have their own identity for accessing data.** When an agent executes a tool, it uses the **human user's** `user_id` and `organization_id`. The agent acts on behalf of the user, with the exact same permissions the user has in the UI - this is a security boundary, not a performance choice.
 
 ---
 
 ## Performance-Critical: Always Apply
 
-The agent runtime is one of the two highest-traffic paths in the system. Every change here is held to the bar described in the backend rules' "Performance-Critical Domains" section. The agent-specific MUSTs:
+The agent runtime is one of the two highest-traffic paths in the system. Every change here is held to the bar described in the backend rules' "Performance-Critical Domains" section. Agent-specific patterns that have served us well:
 
 | Rule | Why |
 |---|---|
-| Never block the request thread on an LLM call. | Compaction, summarisation, and any future "let's send this to the model briefly" pattern goes to ARQ with a Valkey idempotency lock. The request thread enqueues and returns. |
-| Pre-flight reads go through the agent caches. | `fetch_agent_row`, `fetch_agent_skills`, `fetch_agent_prompt`, `get_provider_for_key`, the user/agent profile cache via `SenderResolver`. New runtime reads add a cache helper before they ship. |
+| Keep LLM calls off the request thread. | Compaction, summarisation, and any future "let's send this to the model briefly" pattern goes to ARQ with a Valkey idempotency lock. The request thread enqueues and returns. |
+| Pre-flight reads go through the agent caches. | `fetch_agent_row`, `fetch_agent_skills`, `fetch_agent_prompt`, `get_provider_for_key`, the user/agent profile cache via `SenderResolver`. When you add a new runtime read, adding a cache helper alongside is a good fit. |
 | Agent / skill / prompt mutations invalidate the dependent agent caches in the same commit. | Reverse-index sets `tag:skill:{skill_id}` and `tag:prompt:{prompt_id}` hold the agent ids that reference each shared row. Skill / prompt update / delete = SMEMBERS the set, bulk wipe the dependent agent caches, drop the set on delete. Agent.enabled_skills / prompt_id changes diff old vs new and SREM / SADD the matching tag sets. |
-| Tool calls within a single LLM turn are partitioned read / write. | Read-only tools fan out concurrently against per-tool sessions; writes run sequentially on the runtime session. New tools default to `read_only=False` -- flipping to True is a deliberate annotation, not the default. |
+| Tool calls within a single LLM turn are partitioned read / write. | Read-only tools fan out concurrently against per-tool sessions; writes run sequentially on the runtime session. New tools default to `read_only=False` - flipping to True is a deliberate annotation. |
 | Per-tool `timeout_seconds`. | Default 15s. Long-running tools opt up explicitly with a clear reason in the `ToolDefinition`. Tools that have no upper bound on duration (open-ended search, image gen against a slow provider) live with 30-60s ceilings; if they exceed that, the LLM sees a structured timeout error and recovers, not a stuck event loop. |
 | Hot-row counter UPDATEs gate on the prior value. | `agent_channel_bindings.last_active_token_estimate` and any future "biggest wins" counter use `WHERE current < new_value` (or `IS NULL`) so concurrent agents in the same channel race deterministically. |
 | `agents_messages.token_estimate` is populated at INSERT, never at read time. | Every writer (runtime add_message, summary insert, consolidated summary, chat-channel writer) computes the estimate via `_estimate_message_tokens` and stores it. The window-function context loader assumes the column is populated. |
-| ApprovalStore is in-process and ephemeral. | TTL sweep on every `register` evicts entries older than `APPROVAL_TTL_SECONDS + 60s` and releases their waiters. Pod restarts drop pending approvals -- never assume durability. |
+| ApprovalStore is in-process and ephemeral. | TTL sweep on every `register` evicts entries older than `APPROVAL_TTL_SECONDS + 60s` and releases their waiters. Pod restarts drop pending approvals - durability is not part of the contract here. |
 | New agent-runtime metrics get a label. | LRU hit ratio, compaction lag, tool timeout count, parallel-tool concurrency. Without metrics a regression is invisible. |
 
 ---
@@ -187,7 +187,7 @@ RuntimeOperations (runtime/operations.py)
         -> SQL query via AsyncSession
 ```
 
-Everything stays in-process, on the **same `AsyncSession`** (same database transaction). Imports are lazy (inside the executor function) to avoid circular dependencies between the `agents` domain and the target domains -- this is the one permitted exception to the "no inline imports" rule.
+Everything stays in-process, on the **same `AsyncSession`** (same database transaction). Imports are lazy (inside the executor function) to avoid circular dependencies between the `agents` domain and the target domains - this is the one permitted exception to the "no inline imports" rule.
 
 ### ToolContext
 
@@ -253,7 +253,7 @@ The tool loop runs up to `MAX_TOOL_ITERATIONS = 10` times per message. Within a 
 7. If LLM returns `stop_reason != "tool_use"`, the loop exits with the final response.
 8. If 10 iterations are exceeded, `ValidationError` is raised.
 
-A read-only tool MAY perform side-effect writes on its own per-tool session (e.g. `memory.recall` bumps `access_count`); the per-tool session commit makes this safe under concurrency. The `read_only` flag is a parallelism hint, not a "no writes" promise -- it means "no transaction-shared writes against the runtime session."
+A read-only tool may perform side-effect writes on its own per-tool session (e.g. `memory.recall` bumps `access_count`); the per-tool session commit makes this safe under concurrency. The `read_only` flag is a parallelism hint rather than a "no writes" promise - it means "no transaction-shared writes against the runtime session."
 
 ---
 
@@ -269,7 +269,7 @@ In **streaming mode only**, destructive tools require user approval before execu
 4. Calls `approval_store.wait_for_response(session_id, tc.id, timeout=120.0)`.
 5. Frontend shows confirm/deny UI. User clicks approve or reject.
 6. Frontend calls `RespondToConfirmation` RPC.
-7. Handler calls `approval_store.respond(session_id, tool_call_id, approved)` -- sets the `asyncio.Event`.
+7. Handler calls `approval_store.respond(session_id, tool_call_id, approved)` - sets the `asyncio.Event`.
 8. Waiting coroutine unblocks: if approved, execute tool. If rejected or timed out, return "Action was rejected" to the LLM.
 
 The `ApprovalStore` is a **process-level singleton** using `asyncio.Event`. It does not survive restarts or work across multiple processes.
@@ -386,11 +386,11 @@ Domain helpers in `domains/agents/cache.py` cache the read-heavy pieces of the r
 | `tag:skill:{skill_id}` | Reverse-index Valkey set of agent ids that reference this skill | -- |
 | `tag:prompt:{prompt_id}` | Reverse-index Valkey set of agent ids that reference this prompt | -- |
 
-**Reverse-index discipline**: `Agent.enabled_skills` writes diff old vs new and SREM / SADD against `tag:skill:{sid}` so the set always reflects current dependencies. Same for `agent.prompt_id` against `tag:prompt:{pid}`. Skill or prompt mutations SMEMBERS the tag set, bulk-invalidate the dependent agent skill / prompt caches, and DEL the tag set on delete. The reverse-index sets share the `tag:` namespace with `cache_invalidate_by_tag`-style entries but contain agent ids, not cache keys -- helpers do the SMEMBERS + bulk DEL by hand.
+**Reverse-index discipline**: `Agent.enabled_skills` writes diff old vs new and SREM / SADD against `tag:skill:{sid}` so the set always reflects current dependencies. Same for `agent.prompt_id` against `tag:prompt:{pid}`. Skill or prompt mutations SMEMBERS the tag set, bulk-invalidate the dependent agent skill / prompt caches, and DEL the tag set on delete. The reverse-index sets share the `tag:` namespace with `cache_invalidate_by_tag`-style entries but contain agent ids, not cache keys - helpers do the SMEMBERS + bulk DEL by hand.
 
 **Soft-deleted agents are not seeded** into the cache. The runtime read path filters on `is_deleted=false` and a soft-deleted entry would be served as if present.
 
-**Decrypted credentials never enter Valkey.** The in-process `ProviderClientLRU` is the only place a decrypted credential lives; its lifecycle is bounded by the pubsub invalidation channel described under "Active Provider Resolution".
+**Decrypted credentials MUST NOT enter Valkey.** The in-process `ProviderClientLRU` is the only place a decrypted credential lives; its lifecycle is bounded by the pubsub invalidation channel described under "Active Provider Resolution". This is a security boundary.
 
 ---
 
@@ -412,9 +412,9 @@ Provider keys are Fernet-encrypted at rest in `agents_provider_keys`. Fields:
 `ProviderOperations.get_provider_for_key(...)` and `get_provider_for_model(...)` consult two cache tiers before touching PG:
 
 1. **In-process LRU** (`core/llm_providers/cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
-2. **Valkey metadata cache** (`provider:key:{key_id}`, TTL 3600s): non-secret routing data only -- provider, credential_type, is_valid, is_enabled, available model ids. The encrypted credential is never written to Valkey.
+2. **Valkey metadata cache** (`provider:key:{key_id}`, TTL 3600s): non-secret routing data only - provider, credential_type, is_valid, is_enabled, available model ids. The encrypted credential MUST NOT be written to Valkey.
 
-Cross-pod invalidation: any mutation that changes a provider key publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey metadata entry. A long-lived `PSUBSCRIBE provider_keys:invalidate:*` listener (started in the FastAPI app lifespan and the worker `on_startup`) drops the matching LRU entry on receipt. Cache and pubsub are in lockstep -- one signal, both tiers drop.
+Cross-pod invalidation: any mutation that changes a provider key publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey metadata entry. A long-lived `PSUBSCRIBE provider_keys:invalidate:*` listener (started in the FastAPI app lifespan and the worker `on_startup`) drops the matching LRU entry on receipt. Cache and pubsub are in lockstep - one signal, both tiers drop.
 
 `get_provider_for_model` iterates active keys and uses the cached model-id list to skip decrypt + construction for any key that doesn't own the requested model. Only the matching key gets decrypted.
 
@@ -457,7 +457,7 @@ Compaction runs in the background, never on the request path.
 
 **Token estimate column**: `agents_messages.token_estimate` is computed by `_estimate_message_tokens` at INSERT time (every writer that adds a row populates it). The read path never re-estimates. `get_session_context` is one window-function query that returns the most recent rows whose cumulative token total fits the budget, with a guaranteed inclusion of the absolute latest row.
 
-**Channel-scoped agent compaction** is a separate path (`domains/agents/chat_integration/context.py::ChatAgentContextOperations.compact`) that writes a `sender_type=AGENT, metadata.kind='summary'` chat message and updates `agent_channel_bindings.compaction_summary_msg_ids`. The runtime's `compact_if_needed` writer is a no-op for chat destinations -- the chat-side compaction has its own trigger and worker path.
+**Channel-scoped agent compaction** is a separate path (`domains/agents/chat_integration/context.py::ChatAgentContextOperations.compact`) that writes a `sender_type=AGENT, metadata.kind='summary'` chat message and updates `agent_channel_bindings.compaction_summary_msg_ids`. The runtime's `compact_if_needed` writer is a no-op for chat destinations - the chat-side compaction has its own trigger and worker path.
 
 ---
 
@@ -498,7 +498,7 @@ Compaction runs in the background, never on the request path.
 | Same permissions as UI | Tool executors call the same `*Operations` classes the RPC handlers use |
 | No privilege escalation | An agent cannot access content the user cannot access |
 | Destructive ops gated | `destructive=True` tools require explicit user approval in streaming mode |
-| Org-scoped | All operations pass `organization_id` -- cross-org access is impossible |
+| Org-scoped | All operations pass `organization_id` - cross-org access is structurally impossible |
 | Tool errors contained | `ToolExecutor` catches all exceptions and returns `ToolResult(success=False)` |
 | Iteration limit | Max 10 tool calls per message prevents infinite loops |
 | Provider keys encrypted | Fernet-encrypted at rest, decrypted only at call time |

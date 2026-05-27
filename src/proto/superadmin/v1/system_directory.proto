@@ -1,0 +1,264 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Cross-tenant directory of organizations and users for platform
+// operators. Every RPC requires the caller to have
+// ``User.is_system_admin=true``. The service exposes only metadata --
+// per-tenant content (notes, files, chat, calendar) is reachable only
+// through a ``SupportSession`` grant from the org owner.
+service SystemOrganizationsService {
+  // Paginated list of every org in the deployment with the metadata
+  // a platform operator needs to triage support. No tenant content.
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {}
+
+  // Full detail for one org: counts, owners list, mail/encryption
+  // status, recent platform-audit rows. No tenant content.
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
+
+  // Block sign-in for every member of the org and bump
+  // ``token_version`` so existing JWTs reject immediately. Reversible
+  // via ``UnsuspendOrganization``.
+  rpc SuspendOrganization(SuspendOrganizationRequest) returns (SuspendOrganizationResponse) {}
+
+  // Clear the suspension flag. Members can sign in again on next
+  // login (existing tokens are still dead from the original bump).
+  rpc UnsuspendOrganization(UnsuspendOrganizationRequest) returns (UnsuspendOrganizationResponse) {}
+
+  // Soft-delete: stamps ``deleted_at`` on the org. A daily cron purges
+  // rows whose ``deleted_at + 30d < now``. Owner is emailed at delete
+  // time and 24h before purge. Restorable via ``RestoreOrganization``.
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+
+  // Clear ``deleted_at``. Only effective before the 30-day purge.
+  rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
+}
+
+service SystemUsersService {
+  // Paginated list of every user account in the deployment.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+
+  // Full detail for one user: profile, last login, org memberships.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+
+  // Bump ``token_version`` to invalidate every JWT for one user.
+  // Forces them to log in again on next request.
+  rpc ForceLogoutUser(ForceLogoutUserRequest) returns (ForceLogoutUserResponse) {}
+
+  // Toggle ``is_system_admin`` on one user. Granting promotes them to
+  // a platform operator; revoking demotes back to a regular user.
+  // Cannot revoke from yourself.
+  rpc SetSystemAdmin(SetSystemAdminRequest) returns (SetSystemAdminResponse) {}
+}
+
+// One row in the cross-tenant organizations table.
+message PlatformOrganizationSummary {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string plan = 4;
+  int32 member_count = 5;
+
+  // 'per_org' | 'deployment' | 'env' | 'none' -- where the org's
+  // effective mail config resolves from.
+  string mail_config_source = 6;
+
+  // Active DEK version for this org. 0 when encryption is not
+  // provisioned (legacy or new org without a key row).
+  int32 encryption_version = 7;
+
+  // MAX(audit_events.created_at) for this org. Null when the org has
+  // no audit rows yet.
+  optional google.protobuf.Timestamp last_activity_at = 8;
+
+  // MAX(audit_events.created_at WHERE action='auth.logged_in') for
+  // any member of this org. Null when no one has logged in yet.
+  optional google.protobuf.Timestamp last_login_at = 9;
+
+  bool is_suspended = 10;
+  optional google.protobuf.Timestamp deleted_at = 11;
+  // For UI: the timestamp at which the purge cron will hard-delete
+  // this org. Null when ``deleted_at`` is null.
+  optional google.protobuf.Timestamp purge_at = 12;
+
+  google.protobuf.Timestamp created_at = 13;
+}
+
+// Full detail for one org. Metadata only -- tenant content + tenant
+// audit are intentionally excluded. Platform operators on cloud
+// must NOT see tenant activity (notes/files/chat/auth events) from
+// this surface; that would violate the "operators do not read your
+// content" promise. The org owners list is the only non-metadata
+// field and stays small (typically <5).
+message PlatformOrganizationDetail {
+  PlatformOrganizationSummary summary = 1;
+  // Org domain (auto-join + SSO matcher).
+  string domain = 2;
+  // Org logo URL (if set in profile).
+  string logo_url = 3;
+  // Member count is on the summary; this slice is for the owners
+  // specifically (org role = OWNER), surfaced so the operator can
+  // see who to contact.
+  repeated PlatformOrgOwner owners = 4;
+  // Free-text suspend reason, set by the operator.
+  optional string suspension_reason = 5;
+  // Free-text delete reason, set by the operator.
+  optional string deletion_reason = 6;
+}
+
+message PlatformOrgOwner {
+  string user_id = 1;
+  string email = 2;
+  optional string full_name = 3;
+  google.protobuf.Timestamp joined_at = 4;
+}
+
+// One row in the cross-tenant users table.
+message PlatformUserSummary {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  optional string full_name = 4;
+  bool is_active = 5;
+  bool is_system_admin = 6;
+  bool email_verified = 7;
+  // Placeholder until MFA ships; always false today.
+  bool mfa_enabled = 8;
+  int32 org_memberships_count = 9;
+  // MAX(audit_events.created_at WHERE action='auth.logged_in'
+  // AND actor_user_id=user.id). Null until the user has logged in.
+  optional google.protobuf.Timestamp last_login_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message PlatformUserDetail {
+  PlatformUserSummary summary = 1;
+  repeated PlatformUserMembership memberships = 2;
+}
+
+message PlatformUserMembership {
+  string organization_id = 1;
+  string organization_name = 2;
+  string organization_slug = 3;
+  // OrganizationRole enum value as a string ('MEMBER' | 'ADMIN' | 'OWNER').
+  string role = 4;
+  google.protobuf.Timestamp joined_at = 5;
+  bool is_active = 6;
+  bool is_suspended = 7;
+  optional google.protobuf.Timestamp deleted_at = 8;
+}
+
+message ListOrganizationsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  // Optional case-insensitive substring filter on name or slug.
+  string search = 3;
+  // When true, include soft-deleted orgs (``deleted_at IS NOT NULL``).
+  bool include_deleted = 4;
+  // When true, include suspended orgs only.
+  bool only_suspended = 5;
+}
+
+message ListOrganizationsResponse {
+  repeated PlatformOrganizationSummary organizations = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetOrganizationRequest {
+  string organization_id = 1;
+}
+
+message GetOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message SuspendOrganizationRequest {
+  string organization_id = 1;
+  // Free-text reason. Recorded in the audit row and surfaced on the
+  // org detail page so the next operator knows why.
+  string reason = 2;
+}
+
+message SuspendOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message UnsuspendOrganizationRequest {
+  string organization_id = 1;
+  string reason = 2;
+}
+
+message UnsuspendOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message DeleteOrganizationRequest {
+  string organization_id = 1;
+  // Confirmation: the operator must retype the slug to confirm.
+  // Server-side check; client-side check is also enforced.
+  string confirm_slug = 2;
+  string reason = 3;
+}
+
+message DeleteOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message RestoreOrganizationRequest {
+  string organization_id = 1;
+  string reason = 2;
+}
+
+message RestoreOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  // Optional case-insensitive substring filter on email, username,
+  // or full_name.
+  string search = 3;
+  // When true, include deactivated users (``is_active=false``).
+  bool include_inactive = 4;
+  // When true, return only users with ``is_system_admin=true``.
+  bool only_system_admins = 5;
+}
+
+message ListUsersResponse {
+  repeated PlatformUserSummary users = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  PlatformUserDetail user = 1;
+}
+
+message ForceLogoutUserRequest {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message ForceLogoutUserResponse {}
+
+message SetSystemAdminRequest {
+  string user_id = 1;
+  bool is_system_admin = 2;
+  string reason = 3;
+}
+
+message SetSystemAdminResponse {
+  PlatformUserDetail user = 1;
+}

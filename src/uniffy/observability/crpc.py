@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-"""ConnectRPC interceptors for observability and logging."""
-
 import time
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar

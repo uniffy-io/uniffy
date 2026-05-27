@@ -931,6 +931,9 @@ class OrganizationOperations:
         )
         defaults = result.scalar_one_or_none()
 
+        previous_access_mode = defaults.default_access_mode if defaults else None
+        previous_baseline_role = defaults.default_baseline_role if defaults else None
+
         if defaults:
             if default_access_mode is not None:
                 defaults.default_access_mode = default_access_mode
@@ -963,6 +966,29 @@ class OrganizationOperations:
 
         await self._session.commit()
         await self._session.refresh(defaults)
+
+        await write_audit_event(
+            self._session,
+            organization_id=org_id,
+            actor_user_id=user_id,
+            action=Action.ORGANIZATION_PERMISSION_DEFAULTS_CHANGED,
+            resource_type="CONTENT_TYPE",
+            resource_id=None,
+            details={
+                "content_type": content_type.value,
+                "previous_access_mode": previous_access_mode.value
+                if previous_access_mode
+                else None,
+                "new_access_mode": defaults.default_access_mode.value,
+                "previous_baseline_role": previous_baseline_role.value
+                if previous_baseline_role
+                else None,
+                "new_baseline_role": defaults.default_baseline_role.value
+                if defaults.default_baseline_role
+                else None,
+            },
+        )
+        await self._session.commit()
 
         # A defaults flip changes the effective policy for every
         # inheriting row, so wipe the role + visible-set caches.

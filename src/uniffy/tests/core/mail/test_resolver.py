@@ -135,12 +135,16 @@ class TestResolveFromOrgRows:
             with pytest.raises(MailNotConfiguredError):
                 _run(resolver.resolve(uuid4()))
 
-    def test_none_org_skips_db(self, monkeypatch) -> None:
+    def test_none_org_falls_through_to_env(self, monkeypatch) -> None:
+        # With no org id and no deployment_settings rows, the resolver
+        # skips the org tier, queries deployment (empty), then falls
+        # through to env. The deployment query is one ``session.execute``
+        # call -- we assert source is env, not the call count, since the
+        # deployment tier inserts one DB hit between org-skip and env.
         monkeypatch.setenv("MAIL_FROM_ADDRESS", "sys@uniffy.local")
         monkeypatch.setenv("SMTP_HOST", "smtp.local")
 
-        session = AsyncMock()
-        session.execute = AsyncMock()
+        session = _session_returning([])  # empty for deployment query
         with patch(
             "uniffy.core.mail.resolver.cache_get",
             new=AsyncMock(return_value=_miss()),
@@ -149,7 +153,6 @@ class TestResolveFromOrgRows:
             cfg = _run(resolver.resolve(None))
 
         assert cfg.source == "env"
-        session.execute.assert_not_awaited()
 
 
 class TestCache:

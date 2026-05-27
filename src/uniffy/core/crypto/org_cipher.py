@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from cryptography.fernet import Fernet, InvalidToken
+from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +44,18 @@ from uniffy.observability.metrics import (
     ORG_DEK_UNWRAP_SECONDS,
 )
 
+
+class SupportSessionCipherBridgeDenied(CryptoError):
+    """Raised when a support-session actor tries to decrypt without opt-in.
+
+    Default-deny: every ``OrgCipher.decrypt`` call refuses to bridge
+    plaintext through a support session unless the caller passes
+    ``allow_support_session_bridge=True``. The exception is caught
+    by upstream layers that surface secrets as masked placeholders
+    instead of raising to the operator.
+    """
+
+
 _REENCRYPT_BATCH_SIZE = 200
 
 
@@ -62,13 +75,43 @@ class OrgCipher:
         token = fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"v{version}:{token}"
 
-    async def decrypt(self, organization_id: UUID, ciphertext: str) -> str:
+    async def decrypt(
+        self,
+        organization_id: UUID,
+        ciphertext: str,
+        *,
+        allow_support_session_bridge: bool = False,
+    ) -> str:
         """Decrypt ``ciphertext`` previously produced by ``encrypt``.
 
         Cross-tenant ciphertexts fail loudly: the Fernet token only
         decrypts under the DEK that produced it, and that DEK belongs
         to exactly one organization.
+
+        When the current request runs under an active support session
+        for ``organization_id`` and the caller does not pass
+        ``allow_support_session_bridge=True``, the call raises
+        :class:`SupportSessionCipherBridgeDenied`. A bridge-attempt
+        audit row is always written (allowed or denied) so the org
+        owner sees every plaintext exposure attempt.
         """
+        from uniffy.domains.platform.support_session.context import (
+            get_active_support_session,
+        )
+
+        active = get_active_support_session()
+        if active is not None and active.organization_id == organization_id:
+            await self._write_bridge_attempt_audit(
+                active=active,
+                organization_id=organization_id,
+                allowed=allow_support_session_bridge,
+            )
+            if not allow_support_session_bridge:
+                raise SupportSessionCipherBridgeDenied(
+                    "Decryption refused under an active support session; "
+                    "caller must opt in via allow_support_session_bridge=True"
+                )
+
         version, payload = self._parse(ciphertext)
         fernet = await self._fernet_for(organization_id, version)
         try:
@@ -77,6 +120,46 @@ class OrgCipher:
             raise CryptoError(
                 "Failed to decrypt ciphertext; wrong organization or corrupted payload"
             ) from exc
+
+    async def _write_bridge_attempt_audit(
+        self,
+        *,
+        active,
+        organization_id: UUID,
+        allowed: bool,
+    ) -> None:
+        """Record a support-session bridge attempt on ``OrgCipher.decrypt``.
+
+        Uses a dedicated short-lived session that commits independently
+        of the caller's transaction. If the caller catches
+        :class:`SupportSessionCipherBridgeDenied` and rolls back, the
+        audit row still lands - the org owner sees every plaintext
+        exposure attempt without depending on the caller's commit path.
+        """
+        from uniffy.core.audit import write_audit_event
+        from uniffy.core.audit.actions import Action
+        from uniffy.db import open_session
+
+        try:
+            async with open_session() as audit_session:
+                await write_audit_event(
+                    audit_session,
+                    organization_id=organization_id,
+                    actor_user_id=active.support_user_id,
+                    action=Action.SUPPORT_SESSION_CIPHER_BRIDGE_ATTEMPT,
+                    resource_type="support_session",
+                    resource_id=active.session_id,
+                    details={
+                        "allowed": allowed,
+                        "scope": active.scope,
+                    },
+                )
+                await audit_session.commit()
+        except Exception:
+            logger.warning(
+                "OrgCipher: failed to record bridge-attempt audit row",
+                component="crypto",
+            )
 
     async def provision(
         self,
@@ -119,17 +202,28 @@ class OrgCipher:
     ) -> int:
         """Insert a fresh active DEK; retire the previous one; sweep consumers.
 
-        Publishes the cross-pod invalidation BEFORE the re-encryption
+        Resumption model: if a previous ``rotate`` crashed mid-sweep
+        and left a split-version state (some consumer rows still on a
+        retired DEK), this call drains the prior sweep FIRST so the
+        current-active DEK is the single source of truth before we
+        swap. Then publishes the cross-pod invalidation BEFORE the new
         sweep so every pod stops caching the about-to-be-retired DEK.
-        After publish, walks every registered ``ReEncryptingConsumer``
-        and re-encrypts each row under the new DEK. Returns the new
-        active version.
+        Walks every registered ``ReEncryptingConsumer`` and re-encrypts
+        each row under the new DEK. Returns the new active version.
+
+        Operators can also call :meth:`resume_reencryption` directly to
+        complete a half-rotated state without inserting another DEK.
         """
         previous = await self._load_active(organization_id)
         if previous is None:
             raise OrgDekNotFoundError(
                 f"Cannot rotate: organization {organization_id} has no active DEK"
             )
+
+        # Drain any prior incomplete sweep against the current active
+        # DEK. Idempotent - rows already on `previous` decrypt-and-re-
+        # encrypt under the same key with no functional change.
+        await self._re_encrypt_all_consumers(organization_id)
 
         await self._session.execute(
             update(OrgEncryptionKey)
@@ -156,6 +250,17 @@ class OrgCipher:
 
         return new_version
 
+    async def resume_reencryption(self, organization_id: UUID) -> None:
+        """Re-run the consumer sweep for one organization.
+
+        Idempotent recovery path for a :meth:`rotate` that crashed
+        mid-sweep. Rows already on the active DEK are decrypted and
+        re-encrypted under the same key with no functional change;
+        rows still on a retired DEK migrate to the active one. Safe to
+        call any number of times.
+        """
+        await self._re_encrypt_all_consumers(organization_id)
+
     async def _re_encrypt_all_consumers(self, organization_id: UUID) -> None:
         """Walk every ``ReEncryptingConsumer`` and re-encrypt each row.
 
@@ -169,7 +274,11 @@ class OrgCipher:
             batch = 0
             async for row in consumer.list_rows(self._session, organization_id):
                 ciphertext = consumer.get_ciphertext(row)
-                plaintext = await self.decrypt(organization_id, ciphertext)
+                plaintext = await self.decrypt(
+                    organization_id,
+                    ciphertext,
+                    allow_support_session_bridge=True,
+                )
                 fresh_ciphertext = await self.encrypt(organization_id, plaintext)
                 consumer.set_ciphertext(row, fresh_ciphertext)
                 batch += 1

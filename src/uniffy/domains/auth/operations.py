@@ -8,32 +8,58 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import write_audit_event
+from uniffy.core.audit import audit_ip_var, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.errors import RateLimitExceededError
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_session import UserSession
+from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.context import parse_device_label
 from uniffy.domains.auth.errors import AuthenticationError, RegistrationError, TokenError
+from uniffy.domains.auth.mfa.challenge import (
+    create_enrollment_only_token,
+    create_mfa_challenge_token,
+)
+from uniffy.domains.auth.mfa.enforcement import (
+    MfaRequirement,
+    evaluate_mfa_requirement,
+)
 from uniffy.domains.auth.passwords import hash_password, verify_password
 from uniffy.domains.auth.tokens import (
     create_access_token,
     create_refresh_token,
     decode_access_token,
 )
-from uniffy.domains.auth.types import AuthResult
+from uniffy.domains.auth.types import (
+    AuthOutcome,
+    AuthResult,
+    MfaChallengeRequired,
+    MfaEnrollmentRequired,
+)
+from uniffy.domains.system_config.operations import public_registration_enabled
 from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
+LOGIN_RATE_LIMIT_EMAIL = 10
+LOGIN_RATE_LIMIT_IP = 30
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 
-def is_public_registration_enabled() -> bool:
+
+async def is_public_registration_enabled(session: AsyncSession) -> bool:
     """Return True when the public ``Register`` RPC is allowed to create users.
 
-    Production deploys gate this off so the only path to a new user is an
-    accepted invitation; self-hosters / dev environments flip it on with
-    ``ALLOW_PUBLIC_REGISTRATION=true``.
+    Resolution chain (in order):
+
+    1. ``deployment_settings(namespace='system', key='public_registration')`` --
+       the operator-edited row written from ``/platform/server-settings``.
+    2. Env ``ALLOW_PUBLIC_REGISTRATION`` -- used as the seed value when no
+       row exists. Operators can ship without env and set the flag from
+       the UI, or ship with env and override later.
+    3. Coded default ``False`` -- production-safe.
     """
-    return os.getenv("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower() == "true"
+    return await public_registration_enabled(session)
 
 
 class AuthOperations:
@@ -57,7 +83,7 @@ class AuthOperations:
         password: str,
         organization_slug: str | None = None,
         user_agent: str = "",
-    ) -> AuthResult:
+    ) -> AuthOutcome:
         """
         Authenticate a user with email and password.
 
@@ -86,6 +112,8 @@ class AuthOperations:
         user: User | None = None
         organization_id: UUID | None = None
         try:
+            await self._enforce_login_rate_limit(email)
+
             user = await self._get_user_by_email(email)
             if not user:
                 raise AuthenticationError("Invalid email or password")
@@ -107,6 +135,64 @@ class AuthOperations:
                     organization_role,
                     domain_admin_domains,
                 ) = await self._verify_org_membership(user.id, organization_slug)
+
+            mfa_row = await self._load_user_mfa(user.id)
+            if mfa_row is not None and mfa_row.enabled:
+                challenge = create_mfa_challenge_token(
+                    user.id,
+                    organization_id=organization_id,
+                    token_version=user.token_version,
+                )
+                await write_audit_event(
+                    self._session,
+                    organization_id=organization_id,
+                    actor_user_id=user.id,
+                    action=Action.AUTH_LOGIN_SUCCESS,
+                    resource_type="USER",
+                    resource_id=user.id,
+                    details={
+                        "email": user.email,
+                        "mfa_challenge_issued": True,
+                    },
+                )
+                await self._session.commit()
+                AUTH_ATTEMPTS_TOTAL.labels(
+                    operation="authenticate", outcome="mfa_challenge"
+                ).inc()
+                return MfaChallengeRequired(
+                    challenge_token=challenge,
+                    methods=("totp", "recovery_code"),
+                )
+
+            requirement = await evaluate_mfa_requirement(
+                self._session,
+                user=user,
+                user_mfa=mfa_row,
+            )
+            if requirement.requirement == MfaRequirement.HARD_REQUIRED:
+                enrollment_token = create_enrollment_only_token(
+                    user.id, token_version=user.token_version
+                )
+                await write_audit_event(
+                    self._session,
+                    organization_id=organization_id,
+                    actor_user_id=user.id,
+                    action=Action.AUTH_LOGIN_SUCCESS,
+                    resource_type="USER",
+                    resource_id=user.id,
+                    details={
+                        "email": user.email,
+                        "enrollment_required": True,
+                    },
+                )
+                await self._session.commit()
+                AUTH_ATTEMPTS_TOTAL.labels(
+                    operation="authenticate", outcome="enrollment_required"
+                ).inc()
+                return MfaEnrollmentRequired(
+                    enrollment_token=enrollment_token,
+                    grace_expires_at=None,
+                )
 
             session_record = await self._create_session(user.id, user_agent)
 
@@ -150,6 +236,25 @@ class AuthOperations:
                 session_id=session_record.id,
                 domain_admin_domains=domain_admin_domains,
             )
+        except RateLimitExceededError as exc:
+            AUTH_ATTEMPTS_TOTAL.labels(
+                operation="authenticate", outcome="rate_limited"
+            ).inc()
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=None,
+                action=Action.AUTH_LOGIN_RATE_LIMITED,
+                resource_type=None,
+                resource_id=None,
+                details={
+                    "email_attempted": email,
+                    "resource": exc.resource,
+                    "retry_after_seconds": exc.retry_after,
+                },
+            )
+            await self._session.commit()
+            raise
         except AuthenticationError as exc:
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="failure").inc()
             await write_audit_event(
@@ -203,7 +308,7 @@ class AuthOperations:
 
         """
         try:
-            if not is_public_registration_enabled():
+            if not await is_public_registration_enabled(self._session):
                 await write_audit_event(
                     self._session,
                     organization_id=None,
@@ -663,6 +768,41 @@ class AuthOperations:
         session_record.last_activity = datetime.now(UTC)
         await self._session.commit()
 
+    async def _load_user_mfa(self, user_id: UUID) -> UserMfa | None:
+        """Return the user's MFA row or ``None`` when they never enrolled."""
+        result = await self._session.execute(
+            select(UserMfa).where(UserMfa.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def _enforce_login_rate_limit(self, email: str) -> None:
+        """Throttle the password step before bcrypt burns CPU.
+
+        Two buckets, both per-15-min: per-email (the credential under
+        attack) and per-IP (the source). Both are bump-on-every-attempt
+        so brute force trips the counter even when the attacker rotates
+        across multiple stolen credentials. Email is lowercased so case
+        variants share one bucket. Missing IP (no audit middleware on
+        this path, unlikely) skips that bucket; the per-email guard is
+        the must-have.
+        """
+        email_key = (email or "").strip().lower()
+        if email_key:
+            await check_rate_limit(
+                key=f"rl:auth:login:email:{email_key}",
+                limit=LOGIN_RATE_LIMIT_EMAIL,
+                window_seconds=LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+                resource="login attempts (per email)",
+            )
+        ip = audit_ip_var.get()
+        if ip:
+            await check_rate_limit(
+                key=f"rl:auth:login:ip:{ip}",
+                limit=LOGIN_RATE_LIMIT_IP,
+                window_seconds=LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+                resource="login attempts (per ip)",
+            )
+
     async def _get_user_by_id(self, user_id: UUID) -> User | None:
         """Get user by ID."""
         result = await self._session.execute(select(User).where(User.id == user_id))
@@ -705,6 +845,12 @@ class AuthOperations:
 
         if not org:
             raise AuthenticationError("Organization not found")
+
+        if org.deleted_at is not None:
+            raise AuthenticationError("Organization has been deleted")
+
+        if org.is_suspended:
+            raise AuthenticationError("Organization is suspended")
 
         # Check membership
         result = await self._session.execute(

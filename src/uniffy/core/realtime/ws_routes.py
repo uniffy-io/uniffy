@@ -8,6 +8,11 @@ Auth on upgrade enforces, in order:
   2. Subprotocol bearer JWT (or ``Authorization`` header for mobile).
   3. ``payload["type"] == "access"`` (refresh tokens rejected).
   4. Token ``org_id`` claim matches the URL ``org_id``.
+  5. Valkey ``min_tkv`` watermark - rejects tokens issued before a
+     force-logout / suspension / sysadmin demotion. The realtime
+     router also closes live sockets on a token-revoke pubsub event,
+     but that fires only AFTER connect; this check catches the
+     "connect with an already-revoked token" race.
 
 Per-doc role resolution runs lazily inside ``run_multiplexed_session``.
 """
@@ -29,6 +34,7 @@ from uniffy.core.realtime.auth import (
 )
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
+from uniffy.domains.auth.revocation import is_access_token_revoked
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.observability.metrics import REALTIME_AUTH_FAILURES_TOTAL
 
@@ -97,6 +103,15 @@ async def realtime(
             component=LOGGER_COMPONENT,
         )
         await ws.close(code=WS_CLOSE_FORBIDDEN, reason="org mismatch")
+        return
+
+    if await is_access_token_revoked(user_id, token_version):
+        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="token_revoked").inc()
+        logger.warning(
+            f"realtime upgrade rejected: token revoked (user={user_id})",
+            component=LOGGER_COMPONENT,
+        )
+        await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="token revoked")
         return
 
     await ws.accept(subprotocol=CANONICAL_SUBPROTOCOL)

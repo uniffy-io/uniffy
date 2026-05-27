@@ -1084,6 +1084,8 @@ class OrganizationsHandlers:
                 return GetSecuritySettingsResponse(
                     settings=SecuritySettingsProto(
                         password_reset_enabled=settings.password_reset_enabled,
+                        mfa_required_for_members=settings.mfa_required_for_members,
+                        mfa_required_for_admins=settings.mfa_required_for_admins,
                     ),
                 )
         except PermissionDeniedError as e:
@@ -1109,14 +1111,31 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 org_ops = OrganizationOperations(session)
                 await org_ops.require_org_admin(user_id, org_id)
-                settings = await SecurityOperations(session).set_password_reset_enabled(
-                    organization_id=org_id,
-                    enabled=request.password_reset_enabled,
-                    actor_user_id=user_id,
-                )
+                security_ops = SecurityOperations(session)
+                settings = await security_ops.get(org_id)
+                if request.HasField("password_reset_enabled"):
+                    settings = await security_ops.set_password_reset_enabled(
+                        organization_id=org_id,
+                        enabled=request.password_reset_enabled,
+                        actor_user_id=user_id,
+                    )
+                if request.HasField("mfa_required_for_members"):
+                    settings = await security_ops.set_mfa_required_for_members(
+                        organization_id=org_id,
+                        required=request.mfa_required_for_members,
+                        actor_user_id=user_id,
+                    )
+                if request.HasField("mfa_required_for_admins"):
+                    settings = await security_ops.set_mfa_required_for_admins(
+                        organization_id=org_id,
+                        required=request.mfa_required_for_admins,
+                        actor_user_id=user_id,
+                    )
                 return UpdateSecuritySettingsResponse(
                     settings=SecuritySettingsProto(
                         password_reset_enabled=settings.password_reset_enabled,
+                        mfa_required_for_members=settings.mfa_required_for_members,
+                        mfa_required_for_admins=settings.mfa_required_for_admins,
                     ),
                 )
         except PermissionDeniedError as e:

@@ -15,6 +15,7 @@ import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Envelope, IdentificationCard, Lock, User } from '@phosphor-icons/react';
 import { AuthInput } from '@/features/auth/components/AuthInput';
 import { AuthShell } from '@/features/auth/components/AuthShell';
+import { LoginMfaStep } from '@/features/mfa';
 
 const authClient = createClient(AuthService, unaryTransport);
 
@@ -62,6 +63,7 @@ export function AuthForms() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
+    const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
 
     const fetchUserAndDispatch = async (
         accessToken: string,
@@ -149,14 +151,25 @@ export function AuthForms() {
         setError(null);
         try {
             const response = await authClient.login({ email, password });
-            await fetchUserAndDispatch(
-                response.accessToken,
-                response.refreshToken,
-                response.organizationId,
-                response.organizationRole,
-                response.sessionId,
-                Array.from(response.domainAdminDomains),
-            );
+            const variant = response.result;
+            if (variant.case === 'authResult') {
+                const r = variant.value;
+                await fetchUserAndDispatch(
+                    r.accessToken,
+                    r.refreshToken,
+                    r.organizationId,
+                    r.organizationRole,
+                    r.sessionId,
+                    Array.from(r.domainAdminDomains),
+                );
+            } else if (variant.case === 'mfaChallenge') {
+                setMfaChallengeToken(variant.value.challengeToken);
+            } else if (variant.case === 'enrollmentRequired') {
+                setMemoryAccessToken(variant.value.enrollmentToken);
+                navigate('/auth/enroll-mfa', { replace: true });
+            } else {
+                setError('Unexpected login response. Please try again.');
+            }
         } catch (err: unknown) {
             const raw = err instanceof Error ? err.message : 'Login failed';
             setError(friendlyErrorMessage(raw) || 'Login failed');
@@ -165,7 +178,38 @@ export function AuthForms() {
         }
     };
 
+    const handleMfaVerified = async (params: {
+        accessToken: string;
+        refreshToken: string;
+        organizationId?: string;
+        organizationRole?: string;
+        sessionId?: string;
+    }) => {
+        await fetchUserAndDispatch(
+            params.accessToken,
+            params.refreshToken,
+            params.organizationId,
+            params.organizationRole,
+            params.sessionId,
+            [],
+        );
+        setMfaChallengeToken(null);
+    };
+
     if (isAuthenticated) return null;
+
+    if (mfaChallengeToken) {
+        return (
+            <LoginMfaStep
+                challengeToken={mfaChallengeToken}
+                onVerified={handleMfaVerified}
+                onCancel={() => {
+                    setMfaChallengeToken(null);
+                    setError(null);
+                }}
+            />
+        );
+    }
 
     return (
         <AuthShell>

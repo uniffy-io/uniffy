@@ -41,6 +41,15 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     VerifyPasswordResetTokenRequest,
     VerifyPasswordResetTokenResponse,
 )
+from uniffy_proto.auth.v1.auth_pb2 import (
+    AuthResult as AuthResultProto,
+)
+from uniffy_proto.auth.v1.auth_pb2 import (
+    EnrollmentRequired as EnrollmentRequiredProto,
+)
+from uniffy_proto.auth.v1.auth_pb2 import (
+    MfaChallenge as MfaChallengeProto,
+)
 
 from uniffy.core.audit import audit_ip_var
 from uniffy.core.converters import (
@@ -48,6 +57,7 @@ from uniffy.core.converters import (
     domain_type_to_proto,
     org_role_to_proto,
 )
+from uniffy.core.errors import RateLimitExceededError
 from uniffy.core.models.shared import DomainType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
@@ -73,7 +83,11 @@ from uniffy.domains.auth.password_reset import (
     PasswordResetTokenUsedError,
 )
 from uniffy.domains.auth.tokens import decode_access_token
-from uniffy.domains.auth.types import AuthResult
+from uniffy.domains.auth.types import (
+    AuthResult,
+    MfaChallengeRequired,
+    MfaEnrollmentRequired,
+)
 from uniffy.domains.invitations.errors import (
     InvitationAlreadyUsedError,
     InvitationEmailConflictError,
@@ -93,6 +107,47 @@ def _domain_admins_to_proto(result: AuthResult) -> list[int]:
         with contextlib.suppress(ValueError):
             values.append(domain_type_to_proto(DomainType(d)))
     return values
+
+
+def _auth_result_to_proto(result: AuthResult) -> AuthResultProto:
+    """Build the proto ``AuthResult`` from the domain dataclass."""
+    proto = AuthResultProto(
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
+        token_type="bearer",
+        user_id=str(result.user_id),
+        domain_admin_domains=_domain_admins_to_proto(result),
+    )
+    if result.organization_id is not None:
+        proto.organization_id = str(result.organization_id)
+    if result.organization_role:
+        proto.organization_role = result.organization_role
+    if result.session_id is not None:
+        proto.session_id = str(result.session_id)
+    return proto
+
+
+def _login_outcome_to_proto(
+    outcome: AuthResult | MfaChallengeRequired | MfaEnrollmentRequired,
+) -> LoginResponse:
+    """Map the operations-layer union into the wire-level oneof."""
+    if isinstance(outcome, AuthResult):
+        return LoginResponse(auth_result=_auth_result_to_proto(outcome))
+    if isinstance(outcome, MfaChallengeRequired):
+        return LoginResponse(
+            mfa_challenge=MfaChallengeProto(
+                challenge_token=outcome.challenge_token,
+                methods=list(outcome.methods),
+            )
+        )
+    enrollment = EnrollmentRequiredProto(
+        enrollment_token=outcome.enrollment_token,
+    )
+    if outcome.grace_expires_at is not None:
+        enrollment.grace_expires_at.CopyFrom(
+            datetime_to_timestamp(outcome.grace_expires_at)
+        )
+    return LoginResponse(enrollment_required=enrollment)
 
 
 class AuthHandlers:
@@ -154,16 +209,9 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
-                return LoginResponse(
-                    access_token=result.access_token,
-                    refresh_token=result.refresh_token,
-                    token_type="bearer",
-                    user_id=str(result.user_id),
-                    organization_id=str(result.organization_id) if result.organization_id else "",
-                    organization_role=result.organization_role or "",
-                    session_id=str(result.session_id) if result.session_id else "",
-                    domain_admin_domains=_domain_admins_to_proto(result),
-                )
+                return _login_outcome_to_proto(result)
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except AuthenticationError as e:
             logger.warning("Login failed: {}", e)
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
@@ -400,9 +448,10 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> GetAuthConfigResponse:
         """Public auth configuration the login / register pages need."""
-        return GetAuthConfigResponse(
-            public_registration_enabled=is_public_registration_enabled(),
-        )
+        del request, ctx
+        async with open_session() as session:
+            enabled = await is_public_registration_enabled(session)
+        return GetAuthConfigResponse(public_registration_enabled=enabled)
 
     async def get_invitation(
         self,

@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Deployment-wide configuration flags surfaced to the platform admin
+// surface. Every flag follows the same resolution: ``deployment_settings``
+// row (operator-edited) > env default (set at deploy time) > coded default.
+// The first call without an env value or DB row returns the coded default;
+// the operator's first edit creates the DB row, after which env becomes
+// irrelevant.
+//
+// All RPCs require ``User.is_system_admin=true``.
+service SystemConfigService {
+  // Read every known flag's effective value + source.
+  rpc GetSystemConfig(GetSystemConfigRequest) returns (GetSystemConfigResponse) {}
+
+  // Set the public-registration flag.
+  rpc SetPublicRegistration(SetPublicRegistrationRequest) returns (SetPublicRegistrationResponse) {}
+
+  // Read the deployment-wide MFA policy: whether platform admins must
+  // have MFA enabled, and the day / login caps on the per-user grace
+  // window before the requirement becomes hard.
+  rpc GetMfaPolicy(GetMfaPolicyRequest) returns (GetMfaPolicyResponse) {}
+
+  // Partial update to the MFA policy. Only fields explicitly set in
+  // the request are written. Audits as ``auth.mfa_policy_changed``.
+  rpc SetMfaPolicy(SetMfaPolicyRequest) returns (SetMfaPolicyResponse) {}
+}
+
+// One configuration flag's effective state.
+message SystemFlag {
+  bool enabled = 1;
+  // 'deployment' | 'env' | 'default'
+  string source = 2;
+}
+
+message SystemConfig {
+  // Allow self-service Register RPC to create accounts without an invite.
+  SystemFlag public_registration = 1;
+}
+
+message GetSystemConfigRequest {}
+
+message GetSystemConfigResponse {
+  SystemConfig config = 1;
+}
+
+message SetPublicRegistrationRequest {
+  bool enabled = 1;
+}
+
+message SetPublicRegistrationResponse {
+  SystemConfig config = 1;
+}
+
+// Deployment-wide MFA policy snapshot. Mirrors the
+// ``deployment_settings(namespace='mfa')`` row; absent rows fall back
+// to env then to the coded default.
+message MfaPolicy {
+  bool required_for_system_admins = 1;
+}
+
+message GetMfaPolicyRequest {}
+
+message GetMfaPolicyResponse {
+  MfaPolicy policy = 1;
+}
+
+message SetMfaPolicyRequest {
+  bool required_for_system_admins = 1;
+}
+
+message SetMfaPolicyResponse {
+  MfaPolicy policy = 1;
+}
