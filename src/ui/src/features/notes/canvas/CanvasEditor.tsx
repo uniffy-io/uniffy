@@ -1,9 +1,3 @@
-/**
- * Infinite canvas wrapping React Flow with custom node types
- * (text, note, media, shape, mindmap). Edits flow into the shared
- * YDoc; undo / redo go through the per-doc ``Y.UndoManager``.
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -86,14 +80,10 @@ interface CanvasEditorProps {
   canvasState: CanvasState;
   readonly?: boolean;
   contentId: string;
-  /**
-   * Yjs binding. Required for editing; viewers may receive
-   * ``undefined`` and every write handler then short-circuits.
-   */
+  // Required for editing; viewers may receive undefined and write handlers short-circuit.
   realtime?: CanvasRealtimeBinding;
 }
 
-/** Generate a unique ID for new nodes. */
 function generateNodeId(): string {
   return `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -111,7 +101,6 @@ interface ContextMenuState {
   };
 }
 
-/** Static nodeTypes -- defined outside the component to avoid re-creation. */
 const NODE_TYPES: NodeTypes = {
   text: TextNode,
   note: NoteNode,
@@ -120,7 +109,6 @@ const NODE_TYPES: NodeTypes = {
   mindmap: MindMapNode,
 };
 
-/** Static edgeTypes -- custom edge rendering for all edges. */
 const EDGE_TYPES: EdgeTypes = {
   custom: CustomEdge as EdgeTypes[string],
   mindmapEdge: MindMapEdge as EdgeTypes[string],
@@ -156,9 +144,7 @@ function CanvasEditorInner({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(canvasState.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(canvasState.edges);
-  // Per-canvas defaults in their own state so peer changes to
-  // ``Y.Map("defaults")`` re-render the toolbar without a parent
-  // round-trip.
+  // Defaults in their own state so peer changes to Y.Map("defaults") re-render the toolbar.
   const [defaults, setDefaults] = useState<CanvasDefaults | undefined>(canvasState.defaults);
   const defaultsRef = useRef<CanvasDefaults | undefined>(defaults);
   useEffect(() => {
@@ -177,9 +163,7 @@ function CanvasEditorInner({
   // Coalesce rapid interaction frames into one Y write per debounce window.
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Live refs so the debounced timer reads post-commit state instead
-  // of a stale closure capture; otherwise a delete -> rAF -> setTimeout
-  // chain writes the pre-delete node array back into the YDoc.
+  // Live refs - debounced timer with stale closure would write pre-delete state back to YDoc.
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   useEffect(() => {
@@ -189,9 +173,7 @@ function CanvasEditorInner({
     edgesRef.current = edges;
   }, [edges]);
 
-  // Last known local string per ``${nodeId}:${field}``. Diffing
-  // against this (not the live ``Y.Text``) preserves concurrent
-  // peer inserts that landed between two of our keystrokes.
+  // Diff text edits against last local snapshot (not live Y.Text) to preserve concurrent peer inserts.
   const localTextSnapshotsRef = useRef<Map<string, string>>(new Map());
 
   const textSnapshotKey = useCallback(
@@ -199,9 +181,6 @@ function CanvasEditorInner({
     [],
   );
 
-  /** Commit a node text field through the Y.Text diff path, keeping
-   * the local snapshot in sync so the next delta is computed against
-   * the user's own timeline rather than the merged peer view. */
   const commitNodeTextField = useCallback(
     (nodeId: string, fieldKey: string, next: string) => {
       const rt = realtimeRef.current;
@@ -217,7 +196,6 @@ function CanvasEditorInner({
     [textSnapshotKey],
   );
 
-  /** Compute mind map edges from a set of nodes (for saving). */
   const computeMmEdgesFromNodes = useCallback((nodeList: CanvasNode[]): CanvasEdge[] => {
     const result: CanvasEdge[] = [];
     for (const node of nodeList) {
@@ -244,9 +222,6 @@ function CanvasEditorInner({
     return result;
   }, []);
 
-  /** Body shared by debounced and immediate writes. Pulls live
-   * node / edge state via refs (so deletes committed inside the
-   * debounce window are not stomped) and writes back to the YDoc. */
   const commitChange = useCallback(
     (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
       const finalNodes = updatedNodes ?? nodesRef.current;
@@ -273,9 +248,7 @@ function CanvasEditorInner({
     [commitChange]
   );
 
-  /** Skip the 300ms debounce; used for structural mutations
-   * (add / delete) where a peer rebuild during the debounce window
-   * could wipe the new node before our write lands. */
+  // Skip 300ms debounce for add/delete - a peer rebuild during the window could wipe the new node.
   const flushChange = useCallback(
     (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
       if (changeTimerRef.current) {
@@ -287,8 +260,7 @@ function CanvasEditorInner({
     [commitChange]
   );
 
-  // Realtime cold-start seed + peer-update mirror. Without a
-  // binding, the props-driven ``canvasState`` hydration stays in charge.
+  // Realtime cold-start seed + peer-update mirror; without a binding, props-driven hydration stays in charge.
   useEffect(() => {
     if (!realtime) return undefined;
     let cancelled = false;
@@ -326,8 +298,7 @@ function CanvasEditorInner({
         const value = (node.data as Record<string, unknown> | undefined)?.[field];
         snapshots.set(key, typeof value === 'string' ? value : '');
       }
-      // Drop snapshots for nodes that no longer exist so the map
-      // does not leak across long sessions.
+      // Drop snapshots for removed nodes so the map does not leak across long sessions.
       for (const key of Array.from(snapshots.keys())) {
         if (!seen.has(key)) snapshots.delete(key);
       }
@@ -337,9 +308,7 @@ function CanvasEditorInner({
       if (transaction.origin === realtime.sessionId) return;
       if (transaction.origin === 'hydration') return;
       const next = readCanvasFromYDoc(realtime.ydoc);
-      // Preserve local-only UI flags (selected / dragging / resizing)
-      // across peer rebuilds; otherwise any remote write tears down
-      // the NodeResizer mid-drag and wipes selection.
+      // Preserve local UI flags across peer rebuilds - remote writes would tear down NodeResizer mid-drag.
       setNodes((prev) => {
         const flagsById = new Map(
           prev.map((n) => [
@@ -368,8 +337,6 @@ function CanvasEditorInner({
       if (transaction.origin === 'hydration') return;
       setDefaults(readCanvasDefaults(realtime.ydoc) ?? undefined);
     };
-    // observeDeep emits an array, observe a single event; both
-    // share one rebuild callback keyed off the transaction.
     const handleDeep = (
       _events: unknown,
       transaction: Y.Transaction,
@@ -397,8 +364,6 @@ function CanvasEditorInner({
     };
   }, [realtime, setNodes, setEdges, textSnapshotKey]);
 
-  // Declaratively compute mind map edges from node state. This avoids all timing
-  // issues - edges are always in sync with nodes because they're derived, not managed.
   const computedMmEdges = useMemo(() => {
     const mmEdges: CanvasEdge[] = [];
     for (const node of nodes) {
@@ -425,13 +390,11 @@ function CanvasEditorInner({
     return mmEdges;
   }, [nodes]);
 
-  // Combine user-created edges with computed mind map edges for rendering
   const allEdges = useMemo(() => {
     const userEdges = edges.filter((e) => e.type !== 'mindmapEdge');
     return [...userEdges, ...computedMmEdges] as CanvasEdge[];
   }, [edges, computedMmEdges]);
 
-  /** Helper: run layout for a mind map group and apply positions + edges. */
   const applyMindMapLayout = useCallback(
     (rootId: string, updatedNodes: CanvasNode[]): { nodes: CanvasNode[]; edges: CanvasEdge[] } => {
       const rootNode = updatedNodes.find((n) => n.id === rootId);
@@ -440,14 +403,11 @@ function CanvasEditorInner({
       const rootPos = rootNode.position;
       const result = layoutMindMap(rootId, updatedNodes, rootPos);
 
-      // Correct positions so the root stays at its exact position.
-      // The layout algorithm may shift the root vertically to center it
-      // among children; this correction ensures drag positions are preserved.
+      // Layout may shift root vertically to center it; correct so drag positions are preserved.
       const computedRootPos = result.positions.get(rootId);
       const correctionX = computedRootPos ? rootPos.x - computedRootPos.x : 0;
       const correctionY = computedRootPos ? rootPos.y - computedRootPos.y : 0;
 
-      // Apply corrected positions; root is draggable, children are not
       const positioned = updatedNodes.map((n) => {
         const pos = result.positions.get(n.id);
         if (pos) {
@@ -461,7 +421,6 @@ function CanvasEditorInner({
         return n;
       }) as CanvasNode[];
 
-      // Apply branch color updates
       for (const [nodeId, updates] of result.nodeUpdates) {
         const idx = positioned.findIndex((n) => n.id === nodeId);
         if (idx !== -1) {
@@ -477,7 +436,6 @@ function CanvasEditorInner({
     []
   );
 
-  // Handle node changes (move, resize, select)
   const handleNodesChange = useCallback(
     (changes: NodeChange<CanvasNode>[]) => {
       onNodesChange(changes);
@@ -487,14 +445,11 @@ function CanvasEditorInner({
       );
       if (!hasStructuralChange || readonly) return;
 
-      // Re-layout mind map trees when any mind map node's dimensions change,
-      // so children shift to account for wider/taller parent nodes.
       const hasMmDimensionChange = changes.some(
         (c) => c.type === 'dimensions' && c.id && nodes.find((n) => n.id === c.id)?.data.type === 'mindmap'
       );
       if (hasMmDimensionChange) {
         setNodes((nds) => {
-          // Find all unique mind map roots that need re-layout
           const rootIds = new Set<string>();
           for (const c of changes) {
             if (c.type !== 'dimensions') continue;
@@ -513,8 +468,6 @@ function CanvasEditorInner({
         });
       }
 
-      // Re-layout mind map trees when a root node is dragged,
-      // so child nodes follow the root's new position.
       const hasMmRootPositionChange = changes.some(
         (c) => c.type === 'position' && c.position &&
           nodes.find((n) => n.id === c.id && n.data.type === 'mindmap' && (n.data as MindMapNodeData).isRoot)
@@ -539,9 +492,7 @@ function CanvasEditorInner({
         });
       }
 
-      // Removes flush immediately: a peer rebuild in the debounce
-      // window would otherwise re-materialise the deleted node.
-      // Drags / resizes stay debounced - intermediate frames are noise.
+      // Removes flush immediately - a peer rebuild in the debounce window would re-materialise the node.
       const hasRemoval = changes.some((c) => c.type === 'remove');
       if (hasRemoval) {
         requestAnimationFrame(() => {
@@ -556,8 +507,7 @@ function CanvasEditorInner({
     [onNodesChange, readonly, scheduleChange, flushChange, nodes, setNodes, applyMindMapLayout]
   );
 
-  // Publish local selection into awareness so peers can ring the
-  // active nodes. No throttle - selection only fires on click / lasso.
+  // Publish selection into awareness for peer node rings. No throttle - selection only fires on click/lasso.
   useEffect(() => {
     if (!realtime) return;
     const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
@@ -581,7 +531,6 @@ function CanvasEditorInner({
     [onEdgesChange, readonly, scheduleChange]
   );
 
-  // Get per-canvas default styles for new edges
   const getEdgeDefaults = useCallback((): Partial<CanvasEdgeData> => {
     const d = defaultsRef.current;
     if (!d) return {};
@@ -592,7 +541,6 @@ function CanvasEditorInner({
     return result;
   }, []);
 
-  // Handle connections between nodes
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (readonly) return;
@@ -613,7 +561,6 @@ function CanvasEditorInner({
     [setEdges, readonly, scheduleChange, getEdgeDefaults]
   );
 
-  // Handle edge click to show style toolbar (skip auto-managed mind map edges)
   const handleEdgeClick = useCallback(
     (event: React.MouseEvent, edge: CanvasEdge) => {
       if (readonly || edge.type === 'mindmapEdge') return;
@@ -623,7 +570,6 @@ function CanvasEditorInner({
     [readonly]
   );
 
-  // Handle edge style changes from the toolbar
   const handleEdgeStyleChange = useCallback(
     (edgeId: string, updates: Partial<CanvasEdgeData>) => {
       if (readonly) return;
@@ -641,9 +587,7 @@ function CanvasEditorInner({
     [setEdges, readonly, scheduleChange]
   );
 
-  // Per-node text lives in a Y.Text; we commit a minimal delta so
-  // concurrent typing merges char-by-char. Local React Flow state
-  // updates optimistically to avoid contentEditable flicker.
+  // Per-node text is a Y.Text - commit minimal delta so concurrent typing merges char-by-char.
   const handleTextContentChange = useCallback(
     (nodeId: string, content: string) => {
       if (readonly) return;
@@ -674,17 +618,15 @@ function CanvasEditorInner({
     [setNodes, readonly, commitNodeTextField],
   );
 
-  // Handle node style changes (bgColor, color, borderColor, borderWidth)
   const handleNodeStyleChange = useCallback(
     (nodeId: string, updates: Record<string, unknown>) => {
       if (readonly) return;
 
-      // For mind map nodes with branchColor change, propagate to descendants and re-layout
+      // For mindmap branchColor change, propagate to descendants and re-layout.
       if ('branchColor' in updates) {
         setNodes((nds) => {
           const node = nds.find((n) => n.id === nodeId);
           if (!node || node.data.type !== 'mindmap') {
-            // Not a mind map node, do normal update
             const updated = nds.map((n) =>
               n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n,
             ) as CanvasNode[];
@@ -692,7 +634,6 @@ function CanvasEditorInner({
             return updated;
           }
 
-          // Propagate branchColor to node and all descendants
           const color = updates.branchColor as string;
           const descendants = collectDescendants(nodeId, nds);
           const updated = nds.map((n) => {
@@ -702,7 +643,6 @@ function CanvasEditorInner({
             return n;
           }) as CanvasNode[];
 
-          // Re-layout to update positions and branch colors
           const rootId = findMindMapRoot(nodeId, updated);
           if (!rootId) {
             scheduleChange(updated);
@@ -729,7 +669,6 @@ function CanvasEditorInner({
     [setNodes, readonly, scheduleChange, applyMindMapLayout]
   );
 
-  // Get center position for new nodes
   const getCenterPosition = useCallback(() => {
     return screenToFlowPosition({
       x: window.innerWidth / 2,
@@ -737,7 +676,6 @@ function CanvasEditorInner({
     });
   }, [screenToFlowPosition]);
 
-  // Get per-canvas default styles for new nodes
   const getStyleDefaults = useCallback(() => {
     const d = defaultsRef.current;
     if (!d) return {};
@@ -748,8 +686,6 @@ function CanvasEditorInner({
     return result;
   }, []);
 
-  // Push merged defaults into ``Y.Map("defaults")`` for peers + the
-  // snapshot pipeline; the local observer mirrors the write back.
   const handleDefaultsChange = useCallback(
     (newDefaults: CanvasDefaults) => {
       if (readonly) return;
@@ -762,7 +698,6 @@ function CanvasEditorInner({
     [readonly]
   );
 
-  // Add text block
   const handleAddTextBlock = useCallback(() => {
     if (readonly) return;
     const position = getCenterPosition();
@@ -777,7 +712,6 @@ function CanvasEditorInner({
       style: { width: 250, height: 40 },
     };
     setNodes((nds) => {
-      // Deselect all existing nodes
       const deselected = nds.map((n) => ({ ...n, selected: false }));
       const updated = [...deselected, newNode] as CanvasNode[];
       flushChange(updated);
@@ -786,7 +720,6 @@ function CanvasEditorInner({
     setEditingNodeId(nodeId);
   }, [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange]);
 
-  // Add media node (uploads file first, then creates canvas node)
   const handleAddMediaFile = useCallback(
     async (file: File) => {
       if (readonly || !organizationId) return;
@@ -797,7 +730,7 @@ function CanvasEditorInner({
           contentId,
           contentType: ContentType.NOTE,
         });
-        // Extract fileId from the returned URL: /api/files/{orgId}/{fileId}
+        // URL shape: /api/files/{orgId}/{fileId}
         const urlParts = result.split('/');
         const fileId = urlParts[urlParts.length - 1];
 
@@ -816,19 +749,18 @@ function CanvasEditorInner({
           return updated;
         });
       } catch {
-        // Upload failed -- silently ignore for now
+        // Upload failed
       }
     },
     [readonly, organizationId, contentId, getCenterPosition, getStyleDefaults, setNodes, flushChange]
   );
 
-  // Add shape node
   const handleAddShape = useCallback(
     (shape: 'rect' | 'ellipse' | 'diamond') => {
       if (readonly) return;
       const position = getCenterPosition();
       const defaults = getStyleDefaults();
-      // Shapes use "color" for SVG fill, so map bgColor -> color
+      // Shapes use "color" for SVG fill; map bgColor -> color.
       const shapeDefaults: Record<string, unknown> = {};
       if (defaults.bgColor) shapeDefaults.color = defaults.bgColor;
       if (defaults.borderColor) shapeDefaults.borderColor = defaults.borderColor;
@@ -849,9 +781,6 @@ function CanvasEditorInner({
     [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange]
   );
 
-  // -- Mind map handlers --
-
-  /** Add a new mind map (root + 2 starter children) at canvas center. */
   const handleAddMindMap = useCallback(() => {
     if (readonly) return;
     const position = getCenterPosition();
@@ -915,7 +844,6 @@ function CanvasEditorInner({
     setEditingNodeId(rootId);
   }, [readonly, getCenterPosition, setNodes, flushChange, applyMindMapLayout]);
 
-  /** Add child to a mind map node. */
   const handleMindMapAddChild = useCallback(
     (parentId: string) => {
       if (readonly) return;
@@ -928,7 +856,6 @@ function CanvasEditorInner({
         const childId = generateNodeId();
         newChildId = childId;
 
-        // Update parent to include new child
         const updatedNds = nds.map((n) => {
           if (n.id === parentId && n.data.type === 'mindmap') {
             return {
@@ -943,7 +870,6 @@ function CanvasEditorInner({
           return n;
         }) as CanvasNode[];
 
-        // Create new child node (inherit direction from root)
         const rootId = findMindMapRoot(parentId, nds);
         const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
         const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
@@ -978,7 +904,6 @@ function CanvasEditorInner({
     [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
-  /** Add sibling after a mind map node. */
   const handleMindMapAddSibling = useCallback(
     (nodeId: string) => {
       if (readonly) return;
@@ -994,7 +919,6 @@ function CanvasEditorInner({
         const siblingId = generateNodeId();
         newSiblingId = siblingId;
 
-        // Insert sibling after current node in parent's children
         const updatedNds = nds.map((n) => {
           if (n.id === parentId && n.data.type === 'mindmap') {
             const parentData = n.data as MindMapNodeData;
@@ -1006,7 +930,6 @@ function CanvasEditorInner({
           return n;
         }) as CanvasNode[];
 
-        // Inherit direction from root
         const rootId = findMindMapRoot(nodeId, nds);
         const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
         const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
@@ -1041,7 +964,6 @@ function CanvasEditorInner({
     [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
-  /** Delete a mind map node and its entire subtree. */
   const handleMindMapDeleteNode = useCallback(
     (nodeId: string) => {
       if (readonly) return;
@@ -1051,7 +973,6 @@ function CanvasEditorInner({
 
         const descendants = collectDescendants(nodeId, nds);
 
-        // Remove from parent's children
         const cleaned = nds
           .filter((n) => !descendants.has(n.id))
           .map((n) => {
@@ -1081,7 +1002,6 @@ function CanvasEditorInner({
     [readonly, setNodes, flushChange, applyMindMapLayout]
   );
 
-  /** Toggle collapse on a mind map node. */
   const handleMindMapToggleCollapse = useCallback(
     (nodeId: string) => {
       if (readonly) return;
@@ -1113,8 +1033,7 @@ function CanvasEditorInner({
     [readonly, setNodes, scheduleChange, applyMindMapLayout]
   );
 
-  /** Update a mind map node label via ``Y.Text`` so concurrent
-   * renames merge instead of clobbering. */
+  // Update label via Y.Text so concurrent renames merge instead of clobbering.
   const handleMindMapLabelChange = useCallback(
     (nodeId: string, label: string) => {
       if (readonly) return;
@@ -1130,7 +1049,6 @@ function CanvasEditorInner({
     [setNodes, readonly, commitNodeTextField],
   );
 
-  /** Rotate the layout direction of a mind map (cycles right -> down -> left -> up). */
   const handleMindMapRotate = useCallback(
     (nodeId: string) => {
       if (readonly) return;
@@ -1145,7 +1063,6 @@ function CanvasEditorInner({
         const dirs: Array<'right' | 'down' | 'left' | 'up'> = ['right', 'down', 'left', 'up'];
         const nextDir = dirs[(dirs.indexOf(currentDir) + 1) % dirs.length];
 
-        // Update direction on all nodes in this mindmap
         const mmId = rootNode.data.mindmapId;
         const mmNodeIds: string[] = [];
         const updated = nds.map((n) => {
@@ -1159,7 +1076,6 @@ function CanvasEditorInner({
         const { nodes: laid } = applyMindMapLayout(rootId, updated);
         scheduleChange(laid);
 
-        // Tell React Flow to re-read handle positions after the DOM updates
         requestAnimationFrame(() => {
           for (const nId of mmNodeIds) {
             updateNodeInternals(nId);
@@ -1172,7 +1088,6 @@ function CanvasEditorInner({
     [readonly, setNodes, scheduleChange, applyMindMapLayout, updateNodeInternals]
   );
 
-  // Handle content picker selection
   const handleContentPickerSelect = useCallback(
     (result: SearchResultItem) => {
       if (readonly) return;
@@ -1208,7 +1123,6 @@ function CanvasEditorInner({
           return updated;
         });
       } else {
-        // For any other content type, insert as a text block with a mention link
         const mentionMarkdown = `[[[${result.title}|${result.urn}]]]`;
         const newNode: TextCanvasNode = {
           id: generateNodeId(),
@@ -1227,7 +1141,6 @@ function CanvasEditorInner({
     [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]
   );
 
-  // Context menu
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: CanvasNode) => {
       if (readonly) return;
@@ -1253,7 +1166,6 @@ function CanvasEditorInner({
     setSelectedEdge(null);
   }, []);
 
-  // Delete node
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
       setNodes((nds) => {
@@ -1265,7 +1177,6 @@ function CanvasEditorInner({
     [setNodes, scheduleChange]
   );
 
-  // Node ordering (z-index)
   const handleBringToFront = useCallback(
     (nodeId: string) => {
       setNodes((nds) => {
@@ -1326,7 +1237,6 @@ function CanvasEditorInner({
     [setNodes, scheduleChange]
   );
 
-  // Duplicate node
   const handleDuplicateNode = useCallback(
     (nodeId: string) => {
       setNodes((nds) => {
@@ -1349,8 +1259,7 @@ function CanvasEditorInner({
     [setNodes, scheduleChange]
   );
 
-  // Undo / redo go through the origin-scoped per-doc ``Y.UndoManager``;
-  // the observer effect above mirrors the resulting state back.
+  // Origin-scoped per-doc UndoManager; observer effect mirrors the result back.
   const handleUndo = useCallback(() => {
     realtimeRef.current?.undoManager.undo();
   }, []);
@@ -1359,12 +1268,10 @@ function CanvasEditorInner({
     realtimeRef.current?.undoManager.redo();
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     if (readonly) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't capture when typing in input/textarea
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -1396,7 +1303,6 @@ function CanvasEditorInner({
         setShowContentPicker(true);
       }
 
-      // Mind map shortcuts (only when a mindmap node is selected)
       const selectedNode = nodes.find((n) => n.selected);
       if (selectedNode?.data.type === 'mindmap') {
         const mmData = selectedNode.data as MindMapNodeData;
@@ -1423,7 +1329,6 @@ function CanvasEditorInner({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [readonly, handleAddTextBlock, handleAddShape, handleUndo, handleRedo, fitView, nodes, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapToggleCollapse, handleMindMapDeleteNode]);
 
-  // Focus content picker input when opened, close on escape/click outside
   useEffect(() => {
     if (!showContentPicker) return;
     const timer = setTimeout(() => contentPickerInputRef.current?.focus(), 10);
@@ -1512,7 +1417,6 @@ function CanvasEditorInner({
           <MiniMap pannable zoomable />
         </ReactFlow>
 
-        {/* Toolbar */}
         {!readonly && (
           <CanvasToolbar
             onAddTextBlock={handleAddTextBlock}
@@ -1530,7 +1434,6 @@ function CanvasEditorInner({
           />
         )}
 
-        {/* Edge style toolbar */}
         {selectedEdge && (
           <EdgeStyleToolbar
             x={selectedEdge.x}
@@ -1541,7 +1444,6 @@ function CanvasEditorInner({
           />
         )}
 
-        {/* Context menu */}
         {contextMenu && (
           <CanvasContextMenu
             x={contextMenu.x}
@@ -1565,7 +1467,6 @@ function CanvasEditorInner({
             } : undefined}
           />
         )}
-        {/* Content picker */}
         {showContentPicker && (
           <>
             <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[999] animate-in fade-in-0 duration-150" />

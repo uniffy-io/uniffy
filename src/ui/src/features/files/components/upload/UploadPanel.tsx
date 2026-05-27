@@ -1,9 +1,3 @@
-/**
- * Upload Panel Component
- *
- * Floating panel showing upload progress and queue.
- */
-
 import { useCallback } from 'react';
 import {
     X,

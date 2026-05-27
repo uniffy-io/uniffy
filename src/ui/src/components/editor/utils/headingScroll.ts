@@ -1,10 +1,3 @@
-/**
- * Shared helpers for resolving markdown heading anchors inside a Crepe /
- * Milkdown editor surface. Used by NotesEditor (hash-on-mount scroll),
- * CrepeEditor's in-document anchor click interceptor, the outline panel,
- * and the table-of-contents block plugin.
- */
-
 export function headingToSlug(text: string): string {
   return text
     .toLowerCase()
@@ -12,21 +5,13 @@ export function headingToSlug(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-/**
- * Build a unique slug per occurrence: collisions append `-2`, `-3`, ...
- * so duplicate headings get distinct anchors. Pass the count of prior
- * occurrences already seen in the document.
- */
+/** Duplicate headings get distinct anchors: pass the count of prior occurrences and the result is `base`, `base-2`, `base-3`, ... */
 export function indexedSlug(base: string, occurrence: number): string {
   if (occurrence <= 0) return base;
   return `${base}-${occurrence + 1}`;
 }
 
-/**
- * Resolve the editor root used as the search scope. We prefer `.ProseMirror`
- * because heading nodes get rendered as direct children there; the wrapper
- * `.milkdown` and the raw `root` are fallbacks for older DOM shapes / tests.
- */
+/** `.ProseMirror` is preferred — headings render as direct children there; `.milkdown` and `root` are DOM-shape fallbacks. */
 function resolveEditor(root?: Element | null): ParentNode | null {
   const scope: ParentNode = root ?? document;
   return (
@@ -36,11 +21,7 @@ function resolveEditor(root?: Element | null): ParentNode | null {
   );
 }
 
-/**
- * Find the n-th heading element whose text slug matches `slug`. The
- * "occurrence" index is 0-based: `0` returns the first match, `1` the
- * second, etc. Returns `null` when no match exists at that index.
- */
+/** `occurrence` is 0-based — `0` is the first match. */
 export function findHeadingBySlugAt(
   slug: string,
   occurrence: number,
@@ -60,20 +41,7 @@ export function findHeadingBySlugAt(
   return null;
 }
 
-/**
- * Find the first heading element whose text matches the given slug. When the
- * slug carries an occurrence suffix (e.g. `intro-2`) the lookup walks back
- * through the document, picking the n-th raw match. This is what the link
- * interceptor and on-mount hash scroll use; the slug never carries the
- * suffix from a normal Markdown anchor link, so the common path returns the
- * first match exactly like before.
- *
- * When `root` is supplied the search is scoped to that subtree so multiple
- * editor instances on the page (e.g. the markdown split preview) do not steal
- * each other's headings. When omitted we fall back to the first editor in the
- * document, which preserves the legacy global-scroll behaviour on initial
- * mount.
- */
+/** Slug suffix `-N` walks back to the n-th raw match so duplicate headings remain reachable; pass `root` to scope multi-editor pages. */
 export function findHeadingBySlug(slug: string, root?: Element | null): Element | null {
   const direct = findHeadingBySlugAt(slug, 0, root);
   if (direct) return direct;

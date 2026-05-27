@@ -1,10 +1,3 @@
-/**
- * Paginated notification list view for the full-page notifications.
- *
- * Reuses the NotificationItem from Phase 1, adds time-grouped sections
- * with sticky headers, bulk actions, and pagination controls.
- */
-
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

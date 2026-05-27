@@ -1,11 +1,3 @@
-/**
- * Custom toast content component for real-time notification alerts.
- *
- * Renders a rich notification toast with actor avatar, type color accent,
- * title, truncated body, and click-to-navigate behavior.
- * Respects Zen Mode by being suppressed when active.
- */
-
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X } from '@phosphor-icons/react';

@@ -1,17 +1,3 @@
-/**
- * DetailPanel - Right sidebar showing event details
- *
- * Contains:
- * - Header with back button and actions
- * - Event title with category color
- * - Event metadata (date, time, recurrence, location)
- * - Attendees list
- * - Tags
- * - Referenced content (from @mentions)
- * - Description
- * - Properties (created/modified timestamps)
- */
-
 import { useState, useMemo, useEffect } from 'react';
 import {
   SidebarSimple,
@@ -57,12 +43,8 @@ import { extractMentionsFromMarkdown } from '@/shared/utils/mentionUtils';
 import { TagChip } from '@/features/tags';
 import { useTagsByIds } from '@/features/tags/store/selectors';
 
-// Default color when category is not found
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
-/**
- * Build a human-readable recurrence description.
- */
 function describeRecurrence(r: RecurrenceConfig): string {
   const interval = r.interval || 1;
   const plural = interval > 1;
@@ -114,7 +96,6 @@ export function DetailPanel() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRecurrenceScopeDialog, setShowRecurrenceScopeDialog] = useState(false);
 
-  // Close panel on Escape key
   useEffect(() => {
     if (!selectedEvent) return;
 
@@ -133,19 +114,17 @@ export function DetailPanel() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedEvent, showDeleteConfirm, showRecurrenceScopeDialog, dispatch]);
 
-  // Bookmark state - build URN for the event
   const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : '';
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(eventUrn);
 
-  // Extract mentions from description to show as linked resources
-  // Must be called before early return to respect rules of hooks
+  // Called before the early return so hook order stays stable across renders.
   const eventDescription = selectedEvent?.description ?? '';
   const mentionsFromDescription = useMemo(() => {
     if (!eventDescription) return [];
     return extractMentionsFromMarkdown(eventDescription);
   }, [eventDescription]);
 
-  // Compute RSVP summary counts (excluding organizer)
+  // Excludes the organizer from the RSVP counts.
   const rsvpSummary = useMemo(() => {
     if (!selectedEvent) return { accepted: 0, declined: 0, tentative: 0, pending: 0 };
     const nonOrganizer = selectedEvent.attendees.filter((a) => a.role !== 'organizer');
@@ -157,7 +136,6 @@ export function DetailPanel() {
     };
   }, [selectedEvent]);
 
-  // Current user's attendee record (null if organizer or not an attendee)
   const currentUserAttendee = useMemo(() => {
     if (!selectedEvent || !currentUserId) return null;
     return selectedEvent.attendees.find(
@@ -170,7 +148,6 @@ export function DetailPanel() {
     dispatch(updateAttendeeStatus({ eventId: selectedEvent.id, status }));
   };
 
-  // Calculate conflicts for the selected event
   const conflictingEvents = useMemo(() => {
     if (!selectedEvent) return [];
     return findConflicts(selectedEvent, visibleEvents);
@@ -184,7 +161,6 @@ export function DetailPanel() {
     );
   }
 
-  // Look up category color from Redux state (real categories from backend)
   const category = selectedEvent.categoryId ? categories[selectedEvent.categoryId] : null;
   const categoryColor = category?.color ?? DEFAULT_COLOR;
   const timezoneOffset = getTimezoneOffset(displayTimezone);
@@ -223,7 +199,6 @@ export function DetailPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         {isMobileOrTablet ? (
           <button
@@ -268,11 +243,8 @@ export function DetailPanel() {
         </div>
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Event Details Section */}
         <div className="border-b border-border">
-          {/* Event Title */}
           <div className="px-5 py-4 flex items-start gap-3">
             <div
               className="w-1 h-8 rounded-full shrink-0"
@@ -283,9 +255,7 @@ export function DetailPanel() {
             </h2>
           </div>
 
-          {/* Event Metadata */}
           <div className="px-5 pb-4 space-y-2.5">
-            {/* Date */}
             <div className="flex items-center gap-3 text-sm">
               <CalendarDots size={16} weight="duotone" className="text-muted-foreground" />
               <span className="text-foreground">
@@ -293,7 +263,6 @@ export function DetailPanel() {
               </span>
             </div>
 
-            {/* Time */}
             <div className="flex items-center gap-3 text-sm">
               <Clock size={16} weight="duotone" className="text-muted-foreground" />
               {selectedEvent.isAllDay ? (
@@ -313,7 +282,6 @@ export function DetailPanel() {
               )}
             </div>
 
-            {/* Recurrence */}
             {selectedEvent.recurrence &&
               selectedEvent.recurrence.pattern !== 'none' && (
                 <div className="flex items-center gap-3 text-sm">
@@ -336,7 +304,6 @@ export function DetailPanel() {
                 </div>
               )}
 
-            {/* Occurrence instance info */}
             {selectedEvent.recurrenceId && (
               <div className="flex items-center gap-3 text-sm">
                 <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
@@ -346,7 +313,6 @@ export function DetailPanel() {
               </div>
             )}
 
-            {/* Location */}
             {selectedEvent.location && (
               <div className="flex items-center gap-3 text-sm">
                 <MapPin size={16} weight="duotone" className="text-muted-foreground" />
@@ -359,7 +325,6 @@ export function DetailPanel() {
               </div>
             )}
 
-            {/* Room */}
             {selectedEvent.roomName && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
                 <div className="flex items-center gap-2">
@@ -395,7 +360,6 @@ export function DetailPanel() {
               </div>
             )}
 
-            {/* Tags inline */}
             {eventTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {eventTags.map((tag) => (
@@ -405,7 +369,6 @@ export function DetailPanel() {
             )}
           </div>
 
-          {/* RSVP Action Bar (for non-organizer attendees) */}
           {currentUserAttendee && (
             <div className="px-5 py-3 border-t border-border">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
@@ -452,13 +415,11 @@ export function DetailPanel() {
             </div>
           )}
 
-          {/* Attendees */}
           {selectedEvent.attendees.length > 0 && (
             <div className="px-5 py-3 border-t border-border">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Attendees
               </h3>
-              {/* RSVP Summary */}
               {(rsvpSummary.accepted > 0 || rsvpSummary.declined > 0 || rsvpSummary.tentative > 0 || rsvpSummary.pending > 0) && (
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {rsvpSummary.accepted > 0 && (
@@ -543,7 +504,6 @@ export function DetailPanel() {
             </div>
           )}
 
-          {/* Conflicts Warning */}
           {conflictingEvents.length > 0 && (
             <div className="px-5 py-3 border-t border-border" style={{ backgroundColor: 'color-mix(in srgb, var(--status-warning) 5%, transparent)' }}>
               <h3 className="text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
@@ -584,7 +544,6 @@ export function DetailPanel() {
           )}
         </div>
 
-        {/* Description Section */}
         <div className={cn('px-5 py-4 border-b border-border', selectedEvent.description && 'min-h-48')}>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Description
@@ -604,7 +563,6 @@ export function DetailPanel() {
           )}
         </div>
 
-        {/* Referenced Content Section */}
         {mentionsFromDescription.length > 0 && (
           <div className="px-5 py-4 border-b border-border">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -623,7 +581,6 @@ export function DetailPanel() {
           </div>
         )}
 
-        {/* Properties Section */}
         <div className="px-5 py-4">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
             <Info size={14} weight="duotone" />
@@ -642,7 +599,6 @@ export function DetailPanel() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal (non-recurring events) */}
       {showDeleteConfirm && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" />
@@ -663,7 +619,6 @@ export function DetailPanel() {
         </>
       )}
 
-      {/* Recurring Event Delete Scope Dialog */}
       <RecurrenceEditScopeDialog
         isOpen={showRecurrenceScopeDialog}
         onClose={() => setShowRecurrenceScopeDialog(false)}

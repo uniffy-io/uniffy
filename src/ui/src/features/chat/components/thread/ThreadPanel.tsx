@@ -1,10 +1,3 @@
-/**
- * ThreadPanel - Right-hand side panel for viewing and replying to threads.
- *
- * Shows the root message at top, a reply count separator, then all replies.
- * Compose box at the bottom for replying.
- */
-
 import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { X, LinkSimple } from '@phosphor-icons/react';
@@ -33,19 +26,16 @@ export function ThreadPanel() {
     activeThreadId ? selectTypingInThread(state, activeThreadId) : [],
   );
 
-  // Find the root message from the channel messages
   const rootMessage = useAppSelector((state) =>
     activeThreadId ? state.chatMessages.byId[activeThreadId] ?? null : null,
   );
 
-  // Find the channel name for the header
   const channelName = useAppSelector((state) => {
     if (!rootMessage) return '';
     const channel = state.chatChannels.channels.find(c => c.id === rootMessage.channelId);
     return channel ? `#${channel.name}` : '';
   });
 
-  // Load thread messages when thread opens
   useEffect(() => {
     if (activeThreadId && rootMessage) {
       dispatch(fetchThreadMessages({
@@ -55,7 +45,6 @@ export function ThreadPanel() {
     }
   }, [activeThreadId, rootMessage, dispatch]);
 
-  // Evict expired typing entries on a tick so stale "is typing" disappears.
   useEffect(() => {
     if (!activeThreadId || threadTyping.length === 0) return;
     const timer = setInterval(() => {
@@ -64,12 +53,11 @@ export function ThreadPanel() {
     return () => clearInterval(timer);
   }, [dispatch, activeThreadId, threadTyping.length]);
 
-  // Reset stick-to-bottom when switching threads
   useLayoutEffect(() => {
     stickToBottomRef.current = true;
   }, [activeThreadId]);
 
-  // Auto-scroll to bottom whenever content height changes (covers async image/mention layout)
+  // Re-stick to bottom on content-height changes so async image/mention layout doesn't strand the user above the latest reply.
   useEffect(() => {
     const scrollEl = scrollRef.current;
     const contentEl = contentRef.current;
@@ -134,7 +122,6 @@ export function ThreadPanel() {
     return null;
   }
 
-  // If root message not found (edge case), show a minimal state
   if (!rootMessage) {
     return (
       <div className="flex flex-col h-full bg-background">
@@ -162,7 +149,6 @@ export function ThreadPanel() {
       data-testid="chat-thread-panel"
       data-thread-root-id={activeThreadId}
     >
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-semibold text-foreground">Thread</span>
@@ -187,10 +173,8 @@ export function ThreadPanel() {
         </button>
       </div>
 
-      {/* Scrollable content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto" data-testid="chat-thread-scroll">
        <div ref={contentRef} data-testid="chat-thread-messages" data-reply-count={replyCount}>
-        {/* Root message */}
         <div className="border-b border-border">
           <MessageItem
             message={rootMessage}
@@ -199,7 +183,6 @@ export function ThreadPanel() {
           />
         </div>
 
-        {/* Reply count separator */}
         {replyCount > 0 && (
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="flex-1 border-t border-border" />
@@ -210,7 +193,6 @@ export function ThreadPanel() {
           </div>
         )}
 
-        {/* Thread replies */}
         {threadMessages.map((reply, index) => {
           const prevReply = index > 0 ? threadMessages[index - 1] : null;
           const isGrouped = prevReply !== null
@@ -229,10 +211,8 @@ export function ThreadPanel() {
        </div>
       </div>
 
-      {/* Typing indicator (scoped to this thread's root_id) */}
       <TypingIndicator typingUsers={threadTyping} />
 
-      {/* Thread compose */}
       <MessageCompose
         channelName=""
         placeholder="Reply..."

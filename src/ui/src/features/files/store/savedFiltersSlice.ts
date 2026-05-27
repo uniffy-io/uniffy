@@ -1,16 +1,8 @@
-/**
- * Saved Filters Redux Slice
- *
- * Manages saved file filter state including CRUD operations.
- */
-
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 import type { RootState } from '@/app/store';
-/**
- * Serialized filter criteria for Redux state.
- */
+
 export interface SerializedFilterCriteria {
     extensions?: string[];
     mimeCategories?: string[];
@@ -18,21 +10,17 @@ export interface SerializedFilterCriteria {
     tagIds?: string[];
     sizeMinBytes?: number;
     sizeMaxBytes?: number;
-    createdAfter?: string; // ISO date string
-    createdBefore?: string; // ISO date string
+    /** ISO date string. */
+    createdAfter?: string;
+    /** ISO date string. */
+    createdBefore?: string;
 }
 
-/**
- * Serialized icon value for Redux state.
- */
 export interface SerializedIconValue {
     type: 'icon' | 'emoji';
     value: string;
 }
 
-/**
- * Serialized saved filter for Redux state.
- */
 export interface SerializedSavedFilter {
     id: string;
     userId: string;
@@ -62,9 +50,6 @@ const initialState: SavedFiltersState = {
     savingFilter: false,
 };
 
-/**
- * Serialize a proto saved filter to plain object.
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeSavedFilter(filter: any): SerializedSavedFilter {
     const criteria: SerializedFilterCriteria = {};
@@ -98,7 +83,6 @@ function serializeSavedFilter(filter: any): SerializedSavedFilter {
         }
     }
 
-    // Handle icon
     let icon: SerializedIconValue | undefined;
     if (filter.icon) {
         icon = {
@@ -176,7 +160,6 @@ export const createSavedFilter = createAsyncThunk(
                     tagIds: criteria.tagIds,
                     sizeMinBytes: criteria.sizeMinBytes ? BigInt(criteria.sizeMinBytes) : undefined,
                     sizeMaxBytes: criteria.sizeMaxBytes ? BigInt(criteria.sizeMaxBytes) : undefined,
-                    // Date handling is done in the proto conversion
                 },
                 sortBy,
                 sortOrder,
@@ -274,7 +257,6 @@ const savedFiltersSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // Fetch filters
         builder
             .addCase(fetchSavedFilters.pending, (state) => {
                 state.loading = true;
@@ -292,7 +274,6 @@ const savedFiltersSlice = createSlice({
                 state.error = action.payload as string;
             });
 
-        // Create filter
         builder
             .addCase(createSavedFilter.pending, (state) => {
                 state.savingFilter = true;
@@ -307,7 +288,6 @@ const savedFiltersSlice = createSlice({
                 state.error = action.payload as string;
             });
 
-        // Update filter
         builder
             .addCase(updateSavedFilter.pending, (state) => {
                 state.savingFilter = true;
@@ -322,7 +302,6 @@ const savedFiltersSlice = createSlice({
                 state.error = action.payload as string;
             });
 
-        // Delete filter
         builder
             .addCase(deleteSavedFilter.pending, (state) => {
                 state.savingFilter = true;
@@ -346,15 +325,12 @@ export const selectSavedFiltersLoading = (state: RootState) => state.savedFilter
 export const selectSavedFiltersError = (state: RootState) => state.savedFilters?.error ?? null;
 export const selectSavingFilter = (state: RootState) => state.savedFilters?.savingFilter ?? false;
 
-// Memoized selectors to prevent unnecessary re-renders
 export const selectSavedFiltersArray = createSelector(
     [selectSavedFilters],
     (filters): SerializedSavedFilter[] => {
         return Object.values(filters).sort((a, b) => {
-            // Presets first
             if (a.isPreset && !b.isPreset) return -1;
             if (!a.isPreset && b.isPreset) return 1;
-            // Then by name
             return a.name.localeCompare(b.name);
         });
     }

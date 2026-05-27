@@ -1,11 +1,3 @@
-/**
- * AgentAvatar - Displays an agent's avatar with image/emoji/initials fallback.
- *
- * Priority: uploaded image > emoji > first character of name.
- * The avatarKey prop is a full URL path returned by the backend
- * (e.g. /api/agents/avatars/{agentId}/lg?v={hash}).
- */
-
 import { useState } from "react";
 import { Robot } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";

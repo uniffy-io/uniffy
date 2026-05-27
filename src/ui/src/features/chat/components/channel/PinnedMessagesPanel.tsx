@@ -1,11 +1,3 @@
-/**
- * PinnedMessagesPanel - Dropdown panel showing all pinned messages in a channel.
- *
- * Opens from the pin button in the channel header. Shows each pinned message
- * with sender, content preview, and timestamp. Click navigates to the message
- * in the channel. Renders via portal to avoid overflow issues.
- */
-
 import { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PushPin, X } from '@phosphor-icons/react';
@@ -45,7 +37,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
     return () => { cancelled = true; };
   }, [channelId, organizationId, dispatch]);
 
-  // Position below the anchor
   const [position, setPosition] = useState({ top: 100, left: 100 });
 
   useEffect(() => {
@@ -56,7 +47,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
     const panelWidth = 380;
 
     let left = rect.left;
-    // Don't go off right edge
     if (left + panelWidth > window.innerWidth - 16) {
       left = window.innerWidth - panelWidth - 16;
     }
@@ -65,7 +55,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
     setPosition({ top: rect.bottom + 6, left });
   }, [anchorRef]);
 
-  // Click outside to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -81,7 +70,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
     };
   }, [onClose]);
 
-  // Escape to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -96,7 +84,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
       className="fixed z-[100] w-[380px] max-h-[60vh] bg-card border border-border rounded-xl shadow-xl overflow-hidden flex flex-col"
       style={{ top: position.top, left: position.left }}
     >
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <PushPin size={16} className="text-muted-foreground" />
@@ -115,7 +102,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
         </button>
       </div>
 
-      {/* Pinned messages list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="py-8 px-4 text-center">
@@ -147,7 +133,6 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
                   onClose();
                 }}
               >
-                {/* Sender info */}
                 <div className="flex items-center gap-2 mb-1.5">
                   {isAgent ? (
                     <AgentAvatar
@@ -163,12 +148,10 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
                   <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>
                 </div>
 
-                {/* Message content preview */}
                 <div className="ml-8 text-sm line-clamp-3">
                   <MessageContent content={message.content} />
                 </div>
 
-                {/* Pin indicator */}
                 <div className="ml-8 mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
                   <PushPin size={10} weight="fill" className="text-primary/60" />
                   <span>Pinned</span>

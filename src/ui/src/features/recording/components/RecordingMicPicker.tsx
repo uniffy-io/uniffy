@@ -1,13 +1,3 @@
-/**
- * Microphone picker for the recording popover.
- *
- * "No microphone" is the first option and the default. The device list is
- * lazy-loaded on popover open via `listMicrophones`. Browsers withhold device
- * labels until the user has granted mic permission to the origin at least
- * once, so a fallback "Microphone (xxxxxx)" name is shown until the first
- * recording with the mic on populates the labels.
- */
-
 import { useEffect, useState } from 'react';
 import { Microphone, MicrophoneSlash } from '@phosphor-icons/react';
 import { Select, type SelectOption } from '@/components/ui/select';

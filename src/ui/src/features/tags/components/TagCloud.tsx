@@ -1,12 +1,3 @@
-/**
- * <TagCloud>
- *
- * Top-200 tag cloud where chip font size scales with usage count.
- * Click selects a tag in the explorer's right panel. Used in the
- * middle column of ``TagsExplorerSplit`` when the user picks the
- * "cloud" view variant.
- */
-
 import { useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { tagColorClasses } from '@/features/tags/utils/colors';
@@ -16,7 +7,6 @@ interface TagCloudProps {
     tags: SerializedTag[];
     selectedTagId: string | null;
     onSelect: (tag: SerializedTag) => void;
-    /** Cap. The plan specifies top 200; the page passes ``200`` here. */
     limit?: number;
 }
 

@@ -1,13 +1,3 @@
-/**
- * Save Dialog Component
- *
- * Dialog for saving edited images with options for:
- * - Save as new file (with custom filename)
- * - Save as new version (replace current file)
- * - Format selection (PNG/JPEG)
- * - Quality slider (for JPEG)
- */
-
 import { useState, useCallback } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X, FloppyDisk, File, Files, Warning } from '@phosphor-icons/react';
@@ -57,7 +47,6 @@ export function SaveDialog({
     const [format, setFormat] = useState<ImageFormat>(defaultFormat);
     const [quality, setQuality] = useState(92);
 
-    // Handle save
     const handleSave = useCallback(async () => {
         if (saveMode === 'new') {
             await onSaveAsNew(filename, format, quality / 100);
@@ -66,7 +55,6 @@ export function SaveDialog({
         }
     }, [saveMode, filename, format, quality, onSaveAsNew, onSaveAsVersion]);
 
-    // Get extension for format
     const extension = format === 'image/png' ? 'png' : 'jpg';
 
     return (

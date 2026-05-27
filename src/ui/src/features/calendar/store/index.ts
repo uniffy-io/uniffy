@@ -1,11 +1,6 @@
-/**
- * Calendar store exports
- */
-
 export { calendarReducer } from '@/features/calendar/store/calendarSlice';
 export { calendarUiReducer } from '@/features/calendar/store/calendarUiSlice';
 
-// Thunks (API calls)
 export {
   fetchEventsInRange,
   fetchEvent,
@@ -21,7 +16,6 @@ export {
   removeAttendees,
 } from '@/features/calendar/store/calendarThunks';
 
-// Calendar slice actions
 export {
   setEvents,
   addEvent,
@@ -46,7 +40,6 @@ export {
   resetCalendarState,
 } from '@/features/calendar/store/calendarSlice';
 
-// Calendar UI slice actions
 export {
   setViewMode,
   setCurrentDate,

@@ -1,7 +1,3 @@
-/**
- * Notifications settings section.
- */
-
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
@@ -93,12 +89,11 @@ export function NotificationsSection() {
     const { subscribe, unsubscribe, permissionState, isSupported } = usePushSubscription();
 
     const handleToggle = async (field: string, value: boolean) => {
-        // When toggling desktop notifications, manage push subscription
+        // Browser channel needs a live push subscription; persist only after subscribe() succeeds.
         if (field === 'browserEnabled') {
             if (value) {
                 const result = await subscribe();
                 if (!result.success) {
-                    // Don't persist the setting if subscription failed
                     return;
                 }
             } else {
@@ -148,7 +143,6 @@ export function NotificationsSection() {
                 </p>
             </div>
 
-            {/* Real-time Alerts */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Real-time Alerts</h2>
 
@@ -170,7 +164,6 @@ export function NotificationsSection() {
                 </div>
             </section>
 
-            {/* Browser Notifications */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Browser Notifications</h2>
 
@@ -220,7 +213,6 @@ export function NotificationsSection() {
                 </div>
             </section>
 
-            {/* Email Notifications */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Email Notifications</h2>
 
@@ -271,7 +263,7 @@ export function NotificationsSection() {
                 </div>
             </section>
 
-            {/* Channel Preferences */}
+            {/* Per-type channel matrix: master toggles above (browser/email) cascade down and disable cells. */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Notification Types</h2>
                 <p className="text-sm text-muted-foreground">
@@ -280,7 +272,6 @@ export function NotificationsSection() {
                 </p>
 
                 <div className="bg-card rounded-lg border border-border overflow-hidden">
-                    {/* Header row */}
                     <div className="grid grid-cols-[1fr_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border bg-muted/30">
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">App</div>
@@ -288,7 +279,6 @@ export function NotificationsSection() {
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Email</div>
                     </div>
 
-                    {/* Channel rows */}
                     {NOTIFICATION_TYPE_ROWS.map(({ type, label }) => {
                         const channels = notifications.channelOverrides?.[type] ?? {};
                         const defaults = DEFAULT_CHANNELS[type] ?? { in_app: true, browser: true, email: true };
@@ -330,7 +320,6 @@ export function NotificationsSection() {
                 </Button>
             </section>
 
-            {/* Default Reminders */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Default Reminders</h2>
                 <p className="text-sm text-muted-foreground">
@@ -348,7 +337,6 @@ export function NotificationsSection() {
                 </div>
             </section>
 
-            {/* Quiet Hours */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Quiet Hours</h2>
                 <p className="text-sm text-muted-foreground">

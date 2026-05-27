@@ -1,12 +1,4 @@
-/**
- * Agent Mention Preview Card
- *
- * Shows agent emoji avatar with theme color, name, and description.
- * Uses cyan accent (agent URN color).
- *
- * Markup uses only inline elements so the card stays HTML-valid inside `<p>`.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,
@@ -47,7 +39,6 @@ export function AgentMentionPreview({
     <>
       <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-cyan-500/10 via-cyan-500/5 to-transparent pointer-events-none" />
 
-      {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
         <span className="flex items-start gap-3">
           <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary text-lg">
@@ -60,14 +51,12 @@ export function AgentMentionPreview({
         </span>
       </span>
 
-      {/* Description */}
       {description && (
         <span className="block px-4 pb-2.5 pl-5">
           <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-3">{description}</span>
         </span>
       )}
 
-      {/* Footer */}
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />

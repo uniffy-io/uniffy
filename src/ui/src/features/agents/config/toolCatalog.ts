@@ -128,5 +128,4 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
     },
 ];
 
-// Flat catalog for backwards compatibility
 export const TOOL_CATALOG: ToolGroup[] = TOOL_SECTIONS.flatMap((s) => s.groups);

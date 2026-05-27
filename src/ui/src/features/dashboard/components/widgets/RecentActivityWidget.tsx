@@ -1,11 +1,3 @@
-/**
- * RecentActivityWidget - Cross-domain activity feed
- *
- * Aggregates recently updated items from notes, files, calendar events,
- * tasks, and projects. Full-width table-style layout with filter tabs
- * and rich contextual detail per item type.
- */
-
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClockCounterClockwise } from '@phosphor-icons/react';
@@ -95,12 +87,10 @@ function ActivityRow({ item, showType }: { item: ActivityItem; showType: boolean
             to={item.href}
             className="group grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_1fr_minmax(100px,180px)_minmax(80px,200px)_80px] items-center gap-x-3 px-4 py-3 border-b border-border/50 last:border-b-0 hover:bg-muted/40 transition-colors"
         >
-            {/* Icon */}
             <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', config.theme.badgeBg)}>
                 <Icon size={16} weight="duotone" className={config.theme.accentText} />
             </div>
 
-            {/* Title + mobile meta */}
             <div className="min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                     {item.statusDot && (
@@ -115,23 +105,19 @@ function ActivityRow({ item, showType }: { item: ActivityItem; showType: boolean
                         </span>
                     )}
                 </div>
-                {/* Mobile-only: show meta inline */}
                 <p className="md:hidden text-xs text-muted-foreground mt-0.5 truncate">
                     {config.label} {item.meta && ` \u00b7 ${item.meta}`}
                 </p>
             </div>
 
-            {/* Meta column (tablet+) */}
             <p className="hidden md:block text-xs text-muted-foreground truncate">
                 {item.meta}
             </p>
 
-            {/* Extra column (desktop) */}
             <p className="hidden md:block text-xs text-muted-foreground truncate">
                 {item.extra ?? ''}
             </p>
 
-            {/* Time */}
             <span className="text-xs text-muted-foreground tabular-nums text-right shrink-0">
                 {formatRelativeTime(item.updatedAt)}
             </span>
@@ -286,7 +272,6 @@ export function RecentActivityWidget() {
             priority={2}
             compact
         >
-            {/* Filter tabs */}
             <div className="flex items-center gap-1 mb-3 flex-wrap">
                 {FILTER_TABS.map((tab) => {
                     const count = tabCounts[tab.key];
@@ -320,7 +305,6 @@ export function RecentActivityWidget() {
                 })}
             </div>
 
-            {/* Table header (tablet+) */}
             <div className="hidden md:grid grid-cols-[auto_1fr_minmax(100px,180px)_minmax(80px,200px)_80px] items-center gap-x-3 px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
                 <span className="w-8" />
                 <span>Name</span>

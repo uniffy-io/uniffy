@@ -1,20 +1,3 @@
-/**
- * <TagChip>
- *
- * The single tag pill primitive. Click navigates to ``/tags/{slug}``;
- * domain editors get an optional remove button via ``onRemove``. Phase
- * 5 finalised the colour resolver: ``tag.color`` resolves to a slug
- * from the unified 12-colour palette; null falls back to the
- * workspace accent (``bg-primary/10 text-primary``). There is no
- * hash-derived fallback -- chips inherit the user's accent unless the
- * tag owner explicitly chose a colour from the palette.
- *
- * Locked prop surface (consumed by notes / files / calendar / chat /
- * agents / tasks editors and Phase 5 explorer): { tag, onRemove?,
- * removeDisabled?, nonInteractive?, className? }. Internal expansion
- * is fine; the public surface MUST stay stable.
- */
-
 import { Link } from 'react-router-dom';
 import { X } from '@phosphor-icons/react';
 

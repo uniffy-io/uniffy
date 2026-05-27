@@ -22,33 +22,21 @@ import {
 } from "../store/projectsUiSlice";
 import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
 
-/**
- * Main Projects page component
- *
- * Handles:
- * - URL parameter parsing (projectId, taskId)
- * - Document title updates
- * - Keyboard shortcuts
- * - Initial data loading
- */
 export function ProjectsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { projectId, taskId } = useParams<{ projectId?: string; taskId?: string }>();
 
-  // Get current project for document title
   const currentProject = useAppSelector(selectCurrentProject);
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
 
-  // Guard to prevent URL-to-state effect from running after programmatic navigation
+  // Suppresses the URL->state effect immediately after a state->URL navigation.
   const isProgrammaticNav = useRef(false);
 
-  // Set document title
   useDocumentTitle(currentProject?.name || "Projects");
 
-  // Register keyboard shortcuts
   useShortcutHandlers({
     "app.toggleSidebar": () => {
       dispatch(toggleSidebar());
@@ -63,19 +51,16 @@ export function ProjectsPage() {
     },
   });
 
-  // Load projects on mount
   useEffect(() => {
     dispatch(fetchProjects());
   }, [dispatch]);
 
-  // Handle project selection from URL
   useEffect(() => {
     if (projectId) {
       dispatch(setCurrentProject(projectId));
     }
   }, [dispatch, projectId]);
 
-  // Fetch tasks whenever the current project changes
   const currentProjectId = currentProject?.id;
   useEffect(() => {
     if (currentProjectId) {
@@ -83,9 +68,7 @@ export function ProjectsPage() {
     }
   }, [dispatch, currentProjectId]);
 
-  // Handle task selection from URL (URL -> state)
   useEffect(() => {
-    // Skip when URL was changed by our own state-to-URL effect
     if (isProgrammaticNav.current) {
       isProgrammaticNav.current = false;
       return;
@@ -99,12 +82,11 @@ export function ProjectsPage() {
     }
   }, [dispatch, taskId]);
 
-  // Sync state -> URL when task selection changes
   useEffect(() => {
     const currentProjectId = currentProject?.id;
     if (!currentProjectId) return;
 
-    // Don't sync URL during multi-selection (URL represents single-task viewing)
+    // URL represents single-task viewing; skip while multi-selecting.
     if (selectedTaskIds.length > 1) return;
 
     if (selectedTaskId && isDetailPanelOpen) {

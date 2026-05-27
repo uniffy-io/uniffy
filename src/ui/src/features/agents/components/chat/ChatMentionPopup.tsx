@@ -1,11 +1,3 @@
-/**
- * Spotlight-style mention search popup for the chat textarea.
- *
- * Same visual design as the MentionSearch used in the notes editor
- * and SpotlightSearch, but decoupled from ProseMirror. Works with
- * a plain textarea via callbacks.
- */
-
 import { useRef, useEffect, useCallback } from 'react';
 import { X, At } from '@phosphor-icons/react';
 import { SearchResultsList, useSearch } from '@/features/search';
@@ -47,7 +39,6 @@ export function ChatMentionPopup({
         hasFilters,
     } = useSearch();
 
-    // Seed the search with the initial query from the textarea
     useEffect(() => {
         if (initialQuery) {
             setQuery(initialQuery);
@@ -67,7 +58,7 @@ export function ChatMentionPopup({
             onClose();
             return;
         }
-        // Let SearchResultsList handle ArrowUp/Down and Enter via document listener
+        // ArrowUp/Down and Enter are handled by SearchResultsList's document listener
     }, [onClose]);
 
     const handleClear = useCallback(() => {
@@ -77,7 +68,6 @@ export function ChatMentionPopup({
         inputRef.current?.focus();
     }, [setQuery, onQuerySync, clearResults]);
 
-    // Filter removal handlers
     const handleRemoveTypeFilter = useCallback((type: number) => {
         const newQuery = removeTypeFilterFromQuery(searchQuery, type);
         setQuery(newQuery);
@@ -109,7 +99,6 @@ export function ChatMentionPopup({
         inputRef.current?.focus();
     }, [setQuery, onQuerySync]);
 
-    // Focus input on mount
     useEffect(() => {
         const timer = setTimeout(() => {
             inputRef.current?.focus();
@@ -117,7 +106,6 @@ export function ChatMentionPopup({
         return () => clearTimeout(timer);
     }, []);
 
-    // Click outside to close
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
@@ -130,17 +118,14 @@ export function ChatMentionPopup({
 
     return (
         <>
-            {/* Backdrop */}
             <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[999] animate-in fade-in-0 duration-150" />
 
-            {/* Centered popup */}
             <div className="fixed inset-0 z-[1000] flex items-start justify-center pt-[15vh]" data-testid="chat-mention-popup">
                 <div
                     ref={popupRef}
                     className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
                 >
                     <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
-                        {/* Search input */}
                         <div className="relative flex items-center border-b border-border/50">
                             <div className="absolute left-4 flex items-center gap-1">
                                 <At size={20} weight="bold" className="text-primary" />
@@ -178,7 +163,6 @@ export function ChatMentionPopup({
                             </div>
                         </div>
 
-                        {/* Active filters */}
                         {hasFilters && (
                             <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b border-border/50 bg-muted/30">
                                 {parsedQuery.filters.types.map((type) => (
@@ -211,7 +195,6 @@ export function ChatMentionPopup({
                             </div>
                         )}
 
-                        {/* Results or empty prompt */}
                         {searchQuery.trim() || isLoading || hasFilters ? (
                             <SearchResultsList
                                 results={results}

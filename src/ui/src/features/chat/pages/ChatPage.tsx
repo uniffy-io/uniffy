@@ -1,10 +1,3 @@
-/**
- * ChatPage - Main page component for the Chat feature.
- *
- * Handles routing, data initialization, and wires up the 3-panel layout.
- * Supports split-screen mode for viewing two channels side by side.
- */
-
 import { useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -78,28 +71,23 @@ export function ChatPage() {
         : 'Chat';
   useDocumentTitle(pageTitle);
 
-  // Keyboard shortcut: Ctrl+B toggles sidebar
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
-  // Parse message ID from URL hash
   const hashMessageId = location.hash.replace('#', '') || undefined;
 
-  // Initialize chat data on mount
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
     dispatch(initializeChat({ channelId, messageId: hashMessageId }));
-    // On mobile, when landing inside a channel, keep the channel view visible
-    // instead of the sidebar drawer covering it.
+    // Mobile landing inside a channel keeps the channel view visible instead of the sidebar drawer.
     if (isMobile && channelId) {
       dispatch(collapseSidebar());
     }
   }, [dispatch, channelId, hashMessageId, isMobile]);
 
-  // Handle channel selection from URL changes (after initial load)
   const prevChannelIdRef = useRef<string | undefined>(channelId);
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -110,7 +98,6 @@ export function ChatPage() {
     }
   }, [channelId, dispatch]);
 
-  // Jump to message from URL hash fragment after messages load
   const hashHandledRef = useRef(false);
   const channelMessageIds = useAppSelector((state) =>
     channelId ? state.chatMessages.idsByChannel[channelId] : undefined,
@@ -133,7 +120,6 @@ export function ChatPage() {
     })();
   }, [hashMessageId, messagesLoaded, channelId, dispatch]);
 
-  // Load messages for split channel when it changes
   useEffect(() => {
     if (splitChannelId) {
       dispatch(fetchMessages({ channelId: splitChannelId }));
@@ -145,14 +131,12 @@ export function ChatPage() {
     dispatch(clearSplitChannel());
   }, [dispatch]);
 
-  // Right panel: thread panel or resource panel (mutex)
   const rightPanel = threadPanelOpen && activeThreadId
     ? <ThreadPanel />
     : resourcePanelOpen
       ? <ResourcePanel />
       : null;
 
-  // Split channel view
   const splitView = splitActive && splitChannelId ? (
     <div
       className={cn('h-full', focusedPane === 'right' && 'ring-1 ring-inset ring-primary/30')}
@@ -166,7 +150,6 @@ export function ChatPage() {
     </div>
   ) : null;
 
-  // Primary channel view with focus ring when split is active
   const mainContent = isThreadsInboxRoute ? (
     <ThreadsInbox />
   ) : isUnreadsRoute ? (

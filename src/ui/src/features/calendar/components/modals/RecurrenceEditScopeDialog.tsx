@@ -1,8 +1,3 @@
-/**
- * Recurrence Edit Scope Dialog
- * Asks the user to choose the scope when editing or deleting a recurring event.
- */
-
 import { useState, useEffect } from 'react';
 import { ArrowsClockwise, Calendar, CalendarX, FastForward } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -62,7 +57,7 @@ export function RecurrenceEditScopeDialog({
   const [selected, setSelected] = useState<RecurrenceEditScope>('this_event');
   const [prevOpen, setPrevOpen] = useState(false);
 
-  // Reset selection when dialog opens (render-time state adjustment)
+  // Render-phase reset avoids an effect-loop.
   if (isOpen && !prevOpen) {
     setPrevOpen(true);
     setSelected('this_event');
@@ -93,13 +88,11 @@ export function RecurrenceEditScopeDialog({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 z-40"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div
         className={cn(
           'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
@@ -108,7 +101,6 @@ export function RecurrenceEditScopeDialog({
           'animate-in zoom-in-95 fade-in duration-200',
         )}
       >
-        {/* Header */}
         <div className="flex items-center gap-2 p-4 border-b border-border">
           {isDelete ? (
             <CalendarX className="w-5 h-5 text-muted-foreground" weight="duotone" />
@@ -120,7 +112,6 @@ export function RecurrenceEditScopeDialog({
           </h2>
         </div>
 
-        {/* Options */}
         <div className="p-4 space-y-2">
           {options.map((option) => {
             const isSelected = selected === option.value;
@@ -139,7 +130,6 @@ export function RecurrenceEditScopeDialog({
                     : 'border-border bg-card hover:bg-muted',
                 )}
               >
-                {/* Radio indicator */}
                 <div
                   className={cn(
                     'mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 transition-colors',
@@ -181,7 +171,6 @@ export function RecurrenceEditScopeDialog({
           })}
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-2 p-4 border-t border-border">
           <Button
             type="button"

@@ -1,10 +1,4 @@
-/**
- * TypingIndicator - Shows who is currently typing in the channel.
- *
- * Renders a fixed-height container (always present to prevent layout shift)
- * with avatars, animated dots, and subject names when people or agents are typing.
- * Entries with `isAgent: true` resolve their avatar from the agents Redux slice.
- */
+/** Fixed-height typing indicator (always mounted to prevent layout shift). */
 
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector } from '@/app/hooks';

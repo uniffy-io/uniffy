@@ -1,10 +1,3 @@
-/**
- * Notes Sidebar Component
- *
- * Orchestrates the notes tree sidebar. Manages Redux state, callbacks,
- * and delegates rendering to sub-components.
- */
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTreeStateSync } from '@/features/notes/hooks/useTreeStateSync';
@@ -53,7 +46,6 @@ import { CreateDropdown } from '@/features/notes/components/sidebar/CreateDropdo
 import { NotesSidebarSkeleton } from '@/features/notes/components/sidebar/NotesSidebarSkeleton';
 import type { ActiveMenuState, MoveTarget } from '@/features/notes/components/sidebar/types';
 
-// Section configuration
 interface SectionConfig {
     id: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
     name: string;
@@ -68,14 +60,10 @@ const SECTIONS: SectionConfig[] = [
     { id: 'organization', name: 'Organization', icon: Buildings, scope: AccessMode.OPEN_TO_ORG },
 ];
 
-/**
- * Main sidebar component.
- */
 export function NotesSidebar() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    // Redux state
     const currentNoteId = useAppSelector((state) => state.notes.currentNoteId);
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
     const tree = useAppSelector((state) => state.notesTree.tree);
@@ -84,14 +72,11 @@ export function NotesSidebar() {
     const loading = useAppSelector((state) => state.notesTree.loading);
     const creatingNote = useAppSelector((state) => state.notes.creatingNote);
 
-    // Bookmarks state
     useBookmarks();
     const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
 
-    // Sync tree expanded state with localStorage
     useTreeStateSync();
 
-    // Populate bookmarked section from bookmarks store
     useEffect(() => {
         const bookmarkedNoteIds = Object.keys(bookmarkedUrns)
             .filter(urn => bookmarkedUrns[urn] && urn.includes(':NOTE:'))
@@ -121,7 +106,6 @@ export function NotesSidebar() {
         dispatch(setBookmarkedNodes(bookmarkedNodes));
     }, [bookmarkedUrns, tree.personal, tree.shared, tree.organization, dispatch]);
 
-    // Local UI state
     const [editingId, setEditingId] = useState<string | null>(null);
     const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
     const [sectionDropTarget, setSectionDropTarget] = useState<string | null>(null);
@@ -577,7 +561,6 @@ export function NotesSidebar() {
 
     return (
         <div className="flex flex-col h-full">
-            {/* Header */}
             <SidebarHeader
                 onCreateNote={() => handleNewNote()}
                 onCreateCanvas={() => handleNewCanvas()}
@@ -585,10 +568,8 @@ export function NotesSidebar() {
                 creatingNote={creatingNote}
             />
 
-            {/* Main Sections */}
             <div className="flex-1 overflow-y-auto px-3 py-2">
                 <nav className="space-y-0.5">
-                    {/* Tree controls */}
                     <div className="flex items-center gap-0.5 mb-1">
                         <button
                             onClick={() => dispatch(expandAll())}
@@ -629,7 +610,6 @@ export function NotesSidebar() {
                 </nav>
             </div>
 
-            {/* Organization Move Confirmation (drag & drop) */}
             <ConfirmDialog
                 isOpen={pendingOrgMove !== null}
                 onClose={() => setPendingOrgMove(null)}
@@ -641,7 +621,6 @@ export function NotesSidebar() {
                 variant="warning"
             />
 
-            {/* Three-dot context menu */}
             {activeMenu && (
                 <TreeNodeContextMenu
                     menu={activeMenu}
@@ -653,7 +632,6 @@ export function NotesSidebar() {
                 />
             )}
 
-            {/* Move dialog */}
             {moveTarget && (
                 <NoteMoveDialog
                     target={moveTarget}

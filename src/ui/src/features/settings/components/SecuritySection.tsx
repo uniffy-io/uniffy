@@ -1,7 +1,3 @@
-/**
- * Security settings section - client-side data encryption and cache management.
- */
-
 import { useState } from 'react';
 import { HardDrives, Warning } from '@phosphor-icons/react';
 import { createClient } from '@connectrpc/connect';
@@ -65,7 +61,6 @@ export function SecuritySection() {
 
       <MfaSettingsCard />
 
-      {/* Encryption Status */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Client-Side Data</h2>
         <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-4">
@@ -85,7 +80,6 @@ export function SecuritySection() {
           </div>
 
           <div className="border-t border-border pt-4 space-y-3">
-            {/* Clear This Device */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-foreground">Clear This Device</p>
@@ -105,7 +99,6 @@ export function SecuritySection() {
               </button>
             </div>
 
-            {/* Clear All Devices */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-foreground">Clear All Devices</p>
@@ -154,7 +147,6 @@ export function SecuritySection() {
         </div>
       </section>
 
-      {/* Active Sessions */}
       <SessionsSection />
     </div>
   );

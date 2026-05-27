@@ -1,11 +1,3 @@
-/**
- * CreateCategoryModal - Modal for creating a new channel category.
- *
- * Polished form with accent icon, name input with character counter,
- * and helper text. Categories organize channels in the sidebar
- * into collapsible groups.
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, FolderSimplePlus, Rows } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
@@ -29,7 +21,6 @@ export function CreateCategoryModal() {
   const isNameValid = name.trim().length > 0;
   const showError = touched && !isNameValid;
 
-  // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
@@ -58,7 +49,6 @@ export function CreateCategoryModal() {
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-sm">
       <div data-testid="chat-create-category-modal">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <h2 className="text-xl font-semibold text-foreground">
           New category
@@ -74,10 +64,8 @@ export function CreateCategoryModal() {
         </button>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-5">
-          {/* Illustration card */}
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
               <Rows size={22} weight="bold" />
@@ -90,7 +78,6 @@ export function CreateCategoryModal() {
             </div>
           </div>
 
-          {/* Category name */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Category name
@@ -128,7 +115,6 @@ export function CreateCategoryModal() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           <Button
             type="button"

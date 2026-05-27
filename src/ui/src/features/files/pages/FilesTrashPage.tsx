@@ -1,11 +1,3 @@
-/**
- * Files Trash Page
- *
- * Shows soft-deleted files and folders using the same grid/list cards,
- * sort controls, selection, and bulk actions as the main Files page.
- * Users can drill into a trashed folder to see its soft-deleted contents.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -108,18 +100,15 @@ function TrashView() {
         ? trash.folders.find((f) => f.id === currentFolderId)
         : undefined;
 
-    // Toolbar state (local to this page)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [iconSize, setIconSize] = useState<0 | 1 | 2 | 3>(1);
     const [sortBy, setSortBy] = useState<SortValue>('updated_at');
     const [sortOrder, setSortOrder] = useState<OrderValue>('desc');
 
-    // Selection state
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
 
-    // Pending confirmation dialogs
     const [pendingPermanentDelete, setPendingPermanentDelete] = useState<
         | { kind: 'file'; id: string; name: string }
         | { kind: 'folder'; id: string; name: string }
@@ -130,7 +119,6 @@ function TrashView() {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [restoring, setRestoring] = useState<Set<string>>(new Set());
 
-    // Sync currentFolderId with URL param `folder`
     useEffect(() => {
         const urlFolder = searchParams.get('folder');
         if ((urlFolder ?? null) !== currentFolderId) {
@@ -138,21 +126,16 @@ function TrashView() {
         }
     }, [searchParams, currentFolderId, dispatch]);
 
-    // Fetch trash on mount and when org changes
     useEffect(() => {
         if (organizationId) {
             dispatch(fetchTrash());
         }
     }, [organizationId, dispatch]);
 
-    // Derive items visible at the current level
     const { visibleFolders, visibleFiles } = useMemo(() => {
         const folderMap = new Map(trash.folders.map((f) => [f.id, f] as const));
 
-        // When inside a trashed folder: show its direct subfolders and its files.
-        // When at the root: show only folders whose parent is NOT itself a trashed folder
-        // (so cascaded children aren't surfaced twice), and files whose parent folder is
-        // not in trash.
+        // At root: surface only top-level trashed items (skip children of trashed folders so they aren't listed twice).
         const foldersHere: SerializedFolder[] = trash.folders.filter((f) => {
             if (currentFolderId) {
                 return f.parentId === currentFolderId;
@@ -166,7 +149,6 @@ function TrashView() {
             return !f.folderId || !folderMap.has(f.folderId);
         });
 
-        // Map folders to tree nodes so <FolderCard> can consume them.
         const folderNodes: SerializedTreeNode[] = foldersHere.map((f) => {
             const childFolderCount = trash.folders.filter((x) => x.parentId === f.id).length;
             const childFileCount = trash.files.filter((x) => x.folderId === f.id).length;
@@ -182,8 +164,7 @@ function TrashView() {
         };
     }, [trash.files, trash.folders, currentFolderId, sortBy, sortOrder]);
 
-    // Build breadcrumbs from currentFolder up via parentId, stopping when a non-trashed
-    // ancestor is hit.
+    // Build breadcrumbs from currentFolder up via parentId, stopping at the first non-trashed ancestor.
     const breadcrumbs = useMemo(() => {
         const crumbs: Array<{ id: string; name: string }> = [];
         let folder = currentFolder;
@@ -196,9 +177,7 @@ function TrashView() {
         return crumbs;
     }, [currentFolder, trash.folders]);
 
-    // Whether a given trashed folder was a direct drop (parent not trashed). Files/folders
-    // whose parent is itself trashed cannot be restored individually, only via their
-    // ancestor.
+    // Only direct trash drops can be restored individually; descendants restore through their ancestor.
     const isDirectTrashDrop = useCallback(
         (parentId?: string) => !parentId || !trash.folders.some((f) => f.id === parentId),
         [trash.folders],
@@ -250,7 +229,6 @@ function TrashView() {
         [setSearchParams, clearSelection],
     );
 
-    // ---- Restore actions ----
     const restoreOne = useCallback(
         async (kind: 'file' | 'folder', id: string) => {
             if (!organizationId) return;
@@ -280,7 +258,6 @@ function TrashView() {
 
     const handleBulkRestore = useCallback(async () => {
         if (!organizationId) return;
-        // Only items that can actually be restored (direct trash drops)
         const folderIds = [...selectedFolderIds].filter((id) => {
             const f = trash.folders.find((x) => x.id === id);
             return f && isDirectTrashDrop(f.parentId);
@@ -301,7 +278,6 @@ function TrashView() {
         clearSelection();
     }, [organizationId, selectedFolderIds, selectedFileIds, trash.folders, trash.files, isDirectTrashDrop, dispatch, clearSelection]);
 
-    // ---- Permanent delete actions ----
     const confirmPermanentDelete = useCallback(async () => {
         if (!pendingPermanentDelete || !organizationId) return;
         setDeleteLoading(true);
@@ -362,7 +338,7 @@ function TrashView() {
         setPendingPermanentDelete({ kind: 'empty' });
     }, []);
 
-    // ---- No-op callbacks for props we don't surface in trash mode ----
+    // No-ops for props the trash view doesn't surface but FileCard requires.
     const noop = useCallback(() => {}, []);
     const noopWithName = useCallback(() => {}, []);
 
@@ -744,5 +720,5 @@ export function FilesTrashPage() {
     );
 }
 
-// Keep AccessMode reachable so tree-shaking doesn't drop the import used by folderToTreeNode types.
+// Re-export so tree-shaking doesn't drop AccessMode used by folderToTreeNode types.
 void AccessMode;

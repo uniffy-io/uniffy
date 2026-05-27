@@ -1,13 +1,3 @@
-/**
- * Folder Upload Hook
- *
- * Orchestrates recursive folder upload:
- * 1. Shows confirmation dialog with scan results
- * 2. User can exclude files/subfolders via checkboxes
- * 3. Creates folder tree on the backend (excluding removed folders)
- * 4. Queues included files for upload with correct folder mappings
- */
-
 import { useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { filesApi } from '@/features/files/api/filesApi';
@@ -99,19 +89,16 @@ export function useFolderUpload() {
         const accessMode = resolveUploadAccessMode(viewScope, parentFolder);
 
         try {
-            // Filter out excluded files
             const includedFiles = excludedPaths.size > 0
                 ? scanResult.files.filter((f) => !excludedPaths.has(f.path))
                 : scanResult.files;
 
-            // Filter tree to remove excluded folders
             const includedTree = excludedPaths.size > 0
                 ? filterTree(scanResult.tree, excludedPaths, '')
                 : scanResult.tree;
 
             let folderMapping: FolderMapping = {};
 
-            // Step 1: Create folder tree on backend (if there are folders)
             if (includedTree.length > 0) {
                 try {
                     const response = await filesApi.createFolderTree({
@@ -136,7 +123,6 @@ export function useFolderUpload() {
                 }
             }
 
-            // Step 2: Queue included files for upload
             const uploadItems = includedFiles.map((scannedFile) => {
                 const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 storeFile(id, scannedFile.file);

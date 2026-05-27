@@ -1,8 +1,3 @@
-/**
- * Calendar feature type exports
- */
-
-// Event types
 export type {
   CalendarEvent,
   CreateEventRequest,
@@ -17,7 +12,6 @@ export type {
   ResourceType,
 } from '@/features/calendar/types/event';
 
-// Calendar types
 export type {
   CalendarPreferences,
   ViewMode,
@@ -27,7 +21,6 @@ export type {
   DayColumn,
 } from '@/features/calendar/types/calendar';
 
-// Category types
 export type {
   Category,
   CreateCategoryRequest,
@@ -37,7 +30,6 @@ export type {
 } from '@/features/calendar/types/category';
 export { DEFAULT_CATEGORY_IDS } from '@/features/calendar/types/category';
 
-// Attendee types
 export type {
   Attendee,
   AttendeeStatus,
@@ -47,7 +39,6 @@ export type {
 } from '@/features/calendar/types/attendee';
 export { ATTENDEE_STATUS_CONFIG } from '@/features/calendar/types/attendee';
 
-// UI types
 export type {
   CalendarUIState,
   EventModalPrefill,
@@ -62,7 +53,6 @@ export type {
   EventFilters,
 } from '@/features/calendar/types/ui';
 
-// Form types
 export type {
   EventFormData,
   QuickCaptureData,
@@ -81,7 +71,6 @@ export {
   DAY_OF_WEEK_LABELS,
 } from '@/features/calendar/types/forms';
 
-// Template types
 export type {
   EventTemplate,
   CreateTemplatePayload,

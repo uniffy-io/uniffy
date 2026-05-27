@@ -1,14 +1,3 @@
-/**
- * CalendarHeader - Top navigation bar for the calendar
- *
- * Contains:
- * - Sidebar toggle (mobile only)
- * - Month/year display with navigation arrows
- * - Today button
- * - Timezone indicator (hidden on mobile)
- * - View mode toggle (Day/Week/Month - Week hidden on mobile)
- */
-
 import { CaretLeft, CaretRight, GlobeHemisphereWest, SidebarSimple, FrameCorners } from '@phosphor-icons/react';
 import { useCalendarNavigation } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -46,9 +35,7 @@ export function CalendarHeader() {
 
   return (
     <div className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-card border-b border-border">
-      {/* Left: Sidebar toggle (mobile) + Navigation */}
       <div className="flex items-center gap-1 md:gap-2 min-w-0">
-        {/* Mobile sidebar toggle */}
         {isMobile && isSidebarCollapsed && (
           <button
             onClick={() => dispatch(toggleSidebar())}
@@ -59,7 +46,6 @@ export function CalendarHeader() {
           </button>
         )}
 
-        {/* Previous arrow */}
         <button
           onClick={goToPrevious}
           className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
@@ -68,12 +54,10 @@ export function CalendarHeader() {
           <CaretLeft size={16} weight="bold" className="text-muted-foreground" />
         </button>
 
-        {/* Month/Year title */}
         <h1 className="text-sm md:text-base font-medium text-foreground min-w-0 truncate">
           {headerTitle}
         </h1>
 
-        {/* Next arrow */}
         <button
           onClick={goToNext}
           className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
@@ -82,7 +66,6 @@ export function CalendarHeader() {
           <CaretRight size={16} weight="bold" className="text-muted-foreground" />
         </button>
 
-        {/* Today button */}
         <button
           onClick={goToToday}
           className="px-2 md:px-3 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors shrink-0"
@@ -91,9 +74,7 @@ export function CalendarHeader() {
         </button>
       </div>
 
-      {/* Right: Timezone and View Toggle */}
       <div className="flex items-center gap-1 md:gap-4 shrink-0">
-        {/* Timezone indicator - hidden on mobile */}
         <span
           className={cn(
             "items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground rounded-md",
@@ -105,7 +86,6 @@ export function CalendarHeader() {
           <span>{timezoneOffset}</span>
         </span>
 
-        {/* Detail view mode toggle - hidden on mobile */}
         <div className={cn(
           "items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0",
           isMobile ? "hidden" : "flex"
@@ -134,7 +114,6 @@ export function CalendarHeader() {
           </button>
         </div>
 
-        {/* View mode toggle */}
         <div className="flex items-center gap-0.5">
           {viewModes.map((mode) => (
             <button

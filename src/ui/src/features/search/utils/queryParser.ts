@@ -1,55 +1,23 @@
-/**
- * Search Query Parser
- *
- * Parses Google-style keyword search queries into structured filters.
- *
- * Supported syntax:
- * - Type filters: note:, file:, user:, calendar:, chat:
- * - Metadata filters: tag:, project:
- * - Ownership: my: (shorthand for current user's content)
- * - Quoted phrases: "exact phrase" preserved in text
- *
- * Examples:
- * - `note: "how to" tag:work` -> { text: "how to", filters: { types: [NOTE], tags: ["work"] } }
- * - `user: john` -> { text: "john", filters: { types: [USER] } }
- * - `my: drafts` -> { text: "drafts", filters: { myContentOnly: true } }
- */
+/** Parses `keyword:value` filters into structured search filters. */
 
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 
-/**
- * Parsed search query with extracted filters.
- */
 export interface ParsedQuery {
-    /** Remaining free text after extracting filters (for fuzzy search) */
     text: string;
-    /** Extracted filter values */
     filters: SearchFilters;
-    /** Original raw query */
     rawQuery: string;
 }
 
-/**
- * Filter values extracted from the query.
- */
 export interface SearchFilters {
-    /** Content type filters (note, file, user, etc.) */
     types: SearchResultType[];
-    /** Tag filters */
     tags: string[];
-    /** Project filters */
     projects: string[];
-    /** Only show current user's content */
     myContentOnly: boolean;
-    /** Filter by owner username */
     owner: string | null;
-    /** Exact match phrases detected in query (for UI display) */
     exactPhrases: string[];
 }
 
-/**
- * Mapping of type filter keywords to SearchResultType enum values.
- */
+/** Filter keyword to SearchResultType. Update when adding a new content type. */
 const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'note': SearchResultType.NOTE,
     'notes': SearchResultType.NOTE,
@@ -79,12 +47,12 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'prompts': SearchResultType.PROMPT,
     'room': SearchResultType.ROOM,
     'rooms': SearchResultType.ROOM,
-    // Tag entity (a tag itself, not content tagged with a tag).
+    // tag entity itself, not "content tagged with X" - use tag: for the latter
     'tagentity': SearchResultType.TAG,
     'tagentities': SearchResultType.TAG,
 };
 
-// Map for the `type:` meta prefix (e.g. `type:tag`).
+/** `type:tag` meta-prefix (filters results to a specific entity type). */
 const TYPE_META_MAP: Record<string, SearchResultType> = {
     'tag': SearchResultType.TAG,
     'note': SearchResultType.NOTE,
@@ -101,11 +69,8 @@ const TYPE_META_MAP: Record<string, SearchResultType> = {
     'room': SearchResultType.ROOM,
 };
 
-/**
- * All recognized filter prefixes.
- */
+/** Recognized filter prefixes - shorthands (`notes`, `tagentities`, `msg`) feed into TYPE_KEYWORD_MAP. */
 const FILTER_PREFIXES = [
-    // Type filters
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
     'agentchat', 'agentchats', 'agent-chat', 'agent-chats',
@@ -115,35 +80,19 @@ const FILTER_PREFIXES = [
     'prompt', 'prompts',
     'room', 'rooms',
     'tagentity', 'tagentities',
-    // Meta type filter: `type:tag` -> filter results to tag entities.
     'type',
-    // Metadata filters
     'tag',
-    // Ownership filters
     'my', 'owner',
 ];
 
-/**
- * Regex pattern to match filter syntax: `keyword:value` or `keyword:"quoted value"`
- * Captures: [full match, keyword, quoted value or null, unquoted value or null]
- */
 const FILTER_PATTERN = new RegExp(
     `\\b(${FILTER_PREFIXES.join('|')}):\\s*(?:"([^"]+)"|([^\\s"]+))`,
     'gi'
 );
 
-/**
- * Pattern to match standalone quoted phrases (not preceded by filter keywords).
- * Uses negative lookbehind to avoid matching filter values like tag:"value".
- */
+/** Standalone quoted phrases; negative lookbehind skips filter values like `tag:"value"`. */
 const PHRASE_PATTERN = /(?<![a-z]:)"([^"]+)"/gi;
 
-/**
- * Parse a search query string into structured filters.
- *
- * @param query - Raw search query string
- * @returns Parsed query with text and filters
- */
 export function parseSearchQuery(query: string): ParsedQuery {
     const filters: SearchFilters = {
         types: [],
@@ -161,9 +110,8 @@ export function parseSearchQuery(query: string): ParsedQuery {
     let remainingText = query;
     const extractedFilters: Array<{ match: string; keyword: string; value: string }> = [];
 
-    // Extract all filter matches
     let match: RegExpExecArray | null;
-    FILTER_PATTERN.lastIndex = 0; // Reset regex state
+    FILTER_PATTERN.lastIndex = 0;
 
     while ((match = FILTER_PATTERN.exec(query)) !== null) {
         const [fullMatch, keyword, quotedValue, unquotedValue] = match;
@@ -178,23 +126,17 @@ export function parseSearchQuery(query: string): ParsedQuery {
         }
     }
 
-    // Process extracted filters
     for (const { match, keyword, value } of extractedFilters) {
-        // Remove the filter from remaining text
         remainingText = remainingText.replace(match, ' ');
 
-        // Type filters
         if (keyword in TYPE_KEYWORD_MAP) {
             const resultType = TYPE_KEYWORD_MAP[keyword];
             if (!filters.types.includes(resultType)) {
                 filters.types.push(resultType);
             }
-            // If there's a value after the type filter, it becomes search text
-            // The value is already part of remainingText if not consumed
             continue;
         }
 
-        // Meta `type:` prefix (e.g. `type:tag`).
         if (keyword === 'type') {
             const meta = TYPE_META_MAP[value.toLowerCase()];
             if (meta !== undefined && !filters.types.includes(meta)) {
@@ -203,7 +145,6 @@ export function parseSearchQuery(query: string): ParsedQuery {
             continue;
         }
 
-        // Tag filter
         if (keyword === 'tag') {
             if (!filters.tags.includes(value)) {
                 filters.tags.push(value);
@@ -211,7 +152,6 @@ export function parseSearchQuery(query: string): ParsedQuery {
             continue;
         }
 
-        // Project filter
         if (keyword === 'project') {
             if (!filters.projects.includes(value)) {
                 filters.projects.push(value);
@@ -219,26 +159,22 @@ export function parseSearchQuery(query: string): ParsedQuery {
             continue;
         }
 
-        // My content filter
         if (keyword === 'my') {
             filters.myContentOnly = true;
-            // Value after my: becomes search text, already in remainingText
             continue;
         }
 
-        // Owner filter
         if (keyword === 'owner') {
             filters.owner = value;
             continue;
         }
     }
 
-    // Clean up remaining text
     remainingText = remainingText
-        .replace(/\s+/g, ' ')  // Collapse multiple spaces
+        .replace(/\s+/g, ' ')
         .trim();
 
-    // Extract exact-match phrases for UI display (quotes stay in text for Meilisearch)
+    // Quotes stay in remainingText so Meilisearch enforces the phrase match.
     PHRASE_PATTERN.lastIndex = 0;
     let phraseMatch: RegExpExecArray | null;
     while ((phraseMatch = PHRASE_PATTERN.exec(remainingText)) !== null) {
@@ -255,9 +191,6 @@ export function parseSearchQuery(query: string): ParsedQuery {
     };
 }
 
-/**
- * Check if a query contains any active filters.
- */
 export function hasActiveFilters(filters: SearchFilters): boolean {
     return (
         filters.types.length > 0 ||
@@ -269,9 +202,6 @@ export function hasActiveFilters(filters: SearchFilters): boolean {
     );
 }
 
-/**
- * Get a human-readable label for a SearchResultType.
- */
 export function getTypeFilterLabel(type: SearchResultType): string {
     switch (type) {
         case SearchResultType.NOTE:
@@ -299,9 +229,6 @@ export function getTypeFilterLabel(type: SearchResultType): string {
     }
 }
 
-/**
- * Convert a SearchResultType back to its filter keyword.
- */
 export function getTypeFilterKeyword(type: SearchResultType): string {
     switch (type) {
         case SearchResultType.NOTE:
@@ -331,57 +258,37 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
     }
 }
 
-/**
- * Remove a specific type filter from the query string.
- */
 export function removeTypeFilterFromQuery(query: string, type: SearchResultType): string {
     const keyword = getTypeFilterKeyword(type);
     if (!keyword) return query;
 
-    // Remove the type filter pattern
     const pattern = new RegExp(`\\b${keyword}s?:\\s*(?:"[^"]*"|[^\\s]*)\\s*`, 'gi');
     return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Remove a tag filter from the query string.
- */
 export function removeTagFilterFromQuery(query: string, tag: string): string {
-    // Handle both quoted and unquoted tag values
     const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(`\\btag:\\s*(?:"${escapedTag}"|${escapedTag})\\s*`, 'gi');
     return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Remove a project filter from the query string.
- */
 export function removeProjectFilterFromQuery(query: string, project: string): string {
     const escapedProject = project.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(`\\bproject:\\s*(?:"${escapedProject}"|${escapedProject})\\s*`, 'gi');
     return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Remove the my: filter from the query string.
- */
 export function removeMyFilterFromQuery(query: string): string {
     const pattern = /\bmy:\s*(?:"[^"]*"|[^\s]*)\s*/gi;
     return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Remove an exact-match phrase from the query string.
- */
 export function removePhraseFromQuery(query: string, phrase: string): string {
     const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(`"${escapedPhrase}"\\s*`, 'gi');
     return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Available filter hints for UI display.
- */
 export const FILTER_HINTS = [
     { prefix: '"..."', description: 'Exact phrase match', example: '"docker --platform"' },
     { prefix: 'note:', description: 'Search notes', example: 'note: meeting' },

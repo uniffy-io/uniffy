@@ -6,11 +6,6 @@ import { PROSEMIRROR_FRAGMENT_FIELD } from '@/features/notes/realtime/markdown';
 import { resolveAwarenessColor } from '@/features/notes/realtime/awarenessColor';
 import type { CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
 
-/**
- * `useDocSession` composed with note-specific UndoManager wiring (tracks
- * the shared `Y.XmlFragment("prosemirror")`) and surfaces `whenSynced` so
- * `CrepeEditor` can gate its cold-start markdown seed on first sync.
- */
 export function useNoteRealtimeSession(
   noteId: string | null,
   enabled: boolean,
@@ -47,9 +42,7 @@ export function useNoteRealtimeSession(
     };
   }, [session]);
 
-  // Awareness `user` payload lives in its own effect so avatar/name/accent
-  // changes propagate without rebuilding the UndoManager (which would drop
-  // undo history on every avatar upload).
+  // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager (would drop undo history).
   useEffect(() => {
     if (!session) return;
     const { solid, translucent } = resolveAwarenessColor(

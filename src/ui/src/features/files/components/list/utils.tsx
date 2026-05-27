@@ -1,7 +1,3 @@
-/**
- * Utility functions for file list components
- */
-
 import type { Icon } from '@phosphor-icons/react';
 import {
     File,
@@ -14,9 +10,6 @@ import {
     FileCode,
 } from '@phosphor-icons/react';
 
-/**
- * Get icon component for file type based on MIME type
- */
 export function getFileIcon(mimeType: string): Icon {
     if (mimeType.startsWith('image/')) return FileImage;
     if (mimeType.startsWith('video/')) return FileVideo;
@@ -28,9 +21,6 @@ export function getFileIcon(mimeType: string): Icon {
     return File;
 }
 
-/**
- * Render file icon - avoids component creation during render
- */
 export function renderFileIcon(mimeType: string, size: number, className: string) {
     const IconComponent = getFileIcon(mimeType);
     return <IconComponent size={size} weight="duotone" className={className} />;
@@ -38,21 +28,15 @@ export function renderFileIcon(mimeType: string, size: number, className: string
 
 export { formatProtoDate as formatDate, formatFileSize } from '@/shared/utils/dateFormatting';
 
-/**
- * MIME types that support server-side thumbnail generation.
- * Keep in sync with backend workers/utils/mime.py THUMBNAIL_MIME_TYPES.
- */
+/** Keep in sync with backend workers/utils/mime.py THUMBNAIL_MIME_TYPES. */
 const THUMBNAIL_MIME_TYPES = new Set([
-    // Images
     'image/jpeg',
     'image/png',
     'image/gif',
     'image/webp',
     'image/bmp',
     'image/tiff',
-    // PDFs
     'application/pdf',
-    // Videos
     'video/mp4',
     'video/webm',
     'video/quicktime',
@@ -60,7 +44,6 @@ const THUMBNAIL_MIME_TYPES = new Set([
     'video/x-matroska',
     'video/mpeg',
     'video/ogg',
-    // Audio (album art thumbnails)
     'audio/mpeg',
     'audio/wav',
     'audio/x-wav',
@@ -74,9 +57,6 @@ const THUMBNAIL_MIME_TYPES = new Set([
     'audio/webm',
 ]);
 
-/**
- * Check if a MIME type supports thumbnail generation
- */
 export function supportsThumbnail(mimeType: string): boolean {
     return THUMBNAIL_MIME_TYPES.has(mimeType);
 }

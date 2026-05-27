@@ -1,11 +1,3 @@
-/**
- * CreateChannelModal - Modal for creating a new chat channel.
- *
- * Card-based channel type picker (public/private), name input with
- * slug preview, optional description and category. Inspired by
- * Revolt's channel creation dialog.
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, GlobeSimple, Lock, Check } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
@@ -38,7 +30,6 @@ export function CreateChannelModal() {
   const isNameValid = name.trim().length > 0;
   const showError = touched && !isNameValid;
 
-  // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
@@ -84,7 +75,6 @@ export function CreateChannelModal() {
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting}>
       <div data-testid="chat-create-channel-modal">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <h2 className="text-xl font-semibold text-foreground">
           Create a new channel
@@ -100,10 +90,8 @@ export function CreateChannelModal() {
         </button>
       </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
-            {/* Channel name */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Channel name
@@ -140,7 +128,6 @@ export function CreateChannelModal() {
               </div>
             </div>
 
-            {/* Channel type - card picker */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -201,7 +188,6 @@ export function CreateChannelModal() {
               </button>
             </div>
 
-            {/* Category */}
             {categories.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -217,7 +203,6 @@ export function CreateChannelModal() {
               </div>
             )}
 
-            {/* Description / Purpose */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Channel Purpose
@@ -238,7 +223,6 @@ export function CreateChannelModal() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
             <Button
               type="button"

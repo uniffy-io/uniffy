@@ -1,10 +1,6 @@
 import { getUserColor } from '@/config/theme/userColors';
 
-/**
- * Resolve a user's awareness color (cursor caret + label + selection tint).
- * Accepts shadcn HSL triples (e.g. `"217 91% 60%"`) or hex; falls back to
- * the hashed palette so users without an accent still get a stable color.
- */
+/** Accepts shadcn HSL triples or hex; falls back to the hashed palette for users without an accent. */
 export function resolveAwarenessColor(
   accentColor: string | undefined | null,
   fallbackKey: string,

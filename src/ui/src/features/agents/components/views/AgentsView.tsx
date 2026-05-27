@@ -153,8 +153,6 @@ export function AgentsView() {
     const canShareSelectedAgent = roleCanManage(selectedAgentRole);
     const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
 
-    // No auto-select - URL drives selection. If no agent in URL, show empty state.
-
     const handleCreateAgent = async () => {
         const name = newAgentName.trim();
         if (!name || creating) return;

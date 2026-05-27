@@ -1,17 +1,7 @@
-/**
- * Form type definitions for event creation/editing
- */
-
 import { z } from 'zod';
 import type { RecurrencePattern, DayOfWeek } from '@/features/calendar/types/event';
 
-/**
- * Event form validation schema
- */
-/**
- * Base event form object schema (without refinements).
- * Used by templateFormSchema which needs .omit() - not available on refined schemas.
- */
+/** Base schema without refinements so templateFormSchema can call `.omit()` on it. */
 export const eventFormBaseSchema = z.object({
   title: z
     .string()
@@ -46,7 +36,6 @@ export const eventFormBaseSchema = z.object({
 
 export const eventFormSchema = eventFormBaseSchema.refine(
   (data) => {
-    // Validate end time is after start time for non-all-day events
     if (!data.isAllDay && data.startTime && data.endTime) {
       return data.endTime > data.startTime;
     }
@@ -58,14 +47,8 @@ export const eventFormSchema = eventFormBaseSchema.refine(
   }
 );
 
-/**
- * Event form data type (inferred from schema)
- */
 export type EventFormData = z.infer<typeof eventFormSchema>;
 
-/**
- * Default values for event form
- */
 export const eventFormDefaults: EventFormData = {
   title: '',
   description: '',
@@ -89,18 +72,12 @@ export const eventFormDefaults: EventFormData = {
   linkedResourceIds: [],
 };
 
-/**
- * Quick capture form schema (simplified event creation)
- */
 export const quickCaptureSchema = z.object({
   input: z.string().min(1, 'Please enter event details'),
 });
 
 export type QuickCaptureData = z.infer<typeof quickCaptureSchema>;
 
-/**
- * Parsed quick capture result
- */
 export interface ParsedQuickCapture {
   title: string;
   date?: string;
@@ -110,9 +87,6 @@ export interface ParsedQuickCapture {
   confidence: 'high' | 'medium' | 'low';
 }
 
-/**
- * Category form schema
- */
 export const categoryFormSchema = z.object({
   name: z
     .string()
@@ -124,9 +98,6 @@ export const categoryFormSchema = z.object({
 
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 
-/**
- * Template form schema
- */
 export const templateFormSchema = z.object({
   name: z
     .string()
@@ -138,9 +109,6 @@ export const templateFormSchema = z.object({
 
 export type TemplateFormData = z.infer<typeof templateFormSchema>;
 
-/**
- * Recurrence display labels
- */
 export const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   none: 'Does not repeat',
   daily: 'Daily',
@@ -150,9 +118,6 @@ export const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   yearly: 'Yearly',
 };
 
-/**
- * Day of week display labels
- */
 export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, { short: string; full: string }> = {
   monday: { short: 'Mo', full: 'Monday' },
   tuesday: { short: 'Tu', full: 'Tuesday' },

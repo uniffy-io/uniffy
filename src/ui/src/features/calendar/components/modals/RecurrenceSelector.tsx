@@ -1,11 +1,3 @@
-/**
- * RecurrenceSelector - Recurrence configuration form section for calendar events.
- *
- * Allows users to configure how an event repeats: pattern, interval,
- * day-of-week toggles (weekly/biweekly), day-of-month (monthly),
- * and end conditions (never, after N occurrences, on date).
- */
-
 import { useState } from 'react';
 import { ArrowsClockwise } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
@@ -27,18 +19,12 @@ const PATTERN_OPTIONS = (Object.keys(RECURRENCE_LABELS) as RecurrencePattern[]).
 
 const DAY_KEYS = Object.keys(DAY_OF_WEEK_LABELS) as DayOfWeek[];
 
-/**
- * Get the DayOfWeek key for today.
- */
 function getTodayDayOfWeek(): DayOfWeek {
-  const jsDay = new Date().getDay(); // 0=Sunday, 1=Monday, ...
+  const jsDay = new Date().getDay();
   const mapping: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   return mapping[jsDay];
 }
 
-/**
- * Returns the interval unit label for a given recurrence pattern.
- */
 function getIntervalUnit(pattern: RecurrencePattern): string {
   switch (pattern) {
     case 'daily':
@@ -55,18 +41,12 @@ function getIntervalUnit(pattern: RecurrencePattern): string {
   }
 }
 
-/**
- * Determines the end condition from a RecurrenceConfig.
- */
 function getEndCondition(config: RecurrenceConfig): EndCondition {
   if (config.maxOccurrences) return 'after';
   if (config.endDate) return 'on_date';
   return 'never';
 }
 
-/**
- * Get the appropriate default days when switching to a new pattern.
- */
 function getDefaultDays(newPattern: RecurrencePattern): DayOfWeek[] | undefined {
   if (newPattern === 'daily') return [...ALL_DAYS];
   if (newPattern === 'weekly' || newPattern === 'biweekly') return [getTodayDayOfWeek()];
@@ -157,13 +137,11 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
 
   return (
     <div className="space-y-2">
-      {/* Section label */}
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
         <span>Repeat</span>
       </div>
 
-      {/* Pattern selector */}
       <Select
         value={pattern}
         onChange={(val) => handlePatternChange(val as RecurrencePattern)}
@@ -174,7 +152,6 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
 
       {showDetails && (
         <div className="space-y-3 pl-1">
-          {/* Interval */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Every</span>
             <input
@@ -190,7 +167,6 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
             </span>
           </div>
 
-          {/* Day-of-week toggles */}
           {showDayToggles && (
             <div className="space-y-1.5">
               <label className="block text-xs text-muted-foreground">
@@ -220,7 +196,6 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
             </div>
           )}
 
-          {/* Day-of-month input (monthly) */}
           {showDayOfMonth && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">On day</span>
@@ -236,11 +211,9 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
             </div>
           )}
 
-          {/* End condition */}
           <div className="space-y-1.5">
             <label className="block text-xs text-muted-foreground">Ends</label>
             <div className="space-y-2">
-              {/* Never */}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -252,7 +225,6 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                 <span className="text-xs text-foreground">Never</span>
               </label>
 
-              {/* After N occurrences */}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -277,7 +249,6 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                 <span className="text-xs text-foreground">occurrences</span>
               </label>
 
-              {/* On date */}
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-2 cursor-pointer shrink-0">
                   <input

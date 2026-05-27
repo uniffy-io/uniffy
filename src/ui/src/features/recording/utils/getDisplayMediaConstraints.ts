@@ -1,17 +1,7 @@
 /**
- * Translate the user's recording-source preference (entire screen / specific
- * window / browser tab) into a `DisplayMediaStreamOptions` payload.
- *
- * `displaySurface` is a hint - the browser's native picker still has the final
- * say, especially on Firefox where the field is ignored. `surfaceSwitching`
- * lets the user swap between captured surfaces mid-recording on Chrome
- * without restarting the picker.
- *
- * Tab-audio capture is opt-in: `audio: true` is only set when source=tab AND
- * the user toggled the option. Otherwise we leave `audio: false` and route
- * the microphone in via `getUserMedia` instead, which is more reliable on
- * Chrome/Brave (their tab-audio path drops audio when the captured tab
- * switches surfaces).
+ * Builds `getDisplayMedia` constraints. `displaySurface` is only a hint (Firefox ignores it).
+ * Tab audio (`audio: true`) is gated on source=tab; Chrome/Brave drop tab audio on surface switch,
+ * so mic routes via `getUserMedia` instead.
  */
 
 import type { RecordingSource } from '@/features/recording/store/recordingSlice';

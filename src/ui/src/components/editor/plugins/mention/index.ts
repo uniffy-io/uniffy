@@ -16,7 +16,6 @@ import { getMentionUrl } from '@/components/mention/mentionStateEmitter';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
 
-// Event bus for triggering mention search UI
 export type MentionTriggerEvent = {
   query: string;
   from: number;
@@ -24,13 +23,9 @@ export type MentionTriggerEvent = {
   view: EditorView;
 };
 
-// Use a Set of callbacks to support multiple editor instances
+// Set rather than single callback so multiple editor instances can subscribe.
 const mentionEventCallbacks = new Set<(event: MentionTriggerEvent | null) => void>();
 
-/**
- * Register a callback for mention trigger events.
- * Returns an unsubscribe function.
- */
 export function onMentionTrigger(callback: (event: MentionTriggerEvent | null) => void): () => void {
   mentionEventCallbacks.add(callback);
   return () => {
@@ -42,11 +37,7 @@ export function triggerMentionSearch(event: MentionTriggerEvent | null) {
   mentionEventCallbacks.forEach((callback) => callback(event));
 }
 
-/**
- * Open the mention search popup at the current cursor position by inserting an
- * `@` character and dispatching a synthetic trigger event. Used by toolbar
- * buttons and other UI surfaces outside of the typed-input-rule path.
- */
+/** Inserts `@` and dispatches a synthetic trigger so toolbar buttons can open the search popup without the input-rule path. */
 export function triggerMentionAtCursor(view: EditorView) {
   const { state } = view;
   const start = state.selection.from;
@@ -56,7 +47,6 @@ export function triggerMentionAtCursor(view: EditorView) {
   triggerMentionSearch({ query: '', from: start, to: start + 1, view });
 }
 
-// 1. Define the mention node schema (inline element)
 export const mentionNode = $node('mention', () => ({
   group: 'inline',
   inline: true,
@@ -99,8 +89,7 @@ export const mentionNode = $node('mention', () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: Node) => {
       const attrs = node.attrs as { label: string; urn: string };
-      // Export as custom 'mention' MDAST node - handler added via remarkStringifyMention
-      // This avoids mdast-util-to-markdown escaping the brackets in text nodes
+      // Custom 'mention' MDAST node avoids the bracket-escaping that mdast-util-to-markdown applies to text.
       state.addNode('mention', undefined, undefined, {
         label: attrs.label,
         urn: attrs.urn,
@@ -109,23 +98,18 @@ export const mentionNode = $node('mention', () => ({
   },
 }));
 
-// Regex to match [[[label|urn]]] format
 const MENTION_REGEX = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
-// Custom mention node type for the AST
 interface MentionNode extends UnistNode {
   type: 'mention';
   label: string;
   urn: string;
 }
 
-// Remark plugin to parse [[[label|urn]]] into mention AST nodes
 export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
-  // Return a unified plugin that handles both parsing and stringifying
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function mentionPlugin(this: any) {
-    // Add handler for stringifying mention nodes back to markdown
-    // This handler outputs raw [[[label|urn]]] without escaping
+    // Custom stringifier emits raw `[[[label|urn]]]` without the bracket-escaping that the default text path would apply.
     const toMarkdownExtension = {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,11 +117,9 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
       },
     };
 
-    // Add to existing toMarkdownExtensions or create new array
     const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
     this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
 
-    // Return the tree transformer for parsing
     return (tree: Parent) => {
       visit(tree, 'text', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
         if (!parent || index === undefined) return;
@@ -145,28 +127,21 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
         const textNode = node as { type: 'text'; value: string };
         const value = textNode.value;
 
-        // Check if this text contains any mention patterns
         if (!MENTION_REGEX.test(value)) return;
 
-        // Reset regex lastIndex since we use 'g' flag
         MENTION_REGEX.lastIndex = 0;
 
-        // Split the text into parts, replacing mentions with mention nodes
         const newNodes: (UnistNode | MentionNode)[] = [];
         let lastIndex = 0;
         let match: RegExpExecArray | null;
 
         while ((match = MENTION_REGEX.exec(value)) !== null) {
-          // Skip tag patterns — handled by tag remark plugin
+          // Reserved labels handled by their own remark plugins.
           if (match[1] === 'tag') continue;
-          // Skip video patterns — handled by video remark plugin
           if (match[1] === 'video') continue;
-          // Skip audio patterns — handled by audio remark plugin
           if (match[1] === 'audio') continue;
-          // Skip toc patterns — handled by toc remark plugin
           if (match[1] === 'toc') continue;
 
-          // Add text before the match
           if (match.index > lastIndex) {
             newNodes.push({
               type: 'text',
@@ -174,7 +149,6 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
             } as UnistNode);
           }
 
-          // Add the mention node
           newNodes.push({
             type: 'mention',
             label: match[1],
@@ -184,7 +158,6 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
           lastIndex = match.index + match[0].length;
         }
 
-        // Add any remaining text after the last match
         if (lastIndex < value.length) {
           newNodes.push({
             type: 'text',
@@ -192,7 +165,6 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
           } as UnistNode);
         }
 
-        // Replace the original node with the new nodes
         if (newNodes.length > 0) {
           parent.children.splice(index, 1, ...newNodes);
           return [SKIP, index + newNodes.length];
@@ -202,17 +174,12 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
   };
 });
 
-// 2. Input rule to detect "@" and trigger search
-// Store the view reference when the plugin is created
 const editorViewRef: EditorView | null = null;
 
 export const mentionInputRule = $inputRule(() => {
-  // Create a custom InputRule that captures the view
-  // Match @ followed by any alphanumeric characters, hyphens, or underscores (no spaces in capture group)
   const rule = new InputRule(/@([a-zA-Z0-9-_]*)$/, (_state, match, start, end) => {
     const query = match[1] || '';
 
-    // Get view from global reference
     const view = editorViewRef || (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
 
     if (view) {
@@ -224,14 +191,13 @@ export const mentionInputRule = $inputRule(() => {
       });
     }
 
-    // Don't modify the document yet - let the popup handle insertion
+    // Defer the actual insertion to the popup so the user's selection can still be cancelled.
     return null;
   });
 
   return rule;
 });
 
-// 3. View for rendering mention chips using React
 class MentionNodeView implements NodeView {
   dom: HTMLElement;
   node: Node;
@@ -246,19 +212,17 @@ class MentionNodeView implements NodeView {
     this.getPos = getPos;
     this.destroyed = false;
 
-    // Create wrapper element
     this.dom = document.createElement('span');
     this.dom.className = 'mention-wrapper';
     this.dom.style.cursor = 'pointer';
     this.dom.style.display = 'inline-block';
     this.dom.contentEditable = 'false';
 
-    // Handle click navigation - use mousedown to catch before ProseMirror selection
+    // Capture-phase mousedown intercepts before ProseMirror's own selection handling.
     this.dom.addEventListener('mousedown', (e: MouseEvent) => {
-      // Only handle left clicks
       if (e.button !== 0) return;
 
-      // Let interactive elements (expand/collapse buttons) handle their own events
+      // Let interactive descendants (expand/collapse buttons) handle their own events.
       const target = e.target as HTMLElement;
       if (target.closest('button')) return;
 
@@ -267,28 +231,22 @@ class MentionNodeView implements NodeView {
       e.stopImmediatePropagation();
 
       const { urn } = this.node.attrs as { urn: string };
-      // Prefer resolved URL from search index (handles nested routes like tasks)
+      // Index-resolved URL handles nested routes (e.g. tasks under projects); urnToPath is the fallback.
       const path = getMentionUrl(urn) || getResolvedUrl(urn) || urnToPath(urn);
 
       if (path === '#') return;
 
-      // Cmd/Ctrl + Click opens in new tab
       if (e.metaKey || e.ctrlKey) {
         openInNewTab(path);
       } else {
         navigateTo(path);
       }
-    }, true); // Use capture phase to intercept before ProseMirror
+    }, true);
 
-    // Mount React component
     this.root = createRoot(this.dom);
     this.render();
   }
 
-  /**
-   * Replace this mention node with an inline media block (image, video, or audio).
-   * Called from the MentionChip when the user clicks "Embed" in the hover preview.
-   */
   handleReplaceWithMedia = (mediaType: 'image' | 'video' | 'audio', url: string, title: string) => {
     const pos = this.getPos();
     if (pos === undefined) return;
@@ -311,10 +269,8 @@ class MentionNodeView implements NodeView {
 
     if (!mediaNode) return;
 
-    // Delete the inline mention node first
     const tr = state.tr.delete(pos, pos + this.node.nodeSize);
 
-    // Resolve position to find the parent paragraph
     const mappedPos = tr.mapping.map(pos);
     const $pos = tr.doc.resolve(mappedPos);
 
@@ -324,10 +280,8 @@ class MentionNodeView implements NodeView {
       const parentEnd = $pos.after(1);
 
       if (parentNode.textContent.trim() === '') {
-        // Paragraph is empty after removing mention -- replace with media block
         tr.replaceWith(parentStart, parentEnd, mediaNode);
       } else {
-        // Paragraph has other content -- insert media block after it
         tr.insert(parentEnd, mediaNode);
       }
     }
@@ -336,14 +290,11 @@ class MentionNodeView implements NodeView {
   };
 
   render(selected = false) {
-    // Don't render if already destroyed
     if (this.destroyed) return;
 
     const { urn, label } = this.node.attrs as { urn: string; label: string };
 
-    // Wrap with Redux Provider since this React root is outside the main app tree.
-    // MentionDisplayBridge supplies the user's mentionDisplay setting via context;
-    // live state falls back to the module-level emitter inside useMentionState.
+    // This React root lives outside the main app tree, so it needs its own Provider; MentionDisplayBridge supplies the display setting.
     const mentionElement = React.createElement(MentionChip, {
       urn,
       label,
@@ -351,7 +302,6 @@ class MentionNodeView implements NodeView {
       onReplaceWithMedia: this.handleReplaceWithMedia,
     });
 
-    // Get store from storeRef - should always be available at render time
     const store = getStoreRef();
     if (store) {
       this.root.render(
@@ -361,8 +311,6 @@ class MentionNodeView implements NodeView {
         }),
       );
     } else {
-      // Store not yet initialized - render without provider
-      // This should rarely happen in practice
       console.warn('Store not initialized when rendering MentionChip');
       this.root.render(mentionElement);
     }
@@ -391,8 +339,7 @@ class MentionNodeView implements NodeView {
   }
 
   stopEvent(event: Event) {
-    // Block mouse events so our click handler works,
-    // but let keyboard events through for arrow-key navigation
+    // Swallow mouse events so our capture-phase click handler runs, but let keys through for arrow-key navigation.
     return event instanceof MouseEvent;
   }
 }
@@ -401,14 +348,9 @@ export const mentionView = $view(mentionNode, () => (node: Node, view: EditorVie
   new MentionNodeView(node, view, getPos)
 );
 
-// Export all plugins as a single array
-// Note: View is captured in CrepeEditor.tsx after editor creation
-// The remark plugin must come first to parse [[[label|urn]]] before other processing
-// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
+// The remark plugin runs first so `[[[label|urn]]]` is parsed before other processing. $remark returns a tuple, hence the spread.
 export const mentionPlugins = [...mentionRemarkPlugin, mentionNode, mentionInputRule, mentionView];
 
-// Re-export components and hooks for use in other features
-// Chip components now live in shared @/components/mention/ with live state support
 export { MentionChip, MentionChipBasic, MentionChipCompact } from '@/components/mention';
 export { MentionPreview } from '@/components/mention';
 export { MentionSearch } from '@/components/editor/plugins/mention/MentionSearch';

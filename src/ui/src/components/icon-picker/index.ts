@@ -1,10 +1,3 @@
-/**
- * Icon Picker - Public Exports
- *
- * A shared icon picker component for selecting Phosphor icons or emojis.
- */
-
-// Main component
 export { IconPicker } from '@/components/icon-picker/IconPicker';
 
 export type { IconValue, NoteIcon } from '@/components/icon-picker/iconConstants';
@@ -19,7 +12,6 @@ export {
     isValidIconName,
 } from '@/components/icon-picker/iconConstants';
 
-// Utilities
 export {
     renderIcon,
     getIconByName,

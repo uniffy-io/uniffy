@@ -1,10 +1,3 @@
-/**
- * PersonalAnalyticsWidget - Activity sparkline chart for the last 14 days
- *
- * Shows a simple area chart of user activity (notes, files, tasks)
- * with a summary text line.
- */
-
 import { useMemo } from 'react';
 import { ChartLine } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';

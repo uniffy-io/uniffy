@@ -1,14 +1,3 @@
-/**
- * CalendarPage - Main calendar page component
- *
- * This is the entry point for the Calendar feature.
- * It renders the three-panel layout with sidebar, calendar grid, and detail panel.
- *
- * Supports two routes:
- * - /calendar - Shows the calendar view
- * - /calendar/:eventId - Shows the calendar with a specific event selected and detail panel open
- */
-
 import { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -32,7 +21,7 @@ export function CalendarPage() {
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-  // Track if we've handled the URL eventId to prevent duplicate fetches
+  // Guards against re-fetching when the same eventId stays in the URL.
   const handledEventIdRef = useRef<string | null>(null);
   const {
     isEventModalOpen,
@@ -43,52 +32,46 @@ export function CalendarPage() {
     eventModalPrefill,
   } = useAppSelector((state) => state.calendarUi);
 
-  // Get selected event for dynamic document title
   const events = useAppSelector((state) => state.calendar.events);
   const selectedEvent = selectedEventId ? events[selectedEventId] : null;
   const pageTitle = selectedEvent?.title || 'Calendar';
   useDocumentTitle(pageTitle);
 
-  // Keyboard shortcut for toggling sidebar (global shortcut)
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
-  // Fetch categories when the page loads or organization changes
   useEffect(() => {
     if (!currentOrganizationId) return;
 
     dispatch(fetchCategories());
   }, [dispatch, currentOrganizationId]);
 
-  // Handle eventId from URL (e.g., /calendar/:eventId from URN mentions)
+  // /calendar/:eventId opens an event from a URN mention.
   useEffect(() => {
     if (!currentOrganizationId || !eventId) return;
     if (handledEventIdRef.current === eventId) return;
 
     handledEventIdRef.current = eventId;
 
-    // Select the event to open the detail panel
     dispatch(selectEvent(eventId));
 
-    // Fetch the full event data
     dispatch(fetchEvent(eventId))
       .unwrap()
       .then((event) => {
-        // Navigate the calendar to the event's date so it's visible
+        // Snap the calendar to the event's date so the selection is visible.
         const eventDate = toDateString(new Date(event.startTime));
         if (eventDate !== currentDate) {
           dispatch(setCurrentDate(eventDate));
         }
       })
       .catch(() => {
-        // Event not found or error - the detail panel will handle showing an error
+        // Detail panel surfaces fetch errors.
       });
   }, [dispatch, eventId, currentOrganizationId, currentDate]);
 
-  // Fetch events when the current date changes or on initial load
   useEffect(() => {
     if (!currentOrganizationId) return;
 
@@ -116,7 +99,6 @@ export function CalendarPage() {
         />
       </div>
 
-      {/* Quick Event Creation Modal */}
       <QuickEventModal
         isOpen={isEventModalOpen}
         onClose={() => dispatch(closeEventModal())}
@@ -129,19 +111,16 @@ export function CalendarPage() {
           : undefined}
       />
 
-      {/* Add Category Modal */}
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => dispatch(closeAddCategoryModal())}
       />
 
-      {/* Create Template Modal */}
       <CreateTemplateModal
         isOpen={isCreateTemplateModalOpen}
         onClose={() => dispatch(closeCreateTemplateModal())}
       />
 
-      {/* Event Editor Modal (double-click or edit button) */}
       {isEditingEventOpen && selectedEvent && (
         <EventEditor
           event={selectedEvent}

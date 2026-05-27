@@ -2,7 +2,6 @@ import { useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 
 export function Home() {
-  // Home/dashboard page - shows just "Uniffy" (no suffix)
   useDocumentTitle();
   const { user } = useAppSelector((state) => state.auth);
 
@@ -14,9 +13,8 @@ export function Home() {
           Welcome back, {user?.fullName || user?.username}. Here's an overview of your workspace.
         </p>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Quick Stats / Cards */}
         <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="tracking-tight text-sm font-medium">Notes</h3>
@@ -43,7 +41,6 @@ export function Home() {
           </p>
         </div>
 
-        {/* Placeholder for other stats */}
         <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="tracking-tight text-sm font-medium">Messages</h3>
@@ -67,7 +64,6 @@ export function Home() {
         </div>
       </div>
       
-      {/* Recent Activity or Content */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="col-span-4 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
           <div className="flex flex-col space-y-1.5 p-6">

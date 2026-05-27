@@ -1,12 +1,4 @@
-/**
- * URN Preview Hook
- *
- * Thin per-component wrapper around the batched resolver in
- * `@/components/mention/useBatchedSubjectResolver`. The actual
- * fetch coalescing, cache, and resolveUrns RPC live there;
- * this hook only owns the per-consumer { preview, isLoading,
- * error } state.
- */
+/** Per-component wrapper around the batched resolver in `useBatchedSubjectResolver`; only owns local `{ preview, isLoading, error }`. */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';

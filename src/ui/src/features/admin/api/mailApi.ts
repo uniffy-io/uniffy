@@ -1,9 +1,3 @@
-/**
- * Mail admin API
- *
- * ConnectRPC client wrapper for per-org SMTP configuration and test send.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import {

@@ -1,28 +1,14 @@
-/**
- * Filter Chip Component
- *
- * Displays an active search filter as a removable chip.
- */
-
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 
 interface FilterChipProps {
-    /** Filter label to display */
     label: string;
-    /** Callback when remove button is clicked */
     onRemove: () => void;
-    /** Optional icon to display before label */
     icon?: React.ReactNode;
-    /** Visual variant for different filter types */
     variant?: 'default' | 'exact';
-    /** Additional CSS classes */
     className?: string;
 }
 
-/**
- * A removable chip displaying an active filter.
- */
 export function FilterChip({ label, onRemove, icon, variant = 'default', className }: FilterChipProps) {
     const variantStyles = {
         default: {

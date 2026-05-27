@@ -1,9 +1,4 @@
-/**
- * RenameAgentChatDialog - Set or clear the user's custom name for an agent chat.
- *
- * The auto-generated `name` is preserved on the server; clearing the override
- * (empty input) restores the default agent name on every surface.
- */
+/** Set/clear the user's customName for an agent chat; empty restores the server-generated default. */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

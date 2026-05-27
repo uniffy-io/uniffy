@@ -1,9 +1,3 @@
-/**
- * Invitations admin API
- *
- * ConnectRPC client wrapper for invite-by-email RPCs on OrganizationsService.
- */
-
 import { createClient } from '@connectrpc/connect';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { unaryTransport } from '@/config/api';

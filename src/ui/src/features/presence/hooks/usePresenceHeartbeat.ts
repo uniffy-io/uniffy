@@ -4,17 +4,13 @@ import { presenceApi } from '@/features/presence/api/presenceApi';
 import { fetchBulkPresence } from '@/features/presence/store/presenceThunks';
 import { PresenceStatus } from '@uniffy/proto/presence/v1/presence_pb';
 
-const HEARTBEAT_INTERVAL_MS = 60_000; // 60 seconds
-const IDLE_TIMEOUT_MS = 5 * 60_000; // 5 minutes
-const ACTIVITY_THROTTLE_MS = 30_000; // Throttle activity detection
+// Heartbeat tuned so the backend stale-presence GC marks offline within 2x without
+// over-spamming SetPresence. Idle threshold matches typical "away" UX on chat apps.
+const HEARTBEAT_INTERVAL_MS = 60_000;
+const IDLE_TIMEOUT_MS = 5 * 60_000;
+const ACTIVITY_THROTTLE_MS = 30_000;
 
-/**
- * App-wide presence heartbeat hook.
- *
- * Sends periodic heartbeats and tracks user activity for
- * automatic online/away transitions. Should be called once
- * in a top-level component (e.g. AppHeader).
- */
+/** Call once at the top of the tree (e.g. AppHeader). */
 export function usePresenceHeartbeat() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
@@ -36,7 +32,7 @@ export function usePresenceHeartbeat() {
                     client: 'web',
                 });
             } catch {
-                // Non-fatal - presence is best-effort
+                // best-effort
             }
         },
         [organizationId],
@@ -47,7 +43,6 @@ export function usePresenceHeartbeat() {
             clearTimeout(idleTimerRef.current);
         }
 
-        // If currently away, send online when activity resumes
         if (isAwayRef.current) {
             isAwayRef.current = false;
             sendPresence(PresenceStatus.ONLINE);
@@ -62,11 +57,9 @@ export function usePresenceHeartbeat() {
     useEffect(() => {
         if (!isAuthenticated || !organizationId) return;
 
-        // Send initial online presence
         sendPresence(PresenceStatus.ONLINE);
 
-        // Fetch own presence (including custom status from DB) to
-        // populate the store after page refresh / initial load.
+        // Rehydrate own custom status from DB after page refresh.
         if (userId) {
             dispatch(
                 fetchBulkPresence({
@@ -76,7 +69,6 @@ export function usePresenceHeartbeat() {
             );
         }
 
-        // Start heartbeat interval
         heartbeatRef.current = setInterval(() => {
             const status = isAwayRef.current
                 ? PresenceStatus.AWAY
@@ -84,10 +76,8 @@ export function usePresenceHeartbeat() {
             sendPresence(status);
         }, HEARTBEAT_INTERVAL_MS);
 
-        // Start idle timer
         resetIdleTimer();
 
-        // Throttled activity handler
         const handleActivity = () => {
             const now = Date.now();
             if (now - lastActivityRef.current < ACTIVITY_THROTTLE_MS) return;
@@ -95,38 +85,33 @@ export function usePresenceHeartbeat() {
             resetIdleTimer();
         };
 
-        // Track user activity
         const events = ['mousemove', 'keydown', 'scroll', 'touchstart'] as const;
         for (const event of events) {
             window.addEventListener(event, handleActivity, { passive: true });
         }
 
-        // Handle visibility change (tab hide/show)
         const handleVisibility = () => {
             if (document.hidden) {
-                // Tab hidden - will naturally go away via idle timeout
+                // Hidden tabs drift to away via the idle timer.
             } else {
-                // Tab visible again
                 handleActivity();
             }
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
-        // Handle tab close - best effort offline signal
+        // sendBeacon is fire-and-forget on tab close; TTL on the server side handles cleanup either way.
         const handleUnload = () => {
             if (!organizationId) return;
-            // Use sendBeacon for reliability on tab close
             const url = '/presence.v1.PresenceService/SetPresence';
             try {
                 navigator.sendBeacon(url);
             } catch {
-                // Best effort - TTL will handle cleanup
+                // best-effort
             }
         };
         window.addEventListener('beforeunload', handleUnload);
 
         return () => {
-            // Cleanup
             if (heartbeatRef.current) {
                 clearInterval(heartbeatRef.current);
                 heartbeatRef.current = null;

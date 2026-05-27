@@ -225,14 +225,12 @@ export const joinChannel = createAsyncThunk<
     }
     hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
-    // Add to channel list (user wasn't a member before)
     const existing = getState().chatChannels.channels.find(c => c.id === channelId);
     if (existing) {
       dispatch(updateChannel(plain));
     } else {
       dispatch(addChannel(plain));
     }
-    // Set active and fetch messages for the newly joined channel
     dispatch(setActiveChannel(channelId));
     dispatch(fetchMessages({ channelId }));
     return plain;
@@ -304,8 +302,7 @@ export const fetchMessages = createAsyncThunk<
     });
     const messages = response.messages.map(messageToPlain);
 
-    // Single batched RPC instead of N parallel ListAttachments calls
-    // (a 50-message channel used to fan out 50 round-trips on open).
+    // One batched RPC; a 50-message channel previously fanned out 50 round-trips.
     if (messages.length > 0) {
       try {
         const batch = await attachmentsApi.batchListAttachments({
@@ -340,7 +337,7 @@ export const fetchMessages = createAsyncThunk<
     if (params.beforeId) {
       dispatch(prependMessages({ channelId: params.channelId, messages }));
     } else {
-      // Compute unread separator position before marking as read
+      // Compute unread separator before marking the channel as read.
       const state = getState();
       const channel = state.chatChannels.channels.find(
         (c) => c.id === params.channelId
@@ -358,12 +355,9 @@ export const fetchMessages = createAsyncThunk<
 
       dispatch(setMessages({ channelId: params.channelId, messages }));
 
-      // Re-hydrate any live agent approval cards that survived process
-      // restart in Valkey but got dropped from Redux by the reload. Fire
-      // and forget — a failure here should never block the channel open.
+      // Re-hydrate any pending agent approval cards still live in Valkey (24h TTL) but dropped from Redux on reload.
       dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
 
-      // Mark channel as read when opening it (not when paginating)
       const lastMessage = messages[messages.length - 1];
       if (lastMessage) {
         dispatch(markChannelRead({
@@ -404,7 +398,7 @@ export const sendMessage = createAsyncThunk<
       return rejectWithValue('Failed to send message');
     }
     const plain = messageToPlain(response.message);
-    // Append to channel messages (streaming will also deliver it, but this ensures immediate display)
+    // Append eagerly for immediate display; the stream will also deliver it.
     if (!params.rootId) {
       dispatch(appendMessage({ channelId: params.channelId, message: plain }));
     }
@@ -526,7 +520,6 @@ export const addReaction = createAsyncThunk<
   const currentUserId = state.auth.user?.id ?? '';
 
   try {
-    // Optimistic update - channel messages
     dispatch(addReactionToMessage({
       channelId: params.channelId,
       messageId: params.messageId,
@@ -535,7 +528,6 @@ export const addReaction = createAsyncThunk<
       currentUserId,
     }));
 
-    // Optimistic update - thread messages
     dispatch(addReactionToThreadMessage({
       messageId: params.messageId,
       emoji: params.emoji,
@@ -550,7 +542,6 @@ export const addReaction = createAsyncThunk<
       emoji: params.emoji,
     });
   } catch (error) {
-    // Rollback optimistic updates
     dispatch(removeReactionFromMessage({
       channelId: params.channelId,
       messageId: params.messageId,
@@ -578,7 +569,6 @@ export const removeReaction = createAsyncThunk<
   const currentUserId = state.auth.user?.id ?? '';
 
   try {
-    // Optimistic update - channel messages
     dispatch(removeReactionFromMessage({
       channelId: params.channelId,
       messageId: params.messageId,
@@ -587,7 +577,6 @@ export const removeReaction = createAsyncThunk<
       currentUserId,
     }));
 
-    // Optimistic update - thread messages
     dispatch(removeReactionFromThreadMessage({
       messageId: params.messageId,
       emoji: params.emoji,
@@ -602,7 +591,6 @@ export const removeReaction = createAsyncThunk<
       emoji: params.emoji,
     });
   } catch (error) {
-    // Rollback optimistic updates
     dispatch(addReactionToMessage({
       channelId: params.channelId,
       messageId: params.messageId,
@@ -667,13 +655,7 @@ export const fetchThreadMessages = createAsyncThunk<
   }
 });
 
-/**
- * Resolve the thread root for a given message. Handles three cases:
- * - Message is already loaded in the channel as a reply → returns its rootId.
- * - Message is a thread root with replies → returns its own id.
- * - Message is not loaded → fetches from server to determine rootId.
- * Also ensures the root message is in the channel messages store so ThreadPanel can render it.
- */
+/** Resolve the thread root for a message; ensures the root is loaded so ThreadPanel can render it. */
 export const resolveThreadForMessage = createAsyncThunk<
   { rootMessageId: string; targetMessageId: string } | null,
   { channelId: string; messageId: string },
@@ -786,9 +768,7 @@ export const markChannelRead = createAsyncThunk<
       channelId: params.channelId,
       lastReadMessageId: params.lastReadMessageId,
     });
-    // Backend cascades chat-sourced notifications to read in the same
-    // request. Mirror that locally so the bell panel updates without
-    // waiting for a refetch or stream tick.
+    // Backend cascades chat-sourced notifications; mirror locally so the bell updates without a refetch.
     dispatch(
       markNotificationsReadBySource(
         `urn:uniffy:content:CHAT:${params.channelId}`,
@@ -886,7 +866,6 @@ export const reorderCategoriesThunk = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.reorderCategories({ organizationId, categoryIds });
-    // Refresh to get updated positions
     dispatch(fetchCategories());
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to reorder categories');
@@ -901,7 +880,6 @@ export const createCategoryThunk = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.createCategory({ organizationId, name });
-    // Refresh the full category list to get the new one with proper position
     dispatch(fetchCategories());
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to create category');
@@ -971,8 +949,7 @@ export const updateChannelThunk = createAsyncThunk<
     description?: string;
     categoryId?: string;
     originalCategoryId?: string;
-    // When set, replaces the channel's manual tag set on the server.
-    // Empty array clears all manual tags. Omit to leave tags untouched.
+    /** When set, replaces the channel's manual tag set; empty array clears, omit to leave alone. */
     tagIds?: string[];
   },
   { state: RootState; rejectValue: string }
@@ -989,7 +966,6 @@ export const updateChannelThunk = createAsyncThunk<
     if (!response.channel) {
       return rejectWithValue('Failed to update channel');
     }
-    // Move category if changed
     if (params.categoryId !== params.originalCategoryId) {
       await chatApi.moveChannelToCategory({
         organizationId,
@@ -999,7 +975,7 @@ export const updateChannelThunk = createAsyncThunk<
     }
     hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
-    // Apply categoryId from our params since the updateChannel response may not reflect the move
+    // updateChannel response may not reflect the category move; carry it through from params.
     if (params.categoryId !== params.originalCategoryId) {
       plain.categoryId = params.categoryId ?? null;
     }
@@ -1156,10 +1132,7 @@ export const initializeChat = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >('chat/initialize', async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
   try {
-    // Load channels, categories, unread counts, and agents in parallel.
-    // Agents power DM sidebar avatars, typing indicators, and the @-mention
-    // / new-DM pickers — fetched here so chat-only users never see empty
-    // agent state.
+    // Load channels, categories, unread counts, and agents in parallel; agents power DM avatars and pickers.
     await Promise.all([
       dispatch(fetchChannels()).unwrap(),
       dispatch(fetchCategories()).unwrap(),
@@ -1168,14 +1141,12 @@ export const initializeChat = createAsyncThunk<
       dispatch(fetchAgents()).unwrap().catch(() => {}),
     ]);
 
-    // Set active channel from URL or default to first
     const state = getState();
     const channels = state.chatChannels.channels;
     const targetChannelId = initialChannelId ?? channels[0]?.id;
 
     if (targetChannelId) {
       dispatch(setActiveChannel(targetChannelId));
-      // If a specific message is targeted, fetch around it; otherwise fetch latest
       dispatch(fetchMessages({
         channelId: targetChannelId,
         aroundId: messageId,
@@ -1207,15 +1178,7 @@ export const respondToAgentConfirmation = createAsyncThunk<
   }
 });
 
-/**
- * Restore synthetic confirmation-request cards after a page reload.
- *
- * The approval state itself lives in Valkey (ApprovalStore, TTL 24h). The
- * synthetic message rows that render the card live only in Redux, so a
- * reload mid-flight drops them. We call this on channel mount and append
- * one synthetic row per pending approval, mirroring the shape the
- * AGENT_CONFIRMATION_REQUESTED stream event would have injected.
- */
+/** Re-inject synthetic approval cards on channel mount; live in Valkey but Redux drops on reload. */
 export const fetchChannelPendingApprovals = createAsyncThunk<
   void,
   { channelId: string },

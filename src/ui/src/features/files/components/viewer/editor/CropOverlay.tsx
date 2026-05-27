@@ -1,10 +1,3 @@
-/**
- * Crop Overlay Component
- *
- * Interactive crop selection overlay with drag and resize handles.
- * Allows users to select a region of the image to crop.
- */
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/shared/utils/cn';
 import type { CropRect } from '@/features/files/store/imageEditorSlice';
@@ -48,7 +41,6 @@ export function CropOverlay({
     const [startRect, setStartRect] = useState<CropRect | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
 
-    // Initialize crop rect to full area if not set
     useEffect(() => {
         if (isActive && !cropRect && containerWidth > 0 && containerHeight > 0) {
             // Start with a centered rectangle covering 80% of the image
@@ -60,7 +52,6 @@ export function CropOverlay({
         }
     }, [isActive, cropRect, containerWidth, containerHeight, onCropChange]);
 
-    // Handle mouse down on overlay to start new selection
     const handleOverlayMouseDown = useCallback(
         (e: React.MouseEvent) => {
             if (!isActive || !overlayRef.current) return;
@@ -79,7 +70,6 @@ export function CropOverlay({
         [isActive, onCropChange]
     );
 
-    // Handle mouse down on resize handle
     const handleHandleMouseDown = useCallback(
         (e: React.MouseEvent, handle: ResizeHandle) => {
             e.stopPropagation();
@@ -93,7 +83,6 @@ export function CropOverlay({
         [cropRect]
     );
 
-    // Handle mouse move
     useEffect(() => {
         if (!isDragging) return;
 

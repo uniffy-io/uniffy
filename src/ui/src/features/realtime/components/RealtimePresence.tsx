@@ -38,11 +38,7 @@ interface Participant {
   isSelf: boolean;
 }
 
-/**
- * Compact avatar stack of active realtime editors on this doc, sourced
- * from the doc's `Awareness`. `includeSelf` prepends the local user with
- * a faint outline so a single-tab editor still sees the affordance.
- */
+/** Avatar stack of active editors on this doc. `includeSelf` prepends the local user with a faint outline so single-tab editors still see the affordance. */
 export function RealtimePresence({
   awareness,
   max = 4,
@@ -57,9 +53,8 @@ export function RealtimePresence({
 
   const participants = useMemo<Participant[]>(() => {
     const out: Participant[] = [];
-    // Dedupe by user.id so a user with N tabs (or a peer still in
-    // awareness' GC window after refresh) shows up exactly once.
-    // Anonymous peers (no user.id) are deduped by clientId only.
+    // Dedupe by user.id so multiple tabs / GC-window stragglers collapse to one row.
+    // Anonymous peers are deduped by clientId.
     const seenUserIds = new Set<string>();
     if (includeSelf && (localUserName || localUserColor)) {
       if (localUserId) seenUserIds.add(localUserId);

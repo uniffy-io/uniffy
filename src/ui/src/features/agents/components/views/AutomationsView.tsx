@@ -39,17 +39,15 @@ import {
 } from "@/features/agents/store/agentCronThunks";
 import type { SerializedCronTask } from "@/features/agents/store/agentCronThunks";
 
-// Schedule builder types and helpers
-
 type Frequency = "minutes" | "hourly" | "daily" | "weekly" | "monthly";
 
 interface ScheduleConfig {
     frequency: Frequency;
-    minuteInterval: number;    // for "minutes": every N minutes
-    hour: number;              // 0-23, for daily/weekly/monthly
-    minute: number;            // 0-59, for daily/weekly/monthly
-    weekdays: number[];        // 0=Sun..6=Sat, for weekly
-    monthDay: number;          // 1-31, for monthly
+    minuteInterval: number;
+    hour: number;
+    minute: number;
+    weekdays: number[];
+    monthDay: number;
 }
 
 const DEFAULT_SCHEDULE: ScheduleConfig = {
@@ -135,11 +133,9 @@ function cronToHuman(cron: string): string {
     if (parts.length !== 5) return cron;
     const [min, hour, dom, , dow] = parts;
 
-    // Every N minutes
     if (min.startsWith("*/") && hour === "*") {
         return `Every ${min.slice(2)} minutes`;
     }
-    // Every hour
     if (hour === "*" && dom === "*" && dow === "*") {
         return min === "0" ? "Every hour" : `Every hour at :${min.padStart(2, "0")}`;
     }
@@ -147,16 +143,13 @@ function cronToHuman(cron: string): string {
     const timeStr = formatHour(Number(hour))
         + (Number(min) > 0 ? `:${min.padStart(2, "0")}` : "");
 
-    // Monthly
     if (dom !== "*" && dow === "*") {
         return `${ordinalSuffix(Number(dom))} of every month at ${timeStr}`;
     }
 
-    // Weekly
     if (dow !== "*" && dom === "*") {
         const dayNames = dow.split(",").map((d) => {
             const num = Number(d);
-            // Handle ranges like 1-5
             if (d.includes("-")) {
                 const [start, end] = d.split("-").map(Number);
                 if (start === 1 && end === 5) return "weekdays";
@@ -174,7 +167,6 @@ function cronToHuman(cron: string): string {
         return `${dayNames.join(", ")} at ${timeStr}`;
     }
 
-    // Daily
     if (dom === "*" && dow === "*") {
         return `Daily at ${timeStr}`;
     }
@@ -201,8 +193,6 @@ function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): strin
     return new Date(ts.seconds * 1000).toISOString();
 }
 
-// Schedule Builder component
-
 function ScheduleBuilder({
     value,
     onChange,
@@ -228,7 +218,6 @@ function ScheduleBuilder({
 
     return (
         <div className="space-y-4">
-            {/* Frequency */}
             <div>
                 <label className="block text-sm text-muted-foreground mb-1.5">Repeat</label>
                 <Select<string>
@@ -238,7 +227,6 @@ function ScheduleBuilder({
                 />
             </div>
 
-            {/* Minutes interval */}
             {value.frequency === "minutes" && (
                 <div>
                     <label className="block text-sm text-muted-foreground mb-1.5">Interval</label>
@@ -250,7 +238,6 @@ function ScheduleBuilder({
                 </div>
             )}
 
-            {/* Time picker for hourly/daily/weekly/monthly */}
             {value.frequency !== "minutes" && (
                 <div>
                     <label className="block text-sm text-muted-foreground mb-1.5">
@@ -283,7 +270,6 @@ function ScheduleBuilder({
                 </div>
             )}
 
-            {/* Weekday picker */}
             {value.frequency === "weekly" && (
                 <div>
                     <label className="block text-sm text-muted-foreground mb-1.5">Days</label>
@@ -333,7 +319,6 @@ function ScheduleBuilder({
                 </div>
             )}
 
-            {/* Month day picker */}
             {value.frequency === "monthly" && (
                 <div>
                     <label className="block text-sm text-muted-foreground mb-1.5">Day of month</label>
@@ -345,7 +330,6 @@ function ScheduleBuilder({
                 </div>
             )}
 
-            {/* Preview */}
             <div className="bg-muted/50 border border-border rounded-lg px-3 py-2">
                 <span className="text-xs text-muted-foreground">Schedule: </span>
                 <span className="text-sm font-medium text-foreground">
@@ -355,8 +339,6 @@ function ScheduleBuilder({
         </div>
     );
 }
-
-// Sub-components
 
 function TaskStatusBadge({ task }: { task: SerializedCronTask }) {
     if (!task.isEnabled && task.consecutiveFailures >= task.maxConsecutiveFailures) {
@@ -448,7 +430,6 @@ function CreateTaskForm({
                 />
             </div>
 
-            {/* Schedule builder */}
             <div className="bg-card border border-border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-foreground mb-3">Schedule</h3>
                 <ScheduleBuilder value={schedule} onChange={setSchedule} />
@@ -481,7 +462,6 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
     const logs = useAppSelector(selectCronRunLogs(taskId));
     const [loaded, setLoaded] = useState(false);
 
-    // Check if any logs are still pending (worker hasn't finished yet)
     const hasPending = useMemo(
         () => logs.some((log) => log.status === "pending"),
         [logs],
@@ -493,7 +473,6 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
         setLoaded(true);
     }, [taskId, dispatch]);
 
-    // Poll for updates while a run is pending
     useEffect(() => {
         if (!hasPending) return;
         const interval = setInterval(() => {
@@ -597,7 +576,6 @@ function TaskDetailPanel({
         setTriggering(true);
         try {
             await dispatch(triggerCronTask(task.id)).unwrap();
-            // Refresh logs to show the pending entry
             dispatch(fetchCronRunLogs({ taskId: task.id }));
         } finally {
             setTriggering(false);
@@ -608,7 +586,6 @@ function TaskDetailPanel({
 
     return (
         <>
-            {/* Header */}
             <div className="px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -670,9 +647,7 @@ function TaskDetailPanel({
                 </div>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* Details card */}
                 <div className="bg-card border border-border rounded-lg p-4 space-y-3">
                     <h3 className="font-medium text-foreground">Task Details</h3>
                     <div className="flex items-center justify-between">
@@ -729,7 +704,6 @@ function TaskDetailPanel({
                     )}
                 </div>
 
-                {/* Prompt card */}
                 <div className="bg-card border border-border rounded-lg p-4">
                     <h3 className="font-medium text-foreground mb-2">Prompt</h3>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -737,7 +711,6 @@ function TaskDetailPanel({
                     </p>
                 </div>
 
-                {/* Run history */}
                 <div className="bg-card border border-border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -752,8 +725,6 @@ function TaskDetailPanel({
     );
 }
 
-// Main view
-
 export function AutomationsView({ agentId }: { agentId?: string } = {}) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -762,8 +733,7 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
     const loading = useAppSelector(selectCronLoading);
     const agents = useAppSelector((state) => state.agents.agents);
 
-    // When top-level (no agentId prop), selection is URL-driven via subId.
-    // When embedded inside AgentsView, selection is local state.
+    // Top-level: selection is URL-driven (subId). Embedded: selection is local state.
     const isTopLevel = !agentId;
     const [localSelectedTaskId, setLocalSelectedTaskId] = useState<string | null>(null);
     const selectedTaskId = isTopLevel ? (subId ?? null) : localSelectedTaskId;
@@ -781,7 +751,6 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
 
     const [showCreateForm, setShowCreateForm] = useState(false);
 
-    // Filter tasks by agent when scoped to a specific agent
     const tasks = useMemo(
         () => (agentId ? allTasks.filter((t) => t.agentId === agentId) : allTasks),
         [allTasks, agentId],
@@ -808,8 +777,6 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
         () => (selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null),
         [selectedTaskId, tasks],
     );
-
-    // No auto-select - URL drives selection for top-level, empty state shown otherwise.
 
     const handleDelete = async (taskId: string) => {
         await dispatch(deleteCronTask(taskId)).unwrap();
@@ -963,7 +930,6 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
                 maxSize={400}
                 className="border-r border-border bg-card overflow-hidden"
             >
-            {/* Left sidebar - task list */}
             <div className="h-full flex flex-col">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                     <span className="font-semibold text-foreground">Scheduled Tasks</span>
@@ -1063,7 +1029,6 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
 
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
-            {/* Right panel */}
             <Panel id="automations-detail" minSize={400}>
             <div className="h-full flex flex-col overflow-hidden">
                 {showCreateForm ? (

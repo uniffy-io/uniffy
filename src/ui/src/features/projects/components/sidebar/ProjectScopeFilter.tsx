@@ -1,8 +1,3 @@
-/**
- * ProjectScopeFilter - Compact nav items for filtering projects by scope
- * Matches the Calendar EventScopeFilter pattern with hover-to-expand animation
- */
-
 import { Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";

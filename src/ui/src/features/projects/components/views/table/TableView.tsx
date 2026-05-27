@@ -1,16 +1,3 @@
-/**
- * TableView - Spreadsheet-style table view for tasks
- *
- * Features:
- * - Column headers with field names
- * - Click to sort columns
- * - Inline cell editing (double-click)
- * - Row selection with multi-select
- * - Grouping by field with collapsible sections
- * - Keyboard navigation (arrow keys, Enter to edit, Space to select)
- * - Drag-and-drop row reordering
- */
-
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -705,7 +692,6 @@ export function TableView() {
     dispatch(openDetailPanel());
   }, [dispatch]);
 
-  // ===== Drag-and-Drop =====
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const dropIndicatorRef = useRef<DropIndicator | null>(null);
@@ -1231,7 +1217,6 @@ export function TableView() {
   );
 }
 
-// ===== Bulk Edit Toolbar =====
 
 interface BulkEditToolbarProps {
   count: number;
@@ -1353,7 +1338,6 @@ function BulkEditToolbar({
   );
 }
 
-// ===== Table Row =====
 
 interface TableRowProps {
   task: Task;
@@ -1593,7 +1577,6 @@ function TableRow({
   );
 }
 
-// ===== Editable Field Cell =====
 
 interface EditableFieldCellProps {
   task: Task;
@@ -1726,7 +1709,6 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
   }
 }
 
-// ===== Inline Editors =====
 
 function InlineTextInput({ initialValue, type, onSave, onCancel }: {
   initialValue: string;
@@ -2099,7 +2081,6 @@ function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
   );
 }
 
-// ===== Task Id Cell =====
 
 function TaskIdCell({ task }: { task: Task }) {
   const project = useAppSelector(selectCurrentProject);
@@ -2115,7 +2096,6 @@ function TaskIdCell({ task }: { task: Task }) {
   );
 }
 
-// ===== Task Title Cell =====
 
 function TaskTitleCell({ task }: { task: Task }) {
   return (
@@ -2125,7 +2105,6 @@ function TaskTitleCell({ task }: { task: Task }) {
   );
 }
 
-// ===== Display Components =====
 
 interface FieldCellProps {
   task: Task;
@@ -2310,7 +2289,6 @@ function resolveSystemColumnWidth(
   return defaultWidth;
 }
 
-// ===== Columns Visibility Menu =====
 
 interface ColumnsVisibilityMenuProps {
   projectId: string;
@@ -2379,7 +2357,6 @@ function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: Col
   );
 }
 
-// ===== Column Resize Handle =====
 
 interface ColumnResizeHandleProps {
   columnKey: string;

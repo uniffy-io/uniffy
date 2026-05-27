@@ -1,18 +1,9 @@
-/**
- * Admin Feature
- *
- * Provides organization administration functionality including
- * permission defaults, group management, and member management.
- */
-
 export { adminApi } from '@/features/admin/api/adminApi';
 
-// Components
 export { PermissionDefaultsSection } from '@/features/admin/components/permissions/PermissionDefaultsSection';
 export { GroupsSection } from '@/features/admin/components/groups/GroupsSection';
 export { MembersSection } from '@/features/admin/components/members/MembersSection';
 
-// Hooks
 export {
     useAdminAccess,
     usePermissionDefaults,
@@ -27,7 +18,6 @@ export {
     getDomainTypeLabel,
 } from '@/features/admin/hooks/useAdminHooks';
 
-// Store - Slice & Actions
 export {
     adminReducer,
     clearAdminError,
@@ -49,7 +39,6 @@ export type {
     SerializedDomainAdminInfo,
 } from '@/features/admin/store/adminSlice';
 
-// Store - Thunks
 export {
     fetchPermissionDefaults,
     updatePermissionDefaults,

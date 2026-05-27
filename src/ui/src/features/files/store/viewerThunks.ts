@@ -1,11 +1,3 @@
-/**
- * Viewer Async Thunks
- *
- * Redux async thunks for file viewer operations.
- * Enables opening the viewer from anywhere (search, mentions, etc.)
- * without requiring the files domain to be loaded first.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import { openViewer, setFileData, setError } from '@/features/files/store/viewerSlice';
@@ -14,8 +6,7 @@ import type { RootState, AppDispatch } from '@/app/store';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { File } from '@uniffy/proto/files/v1/files_pb';
 
-// Helper to convert proto File to serializable plain object
-// (duplicated from filesThunks to avoid circular dependency)
+// Duplicated from filesThunks to avoid a circular import.
 const fileToPlain = (file: File): SerializedFile => ({
     id: file.id,
     urn: file.urn,
@@ -69,16 +60,7 @@ const fileToPlain = (file: File): SerializedFile => ({
     } : undefined,
 });
 
-/**
- * Open the file viewer and fetch file data if not already in store.
- *
- * This thunk enables opening files from search, mentions, or other contexts
- * without navigating to the files domain. It:
- * 1. Opens the viewer modal immediately (shows loading state)
- * 2. Checks if file data exists in files.files store
- * 3. If not, fetches the file data from the API
- * 4. Updates the viewer with the file data
- */
+/** Opens the viewer immediately (loading state) and lazily fetches the file when it isn't already cached in the files slice. */
 export const openViewerWithFetch = createAsyncThunk<
     void,
     { fileId: string },
@@ -91,16 +73,13 @@ export const openViewerWithFetch = createAsyncThunk<
         return rejectWithValue('No organization selected');
     }
 
-    // Check if file already exists in files store
     const existingFile = state.files.files[fileId];
 
     if (existingFile) {
-        // File exists in store - open viewer with it directly
         dispatch(openViewer({ fileId, fileData: existingFile }));
         return;
     }
 
-    // File not in store - open viewer (loading state) and fetch
     dispatch(openViewer({ fileId }));
 
     try {

@@ -1,7 +1,3 @@
-/**
- * Search feature exports
- */
-
 export { searchApi } from '@/features/search/api/searchApi';
 export { useSearch, parseSearchQuery, hasActiveFilters } from '@/features/search/hooks/useSearch';
 export type { ParsedQuery, SearchFilters } from '@/features/search/hooks/useSearch';
@@ -21,7 +17,6 @@ export { SpotlightSearch } from '@/features/search/components/SpotlightSearch';
 export { FilterChip } from '@/features/search/components/FilterChip';
 export { FilterHints, FilterHintsCompact } from '@/features/search/components/FilterHints';
 
-// Query parser utilities
 export {
   getTypeFilterLabel,
   getTypeFilterKeyword,
@@ -32,5 +27,4 @@ export {
   FILTER_HINTS,
 } from '@/features/search/utils/queryParser';
 
-// Text utilities
 export { stripMarkdown, stripMarkdownAndTruncate } from '@/features/search/utils/stripMarkdown';

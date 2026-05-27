@@ -1,4 +1,3 @@
-// Store
 export {
     presenceReducer,
     updatePresence,
@@ -18,12 +17,10 @@ export {
     clearCustomStatusThunk,
 } from '@/features/presence/store/presenceThunks';
 
-// Hooks
 export { usePresence } from '@/features/presence/hooks/usePresence';
 export { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
 export { usePresenceHeartbeat } from '@/features/presence/hooks/usePresenceHeartbeat';
 export { useBulkPresence } from '@/features/presence/hooks/useBulkPresence';
 
-// Components
 export { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
 export { CustomStatusPicker } from '@/features/presence/components/CustomStatusPicker';

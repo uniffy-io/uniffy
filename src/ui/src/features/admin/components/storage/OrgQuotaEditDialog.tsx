@@ -1,10 +1,3 @@
-/**
- * Organization Quota Edit Dialog
- *
- * Form for editing the organization storage quota configuration.
- * Uses the shared Modal, Input, and ByteInput components.
- */
-
 import { useState, useEffect } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

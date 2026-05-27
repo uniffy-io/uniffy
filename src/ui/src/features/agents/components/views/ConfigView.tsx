@@ -340,8 +340,6 @@ export function ConfigView() {
         [selectedKeyId, providerKeysMap],
     );
 
-    // No auto-select - URL drives selection, empty state shown otherwise.
-
     const handleValidate = async (keyId: string) => {
         setValidatingKeyId(keyId);
         try {

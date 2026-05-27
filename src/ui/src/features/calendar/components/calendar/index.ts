@@ -1,7 +1,3 @@
-/**
- * Calendar grid components exports
- */
-
 export { TimeColumn } from '@/features/calendar/components/calendar/TimeColumn';
 export { DayHeader, DayHeadersRow } from '@/features/calendar/components/calendar/DayHeader';
 export { GridLines } from '@/features/calendar/components/calendar/GridLines';

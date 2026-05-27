@@ -4,13 +4,7 @@ import { AuthShell } from '@/features/auth/components/AuthShell';
 import { BRAND_ACCENT, BRAND_ACCENT_RING } from '@/features/auth/constants';
 import { mfaUnaryClient } from '@/features/mfa/api/mfaApi';
 
-/**
- * Pulls the message out of a Connect error like
- * ``[unauthenticated] Invalid verification code`` so the inline banner
- * shows the server's text instead of the generic "session expired"
- * mapping that ``friendlyErrorMessage`` would emit for the unauth
- * status code.
- */
+/** Strips the `[status]` prefix so the inline banner shows the server text, not `friendlyErrorMessage`'s generic unauth copy. */
 function verifyErrorMessage(raw: string): string {
     const match = raw.match(/^\[[a-z_]+\]\s*(.+)$/i);
     const body = (match ? match[1] : raw).trim();
@@ -41,12 +35,6 @@ interface LoginMfaStepProps {
     onCancel: () => void;
 }
 
-/**
- * Second login step rendered when ``Login`` returns an
- * ``mfa_challenge`` variant. Visually matches the rest of the auth
- * surface: same shell, same black submit button, same error banner,
- * same animation timings.
- */
 export function LoginMfaStep({ challengeToken, onVerified, onCancel }: LoginMfaStepProps) {
     const [method, setMethod] = useState<'totp' | 'recovery_code'>('totp');
     const [code, setCode] = useState('');

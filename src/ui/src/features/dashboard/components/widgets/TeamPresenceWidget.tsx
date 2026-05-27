@@ -1,10 +1,3 @@
-/**
- * TeamPresenceWidget - Shows online team members
- *
- * Displays a SubjectAvatarStack for compact view with expandable list.
- * Uses PresenceIndicator on each avatar.
- */
-
 import { useMemo, useState } from 'react';
 import { Users, CaretDown, CaretUp } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';

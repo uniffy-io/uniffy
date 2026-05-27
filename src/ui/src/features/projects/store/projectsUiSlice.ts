@@ -9,38 +9,21 @@ export const projectsUiSlice = createSlice({
   name: "projectsUi",
   initialState: initialProjectsUiState,
   reducers: {
-    // ===== View State =====
-
-    /**
-     * Set the current view mode (table/board/roadmap)
-     */
     setViewMode: (state, action: PayloadAction<ViewType>) => {
       state.viewMode = action.payload;
     },
 
-    /**
-     * Set the current view configuration ID
-     */
     setCurrentView: (state, action: PayloadAction<string | null>) => {
       state.currentViewId = action.payload;
     },
 
-    // ===== Selection State =====
-
-    /**
-     * Select a single task
-     */
     selectTask: (state, action: PayloadAction<string | null>) => {
       state.selectedTaskId = action.payload;
-      // Clear multi-select when single-selecting
       if (!state.isMultiSelectMode) {
         state.selectedTaskIds = action.payload ? [action.payload] : [];
       }
     },
 
-    /**
-     * Toggle task selection (for multi-select)
-     */
     toggleTaskSelection: (state, action: PayloadAction<string>) => {
       const taskId = action.payload;
       const index = state.selectedTaskIds.indexOf(taskId);
@@ -49,26 +32,18 @@ export const projectsUiSlice = createSlice({
       } else {
         state.selectedTaskIds.splice(index, 1);
       }
-      // Update primary selection
       state.selectedTaskId = state.selectedTaskIds.length > 0
         ? state.selectedTaskIds[state.selectedTaskIds.length - 1]
         : null;
     },
 
-    /**
-     * Set multi-select mode
-     */
     setMultiSelectMode: (state, action: PayloadAction<boolean>) => {
       state.isMultiSelectMode = action.payload;
       if (!action.payload) {
-        // Keep only the primary selection when exiting multi-select
         state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
       }
     },
 
-    /**
-     * Select all tasks (from a given list of IDs)
-     */
     selectAllTasks: (state, action: PayloadAction<string[]>) => {
       state.selectedTaskIds = action.payload;
       state.isMultiSelectMode = action.payload.length > 1;
@@ -77,193 +52,106 @@ export const projectsUiSlice = createSlice({
         : null;
     },
 
-    /**
-     * Clear all task selections
-     */
     clearSelection: (state) => {
       state.selectedTaskId = null;
       state.selectedTaskIds = [];
       state.isMultiSelectMode = false;
     },
 
-    // ===== Panel State =====
-
-    /**
-     * Open the task detail panel
-     */
     openDetailPanel: (state) => {
       state.isDetailPanelOpen = true;
     },
 
-    /**
-     * Close the task detail panel
-     */
     closeDetailPanel: (state) => {
       state.isDetailPanelOpen = false;
     },
 
-    /**
-     * Toggle the task detail panel
-     */
     toggleDetailPanel: (state) => {
       state.isDetailPanelOpen = !state.isDetailPanelOpen;
     },
 
-    /**
-     * Set detail view mode (sidebar panel or centered modal)
-     */
     setDetailViewMode: (state, action: PayloadAction<"sidebar" | "modal">) => {
       state.detailViewMode = action.payload;
     },
 
-    /**
-     * Set detail panel width
-     */
     setDetailPanelWidth: (state, action: PayloadAction<number>) => {
       state.detailPanelWidth = action.payload;
     },
 
-    /**
-     * Toggle the sidebar
-     */
     toggleSidebar: (state) => {
       state.isSidebarOpen = !state.isSidebarOpen;
     },
 
-    /**
-     * Set sidebar width
-     */
     setSidebarWidth: (state, action: PayloadAction<number>) => {
       state.sidebarWidth = action.payload;
     },
 
-    // ===== Modal State =====
-
-    /**
-     * Open create project modal
-     */
     openCreateProjectModal: (state) => {
       state.isCreateProjectModalOpen = true;
     },
 
-    /**
-     * Close create project modal
-     */
     closeCreateProjectModal: (state) => {
       state.isCreateProjectModalOpen = false;
     },
 
-    /**
-     * Open edit project modal for a specific project
-     */
     openEditProjectModal: (state, action: PayloadAction<string>) => {
       state.editProjectId = action.payload;
     },
 
-    /**
-     * Close edit project modal
-     */
     closeEditProjectModal: (state) => {
       state.editProjectId = null;
     },
 
-    /**
-     * Open create task modal
-     */
     openCreateTaskModal: (state) => {
       state.isCreateTaskModalOpen = true;
     },
 
-    /**
-     * Close create task modal
-     */
     closeCreateTaskModal: (state) => {
       state.isCreateTaskModalOpen = false;
     },
 
-    /**
-     * Open field type picker
-     */
     openFieldPicker: (state) => {
       state.isFieldPickerOpen = true;
     },
 
-    /**
-     * Close field type picker
-     */
     closeFieldPicker: (state) => {
       state.isFieldPickerOpen = false;
     },
 
-    /**
-     * Open view configuration
-     */
     openViewConfig: (state) => {
       state.isViewConfigOpen = true;
     },
 
-    /**
-     * Close view configuration
-     */
     closeViewConfig: (state) => {
       state.isViewConfigOpen = false;
     },
 
-    /**
-     * Set the field being edited
-     */
     setEditingField: (state, action: PayloadAction<string | null>) => {
       state.editingFieldId = action.payload;
     },
 
-    // ===== Drag State =====
-
-    /**
-     * Start dragging a task
-     */
     startDrag: (state, action: PayloadAction<DragState>) => {
       state.dragState = action.payload;
     },
 
-    /**
-     * End dragging
-     */
     endDrag: (state) => {
       state.dragState = null;
     },
 
-    // ===== Inline Editing =====
-
-    /**
-     * Set the cell being edited (taskId + fieldId) or null to clear
-     */
     setEditingCell: (state, action: PayloadAction<{ taskId: string; fieldId: string } | null>) => {
       state.editingCell = action.payload;
     },
 
-    // ===== Keyboard Navigation =====
-
-    /**
-     * Set the focused cell for keyboard navigation
-     */
     setFocusedCell: (state, action: PayloadAction<{ taskId: string; fieldId: string } | null>) => {
       state.focusedCell = action.payload;
     },
 
-    // ===== Table View State =====
-
-    /**
-     * Set all column widths for a project
-     */
     setColumnWidths: (state, action: PayloadAction<{ projectId: string; widths: Record<string, number> }>) => {
       if (!state.columnWidths) state.columnWidths = {};
       state.columnWidths[action.payload.projectId] = action.payload.widths;
       saveColumnWidths(state.columnWidths);
     },
 
-    /**
-     * Update a single column width for a project
-     */
     setColumnWidth: (state, action: PayloadAction<{ projectId: string; fieldId: string; width: number }>) => {
       const { projectId, fieldId, width } = action.payload;
       if (!state.columnWidths) state.columnWidths = {};
@@ -274,9 +162,6 @@ export const projectsUiSlice = createSlice({
       saveColumnWidths(state.columnWidths);
     },
 
-    /**
-     * Hide a column in the table view for a project
-     */
     hideColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
       const { projectId, fieldId } = action.payload;
       if (!state.hiddenColumns) state.hiddenColumns = {};
@@ -287,9 +172,6 @@ export const projectsUiSlice = createSlice({
       }
     },
 
-    /**
-     * Show a previously hidden column in the table view for a project
-     */
     showColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
       const { projectId, fieldId } = action.payload;
       if (!state.hiddenColumns) state.hiddenColumns = {};
@@ -301,62 +183,34 @@ export const projectsUiSlice = createSlice({
       }
     },
 
-    // ===== Scope Filter =====
-
-    /**
-     * Set the project scope filter (all/personal/organization)
-     */
     setProjectScope: (state, action: PayloadAction<ProjectScope>) => {
       state.projectScope = action.payload;
     },
 
-    // ===== Filter and Sort State =====
-
-    /**
-     * Set active filter configuration
-     */
     setFilterConfig: (state, action: PayloadAction<FilterConfig | null>) => {
       state.activeFilterConfig = action.payload;
     },
 
-    /**
-     * Set active sort configuration
-     */
     setSortConfig: (state, action: PayloadAction<SortConfig | null>) => {
       state.activeSortConfig = action.payload;
     },
 
-    /**
-     * Set group by field
-     */
     setGroupBy: (state, action: PayloadAction<string | null>) => {
       state.activeGroupByFieldId = action.payload;
     },
 
-    /**
-     * Toggle the table view's outline (hierarchical subtask) rendering.
-     */
     setTableOutlineEnabled: (state, action: PayloadAction<boolean>) => {
       state.tableOutlineEnabled = action.payload;
     },
 
-    /**
-     * Set search query
-     */
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
 
-    /**
-     * Set sprint quick filter
-     */
     setSprintFilter: (state, action: PayloadAction<string | null>) => {
       state.sprintFilter = action.payload;
     },
 
-    /**
-     * Set task type quick filter
-     */
     setTaskTypeFilter: (state, action: PayloadAction<string | null>) => {
       state.taskTypeFilter = action.payload;
     },
@@ -369,65 +223,35 @@ export const projectsUiSlice = createSlice({
       state.inEpicFilter = action.payload;
     },
 
-    // ===== Roadmap State =====
-
-    /**
-     * Set roadmap start date
-     */
     setRoadmapStartDate: (state, action: PayloadAction<string>) => {
       state.roadmapStartDate = action.payload;
     },
 
-    /**
-     * Set roadmap zoom level
-     */
     setRoadmapZoom: (state, action: PayloadAction<"day" | "week" | "month">) => {
       state.roadmapZoomLevel = action.payload;
     },
 
-    // ===== Autosave State =====
-
-    /**
-     * Set autosave state for a task
-     */
     setTaskSaving: (state, action: PayloadAction<{ taskId: string; isSaving: boolean }>) => {
       state.autosave.isSaving[action.payload.taskId] = action.payload.isSaving;
     },
 
-    /**
-     * Set last saved timestamp for a task
-     */
     setTaskLastSaved: (state, action: PayloadAction<{ taskId: string; timestamp: string }>) => {
       state.autosave.lastSaved[action.payload.taskId] = action.payload.timestamp;
       state.autosave.hasChanges[action.payload.taskId] = false;
     },
 
-    /**
-     * Mark task as having unsaved changes
-     */
     setTaskHasChanges: (state, action: PayloadAction<{ taskId: string; hasChanges: boolean }>) => {
       state.autosave.hasChanges[action.payload.taskId] = action.payload.hasChanges;
     },
 
-    // ===== Reset =====
-
-    // ===== Undo/Redo =====
-
-    /**
-     * Push an entry to the undo stack (clears redo stack)
-     */
     pushUndo: (state, action: PayloadAction<HistoryEntry>) => {
       state.undoStack.push(action.payload);
-      // Limit stack to 50 entries
       if (state.undoStack.length > 50) {
         state.undoStack.shift();
       }
       state.redoStack = [];
     },
 
-    /**
-     * Pop from undo stack and push to redo stack
-     */
     popUndo: (state) => {
       const entry = state.undoStack.pop();
       if (entry) {
@@ -435,9 +259,6 @@ export const projectsUiSlice = createSlice({
       }
     },
 
-    /**
-     * Pop from redo stack and push to undo stack
-     */
     popRedo: (state) => {
       const entry = state.redoStack.pop();
       if (entry) {
@@ -445,17 +266,11 @@ export const projectsUiSlice = createSlice({
       }
     },
 
-    /**
-     * Clear all history
-     */
     clearHistory: (state) => {
       state.undoStack = [];
       state.redoStack = [];
     },
 
-    /**
-     * Reset UI state (e.g., on logout)
-     */
     resetUiState: () => initialProjectsUiState,
   },
 });

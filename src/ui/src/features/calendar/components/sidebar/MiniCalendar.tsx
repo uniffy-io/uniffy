@@ -1,7 +1,3 @@
-/**
- * MiniCalendar - Small month calendar for date selection
- */
-
 import { useState, useMemo, useEffect } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -22,13 +18,11 @@ export function MiniCalendar() {
   const dispatch = useAppDispatch();
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
 
-  // Local state for mini calendar month (synced with main view)
   const [displayMonth, setDisplayMonth] = useState(() => parseISO(currentDate));
 
-  // Sync mini calendar with main calendar when currentDate changes
+  // Track main calendar's month so navigation in either view stays in sync.
   useEffect(() => {
     const newDate = parseISO(currentDate);
-    // Only update if the month/year changed - this is a valid sync pattern for derived state
     if (
       newDate.getMonth() !== displayMonth.getMonth() ||
       newDate.getFullYear() !== displayMonth.getFullYear()
@@ -58,7 +52,6 @@ export function MiniCalendar() {
     dispatch(setCurrentDate(dateString));
   };
 
-  // Group days into weeks
   const weeks = useMemo(() => {
     const result: typeof monthColumns[] = [];
     for (let i = 0; i < monthColumns.length; i += 7) {
@@ -69,7 +62,6 @@ export function MiniCalendar() {
 
   return (
     <div className="bg-muted rounded-lg p-3">
-      {/* Month header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-foreground">{monthTitle}</span>
         <div className="flex items-center gap-1">
@@ -90,7 +82,6 @@ export function MiniCalendar() {
         </div>
       </div>
 
-      {/* Day headers */}
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_HEADERS.map((day) => (
           <div
@@ -102,7 +93,6 @@ export function MiniCalendar() {
         ))}
       </div>
 
-      {/* Calendar grid */}
       <div className="space-y-1">
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 gap-1">

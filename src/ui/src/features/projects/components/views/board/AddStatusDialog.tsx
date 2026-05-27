@@ -1,7 +1,3 @@
-/**
- * AddStatusDialog - Popover for creating a new status option
- */
-
 import { useState, useRef, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";

@@ -1,10 +1,3 @@
-/**
- * PortfolioPage - Cross-project overview showing all projects with health stats.
- *
- * Displays a card grid with per-project stats: completion bar, task counts,
- * overdue indicators, time tracking, and health badges.
- */
-
 import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, Clock, WarningCircle } from "@phosphor-icons/react";
@@ -54,7 +47,7 @@ function computeProjectStats(tasks: Task[]): ProjectStats {
   let totalSpent = 0;
 
   for (const task of tasks) {
-    if (task.parentId) continue; // Only count root tasks
+    if (task.parentId) continue;
     totalTasks++;
     if (task.completedAt) completedTasks++;
     if (!task.completedAt && task.dueDate && isOverdue(task.dueDate)) overdueTasks++;
@@ -79,12 +72,10 @@ export function PortfolioPage() {
   const projects = useAppSelector(selectProjects);
   const allTasks = useAppSelector(selectAllTasks);
 
-  // Fetch projects on mount
   useEffect(() => {
     dispatch(fetchProjects());
   }, [dispatch]);
 
-  // Fetch tasks for each project
   useEffect(() => {
     for (const project of projects) {
       dispatch(fetchProjectTasks(project.id));
@@ -92,7 +83,6 @@ export function PortfolioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when project list changes
   }, [projects.length, dispatch]);
 
-  // Compute stats per project
   const projectCards = useMemo(() => {
     const tasksByProject: Record<string, Task[]> = {};
     for (const task of allTasks) {
@@ -117,7 +107,6 @@ export function PortfolioPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground">Portfolio</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -125,7 +114,6 @@ export function PortfolioPage() {
         </p>
       </div>
 
-      {/* Card grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {projectCards.map(({ project, stats }) => {
           const health = computeHealth(stats);
@@ -137,7 +125,6 @@ export function PortfolioPage() {
               className="border border-border rounded-lg p-4 hover:bg-muted/30 cursor-pointer transition-colors bg-card"
               onClick={() => navigate(`/projects/${project.id}`)}
             >
-              {/* Top row: icon + name + health badge */}
               <div className="flex items-center gap-3 mb-3">
                 <ProjectIcon
                   icon={project.icon}
@@ -157,7 +144,6 @@ export function PortfolioPage() {
                 </span>
               </div>
 
-              {/* Completion bar */}
               {stats.totalTasks > 0 && (
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-3">
                   <div
@@ -167,7 +153,6 @@ export function PortfolioPage() {
                 </div>
               )}
 
-              {/* Stats row */}
               <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                 <span>{stats.completedTasks}/{stats.totalTasks} done ({stats.completionPct}%)</span>
 

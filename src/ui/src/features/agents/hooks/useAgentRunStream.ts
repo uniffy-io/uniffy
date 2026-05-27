@@ -121,9 +121,7 @@ export function useAgentRunStream(
                 }
             } catch (err) {
                 if (controller.signal.aborted) return;
-                // The persisted run TTL has expired or the stream was already
-                // cleaned up. Drop the persisted run id silently and let the
-                // user start fresh - this is not a user-facing error.
+                // Persisted run TTL expired or stream already cleaned up - silently drop the id.
                 if (err instanceof ConnectError && err.code === Code.NotFound) {
                     dispatch(clearActiveRunId());
                     return;

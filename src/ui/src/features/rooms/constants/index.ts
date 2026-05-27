@@ -23,10 +23,6 @@ export const AMENITY_ICONS: Record<string, Icon> = {
   'Wheelchair Accessible': WheelchairMotion,
 };
 
-/**
- * Status colors for room operational status.
- * Uses Tailwind status colors (allowed exception per frontend.md).
- */
 export const ROOM_STATUS_STYLES: Record<string, { dot: string; bg: string }> = {
   active: {
     dot: 'bg-green-500',

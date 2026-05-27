@@ -1,13 +1,3 @@
-/**
- * Connected-network canvas used as the background for every auth surface.
- *
- * Renders a fixed "You" node on the dark left panel plus a slowly-growing
- * mesh of feature nodes (Note, File, Chat, ...) connected by lines and
- * traversed by gentle pulses. The mesh fades from white on the left
- * panel to near-black on the right so it stays legible across both
- * halves of the auth shell. The "You" node is draggable.
- */
-
 import { useCallback, useEffect, useRef } from 'react';
 
 const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Agent', 'Task', 'Event'];

@@ -11,13 +11,6 @@ interface NotFoundPageProps {
   compact?: boolean;
 }
 
-/**
- * Celestial Drift 404 page.
- *
- * Geometric fragments orbit around a massive typographic "404" centerpiece,
- * evoking a page that has drifted into the void between routes. CSS-only
- * ambient animations create depth through layered opacity and scale.
- */
 export function NotFoundPage({
   className,
   heading = 'Page not found',
@@ -35,7 +28,6 @@ export function NotFoundPage({
         className,
       )}
     >
-      {/* Ambient dot grid - very subtle texture */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{
@@ -45,34 +37,26 @@ export function NotFoundPage({
         }}
       />
 
-      {/* Floating geometric shapes - layered at different depths */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        {/* Large slow orbiters */}
         <div className="absolute top-[12%] left-[8%] h-32 w-32 rounded-full bg-primary/10 blur-sm animate-[drift-1_24s_ease-in-out_infinite]" />
         <div className="absolute top-[60%] right-[6%] h-40 w-40 rounded-3xl bg-primary/[0.12] blur-sm animate-[drift-2_28s_ease-in-out_infinite]" />
 
-        {/* Medium shapes */}
         <div className="absolute top-[20%] right-[18%] h-16 w-16 rounded-xl bg-primary/15 rotate-12 animate-[drift-3_18s_ease-in-out_infinite]" />
         <div className="absolute bottom-[22%] left-[14%] h-20 w-20 rounded-full bg-primary/[0.12] animate-[drift-1_22s_ease-in-out_infinite_reverse]" />
         <div className="absolute top-[45%] left-[5%] h-12 w-12 rounded-lg bg-primary/[0.18] -rotate-6 animate-[drift-2_16s_ease-in-out_infinite]" />
 
-        {/* Small accent fragments */}
         <div className="absolute top-[30%] right-[32%] h-6 w-6 rounded-md bg-primary/20 rotate-45 animate-[drift-3_14s_ease-in-out_infinite]" />
         <div className="absolute bottom-[35%] right-[24%] h-8 w-8 rounded-full bg-primary/[0.18] animate-[drift-1_12s_ease-in-out_infinite]" />
         <div className="absolute top-[68%] left-[28%] h-5 w-5 rounded-sm bg-primary/[0.22] -rotate-12 animate-[drift-2_10s_ease-in-out_infinite_reverse]" />
 
-        {/* Thin decorative lines */}
         <div className="absolute top-[38%] left-[20%] h-px w-24 bg-gradient-to-r from-transparent via-primary/30 to-transparent -rotate-12 animate-[drift-3_20s_ease-in-out_infinite]" />
         <div className="absolute bottom-[40%] right-[16%] h-px w-32 bg-gradient-to-r from-transparent via-primary/25 to-transparent rotate-6 animate-[drift-1_26s_ease-in-out_infinite_reverse]" />
 
-        {/* Ring outlines */}
         <div className="absolute top-[15%] right-[10%] h-24 w-24 rounded-full border border-primary/[0.12] animate-[drift-2_30s_ease-in-out_infinite]" />
         <div className="absolute bottom-[18%] left-[22%] h-14 w-14 rounded-full border border-primary/10 animate-[drift-3_20s_ease-in-out_infinite_reverse]" />
       </div>
 
-      {/* Main content */}
       <div className="relative z-10 flex flex-col items-center text-center">
-        {/* Giant 404 typography - background element */}
         <div
           className="select-none text-[8rem] leading-none font-black tracking-tighter text-primary/25 sm:text-[12rem] lg:text-[16rem]"
           aria-hidden="true"
@@ -80,9 +64,7 @@ export function NotFoundPage({
           404
         </div>
 
-        {/* Content overlay - positioned to overlap the 404 */}
         <div className="-mt-12 sm:-mt-16 lg:-mt-20">
-          {/* Accent bar */}
           <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-primary/40" />
 
           <h1 className="mb-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -114,7 +96,6 @@ export function NotFoundPage({
         </div>
       </div>
 
-      {/* Keyframe definitions */}
       <style>{`
         @keyframes drift-1 {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }

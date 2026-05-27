@@ -1,12 +1,4 @@
-/**
- * User Mention Preview Card
- *
- * Shows avatar with presence, name, email, custom status,
- * and message/profile actions. Uses emerald accent.
- *
- * Markup uses only inline elements so the card stays HTML-valid inside `<p>`.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   ArrowSquareOut,

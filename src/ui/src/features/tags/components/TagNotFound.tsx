@@ -1,14 +1,3 @@
-/**
- * <TagNotFound>
- *
- * 404 view for ``/tags/:slug`` when the slug does not resolve. Mirrors
- * the page-level error fallback styling: header + message + secondary
- * action that links back to the explorer index.
- *
- * Per spec the explorer never auto-creates a tag from the URL; if a
- * user lands on a removed slug, we offer "View all tags" instead.
- */
-
 import { Link } from 'react-router-dom';
 import { Tag as TagIcon, ArrowRight } from '@phosphor-icons/react';
 

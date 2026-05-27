@@ -1,11 +1,3 @@
-/**
- * DirectMessageListItem - DM row in the sidebar.
- *
- * Shows user avatar with presence, name, muted indicator, and unread badge.
- * For group DMs, shows participant count.
- * Supports right-click context menu for split view and notification settings.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import { SpeakerSlash, PencilSimple } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

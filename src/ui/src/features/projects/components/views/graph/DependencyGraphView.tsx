@@ -1,21 +1,3 @@
-/**
- * DependencyGraphView - Interactive canvas with pan/zoom showing all project tasks
- *
- * Features:
- * - Shows ALL root tasks (not just those with dependencies)
- * - Sprint swim-lane grouping when sprints exist
- * - Mouse wheel zoom toward cursor
- * - Click-and-drag pan
- * - Dependency edges with color-coded status
- *
- * Node colors:
- * - Red: active blocker (not completed, blocking other tasks, own deps done)
- * - Amber: blocked (has pending blockers, cannot proceed)
- * - Green: free (all own blockers completed, ready to work)
- * - Muted: completed
- * - Default card: neutral (no dependency relationships)
- */
-
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   ShareNetwork,

@@ -78,8 +78,6 @@ function formatTimestamp(ts?: { seconds: number; nanos: number }): string {
     return formatRelativeTime(date.toISOString());
 }
 
-// Importance bar
-
 function ImportanceBar({ value }: { value: number }) {
     const segments = 10;
     const filled = Math.round(value * segments);
@@ -98,8 +96,6 @@ function ImportanceBar({ value }: { value: number }) {
         </div>
     );
 }
-
-// Edit form
 
 interface EditState {
     content: string;
@@ -183,8 +179,6 @@ function MemoryEditForm({
         </div>
     );
 }
-
-// New memory form
 
 interface NewMemoryState {
     key: string;
@@ -302,8 +296,6 @@ function NewMemoryForm({
     );
 }
 
-// Memory row
-
 function MemoryRow({
     memory,
     onEdit,
@@ -399,8 +391,6 @@ function MemoryRow({
     );
 }
 
-// Main tab component
-
 export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
     const memoriesMap = useAppSelector(selectAllMemories);
@@ -413,7 +403,6 @@ export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
 
     const memories = useMemo(() => Object.values(memoriesMap), [memoriesMap]);
 
-    // Fetch memories when agent or filters change
     useEffect(() => {
         dispatch(
             fetchMemories({
@@ -500,7 +489,6 @@ export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
                 </p>
             </div>
 
-            {/* Controls row */}
             <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex-1 max-w-sm relative">
                     <MagnifyingGlass
@@ -537,7 +525,6 @@ export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
                 </button>
             </div>
 
-            {/* Create form */}
             {showCreateForm && (
                 <NewMemoryForm
                     onSubmit={handleCreate}
@@ -545,7 +532,6 @@ export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
                 />
             )}
 
-            {/* Memory list */}
             <div className="space-y-3">
                 {filteredMemories.map((memory) => (
                     <MemoryRow
@@ -560,7 +546,6 @@ export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
                 ))}
             </div>
 
-            {/* Empty state */}
             {filteredMemories.length === 0 && !loading && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                     <Brain

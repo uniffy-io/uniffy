@@ -1,9 +1,3 @@
-/**
- * Item Context Menu Component
- *
- * Right-click context menu for files and folders.
- */
-
 import { useEffect, useRef } from 'react';
 import {
     PencilSimple,

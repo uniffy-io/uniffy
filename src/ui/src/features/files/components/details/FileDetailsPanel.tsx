@@ -1,10 +1,3 @@
-/**
- * File Details Panel
- *
- * Right-side panel showing file information, metadata, and EXIF data.
- * Follows the same pattern as NotesMetadataPanel.
- */
-
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { setDetailsPanelTab, setDetailsPanelOpen } from '@/features/files/store/filesSlice';
 import type { DetailsPanelTab } from '@/features/files/store/filesSlice';

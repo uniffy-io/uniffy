@@ -1,10 +1,3 @@
-/**
- * RecentFilesWidget - Shows recently uploaded/accessed files
- *
- * Displays last 5 files with thumbnail (if image), filename, size, and date.
- * Uses useThumbnailUrl for authenticated image previews.
- */
-
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FolderSimple, ArrowRight } from '@phosphor-icons/react';

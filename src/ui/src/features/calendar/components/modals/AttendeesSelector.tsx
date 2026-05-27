@@ -24,7 +24,6 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
 
   return (
     <div className="space-y-2">
-      {/* Search */}
       <div className="relative">
         {isPickerOpen ? (
           <SubjectPicker
@@ -47,7 +46,6 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
         )}
       </div>
 
-      {/* Selected Attendees Chips */}
       {attendees.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
           {attendees.map((attendee) => {

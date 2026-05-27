@@ -1,10 +1,3 @@
-/**
- * Image Editor Component
- *
- * Main editor component that orchestrates all editing functionality.
- * Combines EditorToolbar, EditorCanvas, and SaveDialog.
- */
-
 import { useEffect, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { EditorCanvas } from '@/features/files/components/viewer/editor/EditorCanvas';
@@ -41,18 +34,15 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
         }
     }, [isEditing, isImageReady, startEditing]);
 
-    // Handle cancel - exit edit mode and close
     const handleCancel = useCallback(() => {
         editor.stopEditing();
         onClose();
     }, [editor, onClose]);
 
-    // Handle save button click - open save dialog
     const handleSaveClick = useCallback(() => {
         editor.openSaveDialog();
     }, [editor]);
 
-    // Handle save as new file
     const handleSaveAsNew = useCallback(
         async (filename: string, format: ImageFormat, quality: number) => {
             const success = await editor.saveAsNewFile(filename, format, quality);
@@ -64,7 +54,6 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
         [editor, onClose]
     );
 
-    // Handle save as new version
     const handleSaveAsVersion = useCallback(
         async (format: ImageFormat, quality: number) => {
             const success = await editor.saveAsNewVersion(format, quality);
@@ -109,7 +98,6 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
         { enabled: editor.isEditing && !editor.isSaving }
     );
 
-    // Show loading state while image is loading
     if (editor.imageLoading) {
         return (
             <div className="w-full h-full flex items-center justify-center">

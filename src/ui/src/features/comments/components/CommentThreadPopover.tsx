@@ -30,7 +30,6 @@ export function CommentThreadPopover({
     const [fullComment, setFullComment] = useState<SerializedComment>(comment);
     const [loading, setLoading] = useState(true);
 
-    // Fetch the full comment with replies
     const fetchFullComment = useCallback(async () => {
         if (!organizationId) return;
         try {
@@ -42,29 +41,26 @@ export function CommentThreadPopover({
                 setFullComment(serializeComment(response.comment));
             }
         } catch {
-            // Fall back to the comment from list (no replies)
+            // Fall through with the list-side comment (no replies).
         } finally {
             setLoading(false);
         }
     }, [organizationId, comment.id]);
 
-    // Fetch on mount
     useEffect(() => {
         fetchFullComment();
     }, [fetchFullComment]);
 
-    // Position: below the highlight, centered horizontally
     const top = anchorRect.bottom + 8 + window.scrollY;
     const left = Math.max(16, anchorRect.left + anchorRect.width / 2);
 
-    // Close on outside click
     useEffect(() => {
         const handleMouseDown = (e: MouseEvent) => {
             if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
                 onClose();
             }
         };
-        // Delay attaching to avoid the opening click from immediately closing
+        // Defer attach: the click that opens the popover would otherwise fire mousedown on document and close it.
         const timer = setTimeout(() => {
             document.addEventListener('mousedown', handleMouseDown);
         }, 0);
@@ -74,7 +70,6 @@ export function CommentThreadPopover({
         };
     }, [onClose]);
 
-    // Close on Escape
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -102,7 +97,6 @@ export function CommentThreadPopover({
             )}
             style={{ top, left }}
         >
-            {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <span className="text-xs font-medium text-muted-foreground">
                     Comment Thread
@@ -115,7 +109,6 @@ export function CommentThreadPopover({
                 </button>
             </div>
 
-            {/* Comment thread */}
             {loading ? (
                 <div className="flex items-center justify-center py-6">
                     <CircleNotch size={20} className="animate-spin text-muted-foreground" />

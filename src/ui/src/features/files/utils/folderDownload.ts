@@ -1,15 +1,9 @@
-/**
- * Folder Download Utility
- *
- * Recursively collects files from folders and builds path mappings
- * for preserving folder structure in zip archives.
- */
-
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 
 export interface FileWithPath {
     fileId: string;
-    path: string; // Full path including filename (e.g., "FolderA/SubFolder/file.txt")
+    /** Full archive path including filename (e.g. "Folder/Sub/file.txt"). */
+    path: string;
 }
 
 export interface FolderContents {
@@ -17,9 +11,6 @@ export interface FolderContents {
     totalCount: number;
 }
 
-/**
- * Find a node by ID in the tree structure.
- */
 function findNodeById(
     nodes: SerializedTreeNode[],
     nodeId: string
@@ -36,9 +27,6 @@ function findNodeById(
     return null;
 }
 
-/**
- * Recursively collect all subfolder IDs from a folder node.
- */
 function collectSubfolderIds(node: SerializedTreeNode): string[] {
     const ids: string[] = [];
     if (node.isFolder) {
@@ -54,9 +42,6 @@ function collectSubfolderIds(node: SerializedTreeNode): string[] {
     return ids;
 }
 
-/**
- * Build a path mapping for folders: folderId -> "ParentFolder/ChildFolder"
- */
 function buildFolderPathMap(
     nodes: SerializedTreeNode[],
     basePath: string = ''
@@ -78,24 +63,12 @@ function buildFolderPathMap(
     return pathMap;
 }
 
-/**
- * Interface for file data (minimal for path building).
- */
 interface FileInfo {
     id: string;
     filename: string;
     folderId?: string;
 }
 
-/**
- * Collect all files from selected folders recursively.
- * Uses the folder tree structure and files store to build proper paths.
- *
- * @param folderIds - Array of selected folder IDs
- * @param tree - The full folder tree structure
- * @param allFiles - All files from the store
- * @returns Files with their paths relative to folder structure
- */
 export function collectFilesFromFolders(
     folderIds: string[],
     tree: {
@@ -108,25 +81,20 @@ export function collectFilesFromFolders(
     const result: FileWithPath[] = [];
     const allNodes = [...tree.personal, ...tree.shared, ...tree.organization];
 
-    // For each selected folder, collect all files
     for (const folderId of folderIds) {
         const folderNode = findNodeById(allNodes, folderId);
         if (!folderNode || !folderNode.isFolder) continue;
 
-        // Get all subfolder IDs (including the folder itself)
         const allFolderIds = new Set(collectSubfolderIds(folderNode));
 
-        // Build path map starting from this folder
         const pathMap: Record<string, string> = {};
         pathMap[folderNode.id] = folderNode.name;
 
-        // Build paths for subfolders
         if (folderNode.children) {
             const childPaths = buildFolderPathMap(folderNode.children, folderNode.name);
             Object.assign(pathMap, childPaths);
         }
 
-        // Find files in any of these folders
         for (const file of allFiles) {
             if (file.folderId && allFolderIds.has(file.folderId)) {
                 const folderPath = pathMap[file.folderId] || folderNode.name;
@@ -141,17 +109,6 @@ export function collectFilesFromFolders(
     return result;
 }
 
-/**
- * Collect files from both selected files and folders.
- * Selected files are placed at the root level.
- * Folder contents preserve their hierarchy.
- *
- * @param fileIds - Directly selected file IDs
- * @param folderIds - Selected folder IDs to expand
- * @param tree - The full folder tree structure
- * @param allFiles - All files from the store (for folder contents and filename lookup)
- * @returns All files with their paths
- */
 export function collectAllDownloadFiles(
     fileIds: string[],
     folderIds: string[],
@@ -165,7 +122,6 @@ export function collectAllDownloadFiles(
     const result: FileWithPath[] = [];
     const addedFileIds = new Set<string>();
 
-    // Add directly selected files at root level
     for (const fileId of fileIds) {
         const file = allFiles.find(f => f.id === fileId);
         if (file) {
@@ -177,10 +133,8 @@ export function collectAllDownloadFiles(
         }
     }
 
-    // Add files from selected folders with their paths
     const folderFiles = collectFilesFromFolders(folderIds, tree, allFiles);
     for (const file of folderFiles) {
-        // Avoid duplicates if a file was also directly selected
         if (!addedFileIds.has(file.fileId)) {
             result.push(file);
             addedFileIds.add(file.fileId);
@@ -190,9 +144,6 @@ export function collectAllDownloadFiles(
     return result;
 }
 
-/**
- * Create a file info array from the files store.
- */
 export function createFileInfoArray(
     files: Record<string, { id: string; filename: string; folderId?: string }>
 ): FileInfo[] {

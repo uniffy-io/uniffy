@@ -1,7 +1,4 @@
-/**
- * Register a `beforeunload` listener while a recording or upload is in flight.
- * The browser shows its native confirm; we cannot change the message text.
- */
+/** `beforeunload` guard while a recording or upload is in flight; browser shows its native confirm (message text is not customizable). */
 
 import { useEffect } from 'react';
 import { useAppSelector } from '@/app/hooks';

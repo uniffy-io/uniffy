@@ -1,10 +1,3 @@
-/**
- * Text Viewer
- *
- * Displays text and code files with syntax highlighting.
- * Uses CodeMirror for read-only viewing.
- */
-
 import { useEffect, useRef, useState } from 'react';
 import { EditorView, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
@@ -55,7 +48,6 @@ export function TextViewer({ file }: TextViewerProps) {
         }
     }, [downloadError, dispatch]);
 
-    // Initialize CodeMirror
     useEffect(() => {
         if (!editorRef.current || content === null) return;
 
@@ -64,7 +56,6 @@ export function TextViewer({ file }: TextViewerProps) {
             viewRef.current.destroy();
         }
 
-        // Find language support based on filename
         const langDesc = LanguageDescription.matchFilename(languages, file.filename);
 
         const setupEditor = async () => {

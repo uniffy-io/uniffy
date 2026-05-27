@@ -1,9 +1,3 @@
-/**
- * Editor Toolbar Component
- *
- * Toolbar with editing tools: rotate, flip, crop, adjustments, undo/redo, save/cancel.
- */
-
 import {
     ArrowCounterClockwise,
     ArrowClockwise,

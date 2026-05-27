@@ -1,15 +1,6 @@
 /**
- * Module-level singleton that owns the MediaRecorder, the merged MediaStream,
- * and the `StreamingUploader`. Outside Redux because none of these objects are
- * serialisable. Thunks call into `start / pause / resume / stop / cancel`
- * and read the upload id back via the slice.
- *
- * Source / mic / tab-audio choices flow in via `start({ source, micDeviceId,
- * captureTabAudio })`. The recorder picker UI sets the slice; the thunk reads
- * the slice and hands the values down to this controller. Any audio source
- * may be denied or unavailable; recording continues with whatever survives.
- * Mic permission denial is silent (user knows they denied it); only screen
- * permission denial fails the recording.
+ * Module-level singleton owning the MediaRecorder, merged MediaStream, and StreamingUploader
+ * (non-serialisable, so outside Redux). Mic permission denial is silent; only screen denial fails the recording.
  */
 
 import { buildRecordingFilename } from '@/features/recording/utils/buildRecordingFilename';
@@ -138,12 +129,7 @@ class RecordingController {
 
         const recorder = new MediaRecorder(mergedStream, { mimeType });
         const containerMime = getContainerMimeType(mimeType);
-        // Filename is always `.mp4` regardless of which container the recorder
-        // picked. Brave / Chrome / Firefox produce VP9/Opus WebM bytes which a
-        // server-side worker transcodes to real H.264/AAC MP4 and atomically
-        // swaps `storage_key`. Committing to `.mp4` from Stop avoids visible
-        // jitter in `/files` and means QuickTime / Finder / iOS pick the right
-        // app once the swap completes.
+        // Filename is always `.mp4`: WebM bytes get transcoded server-side and `storage_key` swaps atomically.
         const filename = buildRecordingFilename('mp4');
         const uploader = new StreamingUploader({
             organizationId: config.organizationId,
@@ -212,14 +198,7 @@ class RecordingController {
         }
     }
 
-    /**
-     * Mute / unmute the microphone mid-recording. Flips `track.enabled`
-     * on every audio track of the mic stream; the merged audio
-     * destination keeps producing samples (silence) so the encoder
-     * doesn't notice and the resulting MP4 stays a single playable
-     * container. Tab audio (system audio from the captured surface) is
-     * NOT muted - only the user's mic.
-     */
+    /** Flips `track.enabled` on mic tracks; merged destination keeps producing silence so the encoder stays happy. Tab audio is not muted. */
     setMicMuted(muted: boolean): void {
         if (!this.micStream) return;
         for (const track of this.micStream.getAudioTracks()) {
@@ -253,9 +232,7 @@ class RecordingController {
         const mergedStream = this.mergedStream;
         const audioContext = this.audioContext;
 
-        // `MediaRecorder.stop()` is a no-op while paused on some browsers
-        // and can leave the encoder hanging - resume first so the final
-        // chunk flushes cleanly.
+        // `MediaRecorder.stop()` is a no-op while paused on some browsers; resume first so the final chunk flushes.
         if (recorder.state === 'paused') {
             try {
                 recorder.resume();

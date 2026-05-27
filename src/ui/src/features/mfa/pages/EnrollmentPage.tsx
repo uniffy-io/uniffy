@@ -10,13 +10,7 @@ import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
 
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 
-/**
- * Full-shell enrollment page rendered when ``Login`` returned
- * ``enrollment_required``. The user holds an enrollment-only token at
- * this point; the wizard exchanges it for a real session via
- * ``ConfirmEnrollment``. No "Not now" option -- policy says they must
- * enrol before going anywhere else.
- */
+/** Enrollment-required shell: the wizard exchanges the enrollment-only token for a real session. No "Not now". */
 export function EnrollmentPage() {
     useDocumentTitle('Two factor enrollment');
     const dispatch = useAppDispatch();

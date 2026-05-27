@@ -98,7 +98,7 @@ export const deleteSprint = createAsyncThunk(
     const organizationId = state.auth.currentOrganizationId;
     if (!organizationId) throw new Error("No organization selected");
 
-    // Find tasks in this sprint before deleting so we can update the frontend store
+    // Capture affected tasks before delete so the store can move them to backlog after.
     const tasks = state.projects.tasks as Record<string, Task>;
     const affectedTaskIds = Object.values(tasks)
       .filter((t) => t.sprintId === sprintId)
@@ -107,7 +107,6 @@ export const deleteSprint = createAsyncThunk(
     await projectsApi.deleteSprint(sprintId, organizationId);
     dispatch(removeSprint({ sprintId, projectId }));
 
-    // Move affected tasks to backlog in the frontend store
     if (affectedTaskIds.length > 0) {
       dispatch(bulkUpdateTasks({ ids: affectedTaskIds, changes: { sprintId: null } }));
     }

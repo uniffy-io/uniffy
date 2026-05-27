@@ -1,14 +1,10 @@
-/**
- * Appearance settings section for theme, accent color, and font.
- */
-
 import { Sun, Moon, Desktop, Check, CheckSquare, CalendarBlank, ArrowSquareOut } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/shared/utils/cn';
 import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
-// Predefined accent colors (quick picks)
+// Theme token cascade: accent color (HSL) layers on top of base palette and mode (light/dark/system).
 const ACCENT_COLORS = [
     { name: 'Blue', value: '217 91% 60%' },
     { name: 'Sky', value: '199 84% 50%' },
@@ -21,7 +17,6 @@ const ACCENT_COLORS = [
     { name: 'Amber', value: '38 92% 50%' },
 ];
 
-// Convert HSL string to hex for color input
 function hslToHex(hsl: string): string {
     const parts = hsl.split(' ');
     if (parts.length !== 3) return '#3c83f5';
@@ -58,7 +53,6 @@ function hslToHex(hsl: string): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-// Convert hex to HSL string for storage
 function hexToHsl(hex: string): string {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!result) return '217 91% 60%';
@@ -86,14 +80,12 @@ function hexToHsl(hex: string): string {
     return `${(h * 360).toFixed(1)} ${(s * 100).toFixed(1)}% ${(l * 100).toFixed(1)}%`;
 }
 
-// Font families
 const FONT_FAMILIES = [
     { id: 'inter', name: 'Inter', description: 'Clean and modern' },
     { id: 'geist', name: 'Geist', description: 'Vercel style' },
     { id: 'system', name: 'System', description: 'Native OS font' },
 ];
 
-// Editor mode options for notes
 const EDITOR_OPTIONS = [
     { id: 'crepe', name: 'Editor', description: 'Rich WYSIWYG editor with full formatting' },
     { id: 'markdown', name: 'Markdown', description: 'Raw markdown source with optional live preview' },
@@ -141,7 +133,6 @@ export function AppearanceSection() {
                 </p>
             </div>
 
-            {/* Theme mode */}
             <section className="space-y-4">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Theme</h2>
@@ -174,7 +165,6 @@ export function AppearanceSection() {
                 </div>
             </section>
 
-            {/* Mention Display */}
             <section className="space-y-4">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
@@ -210,7 +200,6 @@ export function AppearanceSection() {
                                 )}
                             </div>
 
-                            {/* Live preview */}
                             <div className="rounded-md border border-border/50 bg-muted/40 p-3">
                                 {id === 'expanded' ? (
                                     <MentionPreviewExpanded />
@@ -223,7 +212,6 @@ export function AppearanceSection() {
                 </div>
             </section>
 
-            {/* Accent color */}
             <section className="space-y-4">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Accent Color</h2>
@@ -232,7 +220,6 @@ export function AppearanceSection() {
                     </p>
                 </div>
 
-                {/* Color picker */}
                 <div className="flex items-center gap-4">
                     <div className="relative">
                         <input
@@ -260,7 +247,6 @@ export function AppearanceSection() {
                     </Button>
                 </div>
 
-                {/* Quick pick presets */}
                 <div>
                     <p className="text-xs text-muted-foreground mb-2">Quick picks</p>
                     <div className="flex flex-wrap gap-2">
@@ -287,7 +273,6 @@ export function AppearanceSection() {
                 </div>
             </section>
 
-            {/* Font family */}
             <section className="space-y-4">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Font</h2>
@@ -321,7 +306,6 @@ export function AppearanceSection() {
                 </div>
             </section>
 
-            {/* Notes section */}
             <section className="space-y-4">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Notes</h2>
@@ -393,10 +377,6 @@ export function AppearanceSection() {
     );
 }
 
-/**
- * Static preview of an "expanded" mention chip - mirrors MentionExpandedCard
- * but uses fixed sample data so it renders without Redux/live state.
- */
 function MentionPreviewExpanded() {
     return (
         <div className="inline-flex flex-col gap-1.5 max-w-full rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-3 py-2">
@@ -420,10 +400,6 @@ function MentionPreviewExpanded() {
     );
 }
 
-/**
- * Static preview of a "compact" mention chip - mirrors MentionChipCompact
- * styling so users see the actual inline footprint.
- */
 function MentionPreviewCompact() {
     return (
         <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-1.5 py-0.5">

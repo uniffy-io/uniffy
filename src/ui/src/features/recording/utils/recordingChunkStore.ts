@@ -1,22 +1,7 @@
 /**
- * IndexedDB-backed write-through queue for in-flight upload chunks.
- *
- * Why: a `MediaRecorder` chunk is in memory until the upload acks. If the
- * tab crashes / the user accidentally closes it during recording, every
- * unacked chunk is lost. Persisting each part to IndexedDB before sending,
- * and dropping the row on the upload ack, lets a future session reload
- * the orphaned bytes against the same `MultipartUpload` row (which lives
- * for 24h on the server).
- *
- * Storage layout: one IDB database (`uniffy-recording`), one object store
- * (`chunks`) keyed by `${uploadId}:${partNumber.toString().padStart(8,'0')}`.
- * Padded part number sorts lexically same as numerically.
- *
- * Failure modes:
- * - Quota exceeded: caller falls back to in-memory mode (logged warning).
- *   The recording continues; tab-crash recovery for that session is lost
- *   but the recording itself does not.
- * - DB open fails (private mode quirks): same fallback.
+ * IndexedDB write-through queue for in-flight upload chunks. Keys are
+ * `${uploadId}:${partNumber.toString().padStart(8,'0')}` so lexical order matches numeric. On quota
+ * or private-mode failures, callers fall back to in-memory only; the recording itself never breaks.
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
@@ -51,9 +36,7 @@ async function getDb(): Promise<IDBPDatabase | null> {
             }
         },
     }).catch((err) => {
-        // Private browsing / disabled storage / transient open failure.
-        // Caller treats `null` as "no persistence available" and the
-        // recording falls back to in-memory chunk handling.
+        // Private browsing / disabled storage. Caller treats `null` as in-memory-only.
         console.warn('[recording] IndexedDB unavailable for chunk store', err);
         return null;
     });

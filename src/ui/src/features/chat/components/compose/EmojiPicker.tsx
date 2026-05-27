@@ -1,11 +1,3 @@
-/**
- * EmojiPicker - Emoji selection popover using emoji-mart.
- *
- * Renders via portal at document level to avoid overflow clipping.
- * Positions itself relative to an anchor element, preferring above
- * but flipping below if not enough space.
- */
-
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import data from '@emoji-mart/data';
@@ -23,11 +15,9 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
   const containerRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Calculate position from anchor element
   useEffect(() => {
     const anchor = anchorRef?.current;
     if (!anchor) {
-      // Fallback: center on screen
       // eslint-disable-next-line react-hooks/set-state-in-effect -- fallback position when no anchor ref is provided
       setPosition({ top: window.innerHeight / 2 - 200, left: window.innerWidth / 2 - 176 });
       return;
@@ -37,21 +27,18 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
     const pickerHeight = 435;
     const pickerWidth = 352;
 
-    // Prefer above the anchor
+    // Prefer above, flip below if not enough room.
     let top = rect.top - pickerHeight - 8;
     let left = rect.left;
 
-    // If not enough space above, position below
     if (top < 8) {
       top = rect.bottom + 8;
     }
 
-    // Prevent going off right edge
     if (left + pickerWidth > window.innerWidth - 8) {
       left = window.innerWidth - pickerWidth - 8;
     }
 
-    // Prevent going off left edge
     if (left < 8) {
       left = 8;
     }
@@ -59,7 +46,6 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
     setPosition({ top, left });
   }, [anchorRef]);
 
-  // Click outside to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -75,7 +61,6 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
     };
   }, [onClose]);
 
-  // Escape to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

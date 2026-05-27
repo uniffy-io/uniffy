@@ -1,9 +1,3 @@
-/**
- * Storage Quota API Service
- *
- * ConnectRPC client wrapper for storage quota management RPCs.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import { FilesService, CheckStorageQuotaRequestSchema, GetOrgStorageQuotaRequestSchema, GetStorageUsageRequestSchema, GetUserStorageQuotaRequestSchema, ListOrgStorageUsageRequestSchema, ListUserStorageQuotaOverridesRequestSchema, RecalculateStorageUsageRequestSchema, RemoveUserStorageQuotaOverrideRequestSchema, SetOrgStorageQuotaRequestSchema, SetUserStorageQuotaOverrideRequestSchema } from '@uniffy/proto/files/v1/files_pb';
@@ -11,9 +5,6 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 
 const filesClient = createClient(FilesService, transport);
 
-/**
- * Storage quota API methods.
- */
 export const storageApi = {
     getOrgStorageQuota: async (request: MessageInitShape<typeof GetOrgStorageQuotaRequestSchema>) => {
         return filesClient.getOrgStorageQuota(request);

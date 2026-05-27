@@ -1,14 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-/**
- * Breakpoint definitions for responsive design.
- *
- * mobile:  < 768px
- * tablet:  768px - 1023px
- * desktop: >= 1024px
- * wide:    >= 1280px
- */
-
+// mobile: <768  tablet: 768-1023  desktop: >=1024  wide: >=1280
 const BREAKPOINTS = {
     tablet: 768,
     desktop: 1024,
@@ -53,7 +45,6 @@ function getBreakpointState(): BreakpointState {
     };
 }
 
-// Shared state and listeners for useSyncExternalStore
 let currentState = typeof window !== 'undefined' ? getBreakpointState() : {
     breakpoint: 'desktop' as Breakpoint,
     isMobile: false,
@@ -83,7 +74,7 @@ function subscribe(listener: () => void): () => void {
 
 function handleResize() {
     const next = getBreakpointState();
-    // Only notify if breakpoint actually changed (avoids re-renders on every pixel)
+    // Notify only on threshold crossings so subscribers don't re-render every pixel.
     if (next.breakpoint !== currentState.breakpoint) {
         currentState = next;
         for (const listener of listeners) {
@@ -108,23 +99,6 @@ function getServerSnapshot(): BreakpointState {
     };
 }
 
-/**
- * Hook that returns the current viewport breakpoint state.
- *
- * Uses matchMedia-level granularity (mobile / tablet / desktop / wide)
- * but only re-renders when the breakpoint changes, not on every pixel.
- *
- * @example
- * ```tsx
- * const { isMobile, isTablet, isDesktop, isMobileOrTablet } = useBreakpoint();
- *
- * // Hide sidebar on mobile/tablet
- * if (isMobileOrTablet) return <Drawer>{sidebar}</Drawer>;
- *
- * // Adjust panel sizes
- * const sidebarDefault = isTablet ? 200 : 280;
- * ```
- */
 export function useBreakpoint(): BreakpointState {
     return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

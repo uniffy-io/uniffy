@@ -1,10 +1,3 @@
-/**
- * Upload Dropzone Component
- *
- * Drag and drop zone for file and folder uploads with click-to-browse support.
- * Detects dropped folders and triggers the folder upload flow.
- */
-
 import { useCallback, useRef, useState } from 'react';
 import { CloudArrowUp, FolderOpen } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

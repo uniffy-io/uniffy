@@ -1,19 +1,8 @@
-/**
- * Media Stream Service Worker
- *
- * Intercepts requests to /media-stream/{orgId}/{fileId} URLs and uses
- * ConnectRPC streaming to fetch file content with Range header support.
- * This enables video/audio seeking while keeping all traffic via ConnectRPC.
- *
- * Also intercepts /api/thumbnails and /api/files requests to add auth headers.
- *
- * Token Sync Strategy (deterministic request/response):
- * - Worker REQUESTS token via BroadcastChannel when needed (TOKEN_REQUEST)
- * - Main thread RESPONDS with token (TOKEN_RESPONSE)
- * - Main thread also proactively pushes on login/refresh (TOKEN_UPDATE)
- * - Memory only: Token never persisted to storage (security best practice)
- * - No polling or timeouts for initial sync - explicit request/response
- */
+// Intercepts /media-stream/, /api/files/, /api/thumbnails/, and /api/avatars/ URLs
+// to inject Bearer auth (which <img>/<video>/<audio> tags can't send) and stream
+// file ranges over ConnectRPC for seekable media.
+// Token sync: worker BroadcastChannels TOKEN_REQUEST; main thread answers TOKEN_RESPONSE
+// and also pushes TOKEN_UPDATE on login/refresh. Memory only, never persisted.
 
 /// <reference lib="webworker" />
 
@@ -21,7 +10,6 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { createClient } from '@connectrpc/connect';
 import { FilesService } from '@uniffy/proto/files/v1/files_pb';
 
-// Service Worker type declarations
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 import {
@@ -32,35 +20,22 @@ import {
     AGENT_AVATAR_URL_PATTERN,
 } from '@/shared/utils/fileUrls';
 
-// Alias patterns for local readability
 const MEDIA_STREAM_PATTERN = MEDIA_STREAM_URL_PATTERN;
 const THUMBNAIL_PATTERN = THUMBNAIL_URL_PATTERN;
 const FILES_PATTERN = FILE_URL_PATTERN;
 const AVATARS_PATTERN = AVATAR_URL_PATTERN;
 const AGENT_AVATARS_PATTERN = AGENT_AVATAR_URL_PATTERN;
 
-// BroadcastChannel for real-time token sync
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
 
-// Timeouts
-const REQUEST_TIMEOUT_MS = 120000; // 2 minutes for full file requests
-const TOKEN_REQUEST_TIMEOUT_MS = 5000; // 5 seconds to get token from main thread
+const REQUEST_TIMEOUT_MS = 120000;
+const TOKEN_REQUEST_TIMEOUT_MS = 5000;
 
-// In-memory token storage (updated via BroadcastChannel)
 let memoryToken: string | null = null;
-
-// BroadcastChannel instance for sending requests
 let tokenChannel: BroadcastChannel | null = null;
-
-// Pending token request promise (to avoid duplicate requests)
 let pendingTokenRequest: Promise<string | null> | null = null;
-
-// Callbacks waiting for token response
 const tokenResponseCallbacks: Array<(token: string | null) => void> = [];
 
-/**
- * Wrap a promise with a timeout.
- */
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
     return Promise.race([
         promise,
@@ -70,33 +45,23 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
     ]);
 }
 
-/**
- * Request token from main thread via BroadcastChannel.
- * Returns a promise that resolves when the main thread responds.
- */
 function requestTokenFromMainThread(): Promise<string | null> {
-    // If already have token, return immediately
     if (memoryToken) {
         return Promise.resolve(memoryToken);
     }
 
-    // If already requesting, return the existing promise
     if (pendingTokenRequest) {
         return pendingTokenRequest;
     }
 
     pendingTokenRequest = new Promise<string | null>((resolve) => {
-        // Add callback to be called when token arrives
         tokenResponseCallbacks.push(resolve);
 
-        // Request token from main thread
         if (tokenChannel) {
             tokenChannel.postMessage({ type: 'TOKEN_REQUEST' });
         }
 
-        // Timeout after TOKEN_REQUEST_TIMEOUT_MS
         setTimeout(() => {
-            // Remove this callback if still pending
             const index = tokenResponseCallbacks.indexOf(resolve);
             if (index !== -1) {
                 tokenResponseCallbacks.splice(index, 1);
@@ -110,10 +75,6 @@ function requestTokenFromMainThread(): Promise<string | null> {
     return pendingTokenRequest;
 }
 
-/**
- * Get auth token, requesting from main thread if not available.
- * This is the primary method for getting tokens - deterministic, not polling.
- */
 async function getAuthToken(): Promise<string | null> {
     if (memoryToken) {
         return memoryToken;
@@ -121,9 +82,6 @@ async function getAuthToken(): Promise<string | null> {
     return requestTokenFromMainThread();
 }
 
-/**
- * Resolve all pending token callbacks.
- */
 function resolveTokenCallbacks(token: string | null): void {
     while (tokenResponseCallbacks.length > 0) {
         const callback = tokenResponseCallbacks.shift();
@@ -133,19 +91,14 @@ function resolveTokenCallbacks(token: string | null): void {
     }
 }
 
-/**
- * Initialize BroadcastChannel for real-time token updates.
- */
 function initTokenChannel(): void {
     tokenChannel = new BroadcastChannel(TOKEN_CHANNEL_NAME);
 
     tokenChannel.onmessage = (event) => {
         if (event.data?.type === 'TOKEN_UPDATE') {
             memoryToken = event.data.token;
-            // Resolve any pending token requests
             resolveTokenCallbacks(event.data.token);
         } else if (event.data?.type === 'TOKEN_RESPONSE') {
-            // Explicit response to our request
             memoryToken = event.data.token;
             resolveTokenCallbacks(event.data.token);
         } else if (event.data?.type === 'TOKEN_CLEAR') {
@@ -154,16 +107,12 @@ function initTokenChannel(): void {
         }
     };
 
-    // Request token immediately on init (handles page reload scenario)
+    // Pre-fetch token to handle page reloads where the worker outlives the page.
     requestTokenFromMainThread();
 }
 
-// Initialize BroadcastChannel on worker load
 initTokenChannel();
 
-/**
- * Create an auth interceptor for ConnectRPC transport.
- */
 function createAuthInterceptor(token: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (next: any) => async (request: any) => {
@@ -177,10 +126,6 @@ import {
     parseRangeRequest as parseRangeRequestUtil,
 } from '@/workers/mediaStreamUtils';
 
-/**
- * Wrapper that extracts the Range header from a Request object and delegates
- * to the pure utility function.
- */
 function parseRangeRequest(
     request: Request,
     requestFullFile: boolean
@@ -188,29 +133,21 @@ function parseRangeRequest(
     return parseRangeRequestUtil(request.headers.get('Range'), requestFullFile);
 }
 
-/**
- * Handle a media stream request using ReadableStream for memory efficiency.
- *
- * Streams chunks directly to the response without buffering in memory.
- * This is ideal for large video/audio files.
- */
+/** Streams chunks directly to the response without buffering, so large videos stay memory-bounded. */
 async function handleMediaRequest(
     request: Request,
     orgId: string,
     fileId: string,
     requestFullFile: boolean
 ): Promise<Response> {
-    // Parse range from request
     const { startByte, endByte, hasRangeHeader } = parseRangeRequest(request, requestFullFile);
 
-    // Get auth token (requests from main thread if not available)
     const token = await getAuthToken();
     if (!token) {
         return new Response('Unauthorized', { status: 401 });
     }
 
     try {
-        // Create ConnectRPC transport with auth
         const transport = createConnectTransport({
             baseUrl: `${self.location.origin}/api`,
             interceptors: [createAuthInterceptor(token)],
@@ -218,7 +155,6 @@ async function handleMediaRequest(
 
         const client = createClient(FilesService, transport);
 
-        // Start the streaming request
         const streamIterator = client.streamFileRange({
             fileId,
             organizationId: orgId,
@@ -226,7 +162,7 @@ async function handleMediaRequest(
             ...(endByte !== undefined && { endByte: BigInt(endByte) }),
         });
 
-        // Get the first chunk to extract metadata for headers
+        // First chunk carries the metadata we need for response headers.
         const firstResult = await streamIterator[Symbol.asyncIterator]().next();
 
         if (firstResult.done || !firstResult.value) {
@@ -240,16 +176,12 @@ async function handleMediaRequest(
         const mimeType = firstChunk.mimeType || 'application/octet-stream';
         const filename = firstChunk.filename || 'file';
 
-        // 206 iff the browser explicitly sent a Range header. Unsolicited
-        // 206 responses break <audio>/<video> initial loads. Conversely,
-        // a Range request that happens to cover the file's tail
-        // (`bytes=N-` resolving to the last byte) MUST still return 206 --
-        // returning 200 with `Content-Length: totalSize` while the body
-        // only carries `totalSize - N` bytes leaves the browser short of
-        // the declared content and trips MEDIA_ERR_NETWORK on small files.
+        // 206 iff the browser explicitly sent a Range header. Unsolicited 206 breaks
+        // <audio>/<video> initial loads; conversely, a tail-covering Range MUST still
+        // be 206 - returning 200 with Content-Length: totalSize when the body only
+        // carries totalSize-N bytes trips MEDIA_ERR_NETWORK on small files.
         const isPartial = hasRangeHeader;
 
-        // Build response headers
         const headers: HeadersInit = {
             'Content-Type': mimeType,
             'Accept-Ranges': 'bytes',
@@ -261,16 +193,13 @@ async function handleMediaRequest(
             headers['Content-Range'] = `bytes ${rangeStart}-${rangeEnd}/${totalSize}`;
         }
 
-        // Stream chunks directly for memory efficiency
         let cancelled = false;
         const stream = new ReadableStream<Uint8Array>({
             async start(controller) {
                 try {
-                    // Enqueue the first chunk we already have
                     if (cancelled) return;
                     controller.enqueue(firstChunk.data);
 
-                    // Stream remaining chunks directly
                     for await (const response of streamIterator) {
                         if (cancelled) return;
                         controller.enqueue(response.data);
@@ -280,7 +209,6 @@ async function handleMediaRequest(
                         controller.close();
                     }
                 } catch (error) {
-                    // If stream was cancelled by client, silently stop
                     if (cancelled) return;
 
                     if (!(error instanceof Error && error.name === 'AbortError')) {
@@ -289,7 +217,7 @@ async function handleMediaRequest(
                     try {
                         controller.error(error);
                     } catch {
-                        // Controller already closed/errored, ignore
+                        // Controller already closed/errored.
                     }
                 }
             },
@@ -300,54 +228,41 @@ async function handleMediaRequest(
 
         return new Response(stream, { status: isPartial ? 206 : 200, headers });
     } catch (error) {
-        // Check if request was aborted (user navigated away, component unmounted, etc.)
         if (error instanceof Error && error.name === 'AbortError') {
-            return new Response('Request Aborted', { status: 499 }); // 499 = Client Closed Request
+            return new Response('Request Aborted', { status: 499 });
         }
         console.error('[MediaStreamWorker] Error streaming file:', error);
         return new Response('Internal Server Error', { status: 500 });
     }
 }
 
-// Global error handlers to prevent worker from crashing
 self.addEventListener('error', (event: ErrorEvent) => {
     console.error('[MediaStreamWorker] Uncaught error:', event.error);
-    // Prevent the error from propagating and potentially crashing the worker
     event.preventDefault();
 });
 
 self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     console.error('[MediaStreamWorker] Unhandled rejection:', event.reason);
-    // Prevent the rejection from propagating
     event.preventDefault();
 });
 
-// Install event - activate immediately
 self.addEventListener('install', (event: ExtendableEvent) => {
     event.waitUntil(self.skipWaiting());
 });
 
-// Activate event - claim all clients immediately
 self.addEventListener('activate', (event: ExtendableEvent) => {
     event.waitUntil(self.clients.claim());
 });
 
-/**
- * Handle a thumbnail request by proxying with auth header.
- *
- * Unlike media streaming, thumbnails use a standard HTTP endpoint
- * and benefit from browser caching with proper cache headers.
- */
+/** Proxies a thumbnail request with the Bearer token; backend cache headers pass through. */
 async function handleThumbnailRequest(request: Request): Promise<Response> {
-    // Get auth token (requests from main thread if not available)
     const token = await getAuthToken();
     if (!token) {
         return new Response('Unauthorized', { status: 401 });
     }
 
     try {
-        // Copy headers but strip cache directives so the HTTP cache
-        // can work based on the server's response headers
+        // Strip client cache directives so backend Cache-Control/ETag drives the HTTP cache.
         const headers = new Headers(request.headers);
         headers.delete('cache-control');
         headers.delete('pragma');
@@ -356,13 +271,11 @@ async function handleThumbnailRequest(request: Request): Promise<Response> {
         const authRequest = new Request(request.url, {
             method: request.method,
             headers,
-            credentials: 'omit', // Don't send cookies, we use Bearer token
+            credentials: 'omit',
         });
 
-        // Fetch from the backend
         const response = await fetch(authRequest);
 
-        // Return the response as-is (preserves cache headers from backend)
         return response;
     } catch (error) {
         console.error('[MediaStreamWorker] Thumbnail fetch error:', error);
@@ -370,22 +283,15 @@ async function handleThumbnailRequest(request: Request): Promise<Response> {
     }
 }
 
-/**
- * Handle a file request by proxying with auth header.
- *
- * Similar to thumbnails, files use a standard HTTP endpoint and benefit
- * from browser caching. Used for images embedded in notes.
- */
+/** Proxies a file request (images in notes, etc.) with the Bearer token. */
 async function handleFileRequest(request: Request): Promise<Response> {
-    // Get auth token (requests from main thread if not available)
     const token = await getAuthToken();
     if (!token) {
         return new Response('Unauthorized', { status: 401 });
     }
 
     try {
-        // Copy headers but strip cache directives so the HTTP cache
-        // can work based on the server's response headers (max-age, ETag)
+        // Strip client cache directives so backend Cache-Control/ETag drives the HTTP cache.
         const headers = new Headers(request.headers);
         headers.delete('cache-control');
         headers.delete('pragma');
@@ -394,13 +300,11 @@ async function handleFileRequest(request: Request): Promise<Response> {
         const authRequest = new Request(request.url, {
             method: request.method,
             headers,
-            credentials: 'omit', // Don't send cookies, we use Bearer token
+            credentials: 'omit',
         });
 
-        // Fetch from the backend
         const response = await fetch(authRequest);
 
-        // Return the response as-is (preserves cache headers from backend)
         return response;
     } catch (error) {
         console.error('[MediaStreamWorker] File fetch error:', error);
@@ -408,25 +312,21 @@ async function handleFileRequest(request: Request): Promise<Response> {
     }
 }
 
-// Fetch event - intercept media stream, thumbnail, and file requests
 self.addEventListener('fetch', (event: FetchEvent) => {
     const url = new URL(event.request.url);
 
-    // Check for thumbnail requests first (simpler handler)
     const thumbnailMatch = url.pathname.match(THUMBNAIL_PATTERN);
     if (thumbnailMatch) {
         event.respondWith(handleThumbnailRequest(event.request));
         return;
     }
 
-    // Check for file requests (images embedded in notes, etc.)
     const filesMatch = url.pathname.match(FILES_PATTERN);
     if (filesMatch) {
         event.respondWith(handleFileRequest(event.request));
         return;
     }
 
-    // Check for avatar requests (user + agent)
     const avatarsMatch = url.pathname.match(AVATARS_PATTERN);
     if (avatarsMatch) {
         event.respondWith(handleFileRequest(event.request));
@@ -439,18 +339,15 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         return;
     }
 
-    // Check for media stream requests
     const mediaMatch = url.pathname.match(MEDIA_STREAM_PATTERN);
     if (!mediaMatch) {
-        // Not a handled request, let it pass through
         return;
     }
 
     const [, orgId, fileId] = mediaMatch;
-    // Check if full file was requested (for audio that needs waveform analysis)
+    // `?full=true` is for audio that needs waveform analysis before playback.
     const requestFullFile = url.searchParams.get('full') === 'true';
 
-    // Wrap in a safe handler with timeout that always returns a response
     const safeHandler = async (): Promise<Response> => {
         try {
             const timeoutMs = requestFullFile ? REQUEST_TIMEOUT_MS : 30000;
@@ -472,7 +369,6 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     event.respondWith(safeHandler());
 });
 
-// Push event - show OS-level notification when a push message arrives
 self.addEventListener('push', (event: PushEvent) => {
     if (!event.data) return;
 
@@ -496,7 +392,6 @@ self.addEventListener('push', (event: PushEvent) => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click - focus or open the app at the relevant URL
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
     event.notification.close();
 
@@ -518,22 +413,17 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
     );
 });
 
-// Push subscription change - browser revoked or expired the subscription
 self.addEventListener('pushsubscriptionchange', () => {
     console.warn('[MediaStreamWorker] pushsubscriptionchange -- subscription lost');
 });
 
-// Message event - handle token updates from main thread (legacy postMessage fallback)
-// Note: BroadcastChannel is the primary mechanism, this is kept for compatibility
+// postMessage fallback for environments without BroadcastChannel.
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
     if (event.data?.type === 'UPDATE_AUTH_TOKEN') {
-        // Update in-memory token only (no persistent storage)
         memoryToken = event.data.token;
     } else if (event.data?.type === 'CLEAR_AUTH_TOKEN') {
-        // Clear in-memory token
         memoryToken = null;
     } else if (event.data?.type === 'PING') {
-        // Health check - respond to let main thread know worker is alive
         event.source?.postMessage({ type: 'PONG' });
     }
 });

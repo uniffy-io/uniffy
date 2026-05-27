@@ -1,9 +1,3 @@
-/**
- * Filter Card Component
- *
- * Displays a saved file filter with apply, edit, and delete actions.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import {
     Funnel,
@@ -36,12 +30,7 @@ interface FilterCardProps {
     isDeleting?: boolean;
 }
 
-/**
- * Get display summary of non-tag filter criteria.
- *
- * Tag criteria render through ``<TagChip>`` from the tags-slice cache,
- * so they live in their own row below the text summary chips.
- */
+/** Tag criteria render through `<TagChip>` from the tags-slice cache; this returns only the non-tag chips. */
 function getCriteriaSummary(criteria: SerializedFilterCriteria): string[] {
     const parts: string[] = [];
 
@@ -66,9 +55,6 @@ function getCriteriaSummary(criteria: SerializedFilterCriteria): string[] {
     return parts;
 }
 
-/**
- * Get icon type for filter based on criteria.
- */
 type FilterIconType = 'image' | 'document' | 'video' | 'archive' | 'size' | 'date' | 'tag' | 'default';
 
 function getFilterIconType(criteria: SerializedFilterCriteria): FilterIconType {
@@ -141,7 +127,6 @@ export function FilterCard({
             .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag));
     }, [filter.criteria.tagIds, tagsById]);
 
-    // Render icon based on custom icon or fallback to auto-detected
     const renderFilterIcon = () => {
         if (filter.icon) {
             if (filter.icon.type === 'emoji') {

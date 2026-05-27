@@ -1,52 +1,36 @@
 import type { ViewType, FilterConfig, SortConfig } from "./views";
 
-/**
- * Scope filter for project list (matches Calendar's EventScope pattern)
- */
 export type ProjectScope = "all" | "personal" | "organization";
 
-/**
- * Loading state for async operations
- */
 export interface LoadingState {
   projects: boolean;
   tasks: boolean;
   creating: boolean;
-  updating: string | null; // ID of item being updated
-  deleting: string | null; // ID of item being deleted
+  /** ID of item being updated. */
+  updating: string | null;
+  /** ID of item being deleted. */
+  deleting: string | null;
 }
 
-/**
- * Error state for async operations
- */
 export interface ErrorState {
   projects: string | null;
   tasks: string | null;
   general: string | null;
 }
 
-/**
- * Drag state for board and roadmap views
- */
 export interface DragState {
   taskId: string;
-  sourceColumnId?: string; // For board view
-  sourceDate?: string; // For roadmap view
+  sourceColumnId?: string;
+  sourceDate?: string;
   isDragging: boolean;
 }
 
-/**
- * Autosave state
- */
 export interface AutosaveState {
-  isSaving: Record<string, boolean>; // taskId -> isSaving
-  lastSaved: Record<string, string>; // taskId -> timestamp
-  hasChanges: Record<string, boolean>; // taskId -> hasUnsavedChanges
+  isSaving: Record<string, boolean>;
+  lastSaved: Record<string, string>;
+  hasChanges: Record<string, boolean>;
 }
 
-/**
- * A single undo/redo history entry
- */
 export interface HistoryEntry {
   id: string;
   actionType: string;
@@ -57,27 +41,20 @@ export interface HistoryEntry {
   description: string;
 }
 
-/**
- * UI state for the projects feature
- */
 export interface ProjectsUiState {
-  // View state
   viewMode: ViewType;
   currentViewId: string | null;
 
-  // Selection state
   selectedTaskId: string | null;
-  selectedTaskIds: string[]; // For multi-select
+  selectedTaskIds: string[];
   isMultiSelectMode: boolean;
 
-  // Panel state
   isDetailPanelOpen: boolean;
   isSidebarOpen: boolean;
   detailPanelWidth: number;
   sidebarWidth: number;
   detailViewMode: "sidebar" | "modal";
 
-  // Modal state
   isCreateProjectModalOpen: boolean;
   editProjectId: string | null;
   isCreateTaskModalOpen: boolean;
@@ -85,54 +62,45 @@ export interface ProjectsUiState {
   isViewConfigOpen: boolean;
   editingFieldId: string | null;
 
-  // Drag state
   dragState: DragState | null;
 
-  // Inline editing state
   editingCell: { taskId: string; fieldId: string } | null;
 
-  // Keyboard navigation state
   focusedCell: { taskId: string; fieldId: string } | null;
 
-  // Table view state - per-project column widths: { [projectId]: { [fieldId]: width } }
+  /** Keyed by projectId -> fieldId -> px width. */
   columnWidths: Record<string, Record<string, number>>;
 
-  // Table view state - per-project hidden column field ids: { [projectId]: string[] }
+  /** Keyed by projectId -> hidden field ids. */
   hiddenColumns: Record<string, string[]>;
 
-  // Scope filter (all/personal/organization)
   projectScope: ProjectScope;
 
-  // Filter and sort (transient, not saved to view config)
+  /** Transient filter/sort/group state - not persisted to view config. */
   activeFilterConfig: FilterConfig | null;
   activeSortConfig: SortConfig | null;
   activeGroupByFieldId: string | null;
   searchQuery: string;
 
-  // Quick filters
-  sprintFilter: string | null; // sprint ID, "__backlog__" for unassigned, or null for all
-  taskTypeFilter: string | null; // task type value or null for all
-  rootOnlyFilter: boolean; // true = only top-level tasks (parent_id IS NULL)
-  inEpicFilter: string | null; // Epic task ID to scope tasks by ancestry
+  /** Sprint ID, `__backlog__` for unassigned, or null for all. */
+  sprintFilter: string | null;
+  taskTypeFilter: string | null;
+  /** Only top-level tasks (parent_id IS NULL). */
+  rootOnlyFilter: boolean;
+  /** Scope tasks to the ancestry of this epic. */
+  inEpicFilter: string | null;
 
-  // Table view: outline mode (hierarchical subtask rendering with caret/indent)
   tableOutlineEnabled: boolean;
 
-  // Roadmap view state
-  roadmapStartDate: string; // ISO date string
+  roadmapStartDate: string;
   roadmapZoomLevel: "day" | "week" | "month";
 
-  // Autosave
   autosave: AutosaveState;
 
-  // Undo/Redo history
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
 }
 
-/**
- * Initial UI state
- */
 import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
 
 export const initialProjectsUiState: ProjectsUiState = {
@@ -192,9 +160,6 @@ export const initialProjectsUiState: ProjectsUiState = {
   redoStack: [],
 };
 
-/**
- * Panel configuration for resizable layout
- */
 export interface PanelConfig {
   id: string;
   minSize: number;
@@ -203,9 +168,6 @@ export interface PanelConfig {
   collapsible: boolean;
 }
 
-/**
- * Layout panel configurations
- */
 export const PANEL_CONFIG = {
   sidebar: {
     id: "projects-sidebar",

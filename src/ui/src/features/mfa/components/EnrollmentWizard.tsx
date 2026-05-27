@@ -21,29 +21,12 @@ interface EnrollmentResult {
 }
 
 interface EnrollmentWizardProps {
-    /**
-     * Fired after the user clicks "Finish" on the recovery-codes step.
-     * The wizard hands the fresh session back so the caller can either
-     * navigate into the app (enrollment-required path) or simply
-     * refresh the surrounding settings card (self-service enroll).
-     */
     onComplete: (result: EnrollmentResult) => void;
-    /**
-     * Optional cancel handler. Self-service enrollment exposes it as
-     * "Not now"; the enrollment-required full-shell page omits it so
-     * the user cannot escape the requirement.
-     */
+    /** Omitted on the enrollment-required shell so the user cannot escape the requirement. */
     onCancel?: () => void;
 }
 
-/**
- * Three-step TOTP enrollment flow: scan the QR (or copy the manual
- * code), verify a fresh 6 digit code, then save the recovery codes.
- *
- * The whole thing runs against ``MfaService`` over the authenticated
- * transport so it works with either a regular access token or an
- * enrollment-only token interchangeably.
- */
+/** TOTP enrollment: scan -> verify -> save recovery codes. */
 export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps) {
     const [step, setStep] = useState<Step>('scan');
     const [material, setMaterial] = useState<EnrollmentMaterial | null>(null);

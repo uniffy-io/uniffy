@@ -1,35 +1,17 @@
-/**
- * URN Resolution Hook
- *
- * Batch resolves URN metadata using the search service.
- * Provides client-side caching for instant lookups.
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search/api/searchApi';
 import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
 
 export interface UrnResolutionResult {
-  /** Map of URN -> resolved metadata */
   resolved: Map<string, Omit<UrnMetadata, '$typeName'>>;
-  /** Whether the resolution is in progress */
   isLoading: boolean;
-  /** Error message if resolution failed */
   error: string | null;
-  /** Manually trigger refetch */
   refetch: () => void;
 }
 
-// Global cache for resolved URN metadata
 const urnMetadataCache = new Map<string, Omit<UrnMetadata, '$typeName'>>();
 
-/**
- * Hook for batch resolving URN metadata with caching.
- *
- * @param urns - Array of URNs to resolve
- * @returns Resolution result with metadata map, loading state, and error
- */
 export function useUrnResolution(urns: string[]): UrnResolutionResult {
   const [resolved, setResolved] = useState<Map<string, Omit<UrnMetadata, '$typeName'>>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -45,14 +27,12 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       return;
     }
 
-    // Cancel any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
     const currentFetchId = ++fetchIdRef.current;
 
-    // Check cache first and filter out already-cached URNs
     const cachedResults = new Map<string, Omit<UrnMetadata, '$typeName'>>();
     const urnsToFetch: string[] = [];
 
@@ -65,7 +45,6 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       }
     }
 
-    // If all URNs are cached, return immediately
     if (urnsToFetch.length === 0) {
       setResolved(cachedResults);
       setIsLoading(false);
@@ -73,7 +52,6 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       return;
     }
 
-    // Set partial results from cache immediately
     if (cachedResults.size > 0) {
       setResolved(cachedResults);
     }
@@ -87,15 +65,12 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
         urns: urnsToFetch,
       });
 
-      // Check if this request is still relevant
       if (currentFetchId !== fetchIdRef.current) {
         return;
       }
 
-      // Merge with cached results
       const mergedResults = new Map(cachedResults);
 
-      // Process response and update cache
       if (response.resolved) {
         for (const [urn, metadata] of Object.entries(response.resolved)) {
           const plainMetadata = metadata as Omit<UrnMetadata, '$typeName'>;
@@ -107,11 +82,9 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       setResolved(mergedResults);
       setError(null);
     } catch (err) {
-      // Ignore abort errors
       if (err instanceof Error && err.name === 'AbortError') {
         return;
       }
-      // Check if this request is still relevant
       if (currentFetchId !== fetchIdRef.current) {
         return;
       }
@@ -123,7 +96,6 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
     }
   }, [organizationId, urns]);
 
-  // Fetch on mount and when URNs change
   useEffect(() => {
     fetchMetadata();
 
@@ -142,27 +114,17 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
   };
 }
 
-/**
- * Clear the entire URN metadata cache.
- */
 export function clearUrnMetadataCache(): void {
   urnMetadataCache.clear();
 }
 
-/**
- * Invalidate specific URNs from the cache.
- * Call this when content is updated to ensure fresh data on next resolution.
- */
+/** Drop entries so the next resolution refetches after content updates. */
 export function invalidateUrnMetadataCache(urns: string[]): void {
   for (const urn of urns) {
     urnMetadataCache.delete(urn);
   }
 }
 
-/**
- * Pre-populate the cache with known metadata.
- * Useful for hydrating cache from other sources.
- */
 export function hydrateUrnMetadataCache(
   entries: Array<{ urn: string; metadata: Omit<UrnMetadata, '$typeName'> }>
 ): void {

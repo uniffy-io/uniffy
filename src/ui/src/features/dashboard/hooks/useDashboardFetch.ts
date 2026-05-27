@@ -1,13 +1,4 @@
-/**
- * useDashboardFetch - Ensures domain data is loaded for dashboard widgets.
- *
- * The dashboard reads from multiple Redux slices (notes, files, calendar,
- * projects, bookmarks). If the user navigates directly to the dashboard
- * without visiting those pages first, the stores are empty.
- *
- * This hook dispatches the essential fetch thunks once on mount so every
- * widget has data to render. Guards prevent duplicate or retry-loop requests.
- */
+// Cold-load: when the user lands on dashboard directly, hydrate every slice it reads from. Guards stop retry loops.
 
 import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -31,7 +22,6 @@ export function useDashboardFetch() {
     const tasksCount = useAppSelector((state) => Object.keys(state.projects?.tasks ?? {}).length);
     const bookmarksCount = useAppSelector((state) => Object.keys(state.bookmarks?.bookmarks ?? {}).length);
 
-    // Phase 1: fetch all top-level domain data once
     useEffect(() => {
         if (!orgId || fetchedRef.current) return;
         fetchedRef.current = true;
@@ -62,7 +52,7 @@ export function useDashboardFetch() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [orgId]);
 
-    // Phase 2: once projects are loaded, fetch tasks for each (once only)
+    // Task fetch must wait for projects to load - tasks are scoped per project.
     useEffect(() => {
         if (tasksFetchedRef.current) return;
         const ids = Object.keys(projects);

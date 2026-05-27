@@ -55,12 +55,7 @@ export function getTaskTypeConfig(value: string): TaskTypeConfig {
   return TASK_TYPE_MAP.get(value) ?? TASK_TYPES[0];
 }
 
-/**
- * Conventional parent expectations per task type. These drive soft warnings
- * (never blocks) when a user creates a hierarchy that diverges from the
- * Jira/Linear conventions. `rootOk` means a parent is optional. `allowedParents`
- * is the set of conventional parent types when one is present.
- */
+/** Soft-warning rules; never block. `rootOk` lets a type sit at the top level. */
 const TYPE_CONVENTIONS: Record<string, { rootOk: boolean; allowedParents: string[] }> = {
   epic: { rootOk: true, allowedParents: [] },
   story: { rootOk: false, allowedParents: ["epic"] },
@@ -78,11 +73,7 @@ function plural(label: string): string {
   return `${label}s`;
 }
 
-/**
- * Returns a human-readable warning when the (childType, parentType) pairing
- * deviates from the conventional hierarchy, or null when the pairing is fine.
- * Parent of `null` means the task is being placed at the root.
- */
+/** Returns a soft-warning string when the parent/child pairing deviates from convention. */
 export function getHierarchyRuleViolation(
   childType: string,
   parentType: string | null,
@@ -108,11 +99,7 @@ export function getHierarchyRuleViolation(
   return `Unusual hierarchy: ${childLabel} under ${parentLabel}. Typically a ${childLabel} belongs under a ${expected}.`;
 }
 
-/**
- * Determine which custom fields are visible and required for a given task type.
- * System fields are excluded - they are always visible.
- * If no schema exists for the type, all custom fields are shown with none required.
- */
+/** System fields are always visible; this returns only the custom-field subset. */
 export function getFieldsForTaskType(
   fields: Array<{ id: string; isSystem: boolean }>,
   taskType: string,
@@ -122,7 +109,6 @@ export function getFieldsForTaskType(
   const customFields = fields.filter((f) => !f.isSystem);
 
   if (!schema || schema.shownFieldIds.length === 0) {
-    // No schema = show all custom fields, none required
     return {
       visibleFieldIds: new Set(customFields.map((f) => f.id)),
       requiredFieldIds: new Set<string>(),

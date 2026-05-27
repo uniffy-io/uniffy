@@ -1,20 +1,4 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
-/**
- * Live Mention Chip
- *
- * A living inline artifact that shows the real-time state of referenced content.
- * Each chip is a tiny dashboard: the icon encodes the type, the label identifies
- * the content, and type-specific indicators telegraph its current state.
- *
- * Three variants:
- * - MentionChip: Full-featured with hover preview and live indicators
- * - MentionChipCompact: Dense text contexts with hover preview
- * - MentionChipBasic: ProseMirror NodeView fallback (no Redux)
- *
- * Design language: "Signal" - information-dense, calm, orchestrated motion.
- * The border subtly breathes with the type color when content is live.
- */
-
 import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { CaretDown, Robot, Trash } from '@phosphor-icons/react';
@@ -38,11 +22,9 @@ import { cn } from '@/shared/utils/cn';
 import type { Icon } from '@phosphor-icons/react';
 import type { MentionChipProps, MentionChipBasicProps, MentionChipCompactProps, MentionLiveState } from '@/components/mention/types';
 
-// Delays (ms)
 const HOVER_DELAY = 200;
 const CLOSE_DELAY = 350;
 
-/** Clear pending hover/close timeouts on unmount to prevent setState on unmounted components */
 function useTimeoutCleanup(...refs: RefObject<ReturnType<typeof setTimeout> | null>[]) {
   useEffect(() => {
     return () => {
@@ -54,8 +36,7 @@ function useTimeoutCleanup(...refs: RefObject<ReturnType<typeof setTimeout> | nu
   }, []);
 }
 
-// Per-URN expand/collapse preference, persisted in localStorage so the
-// reader's choice survives page reloads and component re-mounts.
+/** localStorage key prefix for per-URN expand/collapse preference. */
 const TOGGLE_STORAGE_PREFIX = 'mention-toggle:';
 
 function readToggle(urn: string): boolean | null {
@@ -79,10 +60,7 @@ function writeToggle(urn: string, value: boolean): void {
   }
 }
 
-/**
- * Loading skeleton that matches the expanded card footprint so chips
- * don't pop in / shift size when liveState arrives from the resolver.
- */
+/** Reserves the expanded-card footprint so chips don't shift size when liveState arrives. */
 function MentionExpandedCardSkeleton({ label }: { label: string }) {
   return (
     <span
@@ -109,14 +87,6 @@ function MentionExpandedCardSkeleton({ label }: { label: string }) {
   );
 }
 
-/**
- * Tombstone chip for a URN whose target was deleted.
- *
- * Renders inline with a strikethrough label, dashed muted border, and a
- * trash icon so the reader can tell something used to be there. Click /
- * hover preview / live indicators are all suppressed -- there is nothing
- * to fetch or to navigate to.
- */
 function MentionTombstoneChip({
   typeLabel,
   compact = false,
@@ -124,9 +94,7 @@ function MentionTombstoneChip({
   typeLabel: string;
   compact?: boolean;
 }) {
-  // Deliberately drops the original label. When something has been
-  // removed the reader is not entitled to its title -- they can know
-  // *that* something was here and what type it was, nothing more.
+  // Drop the original label intentionally: a deleted reference should reveal only the type, not the content.
   const labelText = `Deleted ${typeLabel.toLowerCase()}`;
   return (
     <span
@@ -160,9 +128,6 @@ function MentionTombstoneChip({
   );
 }
 
-/**
- * Tombstone expanded card variant -- block-level "deleted" placeholder.
- */
 function MentionTombstoneCard({
   typeLabel,
 }: {
@@ -187,10 +152,6 @@ function MentionTombstoneCard({
           <Trash size={18} weight="duotone" />
         </span>
         <span className="block flex-1 min-w-0 pt-0.5">
-          {/* Original title intentionally omitted. A deleted reference
-              should reveal nothing about what used to be here beyond
-              the content type -- the audience for the original label
-              is gone with the content. */}
           <span className="block font-semibold text-sm italic text-foreground/70">
             {heading}
           </span>
@@ -204,10 +165,7 @@ function MentionTombstoneCard({
   );
 }
 
-/**
- * Avatar image with fallback to type icon. When `src` is null we know the
- * subject has no avatar and skip the `<img>` entirely (no 404 request).
- */
+/** Null `src` skips the `<img>` entirely so we don't fire a 404 for subjects with no avatar. */
 function ChipAvatar({
   src,
   size,
@@ -230,9 +188,6 @@ function ChipAvatar({
   );
 }
 
-/**
- * Type-aware icon badge
- */
 interface TypeStyle {
   icon: Icon;
   gradient: string;
@@ -261,24 +216,11 @@ function getTypeStyle(type: UrnType): TypeStyle {
   };
 }
 
-/**
- * Detect if content was very recently updated (< 60s) for the "live edge" effect
- */
 function isLiveContent(updatedAt?: string): boolean {
   if (!updatedAt) return false;
   return Date.now() - new Date(updatedAt).getTime() < 60_000;
 }
 
-/**
- * Full MentionChip - inline in notes/chat with hover preview and live state.
- *
- * Visual structure:
- * [icon-badge] Label [live-indicator]
- *   ^gradient bg    ^type-specific status
- *
- * On hover: rich preview card with content summary and quick actions.
- * On state change: border briefly glows, indicators animate transitions.
- */
 function MentionChipInner({
   urn,
   label,
@@ -300,18 +242,15 @@ function MentionChipInner({
     isAgent ? state.agents.agents[parsed.id!] ?? null : null,
   );
 
-  // Auto-resolve live state from provider when no explicit prop
   const contextState = useMentionState(urn);
 
   const { preview, isLoading, error, fetchPreview } = useUrnPreview();
 
-  // User preference for mention display mode (provider-driven, single subscription per page)
   const mentionDisplay = useMentionDisplay();
   const defaultExpanded = mentionDisplay !== 'compact';
 
   const canExpand = hasExpandedCard(parsed.type);
 
-  // Build liveState from provider state, explicit prop, or preview metadata fallback
   const resolvedLiveState = useMemo((): MentionLiveState | null => {
     if (liveState) return liveState;
     if (contextState) return contextState;
@@ -322,9 +261,6 @@ function MentionChipInner({
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
   const isLive = isLiveContent(resolvedLiveState?.updatedAt);
 
-  // Persist the reader's expand/collapse choice per URN so it survives
-  // page reloads. The provider-driven `mentionDisplay` setting still
-  // sets the *initial* shape; this just remembers explicit toggles.
   const [userToggled, setUserToggled] = useState<boolean | null>(() => readToggle(urn));
   const persistToggle = useCallback((value: boolean) => {
     setUserToggled(value);
@@ -333,11 +269,8 @@ function MentionChipInner({
   const wantsExpanded = canExpand && (userToggled ?? defaultExpanded);
   const isExpanded = wantsExpanded && !!resolvedLiveState;
 
-  // Tombstone short-circuit: render dead-link variant for deleted targets.
-  // Skips hover/expand/click logic -- there is nothing to navigate to.
   const isDeleted = resolvedLiveState?.status === 'deleted';
 
-  // Hover preview state
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -411,7 +344,6 @@ function MentionChipInner({
     onReplaceWithMedia(mediaType, url, label);
   }, [preview, onReplaceWithMedia, organizationId, parsed.isValid, parsed.id, label]);
 
-  // Determine if we have any live indicator to show
   const hasLiveIndicator = useMemo(() => {
     if (!resolvedLiveState) return false;
     switch (parsed.type) {
@@ -424,16 +356,12 @@ function MentionChipInner({
     }
   }, [parsed.type, resolvedLiveState]);
 
-  // Tombstone branch: deleted targets render a dead-link placeholder
-  // regardless of the user's expanded/compact preference.
   if (isDeleted) {
     return wantsExpanded
       ? <MentionTombstoneCard typeLabel={typeLabel} />
       : <MentionTombstoneChip typeLabel={typeLabel} />;
   }
 
-  // Expanded card mode -- description sourced from liveState (populated
-  // by the batch resolver) with a hover-preview fallback for races.
   if (isExpanded && resolvedLiveState) {
     return (
       <MentionExpandedCard
@@ -448,8 +376,6 @@ function MentionChipInner({
     );
   }
 
-  // Skeleton: reserve the expanded card footprint while liveState
-  // resolves so chips don't shift from compact-inline to block-card.
   if (wantsExpanded && !resolvedLiveState) {
     return <MentionExpandedCardSkeleton label={label} />;
   }
@@ -462,25 +388,19 @@ function MentionChipInner({
         tabIndex={0}
         aria-label={`${typeLabel}: ${label}${resolvedLiveState?.taskStatus ? `, status: ${resolvedLiveState.taskStatus}` : ''}`}
         className={cn(
-          // Layout
           'mention-chip group/chip inline-flex items-center align-middle',
           'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
           'rounded-md',
-          // Surface - subtle gradient wash
           'bg-gradient-to-r', style.gradient,
           'backdrop-blur-sm',
-          // Border - with live breathing glow
           'border', style.border,
           isLive && 'mention-chip-live',
-          // Per-type colored inner glow for at-a-glance type recognition
           style.glow,
-          // Interaction
           'cursor-pointer select-none',
           'transition-all duration-200 ease-out',
           'hover:shadow-md hover:scale-[1.01]',
           'active:scale-[0.98]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
-          // Selection
           selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
         )}
         onClick={(e) => onClick?.(e)}
@@ -489,7 +409,6 @@ function MentionChipInner({
         onMouseLeave={canExpand ? undefined : handleMouseLeave}
         title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
       >
-        {/* Icon badge / user avatar / agent avatar */}
         {isUser ? (
           <span className="relative flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-visible">
             <ChipAvatar
@@ -536,7 +455,6 @@ function MentionChipInner({
           </span>
         )}
 
-        {/* Task priority dot */}
         {parsed.type === UrnType.TASK && resolvedLiveState?.taskPriorityColor && (
           <span
             className="w-2 h-2 rounded-full shrink-0"
@@ -545,7 +463,6 @@ function MentionChipInner({
           />
         )}
 
-        {/* Label with optional task ID prefix */}
         <span className="inline-flex items-baseline gap-1.5 min-w-0">
           {parsed.type === UrnType.TASK && resolvedLiveState?.taskProjectSlug && resolvedLiveState.taskNumber && (
             <span className="text-[11px] font-mono text-muted-foreground shrink-0">
@@ -564,28 +481,24 @@ function MentionChipInner({
           </span>
         </span>
 
-        {/* File extension badge */}
         {parsed.type === UrnType.FILE && resolvedLiveState?.fileMimeType && (
           <span className="text-[9px] font-semibold uppercase text-muted-foreground bg-muted rounded px-1 py-px shrink-0">
             {resolvedLiveState.fileMimeType.split('/')[1]?.toUpperCase().slice(0, 4) || 'FILE'}
           </span>
         )}
 
-        {/* Project progress percentage */}
         {parsed.type === UrnType.PROJECT && (resolvedLiveState?.projectTotalTasks ?? 0) > 0 && (
           <span className="text-[10px] font-medium text-muted-foreground tabular-nums shrink-0">
             {Math.round(((resolvedLiveState?.projectCompletedTasks ?? 0) / resolvedLiveState!.projectTotalTasks!) * 100)}%
           </span>
         )}
 
-        {/* Live status indicator */}
         {hasLiveIndicator && resolvedLiveState && (
           <span className="inline-flex items-center shrink-0 ml-0.5">
             <LiveIndicator urnType={parsed.type} liveState={resolvedLiveState} />
           </span>
         )}
 
-        {/* Expand button */}
         {!isExpanded && canExpand && resolvedLiveState && (
           <button
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); persistToggle(true); }}
@@ -598,7 +511,6 @@ function MentionChipInner({
         )}
       </span>
 
-      {/* Hover preview popover - disabled when expand/collapse is available */}
       {showPreview && !canExpand && createPortal(
         <MentionPreview
           preview={preview}
@@ -617,10 +529,6 @@ function MentionChipInner({
   );
 }
 
-/**
- * Compact inline variant for dense text contexts (search results, comments).
- * Smaller footprint, still shows live indicators in condensed form.
- */
 function MentionChipCompactInner({
   urn,
   label,
@@ -640,13 +548,11 @@ function MentionChipCompactInner({
     isAgent ? state.agents.agents[parsed.id!] ?? null : null,
   );
 
-  // Auto-resolve live state from provider when no explicit prop
   const contextState = useMentionState(urn);
   const resolvedLiveState = liveState ?? contextState;
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
   const isDeleted = resolvedLiveState?.status === 'deleted';
 
-  // Hover preview
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -728,7 +634,6 @@ function MentionChipCompactInner({
         onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${label}`}
       >
-        {/* Tiny icon / avatar */}
         {isUser ? (
           <span className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-full overflow-visible">
             <ChipAvatar
@@ -772,7 +677,6 @@ function MentionChipCompactInner({
           </span>
         )}
 
-        {/* Label */}
         <span
           className={cn(
             'text-xs font-medium text-foreground truncate max-w-[100px]',
@@ -782,7 +686,6 @@ function MentionChipCompactInner({
           {label}
         </span>
 
-        {/* Condensed live indicator */}
         {hasLiveIndicator && resolvedLiveState && (
           <LiveIndicator urnType={parsed.type} liveState={resolvedLiveState} compact />
         )}
@@ -805,10 +708,7 @@ function MentionChipCompactInner({
   );
 }
 
-/**
- * Basic mention chip for ProseMirror NodeView (outside Redux context).
- * No hover preview, no live state - purely visual with type styling.
- */
+/** ProseMirror NodeView fallback: no Redux context, so no hover/live state. */
 function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasicProps) {
   const parsed = parseUrn(urn);
   const style = getTypeStyle(parsed.type);
@@ -860,12 +760,7 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
   );
 }
 
-/**
- * Memoize with default shallow comparison. Hook-derived state (mentionDisplay,
- * live state) flows through React context, which forces consumer re-renders on
- * change even inside `memo`. Custom equality functions here would silently
- * shadow that contract; do not add one without re-thinking the provider.
- */
+// Default shallow comparison only — context-driven re-renders need to flow through; a custom equality would shadow that contract.
 export const MentionChip = memo(MentionChipInner);
 export const MentionChipCompact = memo(MentionChipCompactInner);
 export const MentionChipBasic = memo(MentionChipBasicInner);

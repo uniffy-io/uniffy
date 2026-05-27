@@ -1,10 +1,3 @@
-/**
- * Notes Async Thunks
- *
- * Redux async thunks for notes API operations.
- * All async operations go through these thunks for proper state management.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
 import { notesApi } from '@/features/notes/api/notesApi';
@@ -21,13 +14,12 @@ import {
 import { bulkUpsertTags } from '@/features/tags/store/tagsSlice';
 import { tagToPlain } from '@/features/tags/store/tagsThunks';
 
-// Request deduplication - track in-flight requests
 let initializeRequestPromise: Promise<{
     notes: SerializedNote[];
     tree: OrganizedNotes;
     totalCount: number;
 }> | null = null;
-// Helper to get organization ID from state
+
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
     if (!orgId) {
@@ -36,9 +28,7 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-// Convert a proto Note to a Redux-serializable plain object.
-// Bigints become numbers; tags travel as ids on the note row while
-// the rich Tag objects are hydrated into the tags slice.
+// Bigints become numbers; tag ids stay on the row while Tag objects hydrate into the tags slice.
 const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
@@ -74,10 +64,6 @@ const noteToPlain = (note: Note) => ({
     } : undefined,
 });
 
-/**
- * Push hydrated Tag rows from note protos into the tags slice cache
- * so chips can render without a follow-up fetch.
- */
 function hydrateNoteTags(dispatch: Dispatch<UnknownAction>, notes: ReadonlyArray<Note>): void {
     const seen = new Map<string, ReturnType<typeof tagToPlain>>();
     for (const note of notes) {
@@ -91,13 +77,8 @@ function hydrateNoteTags(dispatch: Dispatch<UnknownAction>, notes: ReadonlyArray
     dispatch(bulkUpsertTags(Array.from(seen.values())));
 }
 
-/** Serialized note type for Redux storage (bigints converted to numbers) */
 export type SerializedNote = ReturnType<typeof noteToPlain>;
 
-/**
- * Fetch all notes for the current organization.
- * When fetchAllPages is true, automatically fetches all pages and combines results.
- */
 export const fetchNotes = createAsyncThunk<
     {
         notes: SerializedNote[];
@@ -118,7 +99,6 @@ export const fetchNotes = createAsyncThunk<
         sortBy?: string;
         sortOrder?: string;
         excludeContent?: boolean;
-        /** When true, fetches all pages automatically */
         fetchAllPages?: boolean;
     } | void,
     { state: RootState; rejectValue: string; dispatch: AppDispatch }
@@ -127,7 +107,6 @@ export const fetchNotes = createAsyncThunk<
         const organizationId = getOrganizationId(getState());
         const pageSize = params?.pageSize ?? 100;
 
-        // Fetch first page
         const firstResponse = await notesApi.listNotes({
             organizationId,
             page: params?.page ?? 1,
@@ -143,7 +122,6 @@ export const fetchNotes = createAsyncThunk<
             excludeContent: params?.excludeContent ?? true,
         });
 
-        // If not fetching all pages or only one page exists, return first response
         if (!params?.fetchAllPages || firstResponse.totalPages <= 1) {
             hydrateNoteTags(dispatch, firstResponse.notes);
             return {
@@ -155,7 +133,6 @@ export const fetchNotes = createAsyncThunk<
             };
         }
 
-        // Fetch remaining pages in parallel
         const allNotes = [...firstResponse.notes];
         const remainingPages = Array.from(
             { length: firstResponse.totalPages - 1 },
@@ -198,9 +175,6 @@ export const fetchNotes = createAsyncThunk<
     }
 });
 
-/**
- * Fetch deleted notes (trash).
- */
 export const fetchDeletedNotes = createAsyncThunk<
     SerializedNote[],
     void,
@@ -221,9 +195,6 @@ export const fetchDeletedNotes = createAsyncThunk<
     }
 });
 
-/**
- * Fetch a single note by ID.
- */
 export const fetchNote = createAsyncThunk<
     SerializedNote,
     string,
@@ -245,9 +216,6 @@ export const fetchNote = createAsyncThunk<
     }
 });
 
-/**
- * Create a new note or folder.
- */
 export const createNote = createAsyncThunk<
     SerializedNote,
     {
@@ -283,9 +251,6 @@ export const createNote = createAsyncThunk<
     }
 });
 
-/**
- * Update a note.
- */
 export const updateNote = createAsyncThunk<
     SerializedNote,
     {
@@ -317,9 +282,6 @@ export const updateNote = createAsyncThunk<
     }
 });
 
-/**
- * Update note icon.
- */
 export const updateNoteIcon = createAsyncThunk<
     SerializedNote,
     {
@@ -347,9 +309,6 @@ export const updateNoteIcon = createAsyncThunk<
     }
 });
 
-/**
- * Delete a note (soft delete by default).
- */
 export const deleteNote = createAsyncThunk<
     { noteId: string; permanent: boolean },
     { noteId: string; permanent?: boolean },
@@ -371,9 +330,6 @@ export const deleteNote = createAsyncThunk<
     }
 });
 
-/**
- * Restore a deleted note.
- */
 export const restoreNote = createAsyncThunk<
     SerializedNote,
     string,
@@ -395,9 +351,6 @@ export const restoreNote = createAsyncThunk<
     }
 });
 
-/**
- * Search notes.
- */
 export const searchNotes = createAsyncThunk<
     { notes: SerializedNote[]; totalCount: number },
     { query: string; includeDeleted?: boolean },
@@ -421,9 +374,6 @@ export const searchNotes = createAsyncThunk<
     }
 });
 
-/**
- * Get backlinks for a note.
- */
 export const fetchBacklinks = createAsyncThunk<
     { noteId: string; backlinks: Array<{ id: string; title: string; slug: string }> },
     string,
@@ -448,9 +398,6 @@ export const fetchBacklinks = createAsyncThunk<
     }
 });
 
-/**
- * Move note to a different space.
- */
 export const moveNote = createAsyncThunk<
     SerializedNote,
     { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole },
@@ -474,9 +421,6 @@ export const moveNote = createAsyncThunk<
     }
 });
 
-/**
- * Copy note to another space.
- */
 export const copyNote = createAsyncThunk<
     SerializedNote,
     { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole; title?: string },
@@ -501,10 +445,6 @@ export const copyNote = createAsyncThunk<
     }
 });
 
-/**
- * Fetch notes from API (internal helper).
- * Handles pagination and returns all notes.
- */
 async function fetchAllNotesFromAPI(
     organizationId: string,
     currentUserId: string,
@@ -516,7 +456,6 @@ async function fetchAllNotesFromAPI(
 }> {
     const pageSize = 500;
 
-    // Fetch first page
     const firstResponse = await notesApi.listNotes({
         organizationId,
         page: 1,
@@ -527,7 +466,6 @@ async function fetchAllNotesFromAPI(
 
     const allNotes = [...firstResponse.notes];
 
-    // Fetch remaining pages in parallel if needed
     if (firstResponse.totalPages > 1) {
         const remainingPages = Array.from(
             { length: firstResponse.totalPages - 1 },
@@ -553,10 +491,7 @@ async function fetchAllNotesFromAPI(
 
     hydrateNoteTags(dispatch, allNotes);
 
-    // Convert to serializable format
     const serializedNotes = allNotes.map(noteToPlain);
-
-    // Organize into tree structure
     const tree = organizeNotesBySection(serializedNotes, currentUserId);
 
     return {
@@ -566,17 +501,7 @@ async function fetchAllNotesFromAPI(
     };
 }
 
-/**
- * Initialize all notes data with caching support.
- *
- * Load strategy:
- * 1. If cache exists and is fresh (< 5 min) → return cached data, no API call
- * 2. If cache exists but stale → return cached data immediately, revalidate in background
- * 3. If no cache → fetch from API
- *
- * This is the primary entry point for loading notes on page mount.
- * Both notesSlice and notesTreeSlice listen to this action.
- */
+/** Stale-while-revalidate: fresh cache short-circuits; stale cache returns immediately, refreshes in background. */
 export const initializeNotesData = createAsyncThunk<
     {
         notes: SerializedNote[];
@@ -585,7 +510,6 @@ export const initializeNotesData = createAsyncThunk<
         fromCache?: boolean;
     },
     {
-        /** Force API fetch even if cache is fresh */
         forceRefresh?: boolean;
     } | void,
     { state: RootState; rejectValue: string }
@@ -601,9 +525,7 @@ export const initializeNotesData = createAsyncThunk<
 
         const forceRefresh = params?.forceRefresh ?? false;
 
-        // Skip only if the tree itself is hydrated; notesCount > 0
-        // is unreliable because fetchNote / searchNotes can populate
-        // state.notes.notes without ever loading the tree.
+        // Skip only when tree is hydrated; notesCount can be populated by fetchNote/searchNotes alone.
         if (state.notesTree.treeLoaded && !forceRefresh) {
             const existingNotes = Object.values(state.notes.notes);
             return {
@@ -614,23 +536,17 @@ export const initializeNotesData = createAsyncThunk<
             };
         }
 
-        // Request deduplication - if a fetch is already in progress, wait for it
         if (initializeRequestPromise && !forceRefresh) {
             const result = await initializeRequestPromise;
             return { ...result, fromCache: false };
         }
 
-        // Try to load from IndexedDB cache first (stale-while-revalidate pattern)
-        // Always show cached data immediately, then revalidate in background
         if (isIndexedDBAvailable() && !forceRefresh) {
             const cached = await getCachedNotes(organizationId, currentUserId);
 
             if (cached) {
-                // Start background revalidation (fire and forget)
-                // This runs regardless of cache freshness - ensures shared notes appear quickly
                 fetchAllNotesFromAPI(organizationId, currentUserId, dispatch)
                     .then((freshData) => {
-                        // Update cache
                         setCachedNotes(
                             organizationId,
                             currentUserId,
@@ -638,7 +554,6 @@ export const initializeNotesData = createAsyncThunk<
                             freshData.tree,
                             freshData.totalCount
                         );
-                        // Dispatch update to Redux (this will trigger UI update if data changed)
                         dispatch({
                             type: 'notes/backgroundRefreshComplete',
                             payload: freshData,
@@ -648,7 +563,6 @@ export const initializeNotesData = createAsyncThunk<
                         console.error('[NotesCache] Background revalidation failed:', error);
                     });
 
-                // Return cached data immediately for instant UI
                 return {
                     notes: cached.notes,
                     tree: cached.tree,
@@ -658,13 +572,11 @@ export const initializeNotesData = createAsyncThunk<
             }
         }
 
-        // No cache - fetch from API with deduplication
         initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId, dispatch);
 
         try {
             const result = await initializeRequestPromise;
 
-            // Save to cache for next time
             if (isIndexedDBAvailable()) {
                 setCachedNotes(
                     organizationId,

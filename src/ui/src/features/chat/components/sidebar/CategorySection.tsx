@@ -1,12 +1,3 @@
-/**
- * CategorySection - Collapsible channel category in the sidebar.
- *
- * Shows a category header with name, collapse chevron, drag handle, and "+" button.
- * When expanded, renders the channel list items with a smooth height animation.
- * When collapsed, shows aggregate unread count on the header.
- * Supports drag-and-drop reordering via @dnd-kit when `sortable` is true.
- */
-
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
 import {
   CaretDown,
@@ -70,7 +61,6 @@ export function CategorySection({
     transition,
   };
 
-  // Measure content height for animation
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
@@ -132,7 +122,6 @@ export function CategorySection({
       data-testid={`chat-sidebar-category-${testidId}`}
       data-state={collapsed ? 'collapsed' : 'expanded'}
     >
-      {/* Category header - entire row is draggable when sortable */}
       <div
         className={cn(
           'flex items-center w-full px-3 py-1.5 group',
@@ -140,7 +129,6 @@ export function CategorySection({
         )}
         {...(sortable ? { ...attributes, ...listeners } : {})}
       >
-        {/* Toggle + name (or edit input) */}
         {isEditing ? (
           <div className="flex items-center gap-1 flex-1 min-w-0">
             <input
@@ -186,7 +174,6 @@ export function CategorySection({
           </button>
         )}
 
-        {/* Right side: unread badge + edit/delete + add button */}
         <span className="flex items-center gap-1 shrink-0">
           <span
             className={cn(
@@ -241,7 +228,6 @@ export function CategorySection({
         </span>
       </div>
 
-      {/* Channel list with height animation */}
       <div
         ref={contentRef}
         className="overflow-hidden transition-[height,opacity] duration-200 ease-out"

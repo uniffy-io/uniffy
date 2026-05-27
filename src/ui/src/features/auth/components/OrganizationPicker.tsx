@@ -40,9 +40,6 @@ import {
   ShieldWarning,
 } from "@phosphor-icons/react";
 
-/**
- * Get human-readable label for organization role.
- */
 function getRoleLabel(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
@@ -56,9 +53,6 @@ function getRoleLabel(role: OrganizationRole): string {
   }
 }
 
-/**
- * Role badge color mapping.
- */
 function getRoleBadgeClasses(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
@@ -70,9 +64,6 @@ function getRoleBadgeClasses(role: OrganizationRole): string {
   }
 }
 
-/**
- * Extract initials from an organization name for the avatar.
- */
 function getOrgInitials(name: string): string {
   return name
     .split(/\s+/)
@@ -131,10 +122,7 @@ export function OrganizationPicker() {
       setError("Session expired. Please login again.");
       return;
     }
-    // A live recording is owned by the current org's MultipartUpload
-    // row. Switching orgs would orphan the upload (server-side reaper
-    // handles it eventually, but the user loses the clip). Confirm
-    // before discarding.
+    // Switching orgs orphans the MultipartUpload row that backs an active recording, losing the clip.
     if (RECORDING_ACTIVE_STATES.has(recordingState)) {
       setPendingOrgSlug(orgSlug);
       return;
@@ -150,19 +138,14 @@ export function OrganizationPicker() {
     setSelectingSlug(orgSlug);
     try {
       const client = createClient(AuthService, unaryTransport);
-      // Refresh token with the selected organization slug to get an org-scoped token
       const response = await client.refreshToken({
         refreshToken,
         organizationSlug: orgSlug,
       });
 
-      // Store access token in memory (security: not persisted to localStorage)
       setMemoryAccessToken(response.accessToken);
 
-      // Update credentials with new token and organization ID
-      // We assume user info is same, but we update tokens
       if (user) {
-        // Sync theme preferences from user profile
         if (user.accentColor) {
           dispatch(setAccentColor(user.accentColor));
         }
@@ -171,7 +154,7 @@ export function OrganizationPicker() {
         }
 
         dispatch(setCredentials({
-          user: user, // Keep existing user info
+          user: user,
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           organizationId: response.organizationId,
@@ -198,21 +181,16 @@ export function OrganizationPicker() {
   };
 
   const handleLogout = () => {
-    // Clear memory access token (security: remove from memory)
     clearMemoryAccessToken();
-    // Clear all user/org-specific state
     dispatch(logout());
     dispatch(resetSettings());
-    // Clear notes state
     dispatch(clearNotes());
     dispatch(clearNotesTree());
-    // Clear files state
     dispatch(clearFiles());
     dispatch(clearFilesTree());
     dispatch(clearUploads());
     dispatch(closeViewer());
     dispatch(clearSavedFilters());
-    // Clear other state
     dispatch(clearBookmarks());
     dispatch(clearPresence());
     dispatch(clearPermissions());
@@ -222,9 +200,7 @@ export function OrganizationPicker() {
     dispatch(clearChatThreads());
     dispatch(clearChatUi());
     dispatch(clearTags());
-    // Clear file blob cache
     clearBlobCache();
-    // Navigate to auth page
     navigate('/auth');
   };
 
@@ -253,7 +229,6 @@ export function OrganizationPicker() {
 
       <div className="flex min-h-screen items-center justify-center px-6 py-12 bg-background">
         <div className="w-full max-w-md">
-          {/* Header area */}
           <div
             className="flex items-center justify-between mb-8 opacity-0"
             style={{ animation: 'org-slide-up 0.5s ease-out 0.1s forwards' }}
@@ -275,7 +250,6 @@ export function OrganizationPicker() {
             </Button>
           </div>
 
-          {/* Error message */}
           {error && (
             <div
               className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
@@ -288,7 +262,6 @@ export function OrganizationPicker() {
             </div>
           )}
 
-          {/* Loading state */}
           {loading ? (
             <div
               className="flex flex-col items-center justify-center py-16 opacity-0"
@@ -302,7 +275,6 @@ export function OrganizationPicker() {
               <p className="text-sm text-muted-foreground">Loading workspaces...</p>
             </div>
           ) : organizations.length === 0 ? (
-            /* Empty state */
             <div
               className="rounded-xl border border-border bg-card p-10 text-center opacity-0"
               style={{ animation: 'org-slide-up 0.5s ease-out 0.2s forwards' }}
@@ -339,7 +311,6 @@ export function OrganizationPicker() {
               )}
             </div>
           ) : (
-            /* Organization list */
             <div className="space-y-2">
               {user?.isSystemAdmin && (
                 <button
@@ -391,14 +362,12 @@ export function OrganizationPicker() {
                     }}
                   >
                     <div className="flex items-center gap-4 p-4">
-                      {/* Org avatar */}
                       <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
                         <span className="text-primary font-bold text-sm">
                           {getOrgInitials(myOrg.organization?.name || '?')}
                         </span>
                       </div>
 
-                      {/* Org info */}
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-sm text-foreground truncate">
                           {myOrg.organization?.name}
@@ -412,7 +381,6 @@ export function OrganizationPicker() {
                         </div>
                       </div>
 
-                      {/* Arrow / spinner */}
                       <div className="flex-shrink-0">
                         {isSelecting ? (
                           <CircleNotch
@@ -433,7 +401,6 @@ export function OrganizationPicker() {
             </div>
           )}
 
-          {/* Footer */}
           <p
             className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
             style={{ animation: 'org-slide-up 0.5s ease-out 0.6s forwards' }}

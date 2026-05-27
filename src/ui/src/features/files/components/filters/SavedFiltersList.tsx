@@ -1,9 +1,3 @@
-/**
- * Saved Filters List Component
- *
- * Displays a grid of saved file filters.
- */
-
 import { Funnel } from '@phosphor-icons/react';
 import { FilterCard } from '@/features/files/components/filters/FilterCard';
 import type { SerializedSavedFilter } from '@/features/files/store/savedFiltersSlice';

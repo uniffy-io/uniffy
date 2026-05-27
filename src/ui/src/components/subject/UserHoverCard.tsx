@@ -133,10 +133,8 @@ export function UserHoverCard({
           opensDownward ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2',
         )}
       >
-        {/* Emerald accent stripe (USER type) */}
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500" />
 
-        {/* Gradient wash */}
         <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none" />
 
         {isLoading ? (
@@ -151,7 +149,6 @@ export function UserHoverCard({
           </div>
         ) : (
           <>
-            {/* Header */}
             <div className="relative px-4 pt-3.5 pb-2 pl-5">
               <div className="flex items-start gap-3">
                 <div className="relative shrink-0">
@@ -199,7 +196,6 @@ export function UserHoverCard({
               </div>
             </div>
 
-            {/* Actions */}
             <div className="px-4 py-2.5 pl-5 bg-muted/30 border-t border-border/50 flex items-center gap-2">
               {onSendMessage && (
                 <button

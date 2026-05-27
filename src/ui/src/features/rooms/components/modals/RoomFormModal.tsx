@@ -1,10 +1,3 @@
-/**
- * RoomFormModal - Create/edit room form modal
- *
- * Provides a form for creating or editing room resources.
- * Edit mode includes status selection.
- */
-
 import { useState, useEffect, useCallback } from 'react';
 import { X, Door, Plus } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -76,7 +69,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Reset form when room changes or modal opens
   useEffect(() => {
     if (isOpen) {
       if (room) {
@@ -114,7 +106,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Name: required, 1-255 chars
     const name = form.name.trim();
     if (!name) {
       newErrors.name = 'Name is required';
@@ -122,7 +113,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
       newErrors.name = 'Name must be 255 characters or less';
     }
 
-    // Capacity: required, must be a number >= 0
     const cap = parseInt(form.capacity, 10);
     if (!form.capacity.trim()) {
       newErrors.capacity = 'Capacity is required';
@@ -132,22 +122,18 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
       newErrors.capacity = 'Capacity seems too high';
     }
 
-    // Building: max 100 chars
     if (form.building.length > 100) {
       newErrors.building = 'Building must be 100 characters or less';
     }
 
-    // Floor: max 50 chars
     if (form.floor.length > 50) {
       newErrors.floor = 'Floor must be 50 characters or less';
     }
 
-    // Location: max 500 chars
     if (form.location.length > 500) {
       newErrors.location = 'Location must be 500 characters or less';
     }
 
-    // Description: max 2000 chars
     if (form.description.length > 2000) {
       newErrors.description = 'Description must be 2000 characters or less';
     }
@@ -238,7 +224,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
     setCustomAmenity('');
   }, [customAmenity, form.amenities]);
 
-  // Close on escape
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -254,13 +239,11 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div
         className={cn(
           'relative bg-card w-[calc(100vw-2rem)] max-w-lg mx-4',
@@ -269,7 +252,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
           'animate-in zoom-in-95 fade-in duration-200',
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Door size={20} weight="duotone" className="text-muted-foreground" />
@@ -286,10 +268,8 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto flex flex-col gap-4">
-            {/* Name */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">
                 Name <span className="text-red-500">*</span>
@@ -305,7 +285,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               )}
             </div>
 
-            {/* Description */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Description</label>
               <textarea
@@ -326,7 +305,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               )}
             </div>
 
-            {/* Type and Capacity row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Room Type</label>
@@ -356,7 +334,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               </div>
             </div>
 
-            {/* Status (edit only) */}
             {isEdit && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Status</label>
@@ -369,7 +346,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               </div>
             )}
 
-            {/* Building and Floor */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Building</label>
@@ -397,7 +373,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               </div>
             </div>
 
-            {/* Location */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Location</label>
               <Input
@@ -411,7 +386,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               )}
             </div>
 
-            {/* Amenities */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-foreground">Amenities</label>
               <div className="grid grid-cols-2 gap-2">
@@ -425,7 +399,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                 ))}
               </div>
 
-              {/* Custom amenities */}
               {form.amenities.filter((a) => !AMENITY_OPTIONS.includes(a)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {form.amenities
@@ -448,7 +421,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                 </div>
               )}
 
-              {/* Add custom amenity */}
               <div className="flex items-center gap-2 pt-1">
                 <Input
                   value={customAmenity}
@@ -476,7 +448,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               </div>
             </div>
 
-            {/* Visibility */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Visibility</label>
               <Select
@@ -493,7 +464,6 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
             <Button
               type="button"

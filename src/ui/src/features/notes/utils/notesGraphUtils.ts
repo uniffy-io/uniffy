@@ -1,10 +1,3 @@
-/**
- * Notes Graph Utilities
- *
- * Utilities for building graph data from notes based on URN mentions.
- * Used by the NotesGraphDashboard to visualize note connections.
- */
-
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
@@ -12,59 +5,39 @@ import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
 import { getContentTypeLabel } from '@/config/theme/contentTypes';
 
-/** Custom icon for a note */
 export interface NoteIconData {
   type: 'icon' | 'emoji';
   value: string;
 }
 
-/** Node in the graph representing a note or external resource */
 export interface GraphNode {
-  /** Unique identifier (note ID or URN for external resources) */
   id: string;
-  /** Display label */
   label: string;
-  /** Type of the node */
   type: UrnType | 'note';
-  /** Full URN if available */
   urn?: string;
-  /** Whether this is an internal note vs external reference */
   isInternal: boolean;
-  /** Number of connections (for sizing) */
   connections: number;
-  /** Color based on type */
   color: string;
-  /** Custom icon (heroicon or emoji) for internal notes */
   customIcon?: NoteIconData;
-  /** @deprecated Use customIcon.type === 'emoji' instead */
   emoji?: string;
-  /** X position (set by force simulation) */
   x?: number;
-  /** Y position (set by force simulation) */
   y?: number;
-  /** X velocity (set by force simulation) */
   vx?: number;
-  /** Y velocity (set by force simulation) */
   vy?: number;
 }
 
-/** Link between two nodes */
 export interface GraphLink {
-  /** Source node ID */
   source: string;
-  /** Target node ID */
   target: string;
-  /** Label for the link (optional) */
   label?: string;
 }
 
-/** Complete graph data structure */
 export interface GraphData {
   nodes: GraphNode[];
   links: GraphLink[];
 }
 
-/** Parse mentions from markdown content using [[[label|urn]]] pattern */
+/** Parse [[[label|urn]]] mentions from markdown. */
 export function parseMentionsFromContent(content: string): Array<{ label: string; urn: string }> {
   const mentionRegex = /\[\[\[([^\]|]+)\|([^\]]+)\]\]\]/g;
   const mentions: Array<{ label: string; urn: string }> = [];
@@ -82,23 +55,14 @@ export function parseMentionsFromContent(content: string): Array<{ label: string
   return mentions;
 }
 
-/** Get color for a node based on its type */
 function getNodeColor(type: UrnType | 'note', isInternal: boolean): string {
-  // Internal notes use a special marker that will be resolved at render time
+  // Internal notes use a marker resolved at render time.
   if (isInternal) {
     return '__PRIMARY__';
   }
-
   return URN_TYPE_HEX_COLORS[type as UrnType] || URN_TYPE_HEX_COLORS[UrnType.UNKNOWN];
 }
 
-/**
- * Build graph data from a collection of notes.
- * Creates nodes for each note and links based on outgoingReferences.
- *
- * @param notes - Array of notes to build the graph from
- * @param urnMetadata - Optional map of URN -> metadata for resolving external node labels
- */
 export function buildGraphData(
   notes: SerializedNote[],
   urnMetadata?: Map<string, Omit<UrnMetadata, '$typeName'>>
@@ -108,21 +72,18 @@ export function buildGraphData(
   const nodeMap = new Map<string, GraphNode>();
   const connectionCount = new Map<string, number>();
 
-  // Filter out folder notes - they're organizational containers, not content nodes
+  // Folder notes are organizational containers, not content nodes.
   const contentNotes = notes.filter((note) => note.nodeType !== NodeType.FOLDER);
 
-  // Build a map of note IDs to titles for label lookup
   const noteTitles = new Map<string, string>();
   for (const note of contentNotes) {
     noteTitles.set(note.id, note.title || 'Untitled');
   }
 
-  // First pass: count connections for sizing using outgoingReferences
   for (const note of contentNotes) {
     const refs = note.outgoingReferences || [];
     connectionCount.set(note.id, (connectionCount.get(note.id) || 0) + refs.length);
 
-    // Count incoming connections for referenced items
     for (const urn of refs) {
       const parsed = parseUrn(urn);
       if (parsed.isValid) {
@@ -131,11 +92,9 @@ export function buildGraphData(
     }
   }
 
-  // Second pass: create nodes for all content notes
   for (const note of contentNotes) {
     const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
 
-    // Extract custom icon if the note has one
     const customIcon: NoteIconData | undefined = note.icon
       ? { type: note.icon.type, value: note.icon.value }
       : undefined;
@@ -149,7 +108,6 @@ export function buildGraphData(
       connections: connectionCount.get(note.id) || 0,
       color: getNodeColor('note', true),
       customIcon,
-      // Keep emoji for backwards compatibility
       emoji: customIcon?.type === 'emoji' ? customIcon.value : undefined,
     };
 
@@ -157,7 +115,6 @@ export function buildGraphData(
     nodeMap.set(note.id, node);
   }
 
-  // Third pass: create links and external nodes from outgoingReferences
   for (const note of contentNotes) {
     const refs = note.outgoingReferences || [];
 
@@ -165,12 +122,10 @@ export function buildGraphData(
       const parsed = parseUrn(urn);
       if (!parsed.isValid) continue;
 
-      // Check if target is an internal note
       const isInternalNote = nodeMap.has(parsed.id);
 
       if (!isInternalNote && !nodeMap.has(parsed.id)) {
-        // Create external node
-        // Priority for label: resolved metadata > note title (if note) > type label
+        // Label priority: resolved metadata > note title > type label.
         let label: string;
         const resolvedMeta = urnMetadata?.get(urn);
         if (resolvedMeta?.title) {
@@ -194,7 +149,6 @@ export function buildGraphData(
         nodeMap.set(parsed.id, externalNode);
       }
 
-      // Create link
       links.push({
         source: note.id,
         target: parsed.id,
@@ -202,12 +156,10 @@ export function buildGraphData(
     }
   }
 
-  // WORKAROUND: Add invisible self-links for nodes that are only targets
-  // This fixes a bug in react-force-graph-2d where target-only nodes don't get hit detection
+  // Workaround: react-force-graph-2d hit detection fails on target-only nodes; add invisible self-links.
   const sourceNodeIds = new Set(links.map(l => l.source));
   for (const node of nodes) {
     if (!sourceNodeIds.has(node.id)) {
-      // Add a self-referencing link with zero visual impact
       links.push({
         source: node.id,
         target: node.id,
@@ -218,24 +170,16 @@ export function buildGraphData(
   return { nodes, links };
 }
 
-/** Get a human-readable label for a URN type using centralized config */
 function getTypeLabel(type: UrnType): string {
   return getContentTypeLabel(type);
 }
 
-/**
- * Calculate node size based on connection count.
- * More connections = larger node.
- */
 export function getNodeSize(node: GraphNode): number {
   const baseSize = 6;
   const connectionBonus = Math.min(node.connections * 1.5, 10);
   return baseSize + connectionBonus;
 }
 
-/**
- * Get statistics about the graph.
- */
 export function getGraphStats(data: GraphData): {
   totalNodes: number;
   internalNotes: number;

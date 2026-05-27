@@ -1,13 +1,3 @@
-/**
- * RoadmapTaskList - Left panel showing task rows
- *
- * Features:
- * - Status icon, title
- * - Assignee avatar
- * - "No dates" indicator for unscheduled tasks
- * - Synchronized vertical scroll with timeline (mirrors via transform)
- */
-
 import { useRef, useEffect } from "react";
 import { Circle, CheckCircle, Spinner } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";

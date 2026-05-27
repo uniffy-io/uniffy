@@ -1,10 +1,4 @@
-/**
- * useDashboardRefresh - Auto-refresh logic for dashboard data
- *
- * Manages refresh intervals with tab visibility awareness.
- * Pauses all intervals when the tab is not visible.
- * Provides a manual refresh callback.
- */
+// Auto-refresh is gated on document visibility - timers pause when the tab is hidden.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 

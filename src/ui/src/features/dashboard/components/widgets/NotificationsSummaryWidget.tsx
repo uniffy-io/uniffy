@@ -1,10 +1,3 @@
-/**
- * NotificationsSummaryWidget - Unread notifications summary
- *
- * Shows the unread count and last 3 unread notifications in compact form.
- * Uses existing notifications slice state (unreadCount, notifications array).
- */
-
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, ArrowRight, CheckCircle } from '@phosphor-icons/react';

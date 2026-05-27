@@ -1,9 +1,3 @@
-/**
- * Filter Builder Component
- *
- * Form for creating and editing saved file filters.
- */
-
 import { useState, useCallback } from 'react';
 import {
     X,
@@ -35,7 +29,6 @@ interface FilterBuilderProps {
     saving?: boolean;
 }
 
-// MIME category options
 const MIME_CATEGORIES = [
     { id: 'document', label: 'Documents', icon: FileDoc },
     { id: 'image', label: 'Images', icon: Image },
@@ -44,7 +37,6 @@ const MIME_CATEGORIES = [
     { id: 'archive', label: 'Archives', icon: FileArchive },
 ];
 
-// Common file extensions
 const COMMON_EXTENSIONS = [
     'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
     'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp',
@@ -54,7 +46,6 @@ const COMMON_EXTENSIONS = [
     'txt', 'md', 'json', 'xml', 'csv',
 ];
 
-// Sort options
 const SORT_OPTIONS = [
     { value: 'updated_at', label: 'Date Modified' },
     { value: 'created_at', label: 'Date Created' },
@@ -62,7 +53,6 @@ const SORT_OPTIONS = [
     { value: 'size_bytes', label: 'Size' },
 ];
 
-// Size presets
 const SIZE_PRESETS = [
     { label: '< 1 MB', min: undefined, max: 1048576 },
     { label: '1-10 MB', min: 1048576, max: 10485760 },
@@ -76,7 +66,6 @@ export function FilterBuilder({
     onCancel,
     saving = false,
 }: FilterBuilderProps) {
-    // Form state
     const [name, setName] = useState(initialFilter?.name ?? '');
     const [description, setDescription] = useState(initialFilter?.description ?? '');
     const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -96,14 +85,11 @@ export function FilterBuilder({
     const [sortBy, setSortBy] = useState(initialFilter?.sortBy ?? 'updated_at');
     const [sortOrder, setSortOrder] = useState(initialFilter?.sortOrder ?? 'desc');
 
-    // Icon state
     const [icon, setIcon] = useState<SerializedIconValue | undefined>(initialFilter?.icon);
     const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
-    // Error state
     const [error, setError] = useState<string | null>(null);
 
-    // Handle category toggle
     const handleCategoryToggle = useCallback((categoryId: string) => {
         setSelectedCategories((prev) =>
             prev.includes(categoryId)
@@ -112,7 +98,6 @@ export function FilterBuilder({
         );
     }, []);
 
-    // Handle extension add
     const handleAddExtension = useCallback(() => {
         const ext = extensionInput.trim().toLowerCase().replace(/^\./, '');
         if (ext && !extensions.includes(ext)) {
@@ -121,32 +106,26 @@ export function FilterBuilder({
         }
     }, [extensionInput, extensions]);
 
-    // Handle extension remove
     const handleRemoveExtension = useCallback((ext: string) => {
         setExtensions((prev) => prev.filter((e) => e !== ext));
     }, []);
 
-    // Handle size preset selection
     const handleSizePreset = useCallback((min: number | undefined, max: number | undefined) => {
         setSizeMin(min);
         setSizeMax(max);
     }, []);
 
-    // Clear size filter
     const handleClearSize = useCallback(() => {
         setSizeMin(undefined);
         setSizeMax(undefined);
     }, []);
 
-    // Handle icon select
     const handleIconSelect = useCallback((newIcon: IconValue | null) => {
         setIcon(newIcon ? { type: newIcon.type, value: newIcon.value } : undefined);
         setIsIconPickerOpen(false);
     }, []);
 
-    // Handle save
     const handleSave = useCallback(async () => {
-        // Validate
         if (!name.trim()) {
             setError('Filter name is required');
             return;
@@ -184,13 +163,11 @@ export function FilterBuilder({
         }
     }, [name, description, icon, selectedCategories, extensions, tagIds, sizeMin, sizeMax, sortBy, sortOrder, onSave]);
 
-    // Handle category toggle - also clear error
     const handleCategoryToggleWithClear = useCallback((categoryId: string) => {
         handleCategoryToggle(categoryId);
         if (error) setError(null);
     }, [handleCategoryToggle, error]);
 
-    // Clear error on name change
     const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setName(e.target.value);
         if (error) setError(null);

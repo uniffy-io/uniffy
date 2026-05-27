@@ -4,14 +4,7 @@ import { getStoreRef } from '@/app/storeRef';
 import { fetchBulkPresence } from '@/features/presence/store/presenceThunks';
 import type { AppDispatch, RootState } from '@/app/store';
 
-/**
- * Module-level batch queue for presence fetching.
- *
- * When usePresence(userId) encounters an unknown user, the ID is added
- * to a pending set. After a short debounce, all pending IDs are flushed
- * in a single bulk API call. This avoids N+1 requests when many mention
- * chips render simultaneously.
- */
+// 150ms debounce coalesces concurrent usePresence callers into one bulk RPC.
 const pendingUserIds = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -26,7 +19,7 @@ function flushPendingPresence() {
     const organizationId = state.auth.currentOrganizationId;
     if (!organizationId) return;
 
-    // Filter out any that arrived in the store while we were debouncing
+    // Drop any IDs that arrived in the store while debouncing.
     const ids = [...pendingUserIds].filter(
         (id) => !(id in state.presence.statuses),
     );
@@ -42,23 +35,14 @@ function flushPendingPresence() {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function requestPresence(userId: string) {
-    // Agent subjects and placeholder strings shouldn't hit the presence RPC;
-    // the backend expects a valid UUID and raises INVALID_ARGUMENT otherwise.
+    // Backend raises INVALID_ARGUMENT on non-UUID subjects (agents, placeholders).
     if (!userId || !UUID_RE.test(userId)) return;
     pendingUserIds.add(userId);
     if (flushTimer) clearTimeout(flushTimer);
     flushTimer = setTimeout(flushPendingPresence, 150);
 }
 
-/**
- * Get the presence status for a single user.
- *
- * Automatically triggers a bulk fetch if the user's presence is not
- * yet in the store. Multiple concurrent calls are batched into a
- * single API request via a 150ms debounce.
- *
- * Returns 'offline' while the fetch is in-flight or if no data exists.
- */
+/** Returns 'offline' while the bulk fetch is in flight. */
 export function usePresence(userId: string): string {
     const status = useAppSelector(
         (state) => state.presence.statuses[userId],

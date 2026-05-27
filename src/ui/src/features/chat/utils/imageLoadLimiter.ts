@@ -1,15 +1,4 @@
-/**
- * Image-load concurrency limiter.
- *
- * The chat scroll path can mount 100+ <img> elements at once when
- * the user scrolls into a region with image attachments. Native
- * `loading="lazy"` defers but does not throttle once the images
- * are in viewport, which means the browser fans out hundreds of
- * parallel HTTP requests against the auth-proxied media stream.
- * This module-level semaphore caps in-flight image loads to
- * `MAX_CONCURRENT_IMAGES`. Callers acquire a slot, set their
- * `<img src>`, and release on load or error.
- */
+/** Semaphore capping in-flight image loads so virtualised chat scrolls don't fan out hundreds of parallel requests. */
 
 const MAX_CONCURRENT_IMAGES = 8;
 

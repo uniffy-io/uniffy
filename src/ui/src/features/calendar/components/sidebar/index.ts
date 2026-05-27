@@ -1,7 +1,3 @@
-/**
- * Sidebar components exports
- */
-
 export { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
 export { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
 export { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';

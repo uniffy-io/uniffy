@@ -1,10 +1,3 @@
-/**
- * Drawer component for slide-over panels on tablet/mobile.
- *
- * Used to show sidebars and detail panels as overlays on smaller screens.
- * Supports left (sidebars) and right (detail panels) sides with backdrop.
- */
-
 import { useEffect, useRef } from 'react';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
@@ -13,13 +6,10 @@ interface DrawerProps {
     open: boolean;
     onClose: () => void;
     children: React.ReactNode;
-    /** Which side the drawer slides in from */
     side?: 'left' | 'right';
-    /** Width class (Tailwind). Defaults to 'w-80' (320px) */
+    /** Default `w-80` (320px). */
     className?: string;
-    /** Show close button in top corner */
     showClose?: boolean;
-    /** Accessible label */
     ariaLabel?: string;
 }
 
@@ -34,7 +24,6 @@ export function Drawer({
 }: DrawerProps) {
     const drawerRef = useRef<HTMLDivElement>(null);
 
-    // Close on Escape
     useEffect(() => {
         if (!open) return;
 
@@ -48,7 +37,6 @@ export function Drawer({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [open, onClose]);
 
-    // Prevent body scroll when open
     useEffect(() => {
         if (!open) return;
 
@@ -71,7 +59,6 @@ export function Drawer({
             aria-modal="true"
             aria-label={ariaLabel}
         >
-            {/* Backdrop */}
             <div
                 className={cn(
                     'fixed inset-0 bg-black/40 transition-opacity duration-300',
@@ -80,7 +67,6 @@ export function Drawer({
                 onClick={onClose}
             />
 
-            {/* Drawer panel */}
             <div
                 ref={drawerRef}
                 className={cn(
@@ -92,12 +78,10 @@ export function Drawer({
                         : isLeft
                             ? '-translate-x-full'
                             : 'translate-x-full',
-                    // Default width if not overridden
                     !className?.includes('w-') && 'w-80',
                     className
                 )}
             >
-                {/* Close button */}
                 {showClose && (
                     <button
                         onClick={onClose}

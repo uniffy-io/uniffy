@@ -1,18 +1,11 @@
-/**
- * Centralized utilities for parsing Uniffy markdown mentions.
- *
- * Mention format: [[[label|urn:uniffy:content:TYPE:uuid]]]
- */
+// Mention format: [[[label|urn:uniffy:content:TYPE:uuid]]]
 
 export interface ParsedMention {
     label: string;
     urn: string;
 }
 
-/**
- * Extract all [[[label|urn]]] mentions from markdown content.
- * Returns deduplicated results by URN.
- */
+/** Returns mentions deduplicated by URN. */
 export function extractMentionsFromMarkdown(markdown: string): ParsedMention[] {
     const mentionRegex = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
     const mentions: ParsedMention[] = [];
@@ -22,16 +15,12 @@ export function extractMentionsFromMarkdown(markdown: string): ParsedMention[] {
         mentions.push({ label: match[1], urn: match[2] });
     }
 
-    // Deduplicate by URN
     return mentions.filter(
         (mention, index, self) => self.findIndex((m) => m.urn === mention.urn) === index
     );
 }
 
-/**
- * Build a short fallback label from a URN when the display label is missing.
- * Returns "type:abcd1234" using the content type and truncated ID.
- */
+/** Short label like "note:abcd1234" for URNs missing a display label. */
 export function extractFallbackLabel(urn: string): string {
     const parts = urn.split(':');
     const type = parts[3]?.toLowerCase() || 'item';

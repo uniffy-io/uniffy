@@ -6,22 +6,13 @@ import { useRealtimeMarkdownContent } from '@/features/notes/realtime/useMarkdow
 
 interface ReadOnlyViewerProps {
   note: SerializedNote;
-  /** Static fallback content used when no realtime session is active. */
   content: string;
-  /** Optional title/metadata block rendered above the editor surface inside the same scroll wrapper. */
   titleSlot?: ReactNode;
-  /**
-   * When set, the viewer reads live markdown from the shared
-   * ``Y.Text("markdown")`` so it stays in sync with collaborative
-   * edits in another pane.
-   */
   realtime?: CrepeRealtimeBinding;
 }
 
 export function ReadOnlyViewer({ note, content, titleSlot, realtime }: ReadOnlyViewerProps) {
-  // Debounce remote updates: the readonly Crepe pane rebuilds
-  // Milkdown on every value change and would otherwise thrash
-  // while a peer is typing.
+  // Readonly Crepe rebuilds Milkdown per value change - debounce so a typing peer does not thrash it.
   const liveContent = useRealtimeMarkdownContent(realtime?.ydoc ?? null, content, {
     whenSynced: realtime?.whenSynced ?? null,
     debounceMs: 300,

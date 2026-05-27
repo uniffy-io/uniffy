@@ -73,8 +73,6 @@ const CHART_PALETTE = [
     "#ec4899",
 ];
 
-// Formatters
-
 function formatNumber(n: number): string {
     if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -98,10 +96,6 @@ function formatDuration(ms: number): string {
     if (ms >= 1_000) return `${(ms / 1_000).toFixed(1)}s`;
     return `${ms}ms`;
 }
-
-// Cost formatting flows through the shared currency helper so we never
-// hardcode a symbol. The org's display currency comes in via the stats
-// response.
 
 const SECONDARY_TONES = {
     emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
@@ -142,8 +136,6 @@ function SecondaryStat({
     );
 }
 
-// Custom Tooltip
-
 interface TooltipPayloadEntry {
     name: string;
     value: number;
@@ -183,8 +175,6 @@ function ChartTooltip({
         </div>
     );
 }
-
-// Stat Card
 
 function StatCard({
     label,
@@ -231,11 +221,9 @@ function StatCard({
     );
 }
 
-// Daily Usage Area Chart
-
 function formatChartTimestamp(dateStr: string, interval: string): string {
     if (interval === "1d") return formatShortDate(dateStr);
-    // Sub-daily: dateStr is "YYYY-MM-DD HH:MM"
+    // Sub-daily input is "YYYY-MM-DD HH:MM"
     const d = new Date(dateStr.replace(" ", "T"));
     if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString("en-US", {
@@ -363,8 +351,6 @@ function DailyUsageChart({
     );
 }
 
-// Model Distribution Bars
-
 function ModelBars({ data }: { data: UsageStats["modelUsage"] }) {
     const chartData = useMemo(
         () =>
@@ -446,8 +432,6 @@ function ModelBars({ data }: { data: UsageStats["modelUsage"] }) {
     );
 }
 
-// Agent Usage Horizontal Bars
-
 function AgentUsageBars({ data }: { data: UsageStats["agentUsage"] }) {
     const chartData = useMemo(() => {
         const withTotal = data.map((a) => ({
@@ -528,8 +512,6 @@ function AgentUsageBars({ data }: { data: UsageStats["agentUsage"] }) {
     );
 }
 
-// Tool Usage Horizontal Bars
-
 function ToolUsageBars({ data }: { data: UsageStats["toolUsage"] }) {
     const chartData = useMemo(
         () =>
@@ -596,8 +578,6 @@ function ToolUsageBars({ data }: { data: UsageStats["toolUsage"] }) {
         </ResponsiveContainer>
     );
 }
-
-// Provider Key Horizontal Bars
 
 function ProviderKeyBars({ data }: { data: UsageStats["providerKeyUsage"] }) {
     const chartData = useMemo(() => {
@@ -675,8 +655,6 @@ function ProviderKeyBars({ data }: { data: UsageStats["providerKeyUsage"] }) {
         </ResponsiveContainer>
     );
 }
-
-// Sortable Table
 
 type SortDirection = "asc" | "desc";
 
@@ -829,8 +807,6 @@ function SortableTable({
     );
 }
 
-// Chart Legend
-
 function TokenLegend() {
     return (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -851,8 +827,6 @@ function TokenLegend() {
         </div>
     );
 }
-
-// Main Component
 
 export function UsageView() {
     const dispatch = useAppDispatch();
@@ -939,7 +913,6 @@ export function UsageView() {
     return (
         <div className="flex-1 overflow-y-auto">
             <div className="max-w-[1400px] mx-auto p-6 space-y-6">
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-xl font-bold text-foreground tracking-tight">
@@ -978,7 +951,6 @@ export function UsageView() {
                     </div>
                 </div>
 
-                {/* Stat Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
                         label="Total Cost"
@@ -1025,7 +997,7 @@ export function UsageView() {
                     />
                 </div>
 
-                {/* Robustness signals: only render the row when something actually fired */}
+                {/* Robustness signals - only render when something fired */}
                 {(stats.totalRetries > 0 ||
                     stats.totalCancelled > 0 ||
                     stats.totalDeadlineExceeded > 0 ||
@@ -1061,7 +1033,6 @@ export function UsageView() {
                     </div>
                 )}
 
-                {/* Token Usage Chart */}
                 <div className="bg-card border border-border rounded-xl p-5">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-foreground text-sm">
@@ -1091,7 +1062,6 @@ export function UsageView() {
                     <DailyUsageChart data={stats.dailyUsage} interval={selectedInterval} />
                 </div>
 
-                {/* Model Distribution + Agent Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-card border border-border rounded-xl p-5">
                         <div className="flex items-center justify-between mb-4">
@@ -1125,7 +1095,6 @@ export function UsageView() {
                     </div>
                 </div>
 
-                {/* Provider Keys Chart */}
                 {stats.providerKeyUsage.length > 0 && (
                     <div className="bg-card border border-border rounded-xl p-5">
                         <div className="flex items-center justify-between mb-4">
@@ -1144,7 +1113,6 @@ export function UsageView() {
                     </div>
                 )}
 
-                {/* Scheduled Tasks Section */}
                 {stats.cronTotalRuns > 0 && (
                     <>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1229,7 +1197,6 @@ export function UsageView() {
                     </>
                 )}
 
-                {/* Tool Usage Chart */}
                 <div className="bg-card border border-border rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Wrench
@@ -1243,7 +1210,6 @@ export function UsageView() {
                     <ToolUsageBars data={stats.toolUsage} />
                 </div>
 
-                {/* Sortable Tables */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <SortableTable
                         title="Model Breakdown"

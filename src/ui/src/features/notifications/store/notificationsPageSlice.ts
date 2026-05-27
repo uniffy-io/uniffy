@@ -1,10 +1,3 @@
-/**
- * Redux slice for the full-page notifications view.
- *
- * Manages page-specific state: search, advanced filters, view mode,
- * analytics data, bulk selection, and pagination.
- */
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';

@@ -1,8 +1,4 @@
-/**
- * TagCloud - sidebar facet showing every unified tag attached to events
- * in the current view. Selecting a tag toggles a `tagIds[]` filter that
- * narrows the visible events; multi-select is logical AND.
- */
+/** Multi-select tag filter is logical AND. */
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { toggleTagFilter } from '@/features/calendar/store';

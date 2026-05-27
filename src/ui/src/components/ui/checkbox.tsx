@@ -1,9 +1,3 @@
-/**
- * Custom Checkbox Component
- *
- * A styled checkbox that matches the app's theme.
- */
-
 import { forwardRef, useId } from 'react';
 import { Check } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

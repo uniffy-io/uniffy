@@ -26,25 +26,16 @@ import {
   fetchActivities,
 } from "./projectsThunks";
 
-/**
- * Projects domain state
- */
 export interface ProjectsState {
-  /** Projects indexed by ID */
   projects: Record<string, Project>;
-  /** Tasks indexed by ID */
   tasks: Record<string, Task>;
-  /** Currently selected project ID */
   currentProjectId: string | null;
-  /** Activities indexed by task ID */
   activities: Record<string, TaskActivity[]>;
-  /** Loading states for async operations */
   loading: LoadingState;
-  /** Error states for async operations */
   errors: ErrorState;
-  /** Snapshot for reverting failed optimistic task updates */
+  /** Snapshot for reverting failed optimistic task updates. */
   _pendingTaskSnapshot?: Task;
-  /** Snapshots of parent tasks whose subtask counts were optimistically adjusted */
+  /** Snapshots of parents whose subtask counts were optimistically adjusted. */
   _pendingParentSnapshots?: Record<string, Task>;
 }
 
@@ -71,16 +62,10 @@ export const projectsSlice = createSlice({
   name: "projects",
   initialState,
   reducers: {
-    /**
-     * Set the current project
-     */
     setCurrentProject: (state, action: PayloadAction<string | null>) => {
       state.currentProjectId = action.payload;
     },
 
-    /**
-     * Clear all projects (e.g., on logout)
-     */
     clearProjects: (state) => {
       state.projects = {};
       state.tasks = {};
@@ -88,16 +73,10 @@ export const projectsSlice = createSlice({
       state.errors = { projects: null, tasks: null, general: null };
     },
 
-    /**
-     * Clear errors
-     */
     clearErrors: (state) => {
       state.errors = { projects: null, tasks: null, general: null };
     },
 
-    /**
-     * Optimistically update a task (for drag-and-drop)
-     */
     optimisticUpdateTask: (state, action: PayloadAction<Partial<Task> & { id: string }>) => {
       const { id, ...updates } = action.payload;
       const task = state.tasks[id];
@@ -145,9 +124,6 @@ export const projectsSlice = createSlice({
       }
     },
 
-    /**
-     * Bulk update multiple tasks at once (for multi-select field editing)
-     */
     bulkUpdateTasks: (state, action: PayloadAction<{ ids: string[]; changes: Partial<Task> }>) => {
       action.payload.ids.forEach((id) => {
         if (state.tasks[id]) {
@@ -156,9 +132,6 @@ export const projectsSlice = createSlice({
       });
     },
 
-    /**
-     * Add a custom field definition to a project
-     */
     addFieldDefinition: (state, action: PayloadAction<{ projectId: string; field: FieldDefinition }>) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
@@ -166,9 +139,6 @@ export const projectsSlice = createSlice({
       }
     },
 
-    /**
-     * Remove a field definition from a project
-     */
     removeFieldDefinition: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
@@ -178,9 +148,6 @@ export const projectsSlice = createSlice({
       }
     },
 
-    /**
-     * Update a field definition (rename, update config)
-     */
     updateFieldDefinition: (state, action: PayloadAction<{ projectId: string; fieldId: string; changes: Partial<FieldDefinition> }>) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
@@ -193,7 +160,6 @@ export const projectsSlice = createSlice({
 
   },
   extraReducers: (builder) => {
-    // ===== Fetch Projects =====
     builder
       .addCase(fetchProjects.pending, (state) => {
         state.loading.projects = true;
@@ -201,7 +167,6 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjects.fulfilled, (state, action) => {
         state.loading.projects = false;
-        // Index projects by ID
         state.projects = action.payload.reduce(
           (acc, project) => {
             acc[project.id] = project;
@@ -209,7 +174,6 @@ export const projectsSlice = createSlice({
           },
           {} as Record<string, Project>
         );
-        // If no current project and we have projects, select the first one
         if (!state.currentProjectId && action.payload.length > 0) {
           state.currentProjectId = action.payload[0].id;
         }
@@ -219,7 +183,6 @@ export const projectsSlice = createSlice({
         state.errors.projects = (action.payload as string) || action.error.message || "Failed to fetch projects";
       });
 
-    // ===== Fetch Single Project =====
     builder
       .addCase(fetchProject.fulfilled, (state, action) => {
         if (action.payload) {
@@ -227,7 +190,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Fetch Project Tasks =====
     builder
       .addCase(fetchProjectTasks.pending, (state) => {
         state.loading.tasks = true;
@@ -235,7 +197,6 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.loading.tasks = false;
-        // Index tasks by ID (merge with existing)
         action.payload.forEach((task) => {
           state.tasks[task.id] = task;
         });
@@ -245,7 +206,6 @@ export const projectsSlice = createSlice({
         state.errors.tasks = (action.payload as string) || action.error.message || "Failed to fetch tasks";
       });
 
-    // ===== Create Project =====
     builder
       .addCase(createProject.pending, (state) => {
         state.loading.creating = true;
@@ -260,7 +220,6 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to create project";
       });
 
-    // ===== Update Project =====
     builder
       .addCase(updateProject.pending, (state, action) => {
         state.loading.updating = action.meta.arg.id;
@@ -274,7 +233,6 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to update project";
       });
 
-    // ===== Delete Project =====
     builder
       .addCase(deleteProject.pending, (state, action) => {
         state.loading.deleting = action.meta.arg;
@@ -282,12 +240,10 @@ export const projectsSlice = createSlice({
       .addCase(deleteProject.fulfilled, (state, action) => {
         state.loading.deleting = null;
         delete state.projects[action.meta.arg];
-        // Clear current project if it was deleted
         if (state.currentProjectId === action.meta.arg) {
           const remaining = Object.keys(state.projects);
           state.currentProjectId = remaining.length > 0 ? remaining[0] : null;
         }
-        // Remove associated tasks
         Object.keys(state.tasks).forEach((taskId) => {
           if (state.tasks[taskId].projectId === action.meta.arg) {
             delete state.tasks[taskId];
@@ -299,7 +255,6 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to delete project";
       });
 
-    // ===== Create Task =====
     builder
       .addCase(createTask.pending, (state) => {
         state.loading.creating = true;
@@ -317,7 +272,6 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to create task";
       });
 
-    // ===== Update Task =====
     builder
       .addCase(updateTask.pending, (state, action) => {
         state.loading.updating = action.meta.arg.id;
@@ -351,7 +305,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Move Task =====
     builder
       .addCase(moveTask.fulfilled, (state, action) => {
         const { task, updatedParent, spawnedTask } = action.payload;
@@ -380,7 +333,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Delete Task =====
     builder
       .addCase(deleteTask.pending, (state, action) => {
         state.loading.deleting = action.meta.arg;
@@ -389,7 +341,6 @@ export const projectsSlice = createSlice({
         state.loading.deleting = null;
         const taskId = action.meta.arg;
         const task = state.tasks[taskId];
-        // Update parent counts before removing
         if (task?.parentId && state.tasks[task.parentId]) {
           const parent = state.tasks[task.parentId];
           parent.subtaskTotal = Math.max(0, parent.subtaskTotal - 1);
@@ -404,7 +355,6 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to delete task";
       });
 
-    // ===== Delete Multiple Tasks =====
     builder
       .addCase(deleteTasks.pending, (state) => {
         state.loading.deleting = "bulk";
@@ -428,13 +378,11 @@ export const projectsSlice = createSlice({
         state.errors.general = (action.payload as string) || action.error.message || "Failed to delete tasks";
       });
 
-    // ===== Create Field =====
     builder
       .addCase(createFieldThunk.fulfilled, (state, action) => {
         const field = action.payload;
         const project = state.projects[field.projectId];
         if (project) {
-          // Replace optimistic entry if it exists, otherwise push
           const idx = project.fieldDefinitions.findIndex((f) => f.id === field.id);
           if (idx !== -1) {
             project.fieldDefinitions[idx] = field;
@@ -444,7 +392,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Update Field =====
     builder
       .addCase(updateFieldThunk.fulfilled, (state, action) => {
         const field = action.payload;
@@ -457,7 +404,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Delete Field =====
     builder
       .addCase(deleteFieldThunk.fulfilled, (state, action) => {
         const { projectId, fieldId } = action.payload;
@@ -469,7 +415,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Create View =====
     builder
       .addCase(createViewThunk.fulfilled, (state, action) => {
         const view = action.payload;
@@ -484,7 +429,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Update View =====
     builder
       .addCase(updateViewThunk.fulfilled, (state, action) => {
         const view = action.payload;
@@ -497,7 +441,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Delete View =====
     builder
       .addCase(deleteViewThunk.fulfilled, (state, action) => {
         const { projectId, viewId } = action.payload;
@@ -507,7 +450,6 @@ export const projectsSlice = createSlice({
         }
       });
 
-    // ===== Bulk Update Tasks =====
     builder
       .addCase(bulkUpdateTasksThunk.fulfilled, (state, action) => {
         action.payload.forEach((task) => {
@@ -515,7 +457,6 @@ export const projectsSlice = createSlice({
         });
       });
 
-    // ===== Fetch Activities =====
     builder
       .addCase(fetchActivities.fulfilled, (state, action) => {
         state.activities[action.payload.taskId] = action.payload.activities;
@@ -568,10 +509,6 @@ export const selectTaskById = (id: string) => createSelector(
   (state) => state.tasks[id]
 );
 
-/**
- * Select subtasks for a given parent task ID.
- * Returns a stable reference when the tasks map hasn't changed.
- */
 export const selectSubtasksByParentId = (parentId: string) => createSelector(
   [selectAllTasks],
   (tasks) => tasks.filter((t) => t.parentId === parentId)
@@ -591,7 +528,6 @@ export const selectTasksByStatus = (projectId: string) => createSelector(
           acc[task.status] = [];
         }
         acc[task.status].push(task);
-        // Sort by sortOrder within each status
         acc[task.status].sort((a, b) => a.sortOrder - b.sortOrder);
         return acc;
       },
@@ -626,7 +562,7 @@ export const selectProjectCompletion = createSelector(
     const projectStats: Record<string, { total: number; completed: number }> = {};
   
     tasks.forEach(task => {
-      if (task.parentId) return; // Only count root tasks, not subtasks
+      if (task.parentId) return;
       if (!projectStats[task.projectId]) {
         projectStats[task.projectId] = { total: 0, completed: 0 };
       }

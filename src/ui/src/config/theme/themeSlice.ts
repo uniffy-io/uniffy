@@ -1,19 +1,19 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-// Theme mode options: 'system' follows OS preference, 'light' and 'dark' are explicit
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 interface ThemeState {
-  themeMode: ThemeMode; // Persisted theme mode (system/light/dark)
-  accentColor: string | null; // Persisted accent color, synced with user profile
-  fontFamily: string | null; // Persisted font family, synced with user profile ('inter', 'geist', 'system', or null for default)
+  themeMode: ThemeMode;
+  accentColor: string | null;
+  /** 'inter' | 'geist' | 'system' | null (null = Inter). */
+  fontFamily: string | null;
 }
 
 const initialState: ThemeState = {
-  themeMode: 'system', // Default to system preference
+  themeMode: 'system',
   accentColor: null,
-  fontFamily: null, // defaults to Inter
+  fontFamily: null,
 };
 
 export const themeSlice = createSlice({
@@ -24,7 +24,7 @@ export const themeSlice = createSlice({
       state.themeMode = action.payload;
     },
     toggleTheme: (state) => {
-      // Cycle through: system -> light -> dark -> system
+      // Cycle: system -> light -> dark -> system
       if (state.themeMode === 'system') {
         state.themeMode = 'light';
       } else if (state.themeMode === 'light') {

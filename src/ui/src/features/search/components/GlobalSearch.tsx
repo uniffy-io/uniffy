@@ -1,10 +1,3 @@
-/**
- * Global Search Component
- *
- * A modern command-palette style search bar for the header.
- * Expands on focus to become the central interaction point.
- */
-
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
@@ -28,7 +21,7 @@ export function GlobalSearch() {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Exclude chat messages from search results when not in the chat domain
+    // Chat messages only surface when the user is already inside the chat domain.
     const isInChatDomain = location.pathname.startsWith('/chat');
     const searchOptions = useMemo(() => {
         if (isInChatDomain) return undefined;
@@ -38,7 +31,6 @@ export function GlobalSearch() {
     const { query, setQuery, results, isLoading, clearResults } = useSearch(searchOptions);
     const searchShortcut = useFormattedKeybinding('nav.search');
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -58,10 +50,8 @@ export function GlobalSearch() {
     };
 
     const handleResultSelect = async (result: SearchResultItem) => {
-        // For FILE results, open the viewer modal instead of navigating
-        // This keeps the user on their current page
+        // Files open in the viewer modal so the user stays on the current page.
         if (result.type === SearchResultType.FILE) {
-            // Extract file ID from URN (urn:uniffy:content:FILE:uuid)
             const fileId = result.urn.split(':').pop();
             if (fileId) {
                 dispatch(openViewerWithFetch({ fileId }));
@@ -70,8 +60,7 @@ export function GlobalSearch() {
             return;
         }
 
-        // For USER results, open (or create) the 1:1 DM with that user instead
-        // of routing to the user profile page.
+        // Users open the 1:1 DM (create_dm is idempotent for pairs).
         if (result.type === SearchResultType.USER) {
             const userId = result.urn.split(':').pop();
             if (userId) {
@@ -87,7 +76,7 @@ export function GlobalSearch() {
                     closeAfterSelect();
                     return;
                 } catch {
-                    // Fall through to default navigation if DM open failed.
+                    // Fall through to default navigation.
                 }
             }
         }
@@ -117,7 +106,6 @@ export function GlobalSearch() {
 
     return (
         <div ref={containerRef} className="relative">
-            {/* Search Input Container */}
             <div
                 className={cn(
                     "group relative flex items-center",
@@ -127,14 +115,12 @@ export function GlobalSearch() {
                         : "w-[min(384px,calc(100vw-12rem))]"
                 )}
             >
-                {/* Glow effect when focused */}
                 <div className={cn(
                     "absolute -inset-1 rounded-xl opacity-0 blur-md transition-opacity duration-500",
                     "bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20",
                     isFocused && "opacity-100"
                 )} />
 
-                {/* Input wrapper */}
                 <div className={cn(
                     "relative w-full flex items-center rounded-lg overflow-hidden",
                     "transition-all duration-300",
@@ -142,7 +128,6 @@ export function GlobalSearch() {
                         ? "bg-card border border-primary/30 shadow-lg"
                         : "bg-muted/60 border border-transparent hover:bg-muted/80"
                 )}>
-                    {/* Search icon */}
                     <div className={cn(
                         "flex items-center justify-center w-9 h-8 shrink-0",
                         "transition-colors duration-300",
@@ -151,7 +136,6 @@ export function GlobalSearch() {
                         <MagnifyingGlass size={16} weight={isFocused ? "bold" : "duotone"} />
                     </div>
 
-                    {/* Input field */}
                     <input
                         ref={inputRef}
                         type="text"
@@ -174,7 +158,6 @@ export function GlobalSearch() {
                         )}
                     />
 
-                    {/* Right side: Clear button or keyboard shortcut */}
                     <div className="flex items-center pr-2.5 gap-2">
                         {query ? (
                             <button
@@ -203,7 +186,6 @@ export function GlobalSearch() {
                 </div>
             </div>
 
-            {/* Results Dropdown */}
             {isOpen && (query.trim() || isLoading) && (
                 <div className={cn(
                     "absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50",

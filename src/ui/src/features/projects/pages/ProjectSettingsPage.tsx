@@ -1,10 +1,3 @@
-/**
- * ProjectSettingsPage - Dedicated page for project configuration
- *
- * Route: /projects/:projectId/settings
- * Sections: General, Statuses, Custom Fields, Task Types, Danger Zone
- */
-
 import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";

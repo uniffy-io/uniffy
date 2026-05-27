@@ -1,10 +1,3 @@
-/**
- * Icon Picker Constants
- *
- * Pure data definitions for the icon picker component.
- * Contains icon mappings, categories, and emoji presets.
- */
-
 import type { Icon } from '@phosphor-icons/react';
 import {
     // Documents
@@ -183,18 +176,13 @@ import {
     SkipBack,
 } from '@phosphor-icons/react';
 
-/** Icon value type - either a phosphor icon name or an emoji */
 export interface IconValue {
     type: 'icon' | 'emoji';
     value: string;
 }
 
-/** Legacy alias for backwards compatibility */
 export type NoteIcon = IconValue;
 
-/**
- * Map of all supported icon names to their React components.
- */
 export const ICON_COMPONENTS: Record<string, Icon> = {
     // Documents
     FileText,
@@ -372,17 +360,10 @@ export const ICON_COMPONENTS: Record<string, Icon> = {
     SkipBack,
 };
 
-/**
- * Get an icon React component by name.
- * Falls back to FileText if not found.
- */
 export function getIconComponent(name: string): Icon {
     return ICON_COMPONENTS[name] || FileText;
 }
 
-/**
- * Curated list of icons organized by category.
- */
 export const CURATED_ICONS = [
     // Documents
     { name: 'FileText', category: 'Documents' },
@@ -551,7 +532,6 @@ export const CURATED_ICONS = [
     { name: 'Car', category: 'Devices' },
 ] as const;
 
-/** Common emojis for quick access */
 export const COMMON_EMOJIS = [
     // Work & Productivity
     '📝', '📋', '📌', '💡', '🎯', '✅', '📊', '💼',
@@ -571,20 +551,15 @@ export const COMMON_EMOJIS = [
     '✈️', '🚗', '🏠', '🌍', '🗺️', '🏝️', '🏔️', '🌆',
 ] as const;
 
-/** Get all unique categories from curated icons */
 export function getIconCategories(): string[] {
     const categories = new Set(CURATED_ICONS.map(icon => icon.category));
     return Array.from(categories);
 }
 
-/** Get icons by category */
 export function getIconsByCategory(category: string): typeof CURATED_ICONS[number][] {
     return CURATED_ICONS.filter(icon => icon.category === category);
 }
 
-/**
- * Check if an icon name is valid (exists in the ICON_COMPONENTS map).
- */
 export function isValidIconName(name: string): boolean {
     return name in ICON_COMPONENTS;
 }

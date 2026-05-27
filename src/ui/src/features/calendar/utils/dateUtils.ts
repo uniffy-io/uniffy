@@ -1,8 +1,3 @@
-/**
- * Date utility functions for the Calendar feature
- * Uses date-fns for date manipulation
- */
-
 import {
   format,
   parseISO,
@@ -39,12 +34,6 @@ import {
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { DayColumn, ViewMode } from '@/features/calendar/types';
 
-/**
- * Get the dates for a week containing the given date
- * @param date - The reference date
- * @param weekStartsOn - Day the week starts on (0 = Sunday, 1 = Monday)
- * @returns Array of 7 dates from start to end of week
- */
 export function getWeekDates(
   date: Date | string,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1
@@ -57,9 +46,6 @@ export function getWeekDates(
   });
 }
 
-/**
- * Get DayColumn objects for a week
- */
 export function getWeekColumns(
   date: Date | string,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1
@@ -79,12 +65,7 @@ export function getWeekColumns(
   }));
 }
 
-/**
- * Get dates for a month grid (including overflow days)
- * @param date - The reference date
- * @param weekStartsOn - Day the week starts on
- * @returns Array of dates (42 days = 6 weeks)
- */
+/** Always returns 42 dates (6 weeks) including overflow from prev/next month. */
 export function getMonthDates(
   date: Date | string,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1
@@ -98,9 +79,6 @@ export function getMonthDates(
   return eachDayOfInterval({ start: gridStart, end: gridEnd });
 }
 
-/**
- * Get DayColumn objects for a month grid
- */
 export function getMonthColumns(
   date: Date | string,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1
@@ -121,9 +99,7 @@ export function getMonthColumns(
   }));
 }
 
-/**
- * Format a date for display in local timezone
- */
+/** Renders in the browser's local timezone (events are stored UTC). */
 export function formatDate(
   date: Date | string,
   formatStr: string = 'MMM d, yyyy'
@@ -133,16 +109,10 @@ export function formatDate(
   return formatInTimeZone(d, timezone, formatStr);
 }
 
-/**
- * Format a date with day of week (e.g., "Wed, Jan 22, 2026") in local timezone
- */
 export function formatDateWithDay(date: Date | string): string {
   return formatDate(date, 'EEE, MMM d, yyyy');
 }
 
-/**
- * Format time for display (12-hour format) in local timezone
- */
 export function formatTime(
   date: Date | string,
   use24Hour: boolean = false
@@ -152,9 +122,6 @@ export function formatTime(
   return formatInTimeZone(d, timezone, use24Hour ? 'HH:mm' : 'h:mm a');
 }
 
-/**
- * Format time range (e.g., "10:00 – 11:00 AM") in local timezone
- */
 export function formatTimeRange(
   start: Date | string,
   end: Date | string,
@@ -168,7 +135,7 @@ export function formatTimeRange(
     return `${formatInTimeZone(startDate, timezone, 'HH:mm')} – ${formatInTimeZone(endDate, timezone, 'HH:mm')}`;
   }
 
-  // Optimize for same AM/PM
+  // Collapse the AM/PM on the start side when both fall in the same period.
   const startPeriod = formatInTimeZone(startDate, timezone, 'a');
   const endPeriod = formatInTimeZone(endDate, timezone, 'a');
 
@@ -179,16 +146,10 @@ export function formatTimeRange(
   return `${formatInTimeZone(startDate, timezone, 'h:mm a')} – ${formatInTimeZone(endDate, timezone, 'h:mm a')}`;
 }
 
-/**
- * Get month and year for header display
- */
 export function formatMonthYear(date: Date | string): string {
   return formatDate(date, 'MMMM yyyy');
 }
 
-/**
- * Navigate to next/previous period based on view mode
- */
 export function navigateDate(
   date: Date | string,
   direction: 'next' | 'previous',
@@ -209,48 +170,31 @@ export function navigateDate(
   }
 }
 
-/**
- * Check if two dates are the same day in the local timezone.
- * Uses explicit timezone formatting to ensure correct comparison
- * for dates that may span midnight in different timezones.
- */
+/** Compares yyyy-MM-dd in the local zone so DST and UTC-midnight events do not get mis-bucketed. */
 export function areSameDay(date1: Date | string, date2: Date | string): boolean {
   const d1 = typeof date1 === 'string' ? parseISO(date1) : date1;
   const d2 = typeof date2 === 'string' ? parseISO(date2) : date2;
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  // Compare using local date strings to handle timezone edge cases
   const date1Local = formatInTimeZone(d1, timezone, 'yyyy-MM-dd');
   const date2Local = formatInTimeZone(d2, timezone, 'yyyy-MM-dd');
   return date1Local === date2Local;
 }
 
-/**
- * Check if a date is today
- */
 export function isDateToday(date: Date | string): boolean {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return isToday(d);
 }
 
-/**
- * Get start of day
- */
 export function getDayStart(date: Date | string): Date {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return startOfDay(d);
 }
 
-/**
- * Get end of day
- */
 export function getDayEnd(date: Date | string): Date {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return endOfDay(d);
 }
 
-/**
- * Calculate duration in minutes between two dates
- */
 export function getDurationMinutes(
   start: Date | string,
   end: Date | string
@@ -260,9 +204,6 @@ export function getDurationMinutes(
   return differenceInMinutes(endDate, startDate);
 }
 
-/**
- * Format duration for display
- */
 export function formatDuration(minutes: number): string {
   if (minutes < 60) {
     return `${minutes} min`;
@@ -278,9 +219,6 @@ export function formatDuration(minutes: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-/**
- * Create a date with specific time
- */
 export function setTime(
   date: Date | string,
   hours: number,
@@ -290,33 +228,22 @@ export function setTime(
   return setMinutes(setHours(d, hours), minutes);
 }
 
-/**
- * Parse time string (HH:mm) to hours and minutes
- */
+/** Parses 'HH:mm'. */
 export function parseTimeString(time: string): { hours: number; minutes: number } {
   const [hours, minutes] = time.split(':').map(Number);
   return { hours, minutes };
 }
 
-/**
- * Convert date to ISO string (YYYY-MM-DD)
- */
 export function toDateString(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return format(d, 'yyyy-MM-dd');
 }
 
-/**
- * Convert time to ISO string (HH:mm)
- */
 export function toTimeString(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return format(d, 'HH:mm');
 }
 
-/**
- * Get current time info for time indicator
- */
 export function getCurrentTimeInfo(): {
   hour: number;
   minutes: number;
@@ -332,9 +259,6 @@ export function getCurrentTimeInfo(): {
   };
 }
 
-/**
- * Calculate pixel position for a time within a day
- */
 export function getTimePosition(
   date: Date | string,
   hourHeight: number,
@@ -347,9 +271,6 @@ export function getTimePosition(
   return (totalMinutes / 60) * hourHeight;
 }
 
-/**
- * Calculate time from pixel position
- */
 export function getTimeFromPosition(
   position: number,
   hourHeight: number,
@@ -361,9 +282,6 @@ export function getTimeFromPosition(
   return { hours, minutes };
 }
 
-/**
- * Round time to nearest interval
- */
 export function roundTimeToInterval(
   date: Date | string,
   intervalMinutes: number = 15
@@ -374,9 +292,6 @@ export function roundTimeToInterval(
   return setMinutes(d, roundedMinutes);
 }
 
-/**
- * Check if an event spans multiple days
- */
 export function isMultiDayEvent(
   start: Date | string,
   end: Date | string
@@ -386,9 +301,6 @@ export function isMultiDayEvent(
   return differenceInDays(endDate, startDate) >= 1;
 }
 
-/**
- * Get date range label for header
- */
 export function getDateRangeLabel(
   startDate: Date | string,
   endDate: Date | string
@@ -396,32 +308,23 @@ export function getDateRangeLabel(
   const start = typeof startDate === 'string' ? parseISO(startDate) : startDate;
   const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
 
-  // Same month
   if (isSameMonth(start, end)) {
     return format(start, 'MMMM yyyy');
   }
 
-  // Different months, same year
   if (getYear(start) === getYear(end)) {
     return `${format(start, 'MMM')} – ${format(end, 'MMM yyyy')}`;
   }
 
-  // Different years
   return `${format(start, 'MMM yyyy')} – ${format(end, 'MMM yyyy')}`;
 }
 
-/**
- * Get timezone offset string (e.g., "GMT+2")
- */
 export function getTimezoneOffset(timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone): string {
   const now = new Date();
   const formatted = formatInTimeZone(now, timezone, 'xxx');
   return `GMT${formatted.replace(':', '')}`;
 }
 
-/**
- * Convert date between timezones
- */
 export function convertTimezone(
   date: Date | string,
   fromTimezone: string,
@@ -432,7 +335,6 @@ export function convertTimezone(
   return toZonedTime(utcDate, toTimezone);
 }
 
-// Re-export useful date-fns functions
 export {
   parseISO,
   format,

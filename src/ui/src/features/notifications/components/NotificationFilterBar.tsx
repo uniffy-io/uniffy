@@ -1,10 +1,3 @@
-/**
- * Filter bar for the notification panel.
- *
- * Displays filter chips for notification categories
- * (All, Unread, Content, Calendar, Tasks, Chat, System, Permissions).
- */
-
 import {
     Funnel,
     ShareNetwork,

@@ -1,8 +1,3 @@
-/**
- * Account settings section - displays user account information
- * and avatar management.
- */
-
 import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { updateUser } from '@/features/auth/store/authSlice';
@@ -18,10 +13,7 @@ export function AccountSection() {
         const buffer = await file.arrayBuffer();
         const imageData = new Uint8Array(buffer);
         const profile = await usersApi.uploadAvatar(imageData, file.name);
-        // ``hasAvatar`` gates every avatar consumer in the app
-        // (realtime presence, peer cursors, SubjectAvatar, etc.).
-        // Without flipping it here, every consumer keeps rendering
-        // initials until the next full ``GetCurrentUser`` round-trip.
+        // hasAvatar gates every avatar consumer; flip it locally so they stop rendering initials before the next GetCurrentUser.
         dispatch(updateUser({ avatarUrl: profile.avatarUrl, hasAvatar: true }));
     }, [dispatch]);
 
@@ -51,7 +43,6 @@ export function AccountSection() {
                 </p>
             </div>
 
-            {/* Avatar Section */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Avatar</h2>
                 <div className="bg-card rounded-lg border border-border p-4 md:p-6">
@@ -64,7 +55,6 @@ export function AccountSection() {
                 </div>
             </section>
 
-            {/* Account Information */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Account Information</h2>
                 <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -91,7 +81,6 @@ export function AccountSection() {
                 </div>
             </section>
 
-            {/* Account Status */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Status</h2>
                 <div className="bg-card rounded-lg border border-border overflow-hidden">

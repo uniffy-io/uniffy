@@ -1,10 +1,3 @@
-/**
- * Custom Select Component
- *
- * A styled dropdown select that matches the app's theme.
- * Uses viewport-relative positioning for proper rendering in modals.
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CaretDown, Check } from '@phosphor-icons/react';
@@ -47,17 +40,15 @@ export function Select<T extends string | number = string>({
     const buttonRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Calculate dropdown position
     const updatePosition = useCallback(() => {
         if (!buttonRef.current) return;
 
         const rect = buttonRef.current.getBoundingClientRect();
-        const dropdownHeight = Math.min(options.length * 40 + 8, 240); // Approximate height
+        const dropdownHeight = Math.min(options.length * 40 + 8, 240);
         const viewportHeight = window.innerHeight;
         const spaceBelow = viewportHeight - rect.bottom;
         const spaceAbove = rect.top;
 
-        // Open upward if not enough space below and more space above
         const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
         setPosition({
@@ -68,7 +59,6 @@ export function Select<T extends string | number = string>({
         });
     }, [options.length]);
 
-    // Update position on open and on scroll/resize
     useEffect(() => {
         if (isOpen) {
             updatePosition();
@@ -87,7 +77,6 @@ export function Select<T extends string | number = string>({
         }
     }, [isOpen, updatePosition]);
 
-    // Close on outside click
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (
@@ -105,7 +94,6 @@ export function Select<T extends string | number = string>({
         }
     }, [isOpen]);
 
-    // Close on escape
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === 'Escape') {
@@ -136,7 +124,7 @@ export function Select<T extends string | number = string>({
         setIsOpen(false);
     };
 
-    // Render dropdown in portal for proper z-index handling in modals
+    // Portal lets the dropdown layer above modal overlays.
     const renderDropdown = () => {
         if (!isOpen || !position) return null;
 

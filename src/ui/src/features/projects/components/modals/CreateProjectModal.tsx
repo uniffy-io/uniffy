@@ -1,9 +1,3 @@
-/**
- * CreateProjectModal - Modal for creating a new project
- *
- * Simple form with name and optional description.
- */
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
 import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";

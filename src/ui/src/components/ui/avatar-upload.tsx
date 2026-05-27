@@ -1,18 +1,9 @@
-/**
- * AvatarUpload - Shared avatar upload component used by user settings
- * and agent builder.
- *
- * Handles file validation, loading states, and error display.
- * The actual upload/delete logic is delegated to the consumer
- * via onUpload/onDelete callbacks.
- */
-
 import { useState, useRef, useCallback } from "react";
 import { Camera, Trash, SpinnerGap } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ACCEPT = ALLOWED_TYPES.join(",");
 
@@ -29,17 +20,13 @@ const SPINNER_SIZES: Record<AvatarSize, number> = {
 };
 
 interface AvatarUploadProps {
-    /** Current image URL (falsy = no image). */
     imageUrl?: string;
     /** Fallback content when no image (initials, emoji, icon). */
     fallback?: React.ReactNode;
-    /** Preview circle size. */
     size?: AvatarSize;
-    /** Called with a validated File when the user selects an image. */
     onUpload: (file: File) => Promise<void>;
-    /** Called when the user clicks remove. Omit to hide the remove button. */
+    /** Omit to hide the remove button. */
     onDelete?: () => Promise<void>;
-    /** Disable all interactions. */
     disabled?: boolean;
 }
 
@@ -105,7 +92,6 @@ export function AvatarUpload({
     return (
         <div className="space-y-2">
             <div className="flex items-center gap-4">
-                {/* Avatar preview */}
                 <div className="relative group">
                     <div
                         className={cn(
@@ -134,7 +120,6 @@ export function AvatarUpload({
                             </div>
                         )}
                     </div>
-                    {/* Hover overlay */}
                     {!isProcessing && (
                         <button
                             type="button"
@@ -146,7 +131,6 @@ export function AvatarUpload({
                     )}
                 </div>
 
-                {/* Controls */}
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                         <Button

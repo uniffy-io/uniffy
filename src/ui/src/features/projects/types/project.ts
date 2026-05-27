@@ -1,9 +1,6 @@
 import type { FieldDefinition, FieldValue } from "./fields";
 import type { ViewConfig } from "./views";
 
-/**
- * A sprint is a time-boxed iteration for completing tasks
- */
 export interface Sprint {
   id: string;
   projectId: string;
@@ -42,17 +39,11 @@ export interface StartSprintRequest {
   endDate?: string | null;
 }
 
-/**
- * Per-type field schema defining which fields are shown and required
- */
 export interface TypeFieldSchema {
   shownFieldIds: string[];
   requiredFieldIds: string[];
 }
 
-/**
- * A project is a container for tasks with custom field definitions
- */
 export interface Project {
   id: string;
   organizationId: string;
@@ -76,32 +67,29 @@ export interface Project {
   tagIds: string[];
 }
 
-/**
- * A task is an individual work item within a project
- */
 export interface Task {
   id: string;
   projectId: string;
   organizationId: string;
   ownerId: string;
   title: string;
-  description: string; // Markdown with URN mentions [[[label|urn]]]
-  status: string; // References field option ID
-  priority: string; // References field option ID
+  /** Markdown body with [[[label|urn]]] mentions. */
+  description: string;
+  status: string;
+  priority: string;
   assigneeIds: string[];
   startDate: string | null;
   dueDate: string | null;
   completedAt: string | null;
-  
-  // -- V2 Features --
-  parentId: string | null; // Subtasks (Feature 7)
-  blockedByTaskIds: string[]; // Dependencies (Feature 6)
-  isMilestone: boolean; // Milestones (Feature 15)
-  recurrenceRule: string | null; // Recurring (Feature 9) - RRULE format
-  
+  parentId: string | null;
+  blockedByTaskIds: string[];
+  isMilestone: boolean;
+  /** RRULE string for recurring tasks. */
+  recurrenceRule: string | null;
   sortOrder: number;
   fieldValues: Record<string, FieldValue>;
-  outgoingReferences: string[]; // URNs extracted from description
+  /** URNs parsed out of `description`. */
+  outgoingReferences: string[];
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -117,9 +105,6 @@ export interface Task {
   tagIds: string[];
 }
 
-/**
- * Lightweight project reference for lists
- */
 export interface ProjectSummary {
   id: string;
   name: string;
@@ -129,9 +114,6 @@ export interface ProjectSummary {
   memberCount: number;
 }
 
-/**
- * Request types for API operations
- */
 export interface CreateProjectRequest {
   name: string;
   description?: string;

@@ -14,10 +14,7 @@ interface DependencyLinesProps {
   }>;
 }
 
-/**
- * Build an orthogonal path (straight lines, rounded corners) between two points.
- * Route: start -> right stub -> vertical segment -> horizontal to end stub -> end
- */
+/** Right-stub then vertical then horizontal with rounded corners. */
 function buildOrthogonalPath(
   sx: number, sy: number,
   ex: number, ey: number,

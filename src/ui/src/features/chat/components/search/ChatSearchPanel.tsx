@@ -29,7 +29,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
 
   const { results, isLoading, error, totalCount, search, clear } = useChatSearch();
 
-  // Position below anchor
   const [position, setPosition] = useState({ top: 100, left: 100 });
 
   useEffect(() => {
@@ -48,13 +47,11 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
     setPosition({ top: rect.bottom + 6, left });
   }, [anchorRef]);
 
-  // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);
 
-  // Trigger search when query or filters change
   useEffect(() => {
     if (query.trim()) {
       search(query, filters);
@@ -65,7 +62,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
     setFocusedIndex(-1);
   }, [query, filters, search, clear]);
 
-  // Click outside to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -87,7 +83,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
     onClose();
   }, [dispatch, onClose]);
 
-  // Keyboard: Escape, arrow nav, Enter
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -117,7 +112,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, results, focusedIndex, handleNavigate]);
 
-  // Scroll focused item into view
   useEffect(() => {
     if (focusedIndex < 0 || !resultsRef.current) return;
     const items = resultsRef.current.querySelectorAll('[data-search-result]');
@@ -139,7 +133,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
       data-testid="chat-search-popover"
       data-loading={isLoading ? 'true' : 'false'}
     >
-      {/* Search input */}
       <div className="px-3 pt-3 pb-2">
         <div className="relative">
           <MagnifyingGlass
@@ -172,7 +165,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
         </div>
       </div>
 
-      {/* Filters */}
       <div className="px-2 pb-2">
         <ChatSearchFilters
           activeChannelId={channelId}
@@ -184,7 +176,6 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
 
       <div className="border-t border-border" />
 
-      {/* Results */}
       <div ref={resultsRef} className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="px-3 py-4 space-y-3">

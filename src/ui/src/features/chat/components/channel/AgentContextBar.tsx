@@ -1,22 +1,4 @@
-/**
- * AgentContextBar - per-(channel, agent) context meter + controls.
- *
- * Two variants: `full` (DM header sub-bar, sized to the header) and
- * `compact` (popover / inline row in the group-channel Members tab, tighter
- * padding and fewer breakdown chips). `canMutate=false` hides Compact and
- * the overflow menu, so non-admins in group channels see the meter only
- * while the backend permission checker still enforces the real gate.
- *
- * Two render modes:
- *   - Standalone (default; DM header, single-agent surfaces). Mounts
- *     `useChannelAgentContext` and owns its own stats fetch + typing-stop
- *     refresh.
- *   - Batched (`stats` prop provided; channel-agents popover). Renders from
- *     prop stats supplied by `useChannelAgentContextBatch` mounted by the
- *     popover, and uses `useChannelAgentContextActions` for compact/reset.
- *     `onAfterAction` is called after a successful action so the parent
- *     can re-issue the batched fetch.
- */
+/** Per-(channel, agent) context meter + controls. Standalone fetches its own stats; batched mode reads from props. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowsClockwise, DotsThree, Trash } from '@phosphor-icons/react';
@@ -38,18 +20,9 @@ interface AgentContextBarProps {
     agentName: string;
     variant?: 'full' | 'compact';
     canMutate?: boolean;
-    /**
-     * When set (including `null`), the bar renders from these stats and
-     * skips its internal per-agent fetch. Used by `ChannelAgentsPopover`
-     * which fans N agents into one batched fetch. Pass `null` while the
-     * batch is loading or returned no entry for this agent. When
-     * undefined, the bar mounts `useChannelAgentContext` itself.
-     */
+    /** When set (incl. `null`), render from these stats; otherwise mount the per-agent fetch. */
     stats?: ChannelAgentContextStats | null;
-    /**
-     * Called after a successful compact or reset in batched mode so the
-     * parent can re-issue the batched fetch. Ignored in standalone mode.
-     */
+    /** Called after a successful compact/reset in batched mode so the parent can refetch. */
     onAfterAction?: () => void;
 }
 
@@ -272,7 +245,6 @@ function AgentContextBarBody({
             data-variant={variant}
             data-usage-percent={usagePercent}
         >
-            {/* Progress bar */}
             <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                     <div
@@ -289,7 +261,6 @@ function AgentContextBarBody({
                 </span>
             </div>
 
-            {/* Stats breakdown */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                 <span>
                     Active: <span className="font-medium text-foreground">{formatTokenCount(stats.activeTokens)}</span> tokens
@@ -328,7 +299,6 @@ function AgentContextBarBody({
                 )}
             </div>
 
-            {/* Action row (admins only) */}
             {canMutate && (
                 <div className="flex items-center gap-2 flex-wrap">
                     <Button

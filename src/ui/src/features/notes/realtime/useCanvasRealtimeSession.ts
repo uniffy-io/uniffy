@@ -23,11 +23,6 @@ export interface CanvasRealtimeBinding {
   yDefaults: Y.Map<unknown>;
 }
 
-/**
- * Canvas composition of `useDocSession`: builds an UndoManager scoped over
- * the canvas Y roots, attaches a user payload to awareness, and surfaces
- * `whenSynced` so the canvas can defer its cold-start seed.
- */
 export function useCanvasRealtimeSession(
   noteId: string | null,
   enabled: boolean,
@@ -54,8 +49,7 @@ export function useCanvasRealtimeSession(
       return;
     }
 
-    // Touch Y roots up front so observers see stable references and the
-    // UndoManager can scope to them.
+    // Touch Y roots up front so observers see stable references and UndoManager can scope to them.
     const { nodes, edges, order, defaults } = getCanvasYTypes(session.ydoc);
     void nodes;
     void edges;
@@ -84,9 +78,7 @@ export function useCanvasRealtimeSession(
     };
   }, [session]);
 
-  // Awareness `user` payload lives in its own effect so avatar/name/accent
-  // changes propagate without rebuilding the UndoManager (which would drop
-  // undo history on every avatar upload).
+  // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager.
   useEffect(() => {
     if (!session) return;
     const { solid } = resolveAwarenessColor(

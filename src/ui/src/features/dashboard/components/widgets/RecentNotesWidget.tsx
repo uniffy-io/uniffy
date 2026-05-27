@@ -1,9 +1,3 @@
-/**
- * RecentNotesWidget - Shows the user's recently edited notes
- *
- * Displays last 5 notes sorted by update time with title and relative time.
- */
-
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { NotePencil, ArrowRight } from '@phosphor-icons/react';

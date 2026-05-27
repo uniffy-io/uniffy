@@ -1,10 +1,3 @@
-/**
- * usePickerAvailability - Debounced availability check for the RoomPicker.
- *
- * Dispatches fetchAvailableRoomIds when start/end times change,
- * returning a Set of available room IDs. Clears on unmount.
- */
-
 import { useEffect, useMemo, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchAvailableRoomIds } from '@/features/rooms/store/roomsThunks';
@@ -30,7 +23,6 @@ export function usePickerAvailability(
       return;
     }
 
-    // Debounce 300ms to avoid rapid API calls while user adjusts times
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       dispatch(fetchAvailableRoomIds({ organizationId, startTime, endTime }));
@@ -41,7 +33,6 @@ export function usePickerAvailability(
     };
   }, [dispatch, startTime, endTime, organizationId]);
 
-  // Clear on unmount
   useEffect(() => {
     return () => {
       dispatch(clearAvailableRoomIds());

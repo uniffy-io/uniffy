@@ -1,10 +1,3 @@
-/**
- * Grant Domain Admin Dialog
- *
- * Modal for granting domain admin to a user.
- * Uses SubjectPicker for user selection and Select for domain selection.
- */
-
 import { useState } from 'react';
 import { Crown } from '@phosphor-icons/react';
 import { Modal } from '@/components/ui/modal';

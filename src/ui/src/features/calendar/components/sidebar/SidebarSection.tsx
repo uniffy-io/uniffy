@@ -1,7 +1,3 @@
-/**
- * SidebarSection - Reusable collapsible section for sidebar
- */
-
 import { CaretDown } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { toggleSectionCollapse } from '@/features/calendar/store';
@@ -35,7 +31,6 @@ export function SidebarSection({
 
   return (
     <div className="space-y-2">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <button
           onClick={handleToggle}
@@ -54,7 +49,6 @@ export function SidebarSection({
         {action}
       </div>
 
-      {/* Content */}
       {!isCollapsed && (
         <div className="space-y-1">
           {children}

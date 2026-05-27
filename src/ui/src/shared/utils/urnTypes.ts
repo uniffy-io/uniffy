@@ -1,10 +1,4 @@
-/**
- * URN Type Definitions
- *
- * Defines the supported URN types in the UNIFFY system.
- * This file is kept separate to avoid circular dependencies.
- */
-
+// Kept separate from urn.ts to avoid circular imports through contentTypes config.
 export const UrnType = {
   NOTE: 'note',
   FILE: 'file',

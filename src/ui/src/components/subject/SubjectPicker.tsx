@@ -1,9 +1,3 @@
-/**
- * SubjectPicker - Search dropdown for selecting users and/or groups
- *
- * Supports single/multi select, portal/inline modes, and type filtering.
- */
-
 import { useState, useRef, useEffect, useCallback, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { MagnifyingGlass, Check } from '@phosphor-icons/react';
@@ -20,24 +14,17 @@ import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolve
 
 interface SubjectPickerProps {
     mode: SubjectPickerMode;
-    /** Which subject types to show. Default: 'all'. */
     subjectTypes?: SubjectTypeFilter;
-    /** Currently selected subject IDs. */
     value: string[];
-    /** Callback when selection changes. */
     onChange: (ids: string[], subjects: Subject[]) => void;
-    /** Additional IDs to hide from results. */
     excludeIds?: string[];
     /** Render as a portal anchored to anchorRef. */
     portal?: boolean;
-    /** Anchor element for portal positioning. */
     anchorRef?: RefObject<HTMLElement | null>;
-    /** Called when the picker should close. */
     onClose?: () => void;
     placeholder?: string;
     disabled?: boolean;
     autoFocus?: boolean;
-    /** Width for the dropdown in px. Default: 240. */
     dropdownWidth?: number;
 }
 
@@ -65,18 +52,14 @@ export function SubjectPicker({
         excludeIds,
     });
 
-    // Resolve selected IDs to Subject objects for display
     const { subjects: resolvedSelected } = useSubjectResolver(value);
 
-    // Track selected subjects for onChange callback in multi mode
     const selectedSubjectsRef = useRef<Map<string, Subject>>(new Map());
 
-    // Keep track of query changes for search
     useEffect(() => {
         search(query);
     }, [query, search]);
 
-    // Portal positioning
     useEffect(() => {
         if (!portal || !anchorRef?.current) return;
 
@@ -99,7 +82,6 @@ export function SubjectPicker({
         };
     }, [portal, anchorRef, dropdownWidth]);
 
-    // Auto-focus search input
     useEffect(() => {
         if (autoFocus || portal) {
             const timer = setTimeout(() => inputRef.current?.focus(), 50);
@@ -107,7 +89,6 @@ export function SubjectPicker({
         }
     }, [autoFocus, portal, position]);
 
-    // Close on click outside
     useEffect(() => {
         if (!onClose) return;
         const handleClickOutside = (e: MouseEvent) => {
@@ -122,7 +103,6 @@ export function SubjectPicker({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [onClose]);
 
-    // Close on escape or enter
     useEffect(() => {
         if (!onClose) return;
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -139,14 +119,12 @@ export function SubjectPicker({
     const handleSelect = useCallback(
         (subject: Subject) => {
             if (mode === 'single') {
-                // In single mode, fire callback with the selected subject
-                // Callers handle add/remove toggle themselves
+                // Single mode callers handle add/remove toggle themselves.
                 onChange([subject.id], [subject]);
                 setQuery('');
                 return;
             }
 
-            // Multi mode: toggle
             const isSelected = value.includes(subject.id);
             let nextIds: string[];
             if (isSelected) {
@@ -184,7 +162,6 @@ export function SubjectPicker({
             )}
             onClick={(e) => e.stopPropagation()}
         >
-            {/* Search input */}
             <div className="p-2 border-b border-border">
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background">
                     <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
@@ -201,7 +178,6 @@ export function SubjectPicker({
                 </div>
             </div>
 
-            {/* Results list */}
             <div className="max-h-48 overflow-y-auto py-1">
                 {loading && results.length === 0 ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
@@ -259,7 +235,6 @@ export function SubjectPicker({
                                         </div>
                                     )}
                                 </div>
-                                {/* Type badge when showing all types */}
                                 {subjectTypes === 'all' && (
                                     <span
                                         className={cn(

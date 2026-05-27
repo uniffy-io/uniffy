@@ -1,11 +1,3 @@
-/**
- * useSavedTagFilters
- *
- * Convenience facade over the saved-filter slice + thunks. Mounts a
- * one-shot fetch on first call, exposes the live ids / lookup, plus
- * the mutation thunks pre-bound to ``dispatch``.
- */
-
 import { useCallback, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {

@@ -1,13 +1,4 @@
-/**
- * User-friendly error message mapping.
- *
- * Translates raw API / network errors into messages that make sense
- * to non-technical users.  Used by the global error-toast middleware.
- */
-
-/** ConnectRPC / gRPC status codes mapped to friendly messages. */
 const STATUS_CODE_MESSAGES: Record<string, string> = {
-    // 4xx-equivalent
     unauthenticated: 'Your session has expired. Please sign in again.',
     permission_denied: 'You do not have permission to perform this action.',
     not_found: 'The item you requested could not be found.',
@@ -18,7 +9,6 @@ const STATUS_CODE_MESSAGES: Record<string, string> = {
     out_of_range: 'The value provided is out of the allowed range.',
     resource_exhausted: 'Too many requests. Please wait a moment and try again.',
 
-    // 5xx-equivalent
     internal: 'Something went wrong on our end. Please try again shortly.',
     unavailable: 'The server is temporarily unavailable. Please try again in a moment.',
     unimplemented: 'This feature is not available yet.',
@@ -27,7 +17,6 @@ const STATUS_CODE_MESSAGES: Record<string, string> = {
     deadline_exceeded: 'The request took too long. Please try again.',
 };
 
-/** HTTP status codes (used by fetch / non-RPC calls). */
 const HTTP_STATUS_MESSAGES: Record<number, string> = {
     400: 'The request was invalid. Please check your input and try again.',
     401: 'Your session has expired. Please sign in again.',
@@ -43,48 +32,35 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
     504: 'The request took too long. Please try again.',
 };
 
-/** Patterns matched against the raw error string. */
 const MESSAGE_PATTERNS: [RegExp, string][] = [
     [/fetch failed|failed to fetch|networkerror/i, 'Could not connect to the server. Please check your internet connection.'],
     [/timeout|timed?\s*out/i, 'The request timed out. Please try again.'],
-    [/abort/i, ''],  // empty = suppress (handled separately by middleware)
-    // Recording-specific MediaRecorder / getDisplayMedia errors. The trigger
-    // thunk treats `permission_denied` as a silent cancel, but the patterns
-    // here cover any straggler that escapes through `rejectWithValue`.
+    [/abort/i, ''], // empty = suppress
     [/notallowederror|permission denied/i, 'Screen recording permission denied. Click the camcorder icon to retry.'],
     [/notfounderror|no recording source/i, 'No screen, window, or tab is available to record.'],
     [/encodingerror|encoder initialization failed/i, "Recording encoder failed. Try again, or restart your browser if it keeps happening."],
 ];
 
-/**
- * Turn a raw error message into something a human can read.
- *
- * Returns `null` when the error should be suppressed entirely
- * (e.g. aborted requests).
- */
+/** Translate a raw API/network error into user-facing copy. Returns `null` to suppress (e.g. aborts). */
 export function friendlyErrorMessage(raw: string): string | null {
     if (!raw) return null;
 
     const lower = raw.toLowerCase().trim();
 
-    // 1. Suppress noisy non-errors
     if (lower === 'rejected' || lower === 'aborterror') {
         return null;
     }
-    // Domain handlers (e.g. notes autosave) own their own conflict UX
-    // and signal it with this sentinel; suppress the generic toast.
+    // Notes autosave owns its own conflict UX; suppress the generic toast.
     if (raw === 'versionConflict') {
         return null;
     }
 
-    // 2. Try to extract a ConnectRPC status code  e.g. "[internal] ..." or "[unknown] 500"
     const codeMatch = lower.match(/^\[(\w+)]/);
     if (codeMatch) {
         const code = codeMatch[1];
-        // For these codes, prefer the server's specific message
+        // Prefer the server's specific message for these codes.
         if (code === 'failed_precondition' || code === 'invalid_argument') {
             let serverMsg = raw.replace(/^\[\w+]\s*/, '').trim();
-            // Strip technical prefix: "Validation error on 'field': actual message"
             serverMsg = serverMsg.replace(/^Validation error on '\w+':\s*/i, '');
             return serverMsg || STATUS_CODE_MESSAGES[code];
         }
@@ -93,7 +69,6 @@ export function friendlyErrorMessage(raw: string): string | null {
         }
     }
 
-    // 3. Try to match an HTTP status code  e.g. "500", "Request failed with status 503"
     const httpMatch = lower.match(/\b(4\d{2}|5\d{2})\b/);
     if (httpMatch) {
         const status = Number(httpMatch[1]);
@@ -105,14 +80,11 @@ export function friendlyErrorMessage(raw: string): string | null {
         }
     }
 
-    // 4. Try regex patterns
     for (const [pattern, message] of MESSAGE_PATTERNS) {
         if (pattern.test(raw)) {
             return message || null;
         }
     }
 
-    // 5. Fall through: return the original message as-is (it may already be
-    //    a decent user-facing string set via rejectWithValue).
     return raw;
 }

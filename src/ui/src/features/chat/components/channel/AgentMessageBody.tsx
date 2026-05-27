@@ -1,22 +1,4 @@
-/**
- * AgentMessageBody - Renders an agent-authored ChatMessage based on `metadata.kind`.
- *
- * The backend persists agent runtime steps as `sender_type=AGENT` ChatMessage rows
- * and tags each with `metadata.kind` so the frontend can pick the right card:
- *
- * | kind                  | Source                                    | Renders as                |
- * | --------------------- | ----------------------------------------- | ------------------------- |
- * | `final`               | `role=assistant` without tool_call_id     | Plain markdown            |
- * | `tool_call`           | `role=assistant` with tool_call_id        | Tool invocation card      |
- * | `tool_result`         | `role=tool`                               | Tool result card          |
- * | `summary`             | Compaction summary                        | Faint rollup row          |
- * | `confirmation_resolved` | Bridge-written after Allow/Deny         | Resolved-status row       |
- * | `confirmation_request` | Synthetic (stream-event only; Phase 3c)  | Approval card placeholder |
- *
- * `metadata` arrives from the proto wire as `Record<string, string>` (the backend
- * stringifies non-primitive values via `str()`), so nested tool_args read as a
- * Python-repr blob. Good enough for display; JSON serialization is a polish item.
- */
+/** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
 import { useState } from 'react';
 import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
@@ -36,19 +18,7 @@ function readString(metadata: Record<string, unknown>, key: string): string | un
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-/**
- * Read a boolean flag from message metadata.
- *
- * Metadata travels two paths into the slice with different types:
- *
- *  - MESSAGE_CREATED / MESSAGE_UPDATED arrive via proto's
- *    `map<string,string>`, so a backend-set `True` lands as the
- *    string `"true"`.
- *  - The `appendDelta` reducer sets the flag locally as a JS boolean.
- *
- * Both paths must read the same way or the streaming-vs-settled gate
- * flips spuriously and the bubble re-mounts (or never settles).
- */
+/** Read a metadata flag uniformly: proto wire delivers `"true"` strings, appendDelta sets a JS boolean. */
 function readBoolean(metadata: Record<string, unknown>, key: string): boolean {
     const value = metadata[key];
     if (value === true) return true;
@@ -84,11 +54,7 @@ export function AgentMessageBody({ message }: AgentMessageBodyProps) {
             return <ConfirmationResolvedRow message={message} />;
         case 'final':
         default: {
-            // StreamingMessage owns the swap to MessageContent once the
-            // word-reveal animation catches up to `content`. Routing
-            // every kind=final message through it (not just in-flight
-            // ones) keeps animation alive even when the backend flushes
-            // the entire reply in a single AGENT_TOKEN_DELTA chunk.
+            // Route every final message through StreamingMessage so the word-reveal animation runs even when the full reply arrives in one chunk.
             const isStreaming = readBoolean(message.metadata, 'streaming');
             return <StreamingMessage content={message.content} streaming={isStreaming} />;
         }
@@ -226,8 +192,6 @@ function AgentErrorRow({ message }: { message: ChatMessage }) {
     const [showRaw, setShowRaw] = useState(false);
     const display = message.content || 'Unknown error';
     const raw = readString(message.metadata, 'raw_error');
-    // Only surface the expander when raw differs from the truncated display,
-    // otherwise it just duplicates the same text.
     const hasMore = !!raw && raw !== display;
     return (
         <div className="flex items-start gap-2.5 px-3 py-2 rounded-lg max-w-[70%] bg-red-500/10 border border-red-500/30">
@@ -319,8 +283,7 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
         )
             .unwrap()
             .catch(() => {
-                // errorToastMiddleware surfaces failures; reset local state
-                // so the user can retry.
+                // errorToastMiddleware surfaces the failure; reset so the user can retry.
                 setPending(null);
             });
     };

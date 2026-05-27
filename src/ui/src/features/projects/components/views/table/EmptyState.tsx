@@ -1,9 +1,3 @@
-/**
- * EmptyState - Shown when a project has no tasks
- *
- * Uses the shared EmptyState component with task-specific configuration.
- */
-
 import { Plus } from "@phosphor-icons/react";
 import { EmptyState as SharedEmptyState } from "@/components/feedback/EmptyState";
 

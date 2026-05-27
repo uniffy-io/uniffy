@@ -1,12 +1,6 @@
 import type { Task } from "@/features/projects/types";
 
-/**
- * Walk the task graph downwards from ``rootId`` and return the set of ids
- * that includes ``rootId`` itself and every descendant.
- *
- * Used by the parent picker to reject candidates that would create a cycle
- * if chosen as the new parent.
- */
+/** Returns rootId plus all descendants; used to reject cycle-forming parent picks. */
 export function computeDescendantIds(rootId: string, tasks: Task[]): Set<string> {
   const childrenByParent = new Map<string, string[]>();
   for (const t of tasks) {
@@ -44,12 +38,7 @@ export interface FilterParentCandidatesOptions {
   limit?: number;
 }
 
-/**
- * Filter and sort candidate parents for the picker.
- *
- * Empty queries surface Epics first as a convenience for the common
- * "park this under an Epic" flow described in issue #91.
- */
+/** Empty queries surface Epics first for the common "park under an Epic" flow. */
 export function filterParentCandidates(
   tasks: Task[],
   { excludedIds, typeFilter, query, projectSlug, limit = 50 }: FilterParentCandidatesOptions,

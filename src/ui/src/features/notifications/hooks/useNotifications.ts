@@ -1,10 +1,3 @@
-/**
- * React hooks for notifications feature.
- *
- * Provides hooks for accessing notification state, managing the
- * notification panel, filtering, and interacting with notifications.
- */
-
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
@@ -21,9 +14,6 @@ import {
 } from '@/features/notifications/store/notificationsSlice';
 import type { NotificationFilterType } from '@/features/notifications/store/notificationsSlice';
 
-/**
- * Main notifications hook. Provides full notifications state and actions.
- */
 export function useNotifications() {
     const dispatch = useAppDispatch();
     const state = useAppSelector((s) => s.notifications);
@@ -86,9 +76,6 @@ export function useNotifications() {
     };
 }
 
-/**
- * Hook that returns just the unread count. Use for badge display.
- */
 export function useUnreadCount() {
     const dispatch = useAppDispatch();
     const unreadCount = useAppSelector((s) => s.notifications.unreadCount);
@@ -103,9 +90,6 @@ export function useUnreadCount() {
     return unreadCount;
 }
 
-/**
- * Hook that polls for unread count at a given interval.
- */
 export function useUnreadCountPolling(intervalMs: number = 60000) {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);

@@ -1,16 +1,4 @@
-/**
- * AppHeader trigger for screen recording. Two modes:
- *
- * - Idle / done / error: a small pill with the camcorder icon. Clicking
- *   opens the `RecordingPopover` so the user can pick source / mic /
- *   tab-audio before starting.
- * - Recording / paused / starting / stopping / flushing / completing:
- *   the icon morphs into a compact inline controls bar (timer + mute +
- *   pause/resume + stop) so the controls live where the user expects to
- *   stop the recording. No more floating panel.
- *
- * Mobile: hidden. `getDisplayMedia` is not reliable on mobile browsers.
- */
+/** Hidden on mobile (`getDisplayMedia` is unreliable there). */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -78,9 +66,7 @@ export function RecordingNavTrigger() {
 
     useEffect(() => subscribeAvailability(setOtherTabRecording), []);
 
-    // Tab-crash recovery. Runs at most once per app session via a module
-    // flag in `recoverOrphanedRecordings`. The dispatch handle is stable
-    // for the lifetime of the store, so the empty deps array is safe.
+    // Tab-crash recovery. Runs at most once per session via the module flag in `recoverOrphanedRecordings`.
     useEffect(() => {
         void recoverOrphanedRecordings(({ fileId, filename }) => {
             toast.success('Recovered recording from previous session', {
@@ -136,10 +122,7 @@ export function RecordingNavTrigger() {
                 : isPaused
                     ? 'bg-amber-400'
                     : isRecording
-                        // motion-safe gates the pulse animation; users with
-                        // `prefers-reduced-motion: reduce` see a steady dot
-                        // and a slightly stronger color to compensate for
-                        // the lost motion cue.
+                        // motion-safe gates pulse; reduced-motion users see a steady stronger color.
                         ? 'bg-red-500 motion-safe:animate-pulse motion-reduce:bg-red-600'
                         : 'bg-amber-500',
         );

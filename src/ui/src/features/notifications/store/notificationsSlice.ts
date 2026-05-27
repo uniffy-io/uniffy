@@ -1,12 +1,3 @@
-/**
- * Notifications Redux slice for managing notification state.
- *
- * Provides:
- * - notifications: Array of notification objects
- * - unreadCount: Number of unread notifications
- * - Loading and error states
- */
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
@@ -43,31 +34,14 @@ export type NotificationFilterType =
     | 'system';
 
 export interface NotificationsState {
-    /** Ordered list of notifications (newest first) */
     notifications: SerializedNotification[];
-
-    /** Number of unread notifications */
     unreadCount: number;
-
-    /** True while fetching notifications */
     loading: boolean;
-
-    /** True while performing a mark/delete action */
     updating: boolean;
-
-    /** Last error message */
     error: string | null;
-
-    /** Total count from last fetch */
     totalCount: number;
-
-    /** Whether the notification panel is open */
     panelOpen: boolean;
-
-    /** Search query for filtering notifications in the panel */
     searchQuery: string;
-
-    /** Active filter type for the panel */
     activeFilter: NotificationFilterType;
 }
 
@@ -100,9 +74,6 @@ const notificationToPlain = (n: Notification): SerializedNotification => ({
     expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
 });
 
-/**
- * Fetch notifications for the current user.
- */
 export const fetchNotifications = createAsyncThunk<
     { notifications: SerializedNotification[]; totalCount: number; unreadCount: number },
     { page?: number; pageSize?: number } | void,
@@ -132,9 +103,6 @@ export const fetchNotifications = createAsyncThunk<
     }
 });
 
-/**
- * Fetch unread count only.
- */
 export const fetchUnreadCount = createAsyncThunk<
     number,
     void,
@@ -155,9 +123,6 @@ export const fetchUnreadCount = createAsyncThunk<
     }
 });
 
-/**
- * Mark a notification as read.
- */
 export const markNotificationAsRead = createAsyncThunk<
     SerializedNotification,
     string,
@@ -176,9 +141,6 @@ export const markNotificationAsRead = createAsyncThunk<
     }
 });
 
-/**
- * Mark all notifications as read.
- */
 export const markAllNotificationsAsRead = createAsyncThunk<
     number,
     void,
@@ -199,9 +161,6 @@ export const markAllNotificationsAsRead = createAsyncThunk<
     }
 });
 
-/**
- * Delete a notification.
- */
 export const deleteNotification = createAsyncThunk<
     string,
     string,
@@ -221,30 +180,17 @@ const notificationsSlice = createSlice({
     name: 'notifications',
     initialState,
     reducers: {
-        /**
-         * Clear all notifications (used on logout).
-         */
         clearNotifications: () => initialState,
 
-        /**
-         * Toggle the notification panel open/closed.
-         */
         togglePanel: (state) => {
             state.panelOpen = !state.panelOpen;
         },
 
-        /**
-         * Set the panel open state.
-         */
         setPanel: (state, action: PayloadAction<boolean>) => {
             state.panelOpen = action.payload;
         },
 
-        /**
-         * Add a real-time notification from the streaming connection.
-         */
         addRealtimeNotification: (state, action: PayloadAction<SerializedNotification>) => {
-            // Prepend to the list (newest first)
             state.notifications.unshift(action.payload);
             state.totalCount += 1;
             if (!action.payload.isRead) {
@@ -252,43 +198,23 @@ const notificationsSlice = createSlice({
             }
         },
 
-        /**
-         * Set unread count directly.
-         */
         setUnreadCount: (state, action: PayloadAction<number>) => {
             state.unreadCount = action.payload;
         },
 
-        /**
-         * Clear error state.
-         */
         clearError: (state) => {
             state.error = null;
         },
 
-        /**
-         * Set the search query for panel filtering.
-         */
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.searchQuery = action.payload;
         },
 
-        /**
-         * Set the active filter type for the panel.
-         */
         setActiveFilter: (state, action: PayloadAction<NotificationFilterType>) => {
             state.activeFilter = action.payload;
         },
 
-        /**
-         * Optimistically mark every unread notification matching a source
-         * URN as read, decrementing the unread counter accordingly.
-         *
-         * Mirrors the server-side cascade triggered when the originating
-         * content is marked read (e.g. opening a chat channel clears its
-         * mention/DM/thread-reply notifications). Used to keep the bell
-         * panel in sync without waiting for a refetch or stream tick.
-         */
+        /** Mirrors the server-side cascade when originating content is marked read (e.g. opening a chat clears its mention/DM/thread-reply notifications). */
         markNotificationsReadBySource: (state, action: PayloadAction<string>) => {
             const sourceUrn = action.payload;
             if (!sourceUrn) return;
@@ -307,7 +233,6 @@ const notificationsSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // Fetch notifications
         builder
             .addCase(fetchNotifications.pending, (state) => {
                 state.loading = true;
@@ -324,13 +249,11 @@ const notificationsSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch notifications';
             });
 
-        // Fetch unread count
         builder
             .addCase(fetchUnreadCount.fulfilled, (state, action) => {
                 state.unreadCount = action.payload;
             });
 
-        // Mark as read
         builder
             .addCase(markNotificationAsRead.pending, (state) => {
                 state.updating = true;
@@ -351,7 +274,6 @@ const notificationsSlice = createSlice({
                 state.error = action.payload ?? 'Failed to mark as read';
             });
 
-        // Mark all as read
         builder
             .addCase(markAllNotificationsAsRead.pending, (state) => {
                 state.updating = true;
@@ -369,7 +291,6 @@ const notificationsSlice = createSlice({
                 state.error = action.payload ?? 'Failed to mark all as read';
             });
 
-        // Delete notification
         builder
             .addCase(deleteNotification.pending, (state) => {
                 state.updating = true;
@@ -459,9 +380,6 @@ const FILTER_TYPE_MAP: Record<string, number[]> = {
     ],
 };
 
-/**
- * Select filtered notifications based on search query and active filter.
- */
 export function selectFilteredNotifications(state: RootState): SerializedNotification[] {
     const { notifications, searchQuery, activeFilter } = state.notifications;
 

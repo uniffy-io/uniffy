@@ -278,8 +278,6 @@ export const {
   clearChatUi,
 } = chatUiSlice.actions;
 
-// -- Selectors --
-
 export const selectSidebarOpen = (state: RootState): boolean =>
   state.chatUi.sidebarOpen;
 

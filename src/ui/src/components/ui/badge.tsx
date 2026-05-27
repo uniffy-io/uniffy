@@ -1,9 +1,3 @@
-/**
- * Badge - A small status indicator component
- *
- * Provides styled badges for displaying status, tags, or labels.
- */
-
 import * as React from "react";
 import { cn } from "@/shared/utils/cn";
 

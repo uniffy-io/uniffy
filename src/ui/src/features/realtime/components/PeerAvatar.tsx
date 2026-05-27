@@ -14,11 +14,7 @@ interface PeerAvatarProps {
   title?: string;
 }
 
-/**
- * Avatar circle shared by the presence stack and canvas peer cursors.
- * Renders the user's photo when `hasAvatar` and `userId` are set, else a
- * color-filled circle with initials (also the fallback on image error).
- */
+/** Shared by the presence stack and canvas peer cursors; falls back to initials on image error. */
 export function PeerAvatar({
   name,
   color,

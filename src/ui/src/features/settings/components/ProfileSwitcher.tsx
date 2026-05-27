@@ -1,7 +1,3 @@
-/**
- * Profile switcher component for selecting active settings profile.
- */
-
 import React from 'react';
 import { CaretDown, Check, Plus } from '@phosphor-icons/react';
 import { useSettings } from '@/features/settings/hooks/useSettings';
@@ -33,13 +29,11 @@ export function ProfileSwitcher({ onCreateProfile }: ProfileSwitcherProps) {
 
             {isOpen && (
                 <>
-                    {/* Backdrop */}
                     <div
                         className="fixed inset-0 z-10"
                         onClick={() => setIsOpen(false)}
                     />
 
-                    {/* Dropdown */}
                     <div className="absolute left-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-20">
                         <div className="py-1">
                             {profiles.map((profile) => (

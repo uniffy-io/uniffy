@@ -1,7 +1,3 @@
-/**
- * Settings async thunks for API interactions.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
@@ -14,13 +10,6 @@ import type {
     NotificationsSettings,
 } from '@uniffy/proto/settings/v1/settings_pb';
 
-// ─────────────────────────────────────────────────────────────
-// Serialization helpers (convert proto objects to plain JS)
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Convert AppearanceSettings proto to plain object.
- */
 const appearanceToPlain = (appearance?: AppearanceSettings) => {
     if (!appearance) return undefined;
     return {
@@ -36,9 +25,6 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
     };
 };
 
-/**
- * Convert KeyboardShortcutsSettings proto to plain object.
- */
 const keyboardShortcutsToPlain = (shortcuts?: KeyboardShortcutsSettings) => {
     if (!shortcuts) return undefined;
     return {
@@ -46,13 +32,10 @@ const keyboardShortcutsToPlain = (shortcuts?: KeyboardShortcutsSettings) => {
     };
 };
 
-/**
- * Convert NotificationsSettings proto to plain object.
- */
+// Channel-override matrix: per notif-type, which delivery channels (in_app/browser/email) the user opts into.
 const notificationsToPlain = (notifications?: NotificationsSettings) => {
     if (!notifications) return undefined;
 
-    // Convert channel overrides from proto to plain object
     const channelOverrides: Record<string, Record<string, boolean>> = {};
     if (notifications.channelOverrides) {
         for (const [notifType, pref] of Object.entries(notifications.channelOverrides)) {
@@ -81,9 +64,6 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
     };
 };
 
-/**
- * Convert SettingsProfile proto to plain object.
- */
 const profileToPlain = (profile: SettingsProfile) => ({
     id: profile.id,
     userId: profile.userId,
@@ -96,9 +76,6 @@ const profileToPlain = (profile: SettingsProfile) => ({
     updatedAt: profile.updatedAt ? timestampDate(profile.updatedAt).toISOString() : undefined,
 });
 
-/**
- * Convert EffectiveSettings proto to plain object.
- */
 const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     appearance: appearanceToPlain(settings.appearance) ?? {
         theme: 'system',
@@ -127,17 +104,9 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     },
 });
 
-// Export types for use in slice
 export type SerializedProfile = ReturnType<typeof profileToPlain>;
 export type SerializedEffectiveSettings = ReturnType<typeof effectiveSettingsToPlain>;
 
-// ─────────────────────────────────────────────────────────────
-// Async thunks
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Fetch all profiles for the current user.
- */
 export const fetchProfiles = createAsyncThunk<
     SerializedProfile[],
     void,
@@ -153,9 +122,6 @@ export const fetchProfiles = createAsyncThunk<
     }
 });
 
-/**
- * Fetch effective settings for a profile (or default profile).
- */
 export const fetchEffectiveSettings = createAsyncThunk<
     { profile: SerializedProfile; effectiveSettings: SerializedEffectiveSettings },
     string | undefined,
@@ -181,9 +147,6 @@ export const fetchEffectiveSettings = createAsyncThunk<
     }
 });
 
-/**
- * Create a new settings profile.
- */
 export const createProfile = createAsyncThunk<
     SerializedProfile,
     {
@@ -218,9 +181,6 @@ export const createProfile = createAsyncThunk<
     }
 });
 
-/**
- * Update a settings profile (sparse update).
- */
 export const updateProfile = createAsyncThunk<
     SerializedProfile,
     {
@@ -257,9 +217,6 @@ export const updateProfile = createAsyncThunk<
     }
 });
 
-/**
- * Delete a settings profile.
- */
 export const deleteProfile = createAsyncThunk<
     string,
     string,
@@ -280,9 +237,6 @@ export const deleteProfile = createAsyncThunk<
     }
 });
 
-/**
- * Set a profile as the default.
- */
 export const setDefaultProfile = createAsyncThunk<
     SerializedProfile,
     string,

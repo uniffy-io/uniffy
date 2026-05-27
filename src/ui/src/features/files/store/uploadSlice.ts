@@ -1,98 +1,72 @@
-/**
- * Upload Redux Slice
- *
- * Manages file upload state including queue, progress, and streaming.
- */
-
 import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export interface UploadItem {
-    // Unique ID for this upload
     id: string;
 
-    // File info
     filename: string;
     mimeType: string;
     totalSize: number;
 
-    // Upload session info (from initiateUpload)
     uploadId?: string;
     chunkSize?: number;
     totalChunks?: number;
 
-    // Progress tracking
     status: 'queued' | 'initializing' | 'uploading' | 'completing' | 'completed' | 'failed' | 'aborted';
     uploadedChunks: number;
     uploadedBytes: number;
-    progress: number; // 0-100
+    /** 0..100 */
+    progress: number;
 
-    // Target location
     folderId?: string;
     accessMode?: AccessMode;
 
-    // Error info
     error?: string;
 
-    // Timestamps
     startedAt?: number;
     completedAt?: number;
 
-    // Result
     fileId?: string;
 }
 
 export interface DownloadItem {
-    // Unique ID for this download
     id: string;
 
-    // File info
     filename: string;
-    fileCount: number; // Number of files being downloaded (1 for single, >1 for archive)
+    /** 1 for single file, >1 for an archive download. */
+    fileCount: number;
 
-    // Progress tracking
     status: 'downloading' | 'archiving' | 'completed' | 'failed';
-    currentFile: number; // Current file being downloaded (1-indexed)
+    /** 1-indexed. */
+    currentFile: number;
     currentFilename: string;
-    progress: number; // 0-100
+    /** 0..100 */
+    progress: number;
 
-    // Error info
     error?: string;
 
-    // Timestamps
     startedAt: number;
     completedAt?: number;
 }
 
 interface UploadState {
-    // Upload queue
     queue: UploadItem[];
-
-    // Active uploads (by upload item ID)
     activeUploads: Record<string, UploadItem>;
-
-    // Completed uploads (recent)
     completedUploads: UploadItem[];
-
-    // Failed uploads
     failedUploads: UploadItem[];
 
-    // Download state
     activeDownloads: Record<string, DownloadItem>;
     completedDownloads: DownloadItem[];
 
-    // Global state
     isUploading: boolean;
     isDownloading: boolean;
     totalQueuedSize: number;
     totalUploadedSize: number;
 
-    // Settings
     maxConcurrentUploads: number;
 
-    // UI state
     showUploadPanel: boolean;
 }
 
@@ -115,7 +89,6 @@ export const uploadSlice = createSlice({
     name: 'upload',
     initialState,
     reducers: {
-        // Add files to upload queue
         addToQueue: (state, action: PayloadAction<Omit<UploadItem, 'status' | 'uploadedChunks' | 'uploadedBytes' | 'progress'>[]>) => {
             const newItems: UploadItem[] = action.payload.map(item => ({
                 ...item,
@@ -128,13 +101,11 @@ export const uploadSlice = createSlice({
             state.queue.push(...newItems);
             state.totalQueuedSize += newItems.reduce((sum, item) => sum + item.totalSize, 0);
 
-            // Show upload panel when items are added
             if (newItems.length > 0) {
                 state.showUploadPanel = true;
             }
         },
 
-        // Remove item from queue (before upload starts)
         removeFromQueue: (state, action: PayloadAction<string>) => {
             const index = state.queue.findIndex(item => item.id === action.payload);
             if (index >= 0) {
@@ -144,11 +115,9 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Start upload for a queued item
         startUpload: (state, action: PayloadAction<{ itemId: string; uploadId: string; chunkSize: number; totalChunks: number }>) => {
             const { itemId, uploadId, chunkSize, totalChunks } = action.payload;
 
-            // Find in queue
             const queueIndex = state.queue.findIndex(item => item.id === itemId);
             if (queueIndex >= 0) {
                 const item = state.queue[queueIndex];
@@ -161,14 +130,12 @@ export const uploadSlice = createSlice({
                     startedAt: Date.now(),
                 };
 
-                // Move from queue to active
                 state.queue.splice(queueIndex, 1);
                 state.activeUploads[itemId] = activeItem;
                 state.isUploading = true;
             }
         },
 
-        // Update upload progress
         updateProgress: (state, action: PayloadAction<{ itemId: string; uploadedChunks: number; uploadedBytes: number }>) => {
             const { itemId, uploadedChunks, uploadedBytes } = action.payload;
             const item = state.activeUploads[itemId];
@@ -181,7 +148,7 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Mark upload as completing (final chunk sent, waiting for server)
+        /** Final chunk sent, awaiting server CompleteUpload. */
         setCompleting: (state, action: PayloadAction<string>) => {
             const item = state.activeUploads[action.payload];
             if (item) {
@@ -189,7 +156,6 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Complete an upload
         completeUpload: (state, action: PayloadAction<{ itemId: string; fileId: string }>) => {
             const { itemId, fileId } = action.payload;
             const item = state.activeUploads[itemId];
@@ -205,23 +171,19 @@ export const uploadSlice = createSlice({
                 delete state.activeUploads[itemId];
                 state.completedUploads.unshift(completedItem);
 
-                // Keep only last 20 completed
                 if (state.completedUploads.length > 20) {
                     state.completedUploads = state.completedUploads.slice(0, 20);
                 }
 
-                // Check if all uploads done
                 if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
                     state.isUploading = false;
                 }
             }
         },
 
-        // Fail an upload
         failUpload: (state, action: PayloadAction<{ itemId: string; error: string }>) => {
             const { itemId, error } = action.payload;
 
-            // Check queue first
             const queueIndex = state.queue.findIndex(item => item.id === itemId);
             if (queueIndex >= 0) {
                 const item = state.queue[queueIndex];
@@ -234,7 +196,6 @@ export const uploadSlice = createSlice({
                 state.queue.splice(queueIndex, 1);
                 state.failedUploads.unshift(failedItem);
             } else {
-                // Check active uploads
                 const item = state.activeUploads[itemId];
                 if (item) {
                     const failedItem: UploadItem = {
@@ -248,18 +209,15 @@ export const uploadSlice = createSlice({
                 }
             }
 
-            // Keep only last 10 failed
             if (state.failedUploads.length > 10) {
                 state.failedUploads = state.failedUploads.slice(0, 10);
             }
 
-            // Check if all uploads done
             if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
                 state.isUploading = false;
             }
         },
 
-        // Abort an upload
         abortUpload: (state, action: PayloadAction<string>) => {
             const itemId = action.payload;
             const item = state.activeUploads[itemId];
@@ -273,13 +231,11 @@ export const uploadSlice = createSlice({
                 state.failedUploads.unshift(abortedItem);
             }
 
-            // Check if all uploads done
             if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
                 state.isUploading = false;
             }
         },
 
-        // Retry a failed upload
         retryUpload: (state, action: PayloadAction<string>) => {
             const itemId = action.payload;
             const index = state.failedUploads.findIndex(item => item.id === itemId);
@@ -301,27 +257,22 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Clear completed uploads
         clearCompleted: (state) => {
             state.completedUploads = [];
         },
 
-        // Clear failed uploads
         clearFailed: (state) => {
             state.failedUploads = [];
         },
 
-        // Toggle upload panel visibility
         toggleUploadPanel: (state) => {
             state.showUploadPanel = !state.showUploadPanel;
         },
 
-        // Set upload panel visibility
         setShowUploadPanel: (state, action: PayloadAction<boolean>) => {
             state.showUploadPanel = action.payload;
         },
 
-        // Clear all upload state (for logout)
         clearUploads: (state) => {
             state.queue = [];
             state.activeUploads = {};
@@ -335,7 +286,6 @@ export const uploadSlice = createSlice({
             state.totalUploadedSize = 0;
         },
 
-        // Start a download (single or archive)
         startDownload: (state, action: PayloadAction<{ id: string; filename: string; fileCount: number }>) => {
             const { id, filename, fileCount } = action.payload;
             state.activeDownloads[id] = {
@@ -352,7 +302,6 @@ export const uploadSlice = createSlice({
             state.showUploadPanel = true;
         },
 
-        // Update download progress
         updateDownloadProgress: (state, action: PayloadAction<{ id: string; currentFile: number; currentFilename: string; progress: number }>) => {
             const { id, currentFile, currentFilename, progress } = action.payload;
             const item = state.activeDownloads[id];
@@ -363,7 +312,6 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Set download to archiving state
         setDownloadArchiving: (state, action: PayloadAction<string>) => {
             const item = state.activeDownloads[action.payload];
             if (item) {
@@ -371,7 +319,6 @@ export const uploadSlice = createSlice({
             }
         },
 
-        // Complete a download
         completeDownload: (state, action: PayloadAction<string>) => {
             const id = action.payload;
             const item = state.activeDownloads[id];
@@ -385,19 +332,16 @@ export const uploadSlice = createSlice({
                 delete state.activeDownloads[id];
                 state.completedDownloads.unshift(completedItem);
 
-                // Keep only last 10 completed downloads
                 if (state.completedDownloads.length > 10) {
                     state.completedDownloads = state.completedDownloads.slice(0, 10);
                 }
 
-                // Check if all downloads done
                 if (Object.keys(state.activeDownloads).length === 0) {
                     state.isDownloading = false;
                 }
             }
         },
 
-        // Fail a download
         failDownload: (state, action: PayloadAction<{ id: string; error: string }>) => {
             const { id, error } = action.payload;
             const item = state.activeDownloads[id];
@@ -407,14 +351,12 @@ export const uploadSlice = createSlice({
                 item.completedAt = Date.now();
                 delete state.activeDownloads[id];
 
-                // Check if all downloads done
                 if (Object.keys(state.activeDownloads).length === 0) {
                     state.isDownloading = false;
                 }
             }
         },
 
-        // Clear completed downloads
         clearCompletedDownloads: (state) => {
             state.completedDownloads = [];
         },
@@ -436,7 +378,6 @@ export const {
     toggleUploadPanel,
     setShowUploadPanel,
     clearUploads,
-    // Download actions
     startDownload,
     updateDownloadProgress,
     setDownloadArchiving,
@@ -445,7 +386,6 @@ export const {
     clearCompletedDownloads,
 } = uploadSlice.actions;
 
-// Memoized selectors
 const selectFailedUploads = (state: RootState) => state.upload.failedUploads;
 
 export const selectAbortedUploads = createSelector(

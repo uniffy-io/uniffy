@@ -1,14 +1,4 @@
-/**
- * Centralized date and time formatting utilities.
- *
- * All date display across the app should use these functions
- * instead of inline toLocaleDateString() calls.
- */
-
-/**
- * Format a date string to short display: "Jan 22"
- * Adds year when the date is not in the current year: "Jan 22, 2025"
- */
+/** "Jan 22" (adds year when not in the current year). */
 export function formatDateShort(dateStr: string): string {
     const date = new Date(dateStr);
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -18,9 +8,7 @@ export function formatDateShort(dateStr: string): string {
     return date.toLocaleDateString('en-US', opts);
 }
 
-/**
- * Format a date string to full display: "Jan 22, 2026"
- */
+/** "Jan 22, 2026" */
 export function formatDateFull(dateStr: string): string {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', {
@@ -30,9 +18,7 @@ export function formatDateFull(dateStr: string): string {
     });
 }
 
-/**
- * Format a date string with weekday: "Mon, Jan 22"
- */
+/** "Mon, Jan 22" */
 export function formatDateWithWeekday(dateStr: string): string {
     const date = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
     return date.toLocaleDateString('en-US', {
@@ -42,10 +28,7 @@ export function formatDateWithWeekday(dateStr: string): string {
     });
 }
 
-/**
- * Format a proto timestamp ({ seconds, nanos }) to short date.
- * Returns '-' if timestamp is falsy.
- */
+/** Proto timestamp -> short date. Returns '-' when undefined. */
 export function formatProtoDate(timestamp?: { seconds: number | bigint; nanos: number }): string {
     if (!timestamp) return '-';
     const ms = typeof timestamp.seconds === 'bigint'
@@ -59,9 +42,7 @@ export function formatProtoDate(timestamp?: { seconds: number | bigint; nanos: n
     return date.toLocaleDateString(undefined, opts);
 }
 
-/**
- * Format a proto timestamp to date + time: "Jan 22, 2026, 2:30 PM"
- */
+/** "Jan 22, 2026, 2:30 PM" */
 export function formatProtoDateTime(timestamp?: { seconds: number | bigint; nanos: number }): string {
     if (!timestamp) return '-';
     const ms = typeof timestamp.seconds === 'bigint'
@@ -77,9 +58,6 @@ export function formatProtoDateTime(timestamp?: { seconds: number | bigint; nano
     });
 }
 
-/**
- * Check if a date string is in the past (before today).
- */
 export function isOverdue(dateStr: string): boolean {
     const date = new Date(dateStr);
     const today = new Date();
@@ -87,10 +65,7 @@ export function isOverdue(dateStr: string): boolean {
     return date < today;
 }
 
-/**
- * Format a date string as relative time: "just now", "5m ago", "3d ago".
- * Falls back to short date for dates older than 7 days.
- */
+/** "Just now" / "5m ago" / "3d ago"; falls back to short date past 7 days. */
 export function formatRelativeTime(dateStr: string | undefined): string {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -110,14 +85,7 @@ export function formatRelativeTime(dateStr: string | undefined): string {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-/**
- * Format a date string as a smart date/time display:
- * - Today: "2:30 PM"
- * - Yesterday: "Yesterday, 4:15 PM"
- * - This week: "Mon, 10:00 AM"
- * - This year: "Apr 12, 2:30 PM"
- * - Older: "Apr 12, 2025, 2:30 PM"
- */
+/** Today -> "2:30 PM"; yesterday -> "Yesterday, 4:15 PM"; this week -> "Mon, 10:00 AM"; this year -> "Apr 12, 2:30 PM"; older includes year. */
 export function formatSmartDateTime(dateStr: string | undefined): string {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -147,9 +115,7 @@ export function formatSmartDateTime(dateStr: string | undefined): string {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + `, ${time}`;
 }
 
-/**
- * Format seconds to media playback time: "1:23" or "1:02:03"
- */
+/** "1:23" or "1:02:03" */
 export function formatMediaTime(seconds: number): string {
     if (!isFinite(seconds) || seconds < 0) return '0:00';
     const hrs = Math.floor(seconds / 3600);
@@ -162,9 +128,7 @@ export function formatMediaTime(seconds: number): string {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-/**
- * Format bytes to human-readable file size: "1.5 MB"
- */
+/** "1.5 MB" */
 export function formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -173,10 +137,7 @@ export function formatFileSize(bytes: number): string {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-/**
- * Format a future date as remaining time: "for 3h 30m", "for 25m", "for 2d".
- * Returns empty string if the date is in the past or not provided.
- */
+/** "for 3h 30m" / "for 25m" / "for 2d"; empty string when the date is past or missing. */
 export function formatTimeRemaining(dateStr: string | null | undefined): string {
     if (!dateStr) return '';
     const remaining = new Date(dateStr).getTime() - Date.now();

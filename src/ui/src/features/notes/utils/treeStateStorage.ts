@@ -1,22 +1,9 @@
-/**
- * Tree State Storage
- *
- * Persists the expanded/collapsed state of the notes sidebar tree
- * to localStorage for persistence across page navigations and reloads.
- */
-
 const STORAGE_KEY_PREFIX = 'uniffy-notes-tree';
 
-/**
- * Get the storage key for expanded nodes (scoped by org and user)
- */
 function getExpandedNodesKey(organizationId: string, userId: string): string {
     return `${STORAGE_KEY_PREFIX}:expanded:${organizationId}:${userId}`;
 }
 
-/**
- * Load expanded nodes from localStorage
- */
 export function loadExpandedNodes(organizationId: string, userId: string): string[] | null {
     try {
         const key = getExpandedNodesKey(organizationId, userId);
@@ -33,9 +20,6 @@ export function loadExpandedNodes(organizationId: string, userId: string): strin
     return null;
 }
 
-/**
- * Save expanded nodes to localStorage
- */
 export function saveExpandedNodes(
     organizationId: string,
     userId: string,
@@ -49,9 +33,6 @@ export function saveExpandedNodes(
     }
 }
 
-/**
- * Clear all tree state for an organization/user (for logout)
- */
 export function clearTreeState(organizationId: string, userId: string): void {
     try {
         const key = getExpandedNodesKey(organizationId, userId);

@@ -1,9 +1,3 @@
-/**
- * Bookmarks feature public exports.
- *
- * This module provides user-scoped bookmarks for any URN-identified content.
- */
-
 export { bookmarksApi } from '@/features/bookmarks/api/bookmarksApi';
 
 export {

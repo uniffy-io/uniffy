@@ -1,11 +1,3 @@
-/**
- * Trash Slice
- *
- * Dedicated Redux slice for the Trash page. Keeps soft-deleted files and folders
- * separate from the active files state so the main views don't accidentally
- * pick them up.
- */
-
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
@@ -34,7 +26,7 @@ export interface TrashState {
     folders: SerializedFolder[];
     loading: boolean;
     error: string | null;
-    // When set, the user has drilled into a trashed folder and is viewing its contents.
+    /** Set when the user has drilled into a trashed folder. */
     currentFolderId: string | null;
 }
 
@@ -89,7 +81,7 @@ const trashSlice = createSlice({
         },
         removeTrashFolder: (state, action: PayloadAction<string>) => {
             const removed = new Set<string>([action.payload]);
-            // Cascade: also drop any descendant folders and files that lived under this one.
+            // Cascade through descendant folders and their files.
             let changed = true;
             while (changed) {
                 changed = false;
@@ -121,7 +113,6 @@ const trashSlice = createSlice({
                 state.loading = false;
                 state.files = action.payload.files;
                 state.folders = action.payload.folders;
-                // If the folder we were viewing is no longer in trash, reset.
                 if (
                     state.currentFolderId &&
                     !action.payload.folders.some((f) => f.id === state.currentFolderId)

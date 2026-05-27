@@ -1,11 +1,3 @@
-/**
- * Tree Node Item Component
- *
- * Renders a single tree node (note, canvas, or folder) and its children recursively.
- * Folders show "+" (create) and "..." (actions) buttons on hover.
- * Notes/canvas show "..." (actions) button on hover.
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     CaretDown,
@@ -60,11 +52,10 @@ export function TreeNodeItem({
     const isEditing = editing.editingId === node.id;
     const isDragging = drag.draggedNodeId === node.id;
 
-    // Check if this note is bookmarked (via URN) - must be called unconditionally
     const noteUrn = node.noteId ? `urn:uniffy:content:NOTE:${node.noteId}` : '';
     const isBookmarked = useIsBookmarked(noteUrn);
 
-    // Check if draggedNodeId is a descendant of this node (prevent dropping into own children)
+    // Prevent dropping into own descendants.
     const isDescendant = (nodeToCheck: TreeNode, targetId: string): boolean => {
         if (nodeToCheck.id === targetId) return true;
         if (!nodeToCheck.children) return false;
@@ -73,7 +64,6 @@ export function TreeNodeItem({
 
     const canDropHere = isFolder && drag.draggedNodeId !== node.id && (!drag.draggedNodeId || !isDescendant(node, drag.draggedNodeId));
 
-    // Focus input when editing starts
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus();
@@ -223,7 +213,6 @@ export function TreeNodeItem({
         );
     }
 
-    // Note / Canvas item
     return (
         <div
             data-node-id={node.id}

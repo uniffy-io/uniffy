@@ -1,11 +1,4 @@
-/**
- * Hook for streaming notifications in real-time via ConnectRPC server streaming.
- *
- * Subscribes to the StreamNotifications RPC and dispatches incoming
- * notifications to the Redux store. Includes reconnection with
- * exponential backoff. Passes an AbortSignal so the server-side
- * stream is cleanly cancelled on unmount or dependency change.
- */
+/** Server-streamed notification feed with exponential-backoff reconnection. Module-level AbortController guarantees at most one active connection across remounts. */
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -27,18 +20,8 @@ import { NotificationToast } from '@/features/notifications/components/Notificat
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
 
-// Module-level singleton: ensures only one notification stream exists process-wide.
-// If a second mount happens before the first cleanup, the old connection is aborted.
 let _activeController: AbortController | null = null;
 
-/**
- * Subscribe to real-time notification events.
- * Automatically reconnects with exponential backoff on disconnection.
- *
- * Uses a module-level AbortController to guarantee at most one active
- * connection, even if multiple component instances mount concurrently
- * (e.g. during page transitions or React Strict Mode double-effects).
- */
 export function useNotificationStream() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
@@ -49,7 +32,6 @@ export function useNotificationStream() {
     useEffect(() => {
         if (!organizationId || !isAuthenticated) return;
 
-        // Abort any previously active stream from another mount
         _activeController?.abort();
 
         let backoff = INITIAL_BACKOFF_MS;
@@ -58,7 +40,6 @@ export function useNotificationStream() {
 
         async function connect() {
             while (mounted) {
-                // Abort any previous stream before starting a new one
                 abortRef.current?.abort();
                 abortRef.current = new AbortController();
                 _activeController = abortRef.current;
@@ -69,7 +50,6 @@ export function useNotificationStream() {
                         { signal: abortRef.current.signal },
                     );
 
-                    // Reset backoff on successful iteration start
                     backoff = INITIAL_BACKOFF_MS;
 
                     for await (const event of stream) {
@@ -95,7 +75,6 @@ export function useNotificationStream() {
                             };
                             dispatch(addRealtimeNotification(serialized));
 
-                            // Toast notification logic
                             const currentState = getState();
                             if (currentState) {
                                 const toastEnabled = currentState.settings.effectiveSettings?.notifications.toastEnabled ?? false;
@@ -121,7 +100,7 @@ export function useNotificationStream() {
                             }
                         }
 
-                        // File processing completed -- debounce per file
+                        // FILE_UPDATED: debounce per file so a burst of part-ack events collapses to one refetch.
                         if (event.eventType === StreamNotificationsResponse_EventType.FILE_UPDATED && event.fileUpdate) {
                             const fileId = event.fileUpdate.fileId;
                             if (fileId) {
@@ -133,7 +112,6 @@ export function useNotificationStream() {
                                 }, 500));
                             }
                         }
-                        // Presence state changed
                         if (
                             event.eventType ===
                                 StreamNotificationsResponse_EventType.PRESENCE_CHANGED &&
@@ -158,7 +136,7 @@ export function useNotificationStream() {
                             );
                         }
 
-                        // Mention state changed (live mentions)
+                        // MENTION_STATE_CHANGED fans out to tag/live-mention projectors.
                         if (
                             event.eventType ===
                                 StreamNotificationsResponse_EventType.MENTION_STATE_CHANGED &&
@@ -170,7 +148,6 @@ export function useNotificationStream() {
                             }
                         }
 
-                        // Permissions changed - refetch domain admin domains
                         if (
                             event.eventType ===
                                 StreamNotificationsResponse_EventType.PERMISSIONS_CHANGED &&
@@ -183,17 +160,13 @@ export function useNotificationStream() {
                                 });
                                 dispatch(setDomainAdminDomains(Array.from(response.domains)));
                             } catch {
-                                // Non-fatal - permissions will update on next login
+                                // Non-fatal; updates on next login.
                             }
                         }
-
-                        // Heartbeats are silently consumed (keep-alive)
                     }
                 } catch {
-                    // Connection failed, dropped, or aborted
                     if (!mounted) break;
 
-                    // Exponential backoff with jitter
                     const jitter = Math.random() * 1000;
                     await new Promise(resolve => setTimeout(resolve, backoff + jitter));
                     backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);

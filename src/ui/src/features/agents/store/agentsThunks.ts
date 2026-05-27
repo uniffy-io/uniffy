@@ -135,8 +135,7 @@ export const updateAgent = createAsyncThunk<
         imageProviderKeyId?: string;
         promptId?: string;
         clearPrompt?: boolean;
-        // When set, replaces the agent's manual tag set on the server.
-        // Empty array clears all manual tags. Omit to leave tags untouched.
+        // Replace the agent's manual tag set; empty array clears tags; omit to leave untouched.
         tagIds?: string[];
     },
     { state: RootState; rejectValue: string }
@@ -145,10 +144,8 @@ export const updateAgent = createAsyncThunk<
         const state = getState();
         const organizationId = getOrganizationId(state);
         const { agentId, tagIds, ...fields } = params;
-        // Proto3 repeated fields cannot distinguish "sent empty" from "not
-        // sent" (both deserialise to []). To let the backend always apply the
-        // correct value, we send the current Redux value for every repeated
-        // field, overridden by whatever the caller explicitly provided.
+        // Proto3 repeated fields cannot distinguish unset from empty, so resend the current
+        // Redux value for every repeated field; caller-provided values override.
         const current = state.agents.agents[agentId];
         const response = await agentsApi.updateAgent({
             organizationId,

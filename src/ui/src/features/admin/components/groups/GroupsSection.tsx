@@ -1,9 +1,3 @@
-/**
- * Groups Section
- *
- * Admin UI for managing organization groups.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     UsersThree,
@@ -103,7 +97,6 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                 </div>
             </div>
 
-            {/* Delete confirmation dialog */}
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -283,7 +276,6 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                     </div>
                 </div>
 
-                {/* Add member picker */}
                 {showAddPicker && (
                     <div className="px-4 md:px-6 pt-4">
                         <SubjectPicker
@@ -376,7 +368,6 @@ export function GroupsSection() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [viewingMembersGroup, setViewingMembersGroup] = useState<SerializedGroupInfo | null>(null);
 
-    // Fetch on mount
     useEffect(() => {
         refresh();
     }, [refresh]);
@@ -393,7 +384,6 @@ export function GroupsSection() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                     <div className="flex items-center gap-3 mb-2">
@@ -415,7 +405,6 @@ export function GroupsSection() {
                 </button>
             </div>
 
-            {/* Groups list */}
             {loading ? (
                 <div className="py-12 text-center">
                     <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -452,12 +441,10 @@ export function GroupsSection() {
                 </div>
             )}
 
-            {/* Create modal */}
             {showCreateModal && (
                 <GroupFormModal onSave={handleCreate} onClose={() => setShowCreateModal(false)} />
             )}
 
-            {/* Edit modal */}
             {editingGroup && (
                 <GroupFormModal
                     group={editingGroup}
@@ -466,7 +453,6 @@ export function GroupsSection() {
                 />
             )}
 
-            {/* Members modal */}
             {viewingMembersGroup && (
                 <GroupMembersModal
                     group={viewingMembersGroup}

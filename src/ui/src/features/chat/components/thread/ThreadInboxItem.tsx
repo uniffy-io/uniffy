@@ -1,10 +1,3 @@
-/**
- * ThreadInboxItem - Single thread entry in the Threads Inbox.
- *
- * Shows channel name, root message preview, reply count, last reply time,
- * and unread indicator.
- */
-
 import { ChatText, Hash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { SubjectAvatarById } from '@/components/subject';
@@ -19,7 +12,6 @@ interface ThreadInboxItemProps {
 export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
   const senderName = thread.rootMessageSenderName ?? 'Unknown';
 
-  // Truncate root message content for preview
   const preview = thread.rootMessageContent.length > 120
     ? thread.rootMessageContent.slice(0, 120) + '...'
     : thread.rootMessageContent;
@@ -34,7 +26,6 @@ export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
       data-testid={`chat-thread-inbox-item-${thread.rootMessageId}`}
       data-unread={thread.hasUnread ? 'true' : 'false'}
     >
-      {/* Channel name */}
       <div className="flex items-center gap-1.5 mb-1">
         <Hash size={12} className="text-muted-foreground shrink-0" />
         <span className="text-xs font-medium text-muted-foreground">
@@ -45,7 +36,6 @@ export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
         )}
       </div>
 
-      {/* Root message preview */}
       <div className="flex items-start gap-2 mb-1.5">
         <div className="shrink-0 mt-0.5">
           <SubjectAvatarById userId={thread.rootMessageSenderId} displayName={senderName} size="xs" />
@@ -58,7 +48,6 @@ export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
         </div>
       </div>
 
-      {/* Reply info */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <ChatText size={12} />
         <span className="font-medium text-primary">

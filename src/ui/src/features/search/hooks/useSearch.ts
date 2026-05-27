@@ -1,13 +1,3 @@
-/**
- * Search hooks for unified search functionality.
- *
- * Supports Google-style keyword search filters:
- * - Type filters: note:, file:, user:, calendar:
- * - Tag filters: tag:work
- * - Project filters: project:xyz
- * - Ownership: my: (current user's content)
- */
-
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search/api/searchApi';
@@ -22,44 +12,23 @@ import {
 const DEBOUNCE_DELAY_MS = 150;
 
 interface UseSearchOptions {
-    /** Explicit type filters (merged with parsed filters from query) */
     typeFilters?: SearchResultType[];
-    /** Types to exclude from results (ignored when explicit type filters are set) */
+    /** Ignored when explicit typeFilters are set. */
     excludeTypes?: SearchResultType[];
-    /** Maximum results to return */
     limit?: number;
 }
 
 interface UseSearchResult {
-    /** Raw query string including filter keywords */
     query: string;
-    /** Set the raw query string */
     setQuery: (query: string) => void;
-    /** Search results */
     results: SearchResultItem[];
-    /** Loading state */
     isLoading: boolean;
-    /** Error message if search failed */
     error: string | null;
-    /** Clear all results and query */
     clearResults: () => void;
-    /** Parsed query with extracted filters */
     parsedQuery: ParsedQuery;
-    /** Whether any filters are active */
     hasFilters: boolean;
 }
 
-/**
- * Hook for performing debounced global search with keyword filter support.
- *
- * Parses the query string to extract filter keywords like:
- * - `note: meeting` - Search notes for "meeting"
- * - `tag:work project` - Filter by tag:work, search for "project"
- * - `my: drafts` - Search only user's own content
- *
- * @param options - Search options including explicit type filters
- * @returns Search state and controls
- */
 export function useSearch(options?: UseSearchOptions): UseSearchResult {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResultItem[]>([]);
@@ -70,7 +39,6 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    // Parse the query to extract filters
     const parsedQuery = useMemo(() => parseSearchQuery(query), [query]);
     const hasFilters = useMemo(() => hasActiveFilters(parsedQuery.filters), [parsedQuery.filters]);
 
@@ -79,7 +47,6 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         const searchText = parsed.text;
         const filters = parsed.filters;
 
-        // Check if we have search criteria
         const hasSearchCriteria = searchText.trim() || hasActiveFilters(filters);
 
         if (!hasSearchCriteria || !organizationId) {
@@ -88,7 +55,6 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
             return;
         }
 
-        // Cancel any in-flight request
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -98,7 +64,6 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         setError(null);
 
         try {
-            // Merge type filters from parsed query and options
             const typeFilters = [...filters.types];
             if (options?.typeFilters) {
                 for (const tf of options.typeFilters) {
@@ -108,26 +73,24 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
                 }
             }
 
-            // Only apply exclude filters when no explicit type filters are active
+            // excludeTypes only applies when no explicit type filter is set
             const excludeTypes = (typeFilters.length === 0 && options?.excludeTypes)
                 ? options.excludeTypes
                 : [];
 
             const response = await searchApi.search({
                 organizationId,
-                query: searchText, // Send only the text portion, filters are explicit
+                query: searchText,
                 typeFilters: typeFilters.length > 0 ? typeFilters : [],
                 excludeTypes: excludeTypes.length > 0 ? excludeTypes : [],
                 tagFilters: filters.tags.length > 0 ? filters.tags : [],
                 projectFilters: filters.projects.length > 0 ? filters.projects : [],
                 myContentOnly: filters.myContentOnly,
-                // Note: owner filter would need username lookup to convert to UUID
                 limit: options?.limit || 20,
             });
 
             setResults(response.items);
         } catch (err) {
-            // Ignore abort errors
             if (err instanceof Error && err.name === 'AbortError') {
                 return;
             }
@@ -138,7 +101,6 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         }
     }, [organizationId, options?.typeFilters, options?.excludeTypes, options?.limit]);
 
-    // Debounced search
     useEffect(() => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
@@ -184,6 +146,5 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     };
 }
 
-// Re-export types and utilities for convenience
 export type { ParsedQuery, SearchFilters };
 export { parseSearchQuery, hasActiveFilters } from '@/features/search/utils/queryParser';

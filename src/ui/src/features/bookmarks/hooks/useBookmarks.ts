@@ -8,14 +8,6 @@ import {
     type SerializedBookmark,
 } from '@/features/bookmarks/store/bookmarksSlice';
 
-/**
- * Hook for accessing full bookmarks state and actions.
- *
- * Use this when you need to:
- * - List all bookmarks
- * - Access multiple bookmark states
- * - Perform bulk operations
- */
 export function useBookmarks() {
     const dispatch = useAppDispatch();
     const {
@@ -28,13 +20,11 @@ export function useBookmarks() {
 
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-    // Fetch bookmarks when organization changes
     useEffect(() => {
         if (!organizationId) return;
 
         const promise = dispatch(fetchBookmarks());
 
-        // Abort the thunk if component unmounts before it completes
         return () => {
             promise.abort?.();
         };
@@ -60,7 +50,6 @@ export function useBookmarks() {
         [dispatch]
     );
 
-    // Get bookmarks as an array sorted by creation date (newest first)
     const bookmarksList = (Object.values(bookmarks) as SerializedBookmark[]).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
@@ -81,29 +70,10 @@ export function useBookmarks() {
     };
 }
 
-/**
- * Hook to check if a single URN is bookmarked.
- *
- * Use this when you only need to know the bookmark status of one item.
- *
- * @param urn - The URN to check
- * @returns true if the URN is bookmarked, false otherwise
- */
 export function useIsBookmarked(urn: string): boolean {
     return useAppSelector((state) => state.bookmarks.bookmarkedUrns[urn] ?? false);
 }
 
-/**
- * Hook for toggling a bookmark with loading state.
- *
- * Use this when you need a toggle button with:
- * - Current bookmark status
- * - Loading indicator during toggle
- * - Toggle action
- *
- * @param urn - The URN to manage
- * @returns Object with isBookmarked, toggling, and toggle function
- */
 export function useBookmarkToggle(urn: string) {
     const dispatch = useAppDispatch();
     const isBookmarked = useIsBookmarked(urn);
@@ -120,12 +90,6 @@ export function useBookmarkToggle(urn: string) {
     };
 }
 
-/**
- * Hook to get bookmarks filtered by URN type.
- *
- * @param type - The URN type to filter by (e.g., 'NOTE', 'FILE')
- * @returns Array of bookmarks matching the type
- */
 export function useBookmarksByType(type: string): SerializedBookmark[] {
     const bookmarks = useAppSelector((state) => state.bookmarks.bookmarks);
     const typePattern = `urn:uniffy:content:${type.toUpperCase()}:`;

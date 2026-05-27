@@ -1,10 +1,3 @@
-/**
- * BrowseChannelsModal - Browse and join public channels.
- *
- * Lists all public channels in the organization. Users can search,
- * see member counts and descriptions, and join channels with one click.
- */
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Hash, MagnifyingGlass, Users, SignIn } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +19,6 @@ export function BrowseChannelsModal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  // Fetch public channels on mount
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -78,7 +70,6 @@ export function BrowseChannelsModal() {
   return (
     <Modal onClose={handleClose} className="flex flex-col max-h-[80vh]">
       <div data-testid="chat-browse-channels-modal" className="flex flex-col max-h-[80vh]">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <Hash size={20} weight="bold" className="text-primary" />
@@ -96,7 +87,6 @@ export function BrowseChannelsModal() {
         </button>
       </div>
 
-        {/* Search */}
         <div className="px-6 py-3 border-b border-border shrink-0">
           <div className="relative">
             <MagnifyingGlass
@@ -114,7 +104,6 @@ export function BrowseChannelsModal() {
           </div>
         </div>
 
-        {/* Channel list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
@@ -139,7 +128,6 @@ export function BrowseChannelsModal() {
                   data-testid={`chat-browse-channels-row-${channel.id}`}
                   data-member={isMember ? 'true' : 'false'}
                 >
-                  {/* Channel info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Hash size={14} className="text-muted-foreground shrink-0" />
@@ -158,7 +146,6 @@ export function BrowseChannelsModal() {
                     )}
                   </div>
 
-                  {/* Join / Open button */}
                   <div className="shrink-0 mt-0.5">
                     {isMember ? (
                       <Button

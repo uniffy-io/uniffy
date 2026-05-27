@@ -1,15 +1,3 @@
-/**
- * NotesLayout - Main layout for the Notes feature.
- *
- * Three-panel layout with sidebar, editor, and optional metadata panel.
- * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
- *
- * Responsive:
- * - Mobile: sidebar and metadata as drawers, editor full width
- * - Tablet: sidebar inline (narrower), metadata as drawer
- * - Desktop: all panels inline and resizable
- */
-
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import {
@@ -68,9 +56,6 @@ export function NotesLayout({
     dispatch(toggleSidebar());
   }, [dispatch]);
 
-  // On mobile: sidebar and metadata are both drawers, editor is full width
-  // On tablet: sidebar is inline (narrower), metadata is drawer
-  // On desktop: all panels inline and resizable
   const sidebarAsDrawer = isMobile;
   const metadataAsDrawer = isMobileOrTablet;
   const showCollapsedRail = !isZenMode && !showSidebar && !sidebarAsDrawer;
@@ -82,7 +67,6 @@ export function NotesLayout({
         isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
       )}
     >
-      {/* Collapsed sidebar rail */}
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
           <CollapsibleSidebarRail
@@ -100,7 +84,6 @@ export function NotesLayout({
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Left Sidebar - inline on tablet+, drawer on mobile */}
         {showSidebar && !sidebarAsDrawer && (
           <>
             <Panel
@@ -117,14 +100,12 @@ export function NotesLayout({
           </>
         )}
 
-        {/* Main Editor Area */}
         <Panel id="notes-editor" minSize={isMobileOrTablet ? 200 : 400}>
           <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
             {editor}
           </div>
         </Panel>
 
-        {/* Right Metadata Panel - inline on desktop, drawer on tablet/mobile */}
         {showMetadataPanel && metadataPanel && !metadataAsDrawer && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
@@ -141,7 +122,6 @@ export function NotesLayout({
         )}
       </Group>
 
-      {/* Mobile sidebar drawer */}
       {sidebarAsDrawer && (
         <Drawer
           open={showSidebar}
@@ -154,7 +134,6 @@ export function NotesLayout({
         </Drawer>
       )}
 
-      {/* Tablet/mobile metadata drawer */}
       {metadataAsDrawer && (
         <Drawer
           open={showMetadataPanel && !!metadataPanel}

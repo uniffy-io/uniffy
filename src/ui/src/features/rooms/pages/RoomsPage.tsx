@@ -1,10 +1,3 @@
-/**
- * RoomsPage - Admin page for managing rooms and resources
- *
- * Lives inside the AdminLayout at /admin/rooms.
- * Admins can create, edit, delete rooms and view bookings/availability.
- */
-
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Plus,
@@ -60,7 +53,6 @@ export function RoomsPage() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
-  // Build set of currently booked room IDs
   const bookedRoomIds = useMemo(() => {
     const now = new Date();
     const ids = new Set<string>();
@@ -75,7 +67,6 @@ export function RoomsPage() {
     return ids;
   }, [bookings]);
 
-  // Filter rooms by availability
   const filteredRooms = useMemo(() => {
     if (availabilityFilter === 'all') return rooms;
     return rooms.filter((room) => {
@@ -84,7 +75,6 @@ export function RoomsPage() {
     });
   }, [rooms, availabilityFilter, bookedRoomIds]);
 
-  // Fetch rooms on mount
   useEffect(() => {
     if (!currentOrganizationId) return;
     dispatch(
@@ -97,7 +87,6 @@ export function RoomsPage() {
     );
   }, [dispatch, currentOrganizationId, filters]);
 
-  // Fetch current bookings for availability
   useEffect(() => {
     if (!currentOrganizationId) return;
     const now = new Date();
@@ -171,7 +160,6 @@ export function RoomsPage() {
 
   const hasActiveFilters = !!(filters.roomType || filters.status || filters.searchQuery || availabilityFilter !== 'all');
 
-  // Filter options
   const typeFilters: { value: RoomType | null; label: string }[] = [
     { value: null, label: 'All' },
     ...Object.entries(ROOM_TYPE_LABELS).map(([key, label]) => ({
@@ -194,13 +182,11 @@ export function RoomsPage() {
     { value: 'booked', label: 'Booked' },
   ];
 
-  // Counts for availability filter labels
   const availableCount = rooms.filter((r) => !bookedRoomIds.has(r.id)).length;
   const bookedCount = rooms.filter((r) => bookedRoomIds.has(r.id)).length;
 
   return (
     <div className="flex flex-col h-[calc(100dvh-8rem)] gap-4">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Rooms & Resources</h1>
@@ -214,9 +200,7 @@ export function RoomsPage() {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="space-y-3 shrink-0">
-        {/* Search + clear */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <MagnifyingGlass
@@ -246,9 +230,7 @@ export function RoomsPage() {
           )}
         </div>
 
-        {/* Filter rows */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          {/* Type */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground">Type:</span>
             <div className="flex items-center gap-1">
@@ -269,7 +251,6 @@ export function RoomsPage() {
             </div>
           </div>
 
-          {/* Status */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground">Status:</span>
             <div className="flex items-center gap-1">
@@ -290,7 +271,6 @@ export function RoomsPage() {
             </div>
           </div>
 
-          {/* Availability */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground">Availability:</span>
             <div className="flex items-center gap-1">
@@ -319,7 +299,6 @@ export function RoomsPage() {
         </div>
       </div>
 
-      {/* Room table */}
       <div className="flex-1 min-h-0 rounded-lg border border-border overflow-hidden">
       {loading.rooms ? (
         <div className="flex items-center justify-center py-16">
@@ -453,14 +432,12 @@ export function RoomsPage() {
       )}
       </div>
 
-      {/* Room form modal */}
       <RoomFormModal
         isOpen={formOpen}
         onClose={handleFormClose}
         room={editingRoom}
       />
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={!!roomToDelete}
         onClose={() => setRoomToDelete(null)}
@@ -472,7 +449,6 @@ export function RoomsPage() {
         loading={isDeleting}
       />
 
-      {/* Room detail drawer */}
       <Drawer
         open={!!selectedRoomId}
         onClose={handleCloseDetail}
@@ -490,7 +466,6 @@ export function RoomsPage() {
         )}
       </Drawer>
 
-      {/* Booking modal */}
       {selectedRoomId && (
         <BookingModal
           isOpen={bookingModalOpen}

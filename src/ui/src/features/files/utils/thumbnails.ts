@@ -1,10 +1,3 @@
-/**
- * Client-side thumbnail generation utilities.
- *
- * Generates thumbnails for images using Canvas API and caches them in IndexedDB.
- * Cached thumbnails are encrypted at rest using the platform-wide storage encryption.
- */
-
 import { openDB, type IDBPDatabase } from 'idb';
 import {
     encryptForStorage,
@@ -15,10 +8,11 @@ import {
 
 const THUMB_SIZE = 200;
 const DB_NAME = 'uniffy-thumbnails';
-const DB_VERSION = 2; // Bumped: v2 stores encrypted ArrayBuffer values
+// v2 stores encrypted ArrayBuffer values.
+const DB_VERSION = 2;
 const STORE_NAME = 'thumbnails';
 
-// Register this database so it's cleared on seed rotation / device clear
+// Register so the database is wiped on seed rotation / device clear.
 registerEncryptedDatabase(DB_NAME);
 
 interface ThumbnailDB {
@@ -30,9 +24,6 @@ interface ThumbnailDB {
 
 let dbPromise: Promise<IDBPDatabase<ThumbnailDB>> | null = null;
 
-/**
- * Get or create the IndexedDB database for thumbnails.
- */
 function getDB(): Promise<IDBPDatabase<ThumbnailDB>> {
     if (!dbPromise) {
         dbPromise = openDB<ThumbnailDB>(DB_NAME, DB_VERSION, {
@@ -46,9 +37,6 @@ function getDB(): Promise<IDBPDatabase<ThumbnailDB>> {
     return dbPromise;
 }
 
-/**
- * Get a cached thumbnail from IndexedDB (decrypted).
- */
 async function getThumbnailFromCache(fileId: string): Promise<string | null> {
     try {
         if (!isStorageEncryptionReady()) return null;
@@ -61,9 +49,6 @@ async function getThumbnailFromCache(fileId: string): Promise<string | null> {
     }
 }
 
-/**
- * Save a thumbnail to IndexedDB cache (encrypted).
- */
 async function saveThumbnailToCache(fileId: string, dataUrl: string): Promise<void> {
     try {
         if (!isStorageEncryptionReady()) return;
@@ -71,22 +56,14 @@ async function saveThumbnailToCache(fileId: string, dataUrl: string): Promise<vo
         const encrypted = await encryptForStorage(dataUrl);
         await db.put(STORE_NAME, encrypted, fileId);
     } catch {
-        // Silently fail - caching is optional
+        // Caching is best-effort.
     }
 }
 
-/**
- * Generate a thumbnail from an image URL.
- *
- * @param imageUrl - The URL of the full-size image
- * @param fileId - The file ID for caching
- * @returns A data URL of the thumbnail image
- */
 export async function generateImageThumbnail(
     imageUrl: string,
     fileId: string
 ): Promise<string> {
-    // Check cache first
     const cached = await getThumbnailFromCache(fileId);
     if (cached) return cached;
 
@@ -104,18 +81,14 @@ export async function generateImageThumbnail(
                     return;
                 }
 
-                // Calculate dimensions maintaining aspect ratio
                 const ratio = Math.min(THUMB_SIZE / img.width, THUMB_SIZE / img.height);
                 canvas.width = Math.round(img.width * ratio);
                 canvas.height = Math.round(img.height * ratio);
 
-                // Draw scaled image
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Convert to data URL
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-                // Cache it
                 await saveThumbnailToCache(fileId, dataUrl);
 
                 resolve(dataUrl);
@@ -132,26 +105,20 @@ export async function generateImageThumbnail(
     });
 }
 
-/**
- * Clear all cached thumbnails.
- */
 export async function clearThumbnailCache(): Promise<void> {
     try {
         const db = await getDB();
         await db.clear(STORE_NAME);
     } catch {
-        // Silently fail
+        // best-effort
     }
 }
 
-/**
- * Remove a specific thumbnail from cache.
- */
 export async function removeThumbnailFromCache(fileId: string): Promise<void> {
     try {
         const db = await getDB();
         await db.delete(STORE_NAME, fileId);
     } catch {
-        // Silently fail
+        // best-effort
     }
 }

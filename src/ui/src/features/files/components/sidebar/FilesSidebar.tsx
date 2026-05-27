@@ -1,10 +1,3 @@
-/**
- * Files Sidebar Component
- *
- * Displays the folder tree organized by visibility scope.
- * Supports creating folders and navigating the file tree.
- */
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
@@ -87,9 +80,6 @@ const filesNavItems: FilesNavItem[] = [
     { name: 'Filters', path: '/files/filters', icon: Funnel },
 ];
 
-/**
- * Compact nav item that expands on hover to show label.
- */
 function CompactNavItem({ item, isActive }: { item: FilesNavItem; isActive: boolean }) {
     const IconComponent = item.icon;
 
@@ -135,9 +125,6 @@ function CompactNavItem({ item, isActive }: { item: FilesNavItem; isActive: bool
     );
 }
 
-/**
- * Tree node component for folders.
- */
 function FolderNode({
     node,
     depth = 0,
@@ -170,10 +157,8 @@ function FolderNode({
     const isEditing = editingId === node.id;
     const hasChildren = node.children && node.children.length > 0;
 
-    // Local edit state - only relevant when isEditing is true
     const [editValue, setEditValue] = useState(node.name);
 
-    // Reset edit value when starting to edit (called from event handler)
     const handleStartEdit = useCallback(() => {
         setEditValue(node.name);
         onStartEdit(node.id);
@@ -310,16 +295,12 @@ interface FilesSidebarProps {
     onUploadFolder?: () => void;
 }
 
-/**
- * Main Files Sidebar component.
- */
 export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: FilesSidebarProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
     const { isMobile } = useBreakpoint();
 
-    // Redux state
     const tree = useAppSelector((state) => state.filesTree.tree);
     const expandedNodes = useAppSelector((state) => state.filesTree.expandedNodes);
     const selectedFolderId = useAppSelector((state) => state.filesTree.selectedFolderId);
@@ -349,12 +330,10 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
 
     // Populate bookmarked section from bookmarks store
     useEffect(() => {
-        // Find all files whose URNs are bookmarked
         const bookmarkedFileIds = Object.keys(bookmarkedUrns)
             .filter(urn => bookmarkedUrns[urn] && urn.includes(':FILE:'))
             .map(urn => urn.split(':FILE:')[1]);
 
-        // Build tree nodes for bookmarked files
         const bookmarkedNodes: SerializedTreeNode[] = bookmarkedFileIds
             .map(fileId => {
                 const file = files[fileId];
@@ -374,7 +353,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         dispatch(setBookmarkedNodes(bookmarkedNodes));
     }, [bookmarkedUrns, files, dispatch]);
 
-    // Helper to find path to a folder (all parent IDs)
     const findPathToFolder = useCallback((folderId: string): string[] => {
         const path: string[] = [];
 
@@ -419,7 +397,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         [expandedNodes]
     );
 
-    // Toggle node expansion
     const handleToggle = useCallback(
         (id: string) => {
             dispatch(toggleNodeExpanded(id));
@@ -442,7 +419,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         [dispatch, navigate]
     );
 
-    // Create a new folder
     const handleNewFolder = useCallback(
         async (parentId?: string) => {
             try {
@@ -466,7 +442,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         [dispatch, expandedNodes]
     );
 
-    // Create subfolder
     const handleCreateSubfolder = useCallback(
         (parentId: string) => {
             handleNewFolder(parentId);
@@ -490,7 +465,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         [dispatch]
     );
 
-    // Delete folder
     const handleDelete = useCallback(
         async (folderId: string) => {
             try {
@@ -517,7 +491,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         dispatch(initializeFilesData({ forceRefresh: true }));
     }, [dispatch]);
 
-    // Handle scope filter change
     const handleScopeChange = useCallback((scope: 'all' | 'personal' | 'shared' | 'organization') => {
         dispatch(setViewScope(scope));
         navigate('/files'); // Clear folder param
@@ -550,7 +523,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         };
     }, [uploadMenuOpen]);
 
-    // Handle upload button click
     const handleUploadClick = useCallback(() => {
         if (hasTransferActivity) {
             // When there's activity, toggle the status panel
@@ -587,7 +559,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         [dispatch]
     );
 
-    // Render section
     const renderSection = (config: SectionConfig) => {
         const nodes = tree[config.id] || [];
         const sectionExpanded = isExpanded(config.id);
@@ -612,7 +583,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                 {sectionExpanded && (
                     <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
                         {isBookmarksSection ? (
-                            // Render bookmarked files
                             <>
                                 {nodes.map((node) => (
                                     <div
@@ -632,7 +602,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                                 )}
                             </>
                         ) : (
-                            // Render folder tree
                             <>
                                 {nodes.map((node) => (
                                     <FolderNode

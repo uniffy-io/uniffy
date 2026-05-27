@@ -1,10 +1,3 @@
-/**
- * Unsupported Viewer
- *
- * Fallback viewer for file types that can't be previewed.
- * Shows file info and download option.
- */
-
 import { DownloadSimple } from '@phosphor-icons/react';
 import { useMediaStreamUrl } from '@/features/files/components/viewer/hooks/useMediaStream';
 import type { SerializedFile } from '@/features/files/store/filesThunks';

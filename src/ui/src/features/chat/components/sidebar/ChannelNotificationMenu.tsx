@@ -1,10 +1,3 @@
-/**
- * ChannelNotificationMenu - Granular notification settings for a channel.
- *
- * Sections: mute duration options, notification level, thread follow toggle.
- * Rendered as a fixed-position menu (same pattern as ChannelContextMenu).
- */
-
 import { useCallback, useMemo } from 'react';
 import {
   SpeakerHigh,

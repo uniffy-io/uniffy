@@ -1,7 +1,6 @@
-// Multiplexed Yjs transport (frontend side). One WebSocket per browser tab
-// carries every attached doc; frame = [VarString docName][y-protocols bytes].
-// Public surface: `realtimeMultiplexer.attach()` returns a per-doc
-// subscription on the shared connection.
+// One WebSocket per browser tab multiplexes every attached doc.
+// Frame = [VarString docName][y-protocols bytes].
+// Public entrypoint: `realtimeMultiplexer.attach()`.
 
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness';
@@ -22,8 +21,7 @@ import {
   type RealtimeStatus,
 } from '@/features/realtime/protocol';
 
-// y-protocols message-type constants; mirrored here because the upstream
-// library exposes them only as numeric literals, not enums.
+// y-protocols message-type constants - upstream exposes them only as numeric literals.
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
 const MESSAGE_QUERY_AWARENESS = 3;
@@ -84,8 +82,7 @@ class RealtimeMultiplexer {
   attach(opts: MultiplexerAttachOptions): DocSubscription {
     const docName = `${opts.contentType}:${opts.contentId}`;
     if (this.docs.has(docName)) {
-      // The original subscription owns the Y.Doc lifecycle; refuse to
-      // alias a second binding onto it.
+      // The original subscription owns the Y.Doc lifecycle; aliasing breaks teardown.
       throw new Error(`realtime: ${docName} already attached on this tab`);
     }
 

@@ -1,19 +1,3 @@
-/**
- * ChatLayout - Main 3-panel layout for the Chat feature.
- *
- * Structure:
- * - Left sidebar: channel list, DMs, threads link
- * - Center: active channel view (messages + compose), or split 50/50 with secondary channel
- * - Right panel: thread panel OR resource panel (mutex, hidden during split)
- *
- * Responsive:
- * - Desktop (1024px+): all panels inline and resizable
- * - Tablet (768-1024px): sidebar as collapsible rail, RHS as drawer
- * - Mobile (<768px): sidebar as drawer, RHS as full-screen drawer
- *
- * Supports Zen Mode, persistent panel sizes, collapsed sidebar rail.
- */
-
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import {
@@ -93,7 +77,6 @@ export function ChatLayout({
   const showSplit = splitActive && !!splitChannelId && !isMobileOrTablet;
   const showRightPanel = (threadPanelOpen || resourcePanelOpen) && !!rightPanel;
   const sidebarAsDrawer = isMobile;
-  // Right panel as drawer on tablet, mobile, split active, or zen mode
   const rightPanelAsDrawer = isMobileOrTablet || showSplit || isZenMode;
   const showCollapsedRail = !isZenMode && !showSidebar && !sidebarAsDrawer;
 
@@ -104,7 +87,6 @@ export function ChatLayout({
         isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
       )}
     >
-      {/* Collapsed sidebar rail */}
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
           <CollapsibleSidebarRail
@@ -122,7 +104,6 @@ export function ChatLayout({
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Left Sidebar - inline on tablet+, drawer on mobile */}
         {showSidebar && !sidebarAsDrawer && (
           <>
             <Panel
@@ -139,7 +120,6 @@ export function ChatLayout({
           </>
         )}
 
-        {/* Main Channel View */}
         <Panel id="chat-channel" minSize={isMobileOrTablet ? 200 : 400}>
           <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
             {showSplit && splitView ? (
@@ -158,7 +138,6 @@ export function ChatLayout({
           </div>
         </Panel>
 
-        {/* Right Panel (Thread or Resources) - inline on desktop, drawer on tablet/mobile */}
         {showRightPanel && !rightPanelAsDrawer && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
@@ -175,7 +154,6 @@ export function ChatLayout({
         )}
       </Group>
 
-      {/* Mobile sidebar drawer */}
       {sidebarAsDrawer && (
         <Drawer
           open={showSidebar}
@@ -188,7 +166,6 @@ export function ChatLayout({
         </Drawer>
       )}
 
-      {/* Tablet/mobile right panel drawer */}
       {rightPanelAsDrawer && (
         <Drawer
           open={showRightPanel}

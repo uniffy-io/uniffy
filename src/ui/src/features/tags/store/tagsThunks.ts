@@ -1,12 +1,3 @@
-/**
- * Tags async thunks.
- *
- * Phase 5 surface. Wraps the full ``TagsService`` plus saved-filter
- * CRUD. Domain content slices keep using the smaller Phase 2 thunks
- * (suggest / create / list); the explorer-only thunks live further
- * down.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { timestampFromDate, type Timestamp } from '@bufbuild/protobuf/wkt';

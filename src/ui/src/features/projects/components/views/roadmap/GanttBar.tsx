@@ -1,16 +1,3 @@
-/**
- * GanttBar - Timeline task bar
- *
- * Features:
- * - Positioned based on start/end dates
- * - Colored by status
- * - Truncated title inside bar
- * - Assignee avatar at end
- * - Overdue indication
- * - Drag-resize left/right edges to change start/due dates
- * - Drag entire bar to move task (preserves duration)
- */
-
 import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { cn } from "@/shared/utils/cn";
@@ -281,9 +268,6 @@ export function GanttBar({
   );
 }
 
-/**
- * Empty row placeholder for tasks without dates
- */
 interface EmptyGanttRowProps {
   rowIndex: number;
 }

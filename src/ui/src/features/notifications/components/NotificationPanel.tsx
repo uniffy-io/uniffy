@@ -1,11 +1,3 @@
-/**
- * Notification panel - wider dropdown on desktop, bottom sheet on mobile.
- *
- * Groups notifications by: Today, Yesterday, This Week, Earlier.
- * Provides filter chips (All, Unread, Content, Calendar, etc.),
- * search input, mark-all-read, and link to full notifications page.
- */
-
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { CheckCircle, ArrowsClockwise, BellSimple, X, ArrowRight } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

@@ -1,7 +1,3 @@
-/**
- * Sessions Redux slice - manages user session list and revocation state.
- */
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { SessionInfo } from '@uniffy/proto/auth/v1/auth_pb';
 import { sessionsApi } from '@/features/settings/api/sessionsApi';
@@ -9,7 +5,7 @@ import { sessionsApi } from '@/features/settings/api/sessionsApi';
 export interface SessionsState {
     sessions: Omit<SessionInfo, '$typeName'>[];
     loading: boolean;
-    revoking: string | null; // session_id being revoked
+    revoking: string | null;
     revokingAll: boolean;
     error: string | null;
 }
@@ -62,7 +58,6 @@ export const sessionsSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // fetchSessions
         builder.addCase(fetchSessions.pending, (state) => {
             state.loading = true;
             state.error = null;
@@ -76,7 +71,6 @@ export const sessionsSlice = createSlice({
             state.error = action.error.message || 'Failed to load sessions';
         });
 
-        // revokeSession
         builder.addCase(revokeSession.pending, (state, action) => {
             state.revoking = action.meta.arg;
             state.error = null;
@@ -90,7 +84,6 @@ export const sessionsSlice = createSlice({
             state.error = action.error.message || 'Failed to revoke session';
         });
 
-        // revokeOtherSessions
         builder.addCase(revokeOtherSessions.pending, (state) => {
             state.revokingAll = true;
             state.error = null;

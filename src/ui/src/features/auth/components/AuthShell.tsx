@@ -1,14 +1,3 @@
-/**
- * Two-panel auth surface shared by ``/auth`` and ``/auth/accept-invite``.
- *
- * Left panel: dark gradient + the Uniffy logo lockup + tagline.
- * Right panel: light surface holding whatever form the caller renders.
- * Between them sits a connected-network canvas that fades from white on
- * the left to near-black on the right. Light mode is forced for the
- * lifetime of the shell so the auth canvas / form colors stay correct
- * even when the user's saved preference is dark.
- */
-
 import { useLayoutEffect } from 'react';
 import { useAuthNetworkCanvas } from '@/features/auth/hooks/useAuthNetworkCanvas';
 import { UniffyLogo } from '@/components/ui/uniffy-logo';

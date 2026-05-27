@@ -1,14 +1,3 @@
-/**
- * Files Layout Component
- *
- * Responsive three-panel layout with resizable sidebar and main content area.
- * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
- *
- * Mobile: sidebar and detail panel as drawers, content full width.
- * Tablet: sidebar inline (narrower), detail panel as drawer.
- * Desktop: all panels inline and resizable.
- */
-
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import {

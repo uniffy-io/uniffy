@@ -1,10 +1,3 @@
-/**
- * Upload Processor Hook
- *
- * Processes the upload queue, streaming file chunks to the backend.
- * Uses Web Workers for CPU-intensive chunking and uploading operations.
- */
-
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { filesApi } from '@/features/files/api/filesApi';
@@ -24,18 +17,12 @@ import {
 import { setFile } from '@/features/files/store/filesSlice';
 import type { UploadItem } from '@/features/files/store/uploadSlice';
 
-/**
- * Process a single file upload using Web Worker for chunking.
- * The worker handles file slicing and chunk uploads off the main thread.
- */
 async function processUpload(
     item: UploadItem,
     file: File,
     organizationId: string,
     dispatch: ReturnType<typeof useAppDispatch>
-    // TODO: Integrate abort signal with worker operations
 ): Promise<void> {
-    // 1. Initiate upload to get upload_id and chunk parameters (main thread - uses auth interceptor)
     const initResponse = await filesApi.initiateUpload({
         organizationId,
         filename: item.filename,
@@ -47,7 +34,6 @@ async function processUpload(
 
     const { uploadId, chunkSize, totalChunks } = initResponse;
 
-    // Update state with upload session info
     dispatch(startUpload({
         itemId: item.id,
         uploadId,
@@ -55,7 +41,6 @@ async function processUpload(
         totalChunks,
     }));
 
-    // 2. Upload file chunks in worker (off main thread)
     await fileWorkerManager.uploadChunks({
         file,
         uploadId,
@@ -73,23 +58,18 @@ async function processUpload(
 
     dispatch(setCompleting(item.id));
 
-    // 3. Complete the upload (main thread - uses auth interceptor)
     const response = await filesApi.completeUpload({ uploadId });
 
-    // 4. Handle completion - add file to state
     if (response.file) {
-        // Convert proto File to serialized format and add to files state
         const protoFile = response.file;
 
         if (protoFile.tags.length > 0) {
             dispatch(bulkUpsertTags(protoFile.tags.map(tagToPlain)));
         }
 
-        // Helper to convert bigint to number
         const toNumber = (val: bigint | number | undefined): number =>
             typeof val === 'bigint' ? Number(val) : (val ?? 0);
 
-        // Helper to convert proto timestamp to serialized format
         const serializeTimestamp = (ts: { seconds?: bigint | number; nanos?: number } | undefined) =>
             ts ? { seconds: toNumber(ts.seconds), nanos: ts.nanos ?? 0 } : undefined;
 
@@ -145,14 +125,10 @@ async function processUpload(
         throw new Error('Upload completed but no file returned');
     }
 
-    // Clean up stored File object
     removeStoredFile(item.id);
 }
 
-/**
- * Hook that processes the upload queue.
- * Should be called once at the page level.
- */
+/** Mount once at the page level; drains the upload queue. */
 export function useUploadProcessor() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -160,18 +136,15 @@ export function useUploadProcessor() {
     const activeUploads = useAppSelector((state) => state.upload.activeUploads);
     const maxConcurrentUploads = useAppSelector((state) => state.upload.maxConcurrentUploads);
 
-    // Track active upload abort controllers
     const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
     const processingRef = useRef<Set<string>>(new Set());
 
-    // Initialize file worker manager with token functions
     useEffect(() => {
         if (!fileWorkerManager.isInitialized()) {
             fileWorkerManager.init(getAccessToken, refreshAccessToken);
         }
     }, []);
 
-    // Process next items in queue
     const processQueue = useCallback(async () => {
         if (!organizationId) {
             return;
@@ -184,16 +157,13 @@ export function useUploadProcessor() {
             return;
         }
 
-        // Get items to process (not already being processed)
         const itemsToProcess = queue
             .filter((item) => !processingRef.current.has(item.id))
             .slice(0, availableSlots);
 
         for (const item of itemsToProcess) {
-            // Mark as processing to prevent duplicate processing
             processingRef.current.add(item.id);
 
-            // Get the stored File object
             const file = getFile(item.id);
             if (!file) {
                 dispatch(failUpload({
@@ -204,11 +174,9 @@ export function useUploadProcessor() {
                 continue;
             }
 
-            // Create abort controller for this upload
             const abortController = new AbortController();
             abortControllersRef.current.set(item.id, abortController);
 
-            // Process upload (don't await - let it run concurrently)
             processUpload(item, file, organizationId, dispatch)
                 .catch((error) => {
                     if (error.message !== 'Upload aborted') {
@@ -225,16 +193,13 @@ export function useUploadProcessor() {
         }
     }, [organizationId, queue, activeUploads, maxConcurrentUploads, dispatch]);
 
-    // Process queue when it changes
     useEffect(() => {
         processQueue();
     }, [processQueue]);
 
-    // Handle abort requests from uploadSlice
     const abortedItems = useAppSelector(selectAbortedUploads);
 
     useEffect(() => {
-        // Abort any uploads that were marked as aborted
         for (const item of abortedItems) {
             const controller = abortControllersRef.current.get(item.id);
             if (controller) {
@@ -243,12 +208,10 @@ export function useUploadProcessor() {
         }
     }, [abortedItems]);
 
-    // Cleanup on unmount
     useEffect(() => {
-        // Capture ref value inside effect to avoid stale reference in cleanup
+        // Capture inside the effect so cleanup sees the same map even after unmount.
         const controllers = abortControllersRef.current;
         return () => {
-            // Abort all active uploads
             for (const controller of controllers.values()) {
                 controller.abort();
             }

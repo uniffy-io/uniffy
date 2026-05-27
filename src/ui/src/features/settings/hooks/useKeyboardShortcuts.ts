@@ -1,23 +1,14 @@
-/**
- * Keyboard shortcuts hooks for global keyboard handling.
- */
-
 import { useCallback, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 
-/**
- * Default keyboard shortcuts (fallback when settings not loaded).
- */
+/** Fallback used until user settings load; diff against this drives the rebind UI in KeyboardShortcutsSection. */
 const DEFAULT_SHORTCUTS: Record<string, string> = {
-    // Navigation actions
     'nav.search': 'Ctrl+K',
-    // App actions
     'app.settings': 'Ctrl+,',
     'app.commandPalette': 'Ctrl+Shift+P',
     'app.help': 'F1',
     'app.zenMode': 'Ctrl+\\',
     'app.toggleSidebar': 'Ctrl+B',
-    // File viewer actions
     'viewer.close': 'Escape',
     'viewer.next': 'ArrowRight',
     'viewer.previous': 'ArrowLeft',
@@ -29,10 +20,8 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'viewer.rotateRight': 'R',
     'viewer.download': 'Ctrl+S',
     'viewer.edit': 'E',
-    // Comments actions
     'comments.toggle': 'Ctrl+Shift+M',
     'comments.new': 'Ctrl+Shift+C',
-    // Image editor actions
     'imageEditor.undo': 'Ctrl+Z',
     'imageEditor.redo': 'Ctrl+Shift+Z',
     'imageEditor.save': 'Ctrl+S',
@@ -43,7 +32,6 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'imageEditor.flipV': 'V',
     'imageEditor.crop': 'C',
     'imageEditor.applyCrop': 'Enter',
-    // Projects table keyboard navigation
     'projects.focusUp': 'ArrowUp',
     'projects.focusDown': 'ArrowDown',
     'projects.focusLeft': 'ArrowLeft',
@@ -51,19 +39,13 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'projects.editCell': 'Enter',
     'projects.cancelEdit': 'Escape',
     'projects.toggleSelect': 'Space',
-    // Projects undo/redo
     'projects.undo': 'Ctrl+Z',
     'projects.redo': 'Ctrl+Shift+Z',
-
-    // Recording actions
     'recording.toggleQuickClip': 'Ctrl+Alt+S',
-    // Notes editor history (tooltip display; Milkdown handles the keymap internally)
+    // Tooltip-only; Milkdown owns the actual keymap.
     'editor.undo': 'Ctrl+Z',
     'editor.redo': 'Ctrl+Shift+Z',
-
-    // Chat actions
     'chat.editLast': 'ArrowUp',
-    // Canvas actions
     'canvas.addText': 'T',
     'canvas.addShape': 'S',
     'canvas.deleteSelected': 'Delete',
@@ -75,20 +57,13 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'canvas.redo': 'Ctrl+Shift+Z',
 };
 
-/**
- * Detect if running on macOS.
- */
 const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-/**
- * Parse a shortcut string into parts.
- * e.g., "Ctrl+Shift+K" -> { ctrl: true, shift: true, alt: false, meta: false, key: 'k' }
- */
 function parseShortcut(shortcut: string) {
     const parts = shortcut.toLowerCase().split('+');
     const key = parts[parts.length - 1];
 
-    // On Mac, Ctrl is often Cmd
+    // On Mac the "Ctrl" token in a binding maps to Cmd/Meta.
     const usesMeta = isMac && parts.some(p => p === 'ctrl' || p === 'cmd' || p === 'meta');
     const usesCtrl = !isMac && parts.some(p => p === 'ctrl');
 
@@ -101,10 +76,6 @@ function parseShortcut(shortcut: string) {
     };
 }
 
-/**
- * Format a shortcut for display (platform-aware).
- * e.g., "Ctrl+K" -> "⌘K" on Mac, "Ctrl+K" on Windows
- */
 export function formatShortcut(shortcut: string): string {
     if (isMac) {
         return shortcut
@@ -116,27 +87,18 @@ export function formatShortcut(shortcut: string): string {
     return shortcut;
 }
 
-/**
- * Check if a keyboard event matches a shortcut.
- *
- * Exported so callers that own their own keydown listener (e.g. components
- * with focused contentEditable surfaces, where the global handler is bypassed
- * by design) can still honour the user's bound key.
- */
+/** Exported so callers with their own keydown listener (focused contentEditable surfaces) can honour the user's bound key. */
 export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
     const parsed = parseShortcut(shortcut);
 
-    // On Mac, Ctrl key in shortcut means Meta (Cmd)
     const ctrlMatch = isMac
         ? event.metaKey === parsed.meta
         : event.ctrlKey === parsed.ctrl;
 
-    // Check modifiers
     if (!ctrlMatch) return false;
     if (event.shiftKey !== parsed.shift) return false;
     if (event.altKey !== parsed.alt) return false;
 
-    // Check key
     const eventKey = event.key.toLowerCase();
     if (parsed.key === 'left') return eventKey === 'arrowleft';
     if (parsed.key === 'right') return eventKey === 'arrowright';
@@ -146,12 +108,7 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
     return eventKey === parsed.key;
 }
 
-/**
- * A shortcut "owns" the keypress (overrides editable surfaces like inputs,
- * textareas, and contentEditable editors) when it carries a non-typing
- * modifier — Ctrl, Cmd/Meta, or Alt. Bare keys and Shift-only chords are
- * left to the focused editor so we don't hijack regular typing.
- */
+/** Modifier chords (Ctrl/Cmd/Alt) override focused editors; bare keys and Shift-only chords defer to typing. */
 function shortcutOwnsKeypress(shortcut: string): boolean {
     const parsed = parseShortcut(shortcut);
     return parsed.ctrl || parsed.meta || parsed.alt;
@@ -167,14 +124,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
     );
 }
 
-/**
- * Hook for accessing keyboard shortcut bindings from settings.
- */
 export function useKeyboardBindings() {
     const effectiveSettings = useAppSelector(state => state.settings.effectiveSettings);
 
     return useMemo(() => {
-        // Merge defaults with user overrides
         const userBindings = effectiveSettings?.keyboardShortcuts?.bindings ?? {};
         return {
             ...DEFAULT_SHORTCUTS,
@@ -183,33 +136,16 @@ export function useKeyboardBindings() {
     }, [effectiveSettings?.keyboardShortcuts?.bindings]);
 }
 
-/**
- * Get the shortcut for a specific action.
- * @param action - Action identifier (e.g., "editor.save", "nav.search")
- * @returns The keyboard shortcut string
- */
 export function useKeybinding(action: string): string {
     const bindings = useKeyboardBindings();
     return bindings[action] ?? '';
 }
 
-/**
- * Get the formatted (display) shortcut for an action.
- * @param action - Action identifier
- * @returns Platform-formatted shortcut (e.g., "⌘K" on Mac)
- */
 export function useFormattedKeybinding(action: string): string {
     const shortcut = useKeybinding(action);
     return formatShortcut(shortcut);
 }
 
-/**
- * Register a keyboard shortcut handler.
- *
- * @param action - Action identifier to listen for
- * @param handler - Callback function when shortcut is pressed
- * @param options - Options for the handler
- */
 export function useShortcutHandler(
     action: string,
     handler: () => void,
@@ -225,10 +161,7 @@ export function useShortcutHandler(
         if (!enabled || !shortcut) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Bare-key / Shift-only shortcuts must defer to focused editors,
-            // otherwise we'd hijack normal typing. Modifier chords (Ctrl/Cmd/Alt)
-            // always run so global shortcuts like Ctrl+B, Ctrl+\, Ctrl+K keep
-            // working inside the markdown editor, Crepe, search inputs, etc.
+            // Bare/Shift-only chords defer to focused editors; modifier chords always fire.
             if (isEditableTarget(event.target) && !shortcutOwnsKeypress(shortcut)) {
                 return;
             }
@@ -246,12 +179,6 @@ export function useShortcutHandler(
     }, [shortcut, handler, enabled, preventDefault]);
 }
 
-/**
- * Register multiple keyboard shortcut handlers.
- *
- * @param handlers - Map of action identifiers to handler functions
- * @param options - Options for all handlers
- */
 export function useShortcutHandlers(
     handlers: Record<string, () => void>,
     options: {
@@ -268,20 +195,16 @@ export function useShortcutHandlers(
         const handleKeyDown = (event: KeyboardEvent) => {
             const editable = isEditableTarget(event.target);
 
-            // Check each registered handler
             for (const [action, handler] of Object.entries(handlers)) {
                 const shortcut = bindings[action];
                 if (!shortcut) continue;
-                // Skip bare-key / Shift-only shortcuts when typing in an
-                // editor; let modifier chords (Ctrl/Cmd/Alt) through so
-                // global shortcuts keep working inside contentEditable.
                 if (editable && !shortcutOwnsKeypress(shortcut)) continue;
                 if (matchesShortcut(event, shortcut)) {
                     if (preventDefault) {
                         event.preventDefault();
                     }
                     handler();
-                    break; // Only handle one action per keypress
+                    break;
                 }
             }
         };
@@ -291,16 +214,9 @@ export function useShortcutHandlers(
     }, [bindings, handlers, enabled, preventDefault]);
 }
 
-/**
- * Hook that returns a keyboard shortcut handler component.
- * Use this when you need to provide global shortcuts in a component.
- */
 export function useGlobalShortcuts() {
     const bindings = useKeyboardBindings();
 
-    /**
-     * Check if a shortcut matches the given event.
-     */
     const matches = useCallback((action: string, event: KeyboardEvent): boolean => {
         const shortcut = bindings[action];
         return shortcut ? matchesShortcut(event, shortcut) : false;

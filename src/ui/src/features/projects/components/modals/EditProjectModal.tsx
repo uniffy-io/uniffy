@@ -1,9 +1,3 @@
-/**
- * EditProjectModal - Modal for editing an existing project
- *
- * Allows editing name, description, visibility, and icon.
- */
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, PencilSimple } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";

@@ -1,39 +1,20 @@
-/**
- * WidgetCard - Shared wrapper component for dashboard widgets
- *
- * Provides consistent styling, loading states, empty states,
- * and footer areas for all dashboard widgets.
- */
-
 import type { ReactNode } from 'react';
 import type { Icon } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import type { FetchPriority } from '@/features/dashboard/hooks/useDashboardData';
 
 interface WidgetCardProps {
-  /** Card title */
   title: string;
-  /** Optional subtitle/description */
   subtitle?: string;
-  /** Card content */
   children: ReactNode;
-  /** Additional CSS classes */
   className?: string;
-  /** Column span for grid layout (default: 1) */
   colSpan?: 1 | 2 | 3 | 4;
-  /** Optional action element (button, link) in header */
   action?: ReactNode;
-  /** Whether content is loading */
   loading?: boolean;
-  /** Compact mode (less padding) */
   compact?: boolean;
-  /** Optional icon displayed before the title */
   icon?: Icon;
-  /** Optional footer content (e.g. "View all" link) */
   footer?: ReactNode;
-  /** Fetch priority (controls render order) */
   priority?: FetchPriority;
-  /** Minimum height to prevent layout shift during loading */
   minHeight?: string;
 }
 
@@ -101,13 +82,9 @@ export function WidgetCard({
 }
 
 interface EmptyWidgetProps {
-  /** Icon to display */
   icon: Icon;
-  /** Empty state title */
   title: string;
-  /** Empty state description */
   description?: string;
-  /** Optional action button */
   action?: {
     label: string;
     onClick: () => void;

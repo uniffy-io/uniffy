@@ -1,10 +1,3 @@
-/**
- * ThreadsInbox - Dedicated view showing all threads the user is following.
- *
- * Two filter tabs: "All Threads" and "Unreads".
- * Each thread item shows channel, root message preview, reply count, and unread state.
- */
-
 import { useState, useCallback } from 'react';
 import { ChatText } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
@@ -38,12 +31,10 @@ export function ThreadsInbox() {
 
   return (
     <div className="flex flex-col h-full" data-testid="chat-threads-inbox" data-filter={filter}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <span className="text-sm font-semibold text-foreground">Threads</span>
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-1 px-4 py-2 border-b border-border">
         <button
           onClick={() => setFilter('all')}
@@ -73,7 +64,6 @@ export function ThreadsInbox() {
         </button>
       </div>
 
-      {/* Thread list */}
       <div className="flex-1 overflow-y-auto">
         {filteredThreads.length === 0 ? (
           <div className="flex items-center justify-center h-full">

@@ -1,12 +1,3 @@
-/**
- * Tags feature public surface.
- *
- * Phase 5 grew this from a minimal chip + picker into the unified
- * explorer module. Domain editors (notes / files / calendar / chat /
- * agents / tasks) consume ``TagPicker`` / ``TagChip`` / the slice
- * actions; the explorer page imports the rest.
- */
-
 export { TagChip } from '@/features/tags/components/TagChip';
 export { TagPicker } from '@/features/tags/components/TagPicker';
 

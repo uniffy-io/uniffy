@@ -1,13 +1,4 @@
-/**
- * Secure-context-safe UUID v4 generator.
- *
- * `crypto.randomUUID()` is only exposed in secure contexts (HTTPS or
- * `localhost`). Plain-HTTP origins -- raw IPs, `host.docker.internal`,
- * custom dev domains -- throw `TypeError: crypto.randomUUID is not a
- * function` when callers try to use it directly. Routing through this
- * helper keeps client-side IDs working in those environments by falling
- * back to a `getRandomValues`-based v4 implementation.
- */
+/** `crypto.randomUUID()` is secure-context-only; this falls back to `getRandomValues` so plain-HTTP dev origins (raw IPs, `host.docker.internal`) keep working. */
 export function randomUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();

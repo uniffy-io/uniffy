@@ -94,7 +94,6 @@ function MessageItemInner({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const addReactionRef = useRef<HTMLDivElement>(null);
 
-  // User hover card state
   const [hoverCardVisible, setHoverCardVisible] = useState(false);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const hoverTimerRef = useRef<number | undefined>(undefined);
@@ -128,7 +127,6 @@ function MessageItemInner({
     }, 350);
   }, []);
 
-  // Use reactions from API data
   const reactions = (message.reactions ?? []).map(r => ({
     emoji: r.emoji,
     count: r.count,
@@ -168,9 +166,7 @@ function MessageItemInner({
     }));
   }, [dispatch, message.id, message.channelId, message.content]);
 
-  // Full-width agent dividers (context_reset) bypass the bubble + avatar
-  // shell entirely. They carry no meaningful sender attribution at the
-  // chat-row level -- the divider's own metadata holds `reset_by_name`.
+  // Full-width context_reset dividers skip the bubble + avatar shell.
   if (message.senderType === 'AGENT' && message.metadata?.['kind'] === 'context_reset') {
     return (
       <div
@@ -183,7 +179,6 @@ function MessageItemInner({
     );
   }
 
-  // System message (join, leave, etc.)
   if (message.senderType === 'SYSTEM') {
     return (
       <div
@@ -198,7 +193,6 @@ function MessageItemInner({
     );
   }
 
-  // Deleted message
   if (message.isDeleted) {
     return (
       <div
@@ -247,7 +241,6 @@ function MessageItemInner({
       />
 
       <div className="flex items-start gap-3">
-        {/* Avatar or hover timestamp */}
         {isFirstInGroup ? (
           <div
             className="shrink-0 mt-0.5 cursor-pointer"
@@ -278,9 +271,7 @@ function MessageItemInner({
           </div>
         )}
 
-        {/* Content column */}
         <div className="min-w-0 flex-1">
-          {/* Header: name + timestamp (only on first in group) */}
           {isFirstInGroup && (
             <div className="flex items-baseline gap-2 mb-0.5">
               <span
@@ -318,7 +309,6 @@ function MessageItemInner({
             </div>
           )}
 
-          {/* Inline reply preview */}
           {message.replyContext && (
             <button
               type="button"
@@ -341,7 +331,6 @@ function MessageItemInner({
             </button>
           )}
 
-          {/* Message text */}
           <div data-testid={`chat-message-body-${message.id}`}>
             {isAgent ? (
               <AgentMessageBody message={message} />
@@ -353,12 +342,10 @@ function MessageItemInner({
             )}
           </div>
 
-          {/* File attachments */}
           {message.attachments && message.attachments.length > 0 && organizationId && (
             <MessageAttachments attachments={message.attachments} organizationId={organizationId} />
           )}
 
-          {/* Reactions */}
           <div ref={addReactionRef}>
             {(reactions.length > 0 || showReactionPicker) && (
               <ReactionBar
@@ -376,7 +363,6 @@ function MessageItemInner({
             )}
           </div>
 
-          {/* Thread footer */}
           {hasThread && message.thread && (
             <ThreadFooter
               rootMessageId={message.id}
@@ -389,7 +375,6 @@ function MessageItemInner({
         </div>
       </div>
 
-      {/* User hover card */}
       {showHoverCard && (
         <UserHoverCard
           userId={message.senderId}

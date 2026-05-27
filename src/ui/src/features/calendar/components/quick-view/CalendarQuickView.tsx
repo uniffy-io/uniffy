@@ -1,8 +1,3 @@
-/**
- * Calendar quick view icon for the app header.
- * Opens the TodayMeetingsPanel dropdown on click.
- */
-
 import { useState, useCallback, useRef } from 'react';
 import { CalendarCheck } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

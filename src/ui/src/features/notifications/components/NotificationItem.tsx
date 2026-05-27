@@ -1,11 +1,3 @@
-/**
- * Single notification item rendered in the notification panel.
- *
- * Displays actor avatar via SubjectAvatar with type icon badge overlay,
- * notification content with URN type color accent, source URN context,
- * and hover actions. CALENDAR_INVITE notifications include inline RSVP buttons.
- */
-
 import { useState } from 'react';
 import {
     Check,

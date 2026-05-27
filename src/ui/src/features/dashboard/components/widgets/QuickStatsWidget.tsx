@@ -1,10 +1,3 @@
-/**
- * QuickStatsWidget - Horizontal row of compact stat cards
- *
- * Shows: unread notifications, tasks due today, events today, team online.
- * Clickable cards navigate to relevant pages.
- */
-
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Target, CalendarDots, Users, ArrowRight } from '@phosphor-icons/react';

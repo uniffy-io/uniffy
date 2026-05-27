@@ -1,10 +1,3 @@
-/**
- * Pre-flight quota warning rendered at the top of the recording popover when
- * the user is below the soft 2 GB threshold. Non-blocking; the user can still
- * hit Record. The hard cap lives on the server's `complete_upload` quota
- * check.
- */
-
 import { Warning } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import type { QuotaWarning } from '@/features/recording/utils/checkQuotaBeforeRecord';

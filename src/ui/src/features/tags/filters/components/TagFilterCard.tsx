@@ -1,18 +1,3 @@
-/**
- * <TagFilterCard>
- *
- * Saved-filter card for the unified explorer's saved-filters list.
- * Mirrors the visual treatment of the files filter card but renders
- * the tags-specific criteria summary (selected tag chips, content
- * types, owner count, source / date / untagged-only flags).
- *
- * The plan calls for a shared shell hosting both files and tags
- * cards. Phase 5 ships this as a sibling card to keep the cut-over
- * surface contained; consolidating the two cards into a single shell
- * with a per-domain ``renderSummary`` prop is tracked as a follow-up
- * and pays back when chat / projects add filtered dashboards.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import {
     Funnel,

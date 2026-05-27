@@ -63,11 +63,6 @@ function getExpiryDate(value: string): Date | undefined {
     return undefined;
 }
 
-/**
- * Inline picker for setting a custom status.
- * Uses the shared emoji grid from icon-picker, shared Select
- * for duration, and shared Button for actions.
- */
 export function CustomStatusPicker({
     onClose,
     className,
@@ -110,7 +105,6 @@ export function CustomStatusPicker({
                 className,
             )}
         >
-            {/* Header */}
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-foreground">
                     Set a status
@@ -120,7 +114,6 @@ export function CustomStatusPicker({
                 </Button>
             </div>
 
-            {/* Input row */}
             <div className="flex items-center gap-2 mb-3">
                 <button
                     className={cn(
@@ -150,7 +143,6 @@ export function CustomStatusPicker({
                 />
             </div>
 
-            {/* Emoji grid - inline, uses shared COMMON_EMOJIS */}
             {showEmojiGrid && (
                 <div className="mb-3 border border-border rounded-lg p-2 bg-muted/30">
                     <div className="grid grid-cols-8 gap-0.5">
@@ -184,7 +176,6 @@ export function CustomStatusPicker({
                 </div>
             )}
 
-            {/* Duration - shared Select */}
             <div className="mb-3">
                 <label className="text-xs text-muted-foreground mb-1 block">
                     Clear after
@@ -198,7 +189,6 @@ export function CustomStatusPicker({
                 />
             </div>
 
-            {/* Presets */}
             <div className="mb-3">
                 <label className="text-xs text-muted-foreground mb-1 block">
                     Suggestions
@@ -221,7 +211,6 @@ export function CustomStatusPicker({
                 </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-2">
                 <Button
                     onClick={handleSave}

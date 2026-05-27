@@ -1,10 +1,3 @@
-/**
- * Domain Admins Section
- *
- * Admin UI for managing domain admin assignments.
- * Displays a filterable table of domain admins with grant/revoke actions.
- */
-
 import { useEffect, useState } from 'react';
 import {
     Crown,
@@ -207,7 +200,6 @@ export function DomainAdminsSection() {
                 ))}
             </div>
 
-            {/* Table */}
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -247,7 +239,6 @@ export function DomainAdminsSection() {
                 </TableBody>
             </Table>
 
-            {/* Grant Dialog */}
             <GrantDomainAdminDialog
                 open={showGrantDialog}
                 onClose={() => setShowGrantDialog(false)}
@@ -255,7 +246,6 @@ export function DomainAdminsSection() {
                 preselectedDomain={activeTab}
             />
 
-            {/* Revoke Confirmation */}
             <ConfirmDialog
                 isOpen={!!revokeTarget}
                 onClose={() => setRevokeTarget(null)}

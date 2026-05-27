@@ -1,8 +1,3 @@
-/**
- * Floating-label text input with optional leading icon. Shared by the
- * login form and the accept-invite form so both surfaces feel identical.
- */
-
 import { useState } from 'react';
 import { BRAND_ACCENT, BRAND_ACCENT_RING } from '@/features/auth/constants';
 

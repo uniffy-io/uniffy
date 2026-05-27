@@ -1,10 +1,3 @@
-/**
- * Reusable Search Results List Component
- *
- * Displays search results with keyboard navigation.
- * Features glassmorphism and gradient styling matching MentionPreview.
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlass, Tag, Hash, ChatCircle } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
@@ -18,7 +11,6 @@ import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 
-/** Avatar with error fallback for user search results */
 function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
   const avatarSrc = useAvatarUrl(userId, 'sm');
@@ -33,7 +25,7 @@ function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: Reac
   );
 }
 
-/** Map SearchResultType to UrnType */
+/** SearchResultType to UrnType. Update when adding a new content type. */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
@@ -55,9 +47,6 @@ interface ResultTheme extends UrnTypeTheme {
   label: string;
 }
 
-/**
- * Get theme for search result type using centralized content type config
- */
 function getResultTheme(type: SearchResultType): ResultTheme {
   const urnType = SEARCH_RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
   const config = getContentTypeConfig(urnType);
@@ -69,10 +58,6 @@ function getResultTheme(type: SearchResultType): ResultTheme {
   };
 }
 
-/**
- * Thumbnail icon for FILE search results.
- * Falls back to the standard icon badge on error or missing thumbnail.
- */
 function SearchFileIcon({ urn, isSelected, fallback }: {
     urn: string;
     isSelected: boolean;
@@ -108,11 +93,8 @@ interface SearchResultsListProps {
   showHeader?: boolean;
   showFooter?: boolean;
   emptyMessage?: string;
-  /** Controlled selected index */
   selectedIndex?: number;
-  /** Callback when selected index changes */
   onSelectedIndexChange?: (index: number) => void;
-  /** Whether URN was just copied (for feedback) */
   copiedUrn?: boolean;
 }
 
@@ -133,16 +115,13 @@ export function SearchResultsList({
   const [internalIndex, setInternalIndex] = useState(0);
   const itemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
 
-  // Use controlled index if provided, otherwise internal state
   const selectedIndex = controlledIndex ?? internalIndex;
   const setSelectedIndex = onSelectedIndexChange ?? setInternalIndex;
 
-  // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(0);
   }, [results.length, setSelectedIndex]);
 
-  // Scroll selected item into view when navigating with keyboard
   const scrollToIndex = (index: number) => {
     const item = itemRefs.current.get(index);
     if (item) {
@@ -150,7 +129,6 @@ export function SearchResultsList({
     }
   };
 
-  // Keyboard navigation (only arrow keys, enter, escape - copy handled by parent)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (results.length === 0) return;
@@ -196,7 +174,6 @@ export function SearchResultsList({
         className
       )}
     >
-      {/* Header */}
       {showHeader && (
         <div className="px-3 py-2 border-b border-border/50">
           <div className="flex items-center gap-2">
@@ -213,7 +190,6 @@ export function SearchResultsList({
         </div>
       )}
 
-      {/* Loading state */}
       {isLoading && (
         <div className="flex items-center justify-center py-10">
           <div className="flex items-center gap-3">
@@ -223,7 +199,6 @@ export function SearchResultsList({
         </div>
       )}
 
-      {/* Empty state */}
       {!isLoading && results.length === 0 && query.trim() && (
         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
           <MagnifyingGlass size={20} weight="duotone" className="opacity-40 mb-2" />
@@ -232,7 +207,6 @@ export function SearchResultsList({
         </div>
       )}
 
-      {/* Results list */}
       {!isLoading && results.length > 0 && (
         <>
           <ul className="py-1.5 max-h-96 overflow-auto">
@@ -262,12 +236,10 @@ export function SearchResultsList({
                     )}
                     style={{ width: 'calc(100% - 12px)' }}
                   >
-                    {/* Selection indicator */}
                     {isSelected && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full bg-primary" />
                     )}
 
-                    {/* Icon badge / thumbnail / avatar */}
                     {result.type === SearchResultType.FILE ? (
                       <SearchFileIcon
                         urn={result.urn}
@@ -302,7 +274,6 @@ export function SearchResultsList({
                       </div>
                     )}
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={cn(
@@ -318,7 +289,6 @@ export function SearchResultsList({
                           {theme.label}
                         </span>
                       </div>
-                      {/* Conversation context for chat messages */}
                       {result.type === SearchResultType.CHAT_MESSAGE && result.metadata['channel_name'] && (
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {result.metadata['channel_type'] === 'PUBLIC' || result.metadata['channel_type'] === 'PRIVATE' ? (
@@ -331,7 +301,6 @@ export function SearchResultsList({
                           </span>
                         </div>
                       )}
-                      {/* Tags */}
                       {result.tags && result.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                           <Tag size={10} weight="duotone" className="text-muted-foreground/50 shrink-0" />
@@ -362,7 +331,6 @@ export function SearchResultsList({
             })}
           </ul>
 
-          {/* Footer hint */}
           {showFooter && (
             <div className="border-t border-border/50 px-3 py-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
               <span className="flex items-center gap-1">

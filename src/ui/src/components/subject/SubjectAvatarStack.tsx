@@ -1,10 +1,3 @@
-/**
- * SubjectAvatarStack - Overlapping avatar circles
- *
- * Resolves an array of user IDs to Subject objects and renders
- * overlapping SubjectAvatar circles with a "+N" overflow badge.
- */
-
 import { cn } from '@/shared/utils/cn';
 import { type SubjectAvatarSize } from '@/components/subject/types';
 import { SubjectAvatar } from '@/components/subject/SubjectAvatar';

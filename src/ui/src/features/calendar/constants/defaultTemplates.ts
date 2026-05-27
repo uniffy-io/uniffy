@@ -1,17 +1,10 @@
-/**
- * Default event templates for quick event creation
- */
-
 import { DEFAULT_DURATIONS } from '@/features/calendar/constants/timeRanges';
 
-/**
- * Event template definition
- */
 export interface EventTemplate {
   id: string;
   name: string;
   icon: string;
-  duration: number; // in minutes
+  duration: number; // minutes
   categoryId: string;
   description?: string;
   defaultTitle?: string;
@@ -19,9 +12,6 @@ export interface EventTemplate {
   isDefault: boolean;
 }
 
-/**
- * Default event templates
- */
 export const DEFAULT_TEMPLATES: EventTemplate[] = [
   {
     id: 'weekly_sync',
@@ -76,16 +66,10 @@ export const DEFAULT_TEMPLATES: EventTemplate[] = [
   },
 ];
 
-/**
- * Get template by ID
- */
 export function getTemplateById(templateId: string): EventTemplate | undefined {
   return DEFAULT_TEMPLATES.find((t) => t.id === templateId);
 }
 
-/**
- * Template quick action buttons
- */
 export const TEMPLATE_QUICK_ACTIONS = [
   { id: 'weekly_sync', label: 'Sync', shortcut: '1' },
   { id: 'one_on_one', label: '1:1', shortcut: '2' },

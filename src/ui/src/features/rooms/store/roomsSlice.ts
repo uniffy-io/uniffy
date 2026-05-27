@@ -1,8 +1,3 @@
-/**
- * Rooms Redux slice for domain state
- * Manages rooms, bookings, and availability
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
@@ -28,32 +23,14 @@ import {
   fetchAvailableRoomIds,
 } from '@/features/rooms/store/roomsThunks';
 
-/**
- * Rooms domain state
- */
 interface RoomsState {
-  // Rooms indexed by ID
   rooms: Record<string, Room>;
-
-  // Ordered room IDs for the current list view
   roomIds: string[];
-
-  // Bookings indexed by ID
   bookings: Record<string, RoomBooking>;
-
-  // Ordered booking IDs for the current list view
   bookingIds: string[];
-
-  // Availability time slots keyed by room ID
   availability: Record<string, TimeSlot[]>;
-
-  // Room IDs that are available for a specific time range (used by RoomPicker)
   availableRoomIds: string[] | null;
-
-  // Currently selected room ID
   selectedRoomId: string | null;
-
-  // Active filters
   filters: {
     roomType: RoomType | null;
     status: RoomStatus | null;
@@ -63,8 +40,6 @@ interface RoomsState {
     floor: string;
     searchQuery: string;
   };
-
-  // Loading states
   loading: {
     rooms: boolean;
     bookings: boolean;
@@ -74,8 +49,6 @@ interface RoomsState {
     updating: boolean;
     deleting: boolean;
   };
-
-  // Error states
   errors: {
     rooms: string | null;
     bookings: string | null;
@@ -84,8 +57,6 @@ interface RoomsState {
     updating: string | null;
     deleting: string | null;
   };
-
-  // Pagination
   pagination: {
     page: number;
     pageSize: number;
@@ -160,9 +131,6 @@ const roomsSlice = createSlice({
     clearRooms: () => initialState,
   },
   extraReducers: (builder) => {
-    // Room Thunks
-
-    // Initialize all rooms (multi-page eager load)
     builder
       .addCase(initializeRoomsData.pending, (state) => {
         state.loading.rooms = true;
@@ -183,7 +151,6 @@ const roomsSlice = createSlice({
         state.errors.rooms = action.payload || 'Failed to load rooms';
       });
 
-    // Fetch rooms (single page - kept for programmatic use)
     builder
       .addCase(fetchRooms.pending, (state) => {
         state.loading.rooms = true;
@@ -209,7 +176,6 @@ const roomsSlice = createSlice({
         state.errors.rooms = action.payload || 'Failed to fetch rooms';
       });
 
-    // Fetch single room
     builder
       .addCase(fetchRoom.fulfilled, (state, action) => {
         state.rooms[action.payload.id] = action.payload;
@@ -218,7 +184,6 @@ const roomsSlice = createSlice({
         }
       });
 
-    // Create room
     builder
       .addCase(createRoomThunk.pending, (state) => {
         state.loading.creating = true;
@@ -236,7 +201,6 @@ const roomsSlice = createSlice({
         state.errors.creating = action.payload || 'Failed to create room';
       });
 
-    // Update room
     builder
       .addCase(updateRoomThunk.pending, (state) => {
         state.loading.updating = true;
@@ -253,7 +217,6 @@ const roomsSlice = createSlice({
         state.errors.updating = action.payload || 'Failed to update room';
       });
 
-    // Delete room
     builder
       .addCase(deleteRoomThunk.pending, (state) => {
         state.loading.deleting = true;
@@ -274,9 +237,6 @@ const roomsSlice = createSlice({
         state.errors.deleting = action.payload || 'Failed to delete room';
       });
 
-    // Booking Thunks
-
-    // Create booking
     builder
       .addCase(createBookingThunk.pending, (state) => {
         state.loading.creating = true;
@@ -294,7 +254,6 @@ const roomsSlice = createSlice({
         state.errors.creating = action.payload || 'Failed to create booking';
       });
 
-    // Cancel booking
     builder
       .addCase(cancelBookingThunk.fulfilled, (state, action) => {
         if (state.bookings[action.payload.id]) {
@@ -302,7 +261,6 @@ const roomsSlice = createSlice({
         }
       });
 
-    // Fetch bookings
     builder
       .addCase(fetchBookings.pending, (state) => {
         state.loading.bookings = true;
@@ -322,9 +280,6 @@ const roomsSlice = createSlice({
         state.errors.bookings = action.payload || 'Failed to fetch bookings';
       });
 
-    // Availability Thunks
-
-    // Check availability
     builder
       .addCase(checkAvailability.pending, (state) => {
         state.loading.availability = true;
@@ -339,7 +294,6 @@ const roomsSlice = createSlice({
         state.errors.availability = action.payload || 'Failed to check availability';
       });
 
-    // Find available rooms
     builder
       .addCase(findAvailableRooms.pending, (state) => {
         state.loading.rooms = true;
@@ -359,7 +313,6 @@ const roomsSlice = createSlice({
         state.errors.rooms = action.payload || 'Failed to find available rooms';
       });
 
-    // Fetch available room IDs (for RoomPicker - doesn't replace rooms map)
     builder
       .addCase(fetchAvailableRoomIds.pending, (state) => {
         state.loading.availableRooms = true;
@@ -413,7 +366,5 @@ export const selectRoomAvailability = (state: RootState, roomId: string): TimeSl
 
 export const selectAvailableRoomIds = (state: RootState): string[] | null =>
   state.rooms.availableRoomIds;
-
-// Reducer
 
 export const roomsReducer = roomsSlice.reducer;

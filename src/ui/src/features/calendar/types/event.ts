@@ -1,12 +1,5 @@
-/**
- * Event type definitions for the Calendar feature
- */
-
 import type { Attendee } from '@/features/calendar/types/attendee';
 
-/**
- * Recurrence patterns for repeating events
- */
 export type RecurrencePattern =
   | 'none'
   | 'daily'
@@ -15,9 +8,6 @@ export type RecurrencePattern =
   | 'monthly'
   | 'yearly';
 
-/**
- * Days of the week for weekly recurrence
- */
 export type DayOfWeek =
   | 'monday'
   | 'tuesday'
@@ -27,32 +17,19 @@ export type DayOfWeek =
   | 'saturday'
   | 'sunday';
 
-/**
- * Recurrence configuration for repeating events
- */
 export interface RecurrenceConfig {
-  /** The recurrence pattern */
   pattern: RecurrencePattern;
-  /** Interval between recurrences (e.g., every 2 weeks) */
+  /** Step between recurrences (e.g. every 2 weeks). */
   interval: number;
-  /** Days of the week for weekly recurrence */
   daysOfWeek?: DayOfWeek[];
-  /** Day of the month for monthly recurrence */
   dayOfMonth?: number;
-  /** End date for recurrence (ISO string) */
+  /** ISO string. */
   endDate?: string;
-  /** Maximum number of occurrences */
   maxOccurrences?: number;
 }
 
-/**
- * Linked resource types
- */
 export type ResourceType = 'note' | 'file' | 'chat';
 
-/**
- * A linked resource (note, file, or chat)
- */
 export interface LinkedResource {
   id: string;
   type: ResourceType;
@@ -60,80 +37,51 @@ export interface LinkedResource {
   url?: string;
 }
 
-/**
- * Calendar event model
- */
 export interface CalendarEvent {
-  /** Unique event identifier */
   id: string;
-  /** Event title */
   title: string;
-  /** Event description (supports markdown) */
+  /** Markdown. */
   description: string;
-  /** Start date/time (ISO string) */
+  /** ISO string. */
   startTime: string;
-  /** End date/time (ISO string) */
+  /** ISO string. */
   endTime: string;
-  /** Whether this is an all-day event */
   isAllDay: boolean;
-  /** Timezone identifier (e.g., 'America/New_York') */
+  /** IANA timezone (e.g. 'America/New_York'). */
   timezone: string;
-  /** Event location (physical or virtual) */
   location: string;
-  /** Meeting URL (Zoom, Google Meet, etc.) */
   meetingUrl?: string;
-  /** Calendar ID this event belongs to */
   calendarId: string;
-  /** Category ID for color coding */
   categoryId: string;
-  /** List of attendees */
   attendees: Attendee[];
-  /** User ID of the event creator/organizer */
   organizerId: string;
-  /** Recurrence configuration */
   recurrence?: RecurrenceConfig;
-  /** Whether this event is marked as focus/deep work time */
   isFocusTime: boolean;
-  /** Unified-tag ids assigned to this event (resolved via the tags slice cache) */
+  /** Unified-tag ids resolved via the tags slice cache. */
   tagIds: string[];
-  /** Linked resources (notes, files, chats) */
   linkedResources: LinkedResource[];
-  /** Organization ID */
   organizationId: string;
-  /** Visibility scope: 'private' for personal, 'organization' for org-wide */
+  /** 'private' = personal, 'organization' = org-wide. */
   visibility: 'private' | 'organization';
-  /** Created timestamp (ISO string) */
   createdAt: string;
-  /** Last updated timestamp (ISO string) */
   updatedAt: string;
-  /** Reminder intervals in minutes before event */
+  /** Minutes before event. */
   reminders: number[];
-  /** Whether this is a recurring event */
   isRecurring?: boolean;
-  /** If this is an override of a recurring occurrence, the master event ID */
+  /** Master event id when this row overrides a recurring occurrence. */
   recurrenceId?: string;
-  /** For expanded instances: the specific occurrence date (YYYY-MM-DD) */
+  /** YYYY-MM-DD for expanded instances. */
   occurrenceDate?: string;
-  /** Booked room ID (populated from room booking) */
   roomId?: string;
-  /** Booked room name (read-only, populated from room booking) */
+  /** Read-only, mirrored from room booking. */
   roomName?: string;
-  /** Booked room location (read-only, populated from room booking) */
   roomLocation?: string;
-  /** Booked room capacity (read-only, populated from room booking) */
   roomCapacity?: number;
-  /** Booked room amenities (read-only, populated from room booking) */
   roomAmenities?: string[];
 }
 
-/**
- * Scope for editing or deleting recurring events
- */
 export type RecurrenceEditScope = 'this_event' | 'all_events' | 'this_and_following';
 
-/**
- * Event creation request (partial event data)
- */
 export interface CreateEventRequest {
   title: string;
   description?: string;
@@ -153,9 +101,6 @@ export interface CreateEventRequest {
   reminders?: number[];
 }
 
-/**
- * Event update request
- */
 export interface UpdateEventRequest {
   id: string;
   title?: string;
@@ -178,32 +123,19 @@ export interface UpdateEventRequest {
   occurrenceDate?: string;
 }
 
-/**
- * Multi-day event span position
- */
 export type MultiDayPosition = 'start' | 'middle' | 'end' | 'single';
 
-/**
- * Positioned event for rendering on the calendar grid
- * Includes calculated position and size values
- */
+/** CalendarEvent with grid-layout fields computed for rendering. */
 export interface PositionedEvent extends CalendarEvent {
-  /** Top position in pixels from start of day */
   top: number;
-  /** Height in pixels */
   height: number;
-  /** Left offset for overlapping events (0-1) */
+  /** 0-1 offset within the day column for overlapping events. */
   left: number;
-  /** Width multiplier for overlapping events (0-1) */
+  /** 0-1 width multiplier for overlapping events. */
   width: number;
-  /** Column index for overlapping events */
   column: number;
-  /** Total columns for this time slot */
   totalColumns: number;
-  /** Position in multi-day span (start/middle/end/single) */
   multiDayPosition?: MultiDayPosition;
-  /** Whether this event has time conflicts with other events */
   hasConflict?: boolean;
-  /** List of events that conflict with this one */
   conflictingEvents?: CalendarEvent[];
 }

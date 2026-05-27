@@ -1,10 +1,3 @@
-/**
- * IconPicker Component
- *
- * A popover component for selecting icons (Phosphor icons or emojis).
- * Can be used app-wide for notes, filters, bookmarks, etc.
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
@@ -18,19 +11,13 @@ import {
 import { getIconByName } from '@/components/icon-picker/iconUtils';
 
 interface IconPickerProps {
-    /** Currently selected icon */
     currentIcon?: IconValue | null;
-    /** Callback when an icon is selected */
     onSelect: (icon: IconValue | null) => void;
-    /** Callback to close the picker */
     onClose: () => void;
-    /** Optional title for the picker header */
     title?: string;
-    /** Whether to show the remove icon button */
     showRemove?: boolean;
-    /** Optional className for the container */
     className?: string;
-    /** Which categories to show (defaults to all) */
+    /** Defaults to all categories. */
     categories?: string[];
 }
 

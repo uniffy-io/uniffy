@@ -1,11 +1,3 @@
-/**
- * TimeSelect - Combo-box time picker
- *
- * Looks like a standard Select when collapsed. On click, the trigger becomes
- * an editable text input with a dropdown of 30-minute quick-pick presets.
- * Users can type any time (e.g. "9:15 am") and press Enter to set a custom value.
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CaretDown, Check, ClockAfternoon } from '@phosphor-icons/react';
@@ -17,10 +9,7 @@ interface TimeSelectProps {
   className?: string;
 }
 
-/**
- * Format a decimal-hour value to display string.
- * Supports arbitrary minutes (e.g. 9.25 -> "9:15 AM").
- */
+/** Decimal hours -> "9:15 AM". */
 function formatTimeValue(value: number): string {
   const hours = Math.floor(value);
   const minutes = Math.round((value % 1) * 60);
@@ -29,14 +18,10 @@ function formatTimeValue(value: number): string {
   return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
-/**
- * Parse a time string into decimal hours.
- * Handles: "9:15 AM", "9:15am", "9:15", "21:15", "9 AM", "9"
- */
+/** Accepts "9:15 AM", "9:15am", "9:15", "21:15", "9 AM", "9". */
 function parseTimeString(input: string): number | null {
   const trimmed = input.trim().toLowerCase().replace(/\s+/g, ' ');
 
-  // Match: optional hour(s), optional :minutes, optional am/pm
   const match = trimmed.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/);
   if (!match) return null;
 
@@ -54,13 +39,13 @@ function parseTimeString(input: string): number | null {
   return hours + minutes / 60;
 }
 
-/** 30-minute interval presets (48 options for 24 hours) */
+/** 48 half-hour presets covering a 24h day. */
 const PRESET_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const timeValue = i * 0.5;
   return { value: timeValue, label: formatTimeValue(timeValue) };
 });
 
-/** Check if two decimal-hour values represent the same time (within ~1 second) */
+/** ~1 second tolerance to compare decimal-hour values. */
 function timeValuesEqual(a: number, b: number): boolean {
   return Math.abs(a - b) < 0.0003;
 }
@@ -83,12 +68,12 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
 
   const displayValue = formatTimeValue(value);
 
-  // Position the dropdown relative to the trigger
   const updatePosition = useCallback(() => {
     if (!containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const dropdownHeight = 248; // max-h-60 = 240px + padding
+    // max-h-60 (240px) + padding.
+    const dropdownHeight = 248;
     const viewportHeight = window.innerHeight;
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
@@ -102,7 +87,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
     });
   }, []);
 
-  // Update position while open
   useEffect(() => {
     if (!isOpen) return;
     updatePosition();
@@ -116,7 +100,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
     };
   }, [isOpen, updatePosition]);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
 
@@ -137,11 +120,9 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Scroll to nearest preset on open
   useEffect(() => {
     if (!isOpen || !listRef.current) return;
 
-    // Find the nearest preset index to current value
     let nearestIdx = 0;
     let nearestDist = Infinity;
     for (let i = 0; i < PRESET_OPTIONS.length; i++) {
@@ -152,25 +133,22 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
       }
     }
 
-    // Scroll so the nearest option is roughly centered
     const itemHeight = 36;
     const scrollTop = Math.max(0, nearestIdx * itemHeight - 100);
     listRef.current.scrollTop = scrollTop;
   }, [isOpen, value]);
 
-  // Filter presets based on typed input
   const filteredOptions = useMemo(() => {
     if (!inputValue.trim()) return PRESET_OPTIONS;
     const search = inputValue.trim().toLowerCase();
     return PRESET_OPTIONS.filter((opt) => opt.label.toLowerCase().includes(search));
   }, [inputValue]);
 
-  // Parse typed input as a custom (non-preset) time
   const parsedCustomTime = useMemo(() => {
     if (!inputValue.trim()) return null;
     const parsed = parseTimeString(inputValue);
     if (parsed === null) return null;
-    // Only show custom option if it doesn't match any visible preset
+    // Suppress the custom option when it matches a visible preset row.
     const matchesPreset = filteredOptions.some((opt) => timeValuesEqual(opt.value, parsed));
     if (matchesPreset) return null;
     return { value: parsed, label: formatTimeValue(parsed) };
@@ -198,7 +176,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
           return;
         }
       }
-      // If nothing typed or unparseable, pick first filtered option
       if (filteredOptions.length > 0) {
         handleSelect(filteredOptions[0].value);
       }
@@ -231,7 +208,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
         )}
       >
         <div ref={listRef} className="py-1 max-h-60 overflow-y-auto">
-          {/* Custom time option (shown when typed value doesn't match a preset) */}
           {parsedCustomTime && (
             <button
               type="button"
@@ -247,7 +223,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
             </button>
           )}
 
-          {/* Preset 30-min options */}
           {filteredOptions.map((option) => {
             const isSelected = timeValuesEqual(option.value, value);
             return (
@@ -267,7 +242,6 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
             );
           })}
 
-          {/* Empty state */}
           {!hasResults && (
             <div className="px-3 py-4 text-center text-xs text-muted-foreground">
               Type a time like &quot;9:15 AM&quot;

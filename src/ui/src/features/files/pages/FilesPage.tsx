@@ -1,9 +1,3 @@
-/**
- * Files Page Component
- *
- * Main page for file management with sidebar, file list, and upload functionality.
- */
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -37,7 +31,6 @@ export function FilesPage() {
     const { fileId: urlFileId } = useParams<{ fileId?: string }>();
     const [searchParams] = useSearchParams();
 
-    // Redux state
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
     const currentFolderId = useAppSelector((state) => state.files.filters.folderId);
     const viewScope = useAppSelector((state) => state.files.filters.viewScope);
@@ -49,29 +42,20 @@ export function FilesPage() {
     const currentFileId = useAppSelector((state) => state.files.currentFileId);
     const filesMap = useAppSelector((state) => state.files.files);
 
-    // selectFilesForCurrentFolderAndScope handles:
-    // - Folder filtering (currentFolderId or root)
-    // - ViewScope filtering (personal/shared/organization/all)
     const files = useAppSelector(selectFilesForCurrentFolderAndScope);
     const allFiles = useAppSelector(selectAllFiles);
 
-    // Get the current file for the details panel
     const currentFile = currentFileId ? filesMap[currentFileId] : null;
 
-    // Viewer state - only used for deep link support
     const viewerIsOpen = useAppSelector((state) => state.fileViewer.isOpen);
 
-    // Sidebar state from Redux (shared across files pages)
     const showSidebar = useAppSelector((state) => state.files.sidebarOpen);
 
-    // Local state
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
-    // File input ref for upload
     const fileInputRef = useRef<HTMLInputElement>(null);
     const folderInputRef = useRef<HTMLInputElement>(null);
 
-    // Folder upload flow (scan + confirm + createFolderTree + queue)
     const folderUploadSupported = isFolderUploadSupported();
     const {
         scanResult: folderScanResult,
@@ -81,10 +65,9 @@ export function FilesPage() {
         confirmUpload: confirmFolderUpload,
     } = useFolderUpload();
 
-    // Track if we've already opened viewer for deep link (prevent re-opening)
+    // Latches so a deep link only opens the viewer once.
     const deepLinkHandledRef = useRef(false);
 
-    // Initialize data on mount
     useEffect(() => {
         if (organizationId) {
             dispatch(initializeFilesData());
@@ -99,7 +82,6 @@ export function FilesPage() {
         }
     }, [dispatch, organizationId, viewScope]);
 
-    // Handle folder from URL
     useEffect(() => {
         const folderId = searchParams.get('folder');
         if (folderId !== currentFolderId) {
@@ -126,7 +108,6 @@ export function FilesPage() {
         }
     }, [urlFileId, loading, allFiles, viewerIsOpen, dispatch]);
 
-    // Handle file download
     const handleDownload = useCallback(
         async (fileId: string) => {
             if (!organizationId || isDownloading) return;

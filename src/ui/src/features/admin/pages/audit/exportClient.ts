@@ -1,11 +1,3 @@
-/**
- * Client-side audit export helper.
- *
- * Drives the streaming ExportEvents RPC, concatenates chunks into a
- * Blob, and triggers a browser download. Errors propagate to the
- * caller so the error-toast middleware surfaces them.
- */
-
 import { toast } from 'sonner';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { friendlyErrorMessage } from '@/config';

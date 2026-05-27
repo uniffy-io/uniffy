@@ -1,11 +1,3 @@
-/**
- * Tags API client.
- *
- * Wraps the ConnectRPC ``TagsService`` with the full surface area the
- * unified explorer (Phase 5) needs: tag CRUD, search, assignment,
- * content listing with criteria, and saved-filter CRUD.
- */
-
 import { createClient } from '@connectrpc/connect';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { unaryTransport } from '@/config/api';

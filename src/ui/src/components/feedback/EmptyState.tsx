@@ -34,7 +34,6 @@ export function EmptyState({
   return (
     <div className={cn('flex-1 flex flex-col items-center justify-center p-6 md:p-8', className)}>
       <div className="max-w-md text-center">
-        {/* Floating card illustration */}
         <div className="relative mb-8">
           <div className="flex items-center justify-center gap-4">
             <div className="w-16 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 -rotate-6 transform" />
@@ -48,7 +47,6 @@ export function EmptyState({
           </div>
         </div>
 
-        {/* Heading */}
         <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">
           {title}
         </h2>
@@ -56,7 +54,6 @@ export function EmptyState({
           {description}
         </p>
 
-        {/* CTA button */}
         {actionLabel && onAction && (
           <Button onClick={onAction} className="mb-4">
             <IconComponent size={16} className="mr-2" />
@@ -64,7 +61,6 @@ export function EmptyState({
           </Button>
         )}
 
-        {/* Keyboard shortcut hint */}
         {shortcutKey && shortcut && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
             <span>or press</span>
@@ -74,7 +70,6 @@ export function EmptyState({
           </div>
         )}
 
-        {/* Quick tips */}
         {tips && tips.length > 0 && (
           <div className="bg-card rounded-lg border border-border p-4 text-left">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">

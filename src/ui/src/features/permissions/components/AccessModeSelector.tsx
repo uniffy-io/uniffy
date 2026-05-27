@@ -17,13 +17,7 @@ interface AccessModeSelectorProps {
     onChange: (value: AccessModeValue) => void;
     disabled?: boolean;
     defaultBaselineRole?: ContentRole;
-    /**
-     * When true, prepend an "Use organization default" action that
-     * clears the per-item override (writes ACCESS_MODE_UNSPECIFIED,
-     * stored as NULL so the row inherits live). The button has no
-     * selected state - the backend resolves NULL into an effective
-     * mode before serializing, so the click acts as a one-shot reset.
-     */
+    /** Clears per-item override (writes UNSPECIFIED -> NULL) so the row inherits the org default. */
     showInheritOption?: boolean;
 }
 

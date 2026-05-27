@@ -1,11 +1,3 @@
-/**
- * Header for the full-page notifications view.
- *
- * Contains page title with unread count, search input, action buttons,
- * view toggle, and a toolbar row with select-all, date quick filters,
- * custom date pickers, and bulk actions.
- */
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     MagnifyingGlass,

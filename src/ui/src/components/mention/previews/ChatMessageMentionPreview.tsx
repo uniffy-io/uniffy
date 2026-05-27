@@ -1,15 +1,4 @@
-/**
- * Chat Message Mention Preview Card
- *
- * Renders a referenced chat message with sender, parent channel, the
- * message snippet, and timestamp. The shared <ParentBadge> + meta-row
- * layout keeps it visually consistent with the other expandable types.
- *
- * Markup uses only inline elements (`<span>` with `block`/`flex` Tailwind
- * classes) so the card stays HTML-valid as a descendant of `<p>` when
- * markdown wraps mentions inline.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,

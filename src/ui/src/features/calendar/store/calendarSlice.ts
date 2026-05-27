@@ -1,8 +1,3 @@
-/**
- * Calendar Redux slice for domain state
- * Manages events, categories, and templates
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type {
@@ -31,26 +26,12 @@ import {
   listEventTemplates,
 } from '@/features/calendar/store/calendarThunks';
 
-/**
- * Calendar domain state
- */
 interface CalendarState {
-  // Events indexed by ID
   events: Record<string, CalendarEvent>;
-
-  // Event IDs for the current view date range
   visibleEventIds: string[];
-
-  // Categories indexed by ID
   categories: Record<string, Category>;
-
-  // Templates indexed by ID
   templates: Record<string, EventTemplate>;
-
-  // Active filters
   filters: EventFilters;
-
-  // Loading states
   loading: {
     events: boolean;
     categories: boolean;
@@ -59,8 +40,6 @@ interface CalendarState {
     updating: boolean;
     deleting: boolean;
   };
-
-  // Error states
   errors: {
     events: string | null;
     categories: string | null;
@@ -69,8 +48,6 @@ interface CalendarState {
     updating: string | null;
     deleting: string | null;
   };
-
-  // Pagination
   pagination: {
     page: number;
     pageSize: number;
@@ -79,9 +56,6 @@ interface CalendarState {
   };
 }
 
-/**
- * Convert default categories to proper Category type
- */
 function createDefaultCategories(): Record<string, Category> {
   const now = new Date().toISOString();
   const result: Record<string, Category> = {};
@@ -138,7 +112,6 @@ const calendarSlice = createSlice({
   name: 'calendar',
   initialState,
   reducers: {
-    // Event actions
     setEvents: (state, action: PayloadAction<CalendarEvent[]>) => {
       state.events = action.payload.reduce((acc, event) => {
         acc[event.id] = event;
@@ -167,7 +140,6 @@ const calendarSlice = createSlice({
       );
     },
 
-    // Category CRUD
     addCategory: (state, action: PayloadAction<Category>) => {
       state.categories[action.payload.id] = action.payload;
     },
@@ -182,7 +154,6 @@ const calendarSlice = createSlice({
       delete state.categories[action.payload];
     },
 
-    // Filters
     setFilters: (state, action: PayloadAction<Partial<EventFilters>>) => {
       state.filters = { ...state.filters, ...action.payload };
     },
@@ -217,7 +188,6 @@ const calendarSlice = createSlice({
       }
     },
 
-    // Loading states
     setEventsLoading: (state, action: PayloadAction<boolean>) => {
       state.loading.events = action.payload;
     },
@@ -234,7 +204,6 @@ const calendarSlice = createSlice({
       state.loading.deleting = action.payload;
     },
 
-    // Error states
     setEventsError: (state, action: PayloadAction<string | null>) => {
       state.errors.events = action.payload;
     },
@@ -247,7 +216,6 @@ const calendarSlice = createSlice({
       state.errors = initialState.errors;
     },
 
-    // Pagination
     setPagination: (
       state,
       action: PayloadAction<Partial<CalendarState['pagination']>>
@@ -255,13 +223,9 @@ const calendarSlice = createSlice({
       state.pagination = { ...state.pagination, ...action.payload };
     },
 
-    // Reset state
     resetCalendarState: () => initialState,
   },
   extraReducers: (builder) => {
-    // Event Thunks
-
-    // Fetch events in range
     builder
       .addCase(fetchEventsInRange.pending, (state) => {
         state.loading.events = true;
@@ -269,7 +233,7 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEventsInRange.fulfilled, (state, action) => {
         state.loading.events = false;
-        // Replace events entirely to clear stale/deleted entries
+        // Replace map wholesale so deleted entries drop out.
         const newEvents: Record<string, CalendarEvent> = {};
         action.payload.forEach((event) => {
           newEvents[event.id] = event;
@@ -282,7 +246,6 @@ const calendarSlice = createSlice({
         state.errors.events = action.payload || 'Failed to fetch events';
       });
 
-    // Fetch single event
     builder
       .addCase(fetchEvent.fulfilled, (state, action) => {
         state.events[action.payload.id] = action.payload;
@@ -291,7 +254,6 @@ const calendarSlice = createSlice({
         }
       });
 
-    // Create event
     builder
       .addCase(createEventThunk.pending, (state) => {
         state.loading.creating = true;
@@ -309,7 +271,6 @@ const calendarSlice = createSlice({
         state.errors.creating = action.payload || 'Failed to create event';
       });
 
-    // Update event
     builder
       .addCase(updateEventThunk.pending, (state) => {
         state.loading.updating = true;
@@ -326,7 +287,6 @@ const calendarSlice = createSlice({
         state.errors.updating = action.payload || 'Failed to update event';
       });
 
-    // Delete event
     builder
       .addCase(deleteEventThunk.pending, (state) => {
         state.loading.deleting = true;
@@ -344,9 +304,6 @@ const calendarSlice = createSlice({
         state.errors.deleting = action.payload || 'Failed to delete event';
       });
 
-    // Category Thunks
-
-    // Fetch categories
     builder
       .addCase(fetchCategories.pending, (state) => {
         state.loading.categories = true;
@@ -364,13 +321,11 @@ const calendarSlice = createSlice({
         state.errors.categories = action.payload || 'Failed to fetch categories';
       });
 
-    // Create category
     builder
       .addCase(createCategoryThunk.fulfilled, (state, action) => {
         state.categories[action.payload.id] = action.payload;
       });
 
-    // Update category
     builder
       .addCase(updateCategoryThunk.fulfilled, (state, action) => {
         if (state.categories[action.payload.id]) {
@@ -378,15 +333,11 @@ const calendarSlice = createSlice({
         }
       });
 
-    // Delete category
     builder
       .addCase(deleteCategoryThunk.fulfilled, (state, action) => {
         delete state.categories[action.payload.categoryId];
       });
 
-    // Attendee Thunks
-
-    // Add attendees
     builder
       .addCase(addAttendees.fulfilled, (state, action) => {
         if (state.events[action.payload.id]) {
@@ -394,7 +345,6 @@ const calendarSlice = createSlice({
         }
       });
 
-    // Remove attendees
     builder
       .addCase(removeAttendees.fulfilled, (state, action) => {
         if (state.events[action.payload.id]) {
@@ -402,7 +352,6 @@ const calendarSlice = createSlice({
         }
       });
 
-    // Update attendee status (optimistic local update)
     builder
       .addCase(updateAttendeeStatus.fulfilled, (state, action) => {
         const { eventId, userId, status } = action.payload;
@@ -417,7 +366,6 @@ const calendarSlice = createSlice({
         }
       });
 
-    // Templates
     builder
       .addCase(createEventTemplate.fulfilled, (state, action) => {
         state.templates[action.payload.id] = action.payload;

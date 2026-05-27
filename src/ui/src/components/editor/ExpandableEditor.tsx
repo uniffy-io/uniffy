@@ -6,39 +6,21 @@ import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { cn } from '@/shared/utils/cn';
 
 interface ExpandableEditorProps {
-  /** Content type for uploads and comments */
   contentType: ContentType;
-  /** Content ID for uploads and comments */
   contentId: string;
-  /** Markdown content */
   value: string;
-  /** Called when content changes */
   onChange: (markdown: string) => void;
-  /** Placeholder text for empty editor */
   placeholder?: string;
-  /** Enable file uploads (defaults to true when contentId is provided) */
+  /** Defaults to true when `contentId` is provided. */
   enableUpload?: boolean;
-  /** When true, the editor is read-only */
   readonly?: boolean;
-  /** Label shown in the overlay header (e.g. "Description") */
+  /** Overlay header label, e.g. "Description". */
   label?: string;
-  /** Called with each uploaded file ID (for deferred attachment when contentId is empty) */
   onFileUploaded?: (fileId: string) => void;
-  /** Show full content preview without truncation, with a separate edit button */
   fullPreview?: boolean;
-  /**
-   * In `fullPreview` mode, cap the read-only preview at this height so a long
-   * description does not stretch its host (e.g. the task detail modal). The
-   * preview becomes scrollable so the reader can still see the whole content;
-   * click-to-expand opens the full editor in the overlay.
-   */
+  /** Caps the `fullPreview` height so long content doesn't stretch the host (e.g. task detail modal); becomes scrollable. */
   previewMaxHeight?: string;
-  /**
-   * When true, render the label as an uppercase header row above the preview
-   * with the Edit button aligned to the right of the label. Hosts that opt in
-   * should drop their own external heading. When false (default), the host
-   * owns the heading and the Edit button floats at the top-right of the preview.
-   */
+  /** When true, render the label as a header row with Edit aligned right; otherwise the host owns the heading. */
   showHeader?: boolean;
 }
 
@@ -59,7 +41,6 @@ export function ExpandableEditor({
   const [isExpanded, setIsExpanded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
-  // Initial content snapshot for the expanded editor (set once when opening)
   const [draftInitial, setDraftInitial] = useState(value);
 
   const handleOpen = useCallback(() => {
@@ -69,7 +50,7 @@ export function ExpandableEditor({
     setEditorKey((k) => k + 1);
     setIsExpanded(true);
 
-    // Defer editor mount for smooth animation
+    // Defer editor mount so the overlay can animate in first.
     setTimeout(() => {
       setEditorReady(true);
     }, 50);
@@ -84,11 +65,10 @@ export function ExpandableEditor({
     onChange(markdown);
   }, [onChange]);
 
-  // Auto-focus the editor when expanded overlay opens
   const editorPanelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isExpanded || !editorReady) return;
-    // Wait for CrepeEditor to mount and create ProseMirror
+    // Wait for CrepeEditor to mount and attach its ProseMirror DOM.
     const timer = setTimeout(() => {
       const pm = editorPanelRef.current?.querySelector('.ProseMirror') as HTMLElement | null;
       pm?.focus();
@@ -96,7 +76,6 @@ export function ExpandableEditor({
     return () => clearTimeout(timer);
   }, [isExpanded, editorReady]);
 
-  // Close on Escape
   useEffect(() => {
     if (!isExpanded) return;
 

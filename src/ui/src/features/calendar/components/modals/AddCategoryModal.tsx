@@ -1,8 +1,3 @@
-/**
- * Add Category Modal
- * Dialog for creating a new event category
- */
-
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { createCategory, updateCategory } from '@/features/calendar/store/calendarThunks';
@@ -36,7 +31,6 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Populate form when editing + Escape key to close
   useEffect(() => {
     if (isOpen) {
       if (editingCategoryId && categories[editingCategoryId]) {
@@ -99,15 +93,12 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
             {isEditing ? 'Edit Category' : 'New Category'}
@@ -132,7 +123,6 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
           </button>
         </div>
 
-        {/* Content */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {error && (
             <div className="text-sm p-3 rounded-md border status-error">
@@ -175,7 +165,6 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"

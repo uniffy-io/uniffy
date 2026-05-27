@@ -129,10 +129,7 @@ export const chatThreadsSlice = createSlice({
       }>,
     ) => {
       const { messageId, delta, sequence, final } = action.payload;
-      // We do not know which thread bucket holds the placeholder, so we
-      // scan all open thread message lists. ChatStreamProvider dispatches
-      // both this action and the channel one; whichever bucket holds the
-      // row updates, the other no-ops.
+      // The placeholder bucket isn't known; scan all open thread lists.
       for (const messages of Object.values(state.threadMessages)) {
         const msg = messages.find((m) => m.id === messageId);
         if (!msg) continue;
@@ -174,8 +171,6 @@ export const {
   appendDeltaToThreadMessage,
   clearChatThreads,
 } = chatThreadsSlice.actions;
-
-// -- Selectors --
 
 export const selectActiveThreadId = (state: RootState): string | null =>
   state.chatThreads.activeThreadId;

@@ -1,9 +1,3 @@
-/**
- * File Card Component
- *
- * Displays a file in grid or list view with actions.
- */
-
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -137,7 +131,7 @@ export function FileCard({
         setIsEditingTags(true);
     };
 
-    // Handle single click - select file (for details panel), or open on mobile
+    // Single-click selects on desktop (opens details panel); on mobile it opens the viewer directly.
     const handleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming
         if (isRenaming) return;
@@ -156,7 +150,6 @@ export function FileCard({
         }
     };
 
-    // Handle double click - open file viewer (desktop only)
     const handleDoubleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming or in select mode
         if (isRenaming || isSelectMode) return;

@@ -26,9 +26,7 @@ export function setCommentClickHandler(handler: (commentId: string) => void) {
     _onCommentClick = handler;
 }
 
-/**
- * Push updated anchors/activeId into the plugin via a ProseMirror meta transaction.
- */
+/** Push anchors and activeId into the plugin via a meta transaction; ProseMirror reconciles decorations from there. */
 export function updateCommentDecorations(
     view: EditorView,
     anchors: CommentAnchor[],
@@ -39,13 +37,7 @@ export function updateCommentDecorations(
     view.dispatch(tr);
 }
 
-/**
- * Milkdown plugin that highlights commented text selections.
- *
- * Register with `editor.use(commentDecorationsPlugin)` BEFORE `.create()`.
- * After creation, call `updateCommentDecorations(view, anchors, activeId)`
- * whenever the comment data changes.
- */
+/** Inline decorations highlighting commented selections; mention chips render in comment bodies separately. */
 export const commentDecorationsPlugin = $prose(() => {
     let currentAnchors: CommentAnchor[] = [];
     let currentActiveId: string | null = null;

@@ -1,8 +1,4 @@
-/**
- * Capture-tab-audio toggle. Only meaningful when source=tab, otherwise the
- * browser ignores the `audio: true` flag on `getDisplayMedia`. The popover
- * hides this control when source is screen or window.
- */
+/** Only meaningful when source=tab; browser ignores `audio: true` on `getDisplayMedia` otherwise. */
 
 import { SpeakerHigh } from '@phosphor-icons/react';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';

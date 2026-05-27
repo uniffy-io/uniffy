@@ -1,25 +1,3 @@
-/**
- * Live Mention Preview Card
- *
- * Rich hover popover that expands from a MentionChip. Shows a detailed,
- * type-aware preview of the referenced content with live state information.
- *
- * Design language: editorial card with a type-colored accent stripe on the
- * left edge, glass-morphism surface, and type-specific detail sections.
- *
- * Visual structure:
- * +--[accent stripe]-------------------------------+
- * | [icon/avatar]  Title                    [dot]  |
- * |               Type . temporal context          |
- * +------------------------------------------------+
- * | Description or content preview (3 lines max)   |
- * +------------------------------------------------+
- * | Type-specific details (event time, progress)   |
- * +------------------------------------------------+
- * | Updated 2m ago              [Open] [Copy link] |
- * +------------------------------------------------+
- */
-
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import {
@@ -85,7 +63,6 @@ function getTypeTheme(type: UrnType): TypeTheme {
   };
 }
 
-/** Known types that have dedicated preview components */
 const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
   UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE,
   UrnType.NOTE, UrnType.USER, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
@@ -105,7 +82,6 @@ export function MentionPreview({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
-  // Build effective liveState: merge provider state with preview.metadata fallback
   const effectiveLiveState = useMemo((): MentionLiveState | null => {
     if (liveState) return liveState;
     if (!preview?.metadata) return null;

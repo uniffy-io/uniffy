@@ -1,10 +1,3 @@
-/**
- * TypeFieldSchemasSection - Configure which fields are shown/required per task type
- *
- * Used in the EditProjectModal to let admins define per-type field schemas.
- * Only custom (non-system) fields are configurable. System fields are always shown.
- */
-
 import { useCallback } from "react";
 import { cn } from "@/shared/utils/cn";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";

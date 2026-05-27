@@ -1,11 +1,3 @@
-/**
- * BookingModal - Booking creation modal
- *
- * Provides a form for creating a new room booking with date, time, and optional details.
- * Supports pre-selected room or room picker for selection.
- * Uses the shared DatePicker and TimeSelect components for consistency with Calendar.
- */
-
 import { useState, useEffect, useMemo } from 'react';
 import { X, CalendarPlus, Warning } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -34,17 +26,11 @@ interface BookingFormState {
   notes: string;
 }
 
-/**
- * Get today's date as YYYY-MM-DD string.
- */
 function getTodayString(): string {
   const now = new Date();
   return now.toISOString().split('T')[0];
 }
 
-/**
- * Convert decimal hours to HH:MM string.
- */
 function decimalToTimeString(decimal: number): string {
   const hours = Math.floor(decimal);
   const minutes = Math.round((decimal % 1) * 60);
@@ -59,15 +45,14 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
   const [form, setForm] = useState<BookingFormState>({
     selectedRoomId: roomId || null,
     date: getTodayString(),
-    startTime: 9, // 9:00 AM
-    endTime: 10, // 10:00 AM
+    startTime: 9,
+    endTime: 10,
     title: '',
     notes: '',
   });
 
   const [conflict, setConflict] = useState(false);
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form state when modal opens
@@ -83,7 +68,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
     }
   }, [isOpen, roomId]);
 
-  // Check for basic time validation
   const timeError = useMemo(() => {
     if (form.startTime >= form.endTime) {
       return 'End time must be after start time';
@@ -114,7 +98,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
       );
 
       if (createBooking.rejected.match(result)) {
-        // Show conflict warning if the error suggests a conflict
         const errorMsg = (result.payload as string) || '';
         if (errorMsg.toLowerCase().includes('conflict') || errorMsg.toLowerCase().includes('booked') || errorMsg.toLowerCase().includes('overlap')) {
           setConflict(true);
@@ -126,11 +109,10 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
         onClose();
       }
     } catch {
-      // Error handled by middleware
+      // handled by errorToastMiddleware
     }
   };
 
-  // Close on escape
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -145,7 +127,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
   const isSubmitting = loading.creating;
   const canSubmit = !!form.selectedRoomId && !!form.date && !timeError;
 
-  // Build ISO strings for RoomPicker availability check
   const startTimeStr = decimalToTimeString(form.startTime);
   const endTimeStr = decimalToTimeString(form.endTime);
   const pickerStartTime = form.date ? `${form.date}T${startTimeStr}:00` : undefined;
@@ -153,13 +134,11 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
 
   return (
     <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div
         className={cn(
           'relative bg-card w-[calc(100vw-2rem)] max-w-md mx-4',
@@ -168,7 +147,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
           'animate-in zoom-in-95 fade-in duration-200',
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <CalendarPlus size={20} weight="duotone" className="text-muted-foreground" />
@@ -183,10 +161,8 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto flex flex-col gap-4">
-            {/* Room selection */}
             {roomId && roomName ? (
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Room</label>
@@ -212,7 +188,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
               </div>
             )}
 
-            {/* Date */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">
                 Date <span className="text-red-500">*</span>
@@ -227,7 +202,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
               />
             </div>
 
-            {/* Time row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">
@@ -255,12 +229,10 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
               </div>
             </div>
 
-            {/* Time error */}
             {timeError && (
               <p className="text-xs text-red-500">{timeError}</p>
             )}
 
-            {/* Conflict warning */}
             {conflict && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800">
                 <Warning size={16} className="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
@@ -270,7 +242,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
               </div>
             )}
 
-            {/* Title */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Title</label>
               <Input
@@ -280,7 +251,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
               />
             </div>
 
-            {/* Notes */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Notes</label>
               <textarea
@@ -298,7 +268,6 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
             <Button
               type="button"

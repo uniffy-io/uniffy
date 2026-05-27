@@ -1,15 +1,3 @@
-/**
- * AudioRecordingBar Component
- *
- * Renders an inline recording UI inside a ProseMirror NodeView.
- * Uses the MediaRecorder API to capture microphone audio.
- * Shows elapsed time, animated bars, and Stop/Cancel buttons.
- *
- * On stop: calls onComplete(blob) with the recorded audio.
- * On cancel: calls onCancel() to remove the node.
- * Handles mic permission denial gracefully.
- */
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Stop, X, Microphone } from '@phosphor-icons/react';
 

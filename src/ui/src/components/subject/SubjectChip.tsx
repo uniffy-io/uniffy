@@ -1,10 +1,3 @@
-/**
- * SubjectChip - Removable pill showing a selected subject
- *
- * Displays SubjectAvatar (xs) + name + optional remove button.
- * Color-coded border: accent for users, violet for groups.
- */
-
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';

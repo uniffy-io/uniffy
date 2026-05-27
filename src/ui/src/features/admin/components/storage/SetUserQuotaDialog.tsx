@@ -1,11 +1,3 @@
-/**
- * Set User Quota Dialog
- *
- * Dialog for setting or removing a per-user quota override.
- * Shows current usage for context and allows entering a custom quota.
- * Uses the shared Modal, Input, and ByteInput components.
- */
-
 import { useState, useEffect, useMemo } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

@@ -1,22 +1,6 @@
 /**
- * Queue-depth governor for the streaming uploader.
- *
- * The recording rate (`MediaRecorder` output) is decoupled from the upload
- * rate. On a slow uplink, the unsent backlog grows. Without bounds, the
- * recording would pin browser memory until OOM and the IndexedDB quota
- * would also blow.
- *
- * Levels:
- * - normal (< 50 MB): no UI, no events.
- * - slow (50-200 MB): banner warns the user; recording continues.
- * - falling-behind (200-500 MB): more urgent banner ("consider stopping").
- * - auto-stop (> 500 MB): the uploader requests a hard stop. The thunk
- *   then transitions the recorder into stop / flushing so we keep what
- *   we have rather than crashing the tab.
- *
- * Levels are sticky going up but only de-escalate after the backlog
- * drops below the level boundary minus a 10% hysteresis so the banner
- * does not flap around a threshold.
+ * Queue-depth governor. Levels: normal (<50MB), slow (50-200MB), falling-behind (200-500MB),
+ * auto-stop (>500MB, hard-stop to avoid OOM). 10% hysteresis on de-escalation so the banner doesn't flap.
  */
 
 export type BackpressureLevel = 'normal' | 'slow' | 'falling-behind' | 'auto-stop';
@@ -56,10 +40,7 @@ export function classifyBacklog(
         next = 'normal';
     }
 
-    // De-escalation hysteresis: only step DOWN once the backlog dips
-    // below 90% of the previous level's floor; this prevents the banner
-    // from flapping around an exact threshold when the upload rate
-    // briefly equals the capture rate.
+    // De-escalation hysteresis: only step DOWN below 90% of previous level's floor.
     if (next === 'normal' && current !== 'normal') {
         if (backlogBytes >= HYSTERESIS * thresholdFor(current)) {
             return current;

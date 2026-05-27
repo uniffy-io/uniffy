@@ -1,15 +1,4 @@
-/**
- * <TagPicker>
- *
- * Replacement for the legacy ``TagInput``. Async autocomplete via
- * ``SuggestTags`` (debounced, min 2 chars), free-text creation via
- * ``CreateTag``, hard 20-tag manual cap mirroring the backend.
- *
- * Phase 5 expands this with the explorer's filter-rail multi-select
- * presentation and the create-with-color modal. Phase 2 keeps the
- * component intentionally minimal so notes / files / calendar can
- * adopt it now and Phase 5 only has to re-skin.
- */
+/** Async autocomplete via `SuggestTags` (debounced, min 2 chars), free-text creation, hard 20-tag cap matching the backend. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from '@phosphor-icons/react';

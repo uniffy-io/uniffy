@@ -1,9 +1,3 @@
-/**
- * Filters Page Component
- *
- * Page for managing saved file filters.
- */
-
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';

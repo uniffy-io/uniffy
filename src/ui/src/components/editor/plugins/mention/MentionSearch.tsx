@@ -1,15 +1,4 @@
-/**
- * Mention Search Component
- *
- * Displays a centered Spotlight-style search popup when "@" is typed.
- * Uses the same styling as SpotlightSearch for consistency.
- *
- * Supports Google-style keyword filters:
- * - Type filters: note:, file:, user:, calendar:
- * - Tag filters: tag:work
- * - Ownership: my: (current user's content)
- */
-
+// Supports Google-style keyword filters: type prefixes (`note:`, `file:`, ...), `tag:`, and `my:` for the current user's content.
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { EditorView } from '@milkdown/kit/prose/view';
 import { X, At } from '@phosphor-icons/react';

@@ -1,21 +1,4 @@
-/**
- * Tag Mention Preview Card
- *
- * Renders the rich preview for a ``urn:uniffy:content:TAG:{id}`` mention.
- * Denormalised data flows in via ``MentionLiveState`` from the
- * Meilisearch tag entity doc; the preview is render-only and never
- * re-fetches.
- *
- * Layout
- *   - Header: tag swatch + name + slug + "Tag" type label.
- *   - Optional description.
- *   - Stats row: total usage count and last-added relative time.
- *   - Footer: copy URN + "Open in /tags".
- *
- * All elements use inline-friendly markup so the card is HTML-valid as
- * a descendant of ``<p>`` (chip lives inside markdown paragraphs).
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   ArrowSquareOut,

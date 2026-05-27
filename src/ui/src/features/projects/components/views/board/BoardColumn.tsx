@@ -1,13 +1,3 @@
-/**
- * BoardColumn - A single column in the Board view
- *
- * Features:
- * - Header with status color dot, name, and task count
- * - Scrollable card list
- * - Drop zone for drag-and-drop
- * - Collapsible (future feature)
- */
-
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,

@@ -1,10 +1,6 @@
-/**
- * TimeColumn - Left column showing time labels
- */
-
 import { GRID, LAYOUT, DISPLAY_HOURS } from '@/features/calendar/constants';
 
-// Top padding to prevent first time label from being cut off
+/** Top padding to keep the first hour label from clipping. */
 export const TIME_COLUMN_TOP_PADDING = 8;
 
 interface TimeColumnProps {
@@ -12,7 +8,6 @@ interface TimeColumnProps {
 }
 
 export function TimeColumn({ hourHeight = GRID.HOUR_HEIGHT }: TimeColumnProps) {
-  // Filter hours to display
   const visibleHours = DISPLAY_HOURS.filter(
     (h) => h.hour >= GRID.START_HOUR && h.hour <= GRID.END_HOUR
   );
@@ -22,7 +17,6 @@ export function TimeColumn({ hourHeight = GRID.HOUR_HEIGHT }: TimeColumnProps) {
       className="flex-shrink-0 bg-muted/50 border-r border-border"
       style={{ width: LAYOUT.TIME_COLUMN_WIDTH }}
     >
-      {/* Time labels - each label is positioned at the top of its hour block */}
       <div className="relative" style={{ paddingTop: TIME_COLUMN_TOP_PADDING }}>
         {visibleHours.map((hour) => (
           <div
@@ -30,7 +24,7 @@ export function TimeColumn({ hourHeight = GRID.HOUR_HEIGHT }: TimeColumnProps) {
             className="flex items-start justify-end pr-2 text-xs text-muted-foreground"
             style={{ height: hourHeight }}
           >
-            {/* Offset text up by half line-height to center on the hour line */}
+            {/* Lift label by half its line-height so it centers on the hour gridline. */}
             <span style={{ marginTop: -6 }}>{hour.label}</span>
           </div>
         ))}

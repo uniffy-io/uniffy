@@ -1,23 +1,4 @@
-/**
- * useTagFilterState
- *
- * Owns the explorer rail's local filter state and keeps it in sync
- * with the URL so a filtered view is shareable / reload-safe. The
- * ``criteria`` shape mirrors ``SerializedTagFilterCriteria`` from
- * tagsThunks.
- *
- * URL params:
- *   - tags        comma-separated tag ids
- *   - types       comma-separated content type values (the proto
- *                 ContentType numbers; explorer renders to friendly
- *                 labels via the urnTypes config)
- *   - owners      comma-separated user ids
- *   - sources     comma-separated of {manual, inline}
- *   - createdAfter / createdBefore / updatedAfter / updatedBefore
- *                 ISO timestamps
- *   - access      access mode value (proto enum number)
- *   - untagged    "1" when ``untagged_only`` is on
- */
+/** URL-synced filter state. Query params: `tags`, `types`, `owners`, `sources`, `created/updatedAfter/Before`, `access`, `untagged`. */
 
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';

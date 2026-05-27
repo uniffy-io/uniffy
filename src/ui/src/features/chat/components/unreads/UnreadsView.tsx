@@ -1,10 +1,3 @@
-/**
- * UnreadsView - Dedicated page showing all unread messages grouped by channel.
- *
- * Shows each channel with unread messages as a collapsible section with
- * message previews. Users can mark individual channels or all as read.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -33,7 +26,6 @@ interface UnreadChannelSectionProps {
 function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: UnreadChannelSectionProps) {
   const messages = useAppSelector((state) => selectMessagesForChannel(state, channel.id));
 
-  // Get the last N unread messages
   const unreadMessages = useMemo(
     () => messages.filter(m => m.rootId === null).slice(-unreadCount),
     [messages, unreadCount],
@@ -45,7 +37,6 @@ function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: 
 
   return (
     <div className="border-b border-border/50">
-      {/* Channel header */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/20">
         <button
           onClick={() => onNavigate(channel.id)}
@@ -67,7 +58,6 @@ function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: 
         </button>
       </div>
 
-      {/* Unread messages */}
       <div>
         {unreadMessages.map(message => (
           <UnreadMessageItem
@@ -94,12 +84,10 @@ function UnreadMessageItem({ message, channelId, onNavigate }: {
       onClick={() => onNavigate(channelId)}
       className="w-full text-left px-4 py-2 hover:bg-muted/30 transition-colors flex items-start gap-3"
     >
-      {/* Avatar */}
       <div className="shrink-0 mt-0.5">
         <SubjectAvatarById userId={message.senderId} displayName={senderName} size="sm" />
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-semibold text-foreground">{senderName}</span>
@@ -133,7 +121,6 @@ export function UnreadsView() {
   }, [dispatch, navigate]);
 
   const handleMarkRead = useCallback((channelId: string) => {
-    // Find last message to pass to API
     const state = channels.find(c => c.id === channelId);
     if (state) {
       dispatch(markChannelRead({ channelId, lastReadMessageId: '' }));
@@ -151,7 +138,6 @@ export function UnreadsView() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <span className="text-sm font-semibold text-foreground">Unreads</span>
         {unreadChannels.length > 0 && (
@@ -165,7 +151,6 @@ export function UnreadsView() {
         )}
       </div>
 
-      {/* Unread channels list */}
       <div className="flex-1 overflow-y-auto">
         {unreadChannels.length === 0 ? (
           <div className="flex items-center justify-center h-full">

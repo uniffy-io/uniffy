@@ -1,52 +1,35 @@
-/**
- * File Viewer Redux Slice
- *
- * Manages state for the file viewer modal including:
- * - Modal open/close state
- * - Playlist navigation (prev/next file)
- * - Media playback state (play, pause, time, volume)
- * - Image viewer state (zoom, pan, rotation)
- * - PDF viewer state (current page, zoom)
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
 interface ViewerState {
-    // Modal state
     isOpen: boolean;
     isFullscreen: boolean;
 
-    // File data - stored here so viewer works without files domain loaded
-    // When opening from search, file data is fetched and stored here
+    /** Cached so the viewer can open directly from search without the files domain loaded. */
     fileData: SerializedFile | null;
 
-    // Playlist state
     currentFileId: string | null;
-    playlist: string[];  // File IDs in current view
+    playlist: string[];
     playlistIndex: number;
 
-    // Media state (video/audio)
     isPlaying: boolean;
     currentTime: number;
     duration: number;
     volume: number;
     isMuted: boolean;
 
-    // Image viewer state (zoom: 1 = fit to screen)
+    /** zoom 1 = fit to screen. */
     zoom: number;
     panX: number;
     panY: number;
     rotation: number;
 
-    // PDF state
     currentPage: number;
     totalPages: number;
     pdfZoom: number;
     pdfRotation: number;
 
-    // Loading state
     loading: boolean;
     error: string | null;
 }
@@ -79,8 +62,6 @@ export const viewerSlice = createSlice({
     name: 'fileViewer',
     initialState,
     reducers: {
-        // Open viewer with a file and playlist
-        // fileData is optional - if provided, viewer works standalone without files store
         openViewer: (
             state,
             action: PayloadAction<{ fileId: string; playlist?: string[]; fileData?: SerializedFile }>
@@ -91,9 +72,8 @@ export const viewerSlice = createSlice({
             state.playlist = playlist;
             state.playlistIndex = playlist.length > 0 ? playlist.indexOf(fileId) : 0;
             state.fileData = fileData ?? null;
-            state.loading = !fileData; // Not loading if we already have file data
+            state.loading = !fileData;
             state.error = null;
-            // Reset viewer state
             state.zoom = 1;
             state.panX = 0;
             state.panY = 0;
@@ -106,27 +86,22 @@ export const viewerSlice = createSlice({
             state.currentTime = 0;
         },
 
-        // Set file data (used when fetching file async after opening)
         setFileData: (state, action: PayloadAction<SerializedFile>) => {
             state.fileData = action.payload;
             state.loading = false;
         },
 
-        // Close viewer - only set isOpen to false so the Transition
-        // leave animation can complete and Dialog cleans up (removes inert).
-        // File data is kept until the next openViewer call overwrites it.
+        /** Only flips `isOpen`; file data is kept until the next openViewer overwrites it so the Dialog leave-transition can run. */
         closeViewer: (state) => {
             state.isOpen = false;
             state.isFullscreen = false;
         },
 
-        // Navigate to next file in playlist
         nextFile: (state) => {
             if (state.playlistIndex < state.playlist.length - 1) {
                 state.playlistIndex += 1;
                 state.currentFileId = state.playlist[state.playlistIndex];
                 state.loading = true;
-                // Reset viewer state for new file
                 state.zoom = 1;
                 state.panX = 0;
                 state.panY = 0;
@@ -137,13 +112,11 @@ export const viewerSlice = createSlice({
             }
         },
 
-        // Navigate to previous file in playlist
         previousFile: (state) => {
             if (state.playlistIndex > 0) {
                 state.playlistIndex -= 1;
                 state.currentFileId = state.playlist[state.playlistIndex];
                 state.loading = true;
-                // Reset viewer state for new file
                 state.zoom = 1;
                 state.panX = 0;
                 state.panY = 0;
@@ -154,7 +127,6 @@ export const viewerSlice = createSlice({
             }
         },
 
-        // Toggle fullscreen
         toggleFullscreen: (state) => {
             state.isFullscreen = !state.isFullscreen;
         },
@@ -163,7 +135,6 @@ export const viewerSlice = createSlice({
             state.isFullscreen = action.payload;
         },
 
-        // Media controls
         setPlaying: (state, action: PayloadAction<boolean>) => {
             state.isPlaying = action.payload;
         },
@@ -192,7 +163,6 @@ export const viewerSlice = createSlice({
             state.isMuted = !state.isMuted;
         },
 
-        // Image viewer controls
         setZoom: (state, action: PayloadAction<number>) => {
             state.zoom = Math.max(0.1, Math.min(10, action.payload));
         },
@@ -213,7 +183,6 @@ export const viewerSlice = createSlice({
             state.rotation = 0;
         },
 
-        // PDF controls
         setPage: (state, action: PayloadAction<number>) => {
             const page = action.payload;
             if (page >= 1 && page <= state.totalPages) {
@@ -233,7 +202,6 @@ export const viewerSlice = createSlice({
             state.pdfRotation = action.payload % 360;
         },
 
-        // Loading state
         setLoading: (state, action: PayloadAction<boolean>) => {
             state.loading = action.payload;
         },
@@ -272,7 +240,6 @@ export const {
     setError,
 } = viewerSlice.actions;
 
-// Aliases for clearer naming in viewer components
 export const setViewerLoading = setLoading;
 export const setViewerError = setError;
 

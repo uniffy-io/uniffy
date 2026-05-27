@@ -1,11 +1,3 @@
-/**
- * Async thunks for the agents governance admin surface.
- *
- * Calls the BudgetsService and RateLimitsService through
- * agentsGovernanceApi. Errors propagate to the global toast
- * middleware - never raise toast manually here.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { agentsGovernanceApi } from '@/features/admin/api/agentsGovernanceApi';
@@ -55,8 +47,6 @@ function requireOrg(getState: () => RootState): string {
     if (!orgId) throw new Error('No organization selected');
     return orgId;
 }
-
-// --- Budget ---
 
 export const fetchOrgBudget = createAsyncThunk<
     OrgBudgetState | null,
@@ -125,8 +115,6 @@ export const fetchCurrentSpend = createAsyncThunk<
     };
 });
 
-// --- Rate limits ---
-
 export const fetchRateLimits = createAsyncThunk<
     RateLimitState[],
     void,
@@ -168,8 +156,6 @@ export const deleteRateLimit = createAsyncThunk<
     await agentsGovernanceApi.deleteRateLimit({ organizationId, kind });
     return kind;
 });
-
-// --- Currencies ---
 
 export const fetchCurrencyRates = createAsyncThunk<
     CurrencyRateState[],
@@ -239,8 +225,6 @@ export const setDisplayCurrency = createAsyncThunk<
     });
     return resp.displayCurrency;
 });
-
-// --- User quota ---
 
 export interface UpsertUserQuotaArgs {
     userId: string;

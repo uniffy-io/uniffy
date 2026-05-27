@@ -16,20 +16,15 @@ import {
 import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
 import type { Task, CreateTaskRequest, UpdateTaskRequest, MoveTaskRequest } from "@/features/projects/types/project";
 
-/**
- * Hook for managing tasks within the current project
- */
 export function useTasks() {
   const dispatch = useAppDispatch();
 
   const currentProjectId = useAppSelector(selectCurrentProjectId);
 
-  // Get tasks for current project
   const tasks = useAppSelector((state) =>
     currentProjectId ? selectTasksForProject(currentProjectId)(state) : []
   );
 
-  // Get tasks grouped by status for current project
   const tasksByStatus = useAppSelector((state) =>
     currentProjectId ? selectTasksByStatus(currentProjectId)(state) : {}
   );
@@ -64,7 +59,6 @@ export function useTasks() {
 
   const reorderTask = useCallback(
     (data: MoveTaskRequest) => {
-      // Optimistic update
       dispatch(optimisticUpdateTask({ id: data.id, status: data.status, sortOrder: data.sortOrder }));
       return dispatch(moveTask(data));
     },
@@ -95,9 +89,6 @@ interface UseFilteredTasksOptions {
   includeSubtasks?: boolean;
 }
 
-/**
- * Hook for filtering and sorting tasks
- */
 export function useFilteredTasks(
   projectId: string,
   options: UseFilteredTasksOptions = {},
@@ -112,8 +103,7 @@ export function useFilteredTasks(
   const rootOnlyFilter = useAppSelector((state) => state.projectsUi.rootOnlyFilter);
   const inEpicFilter = useAppSelector((state) => state.projectsUi.inEpicFilter);
 
-  // Hierarchy index is computed against the full task set so ancestry walks
-  // are correct even when the quick filters would otherwise hide a parent.
+  // Hierarchy index walks the full task set so ancestry stays correct when quick filters hide a parent.
   const hierarchyIndex = useMemo(() => buildTaskHierarchyIndex(tasks), [tasks]);
 
   const filteredTasks = useMemo(() => {
@@ -129,7 +119,6 @@ export function useFilteredTasks(
       );
     }
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -139,22 +128,18 @@ export function useFilteredTasks(
       );
     }
 
-    // Apply sprint quick filter
     if (sprintFilter === "__backlog__") {
       result = result.filter((task) => task.sprintId === null);
     } else if (sprintFilter) {
       result = result.filter((task) => task.sprintId === sprintFilter);
     }
 
-    // Apply task type quick filter
     if (taskTypeFilter) {
       result = result.filter((task) => (task.taskType || "task") === taskTypeFilter);
     }
 
-    // Apply filter conditions
     result = applyFilters(result, filterConfig, hierarchyIndex);
 
-    // Apply sorting
     if (sortConfig) {
       result.sort((a, b) => {
         const aVal = getFieldValue(a, sortConfig.fieldId);
@@ -191,9 +176,6 @@ export function useFilteredTasks(
   return filteredTasks;
 }
 
-/**
- * Get a field value from a task
- */
 function getFieldValue(task: Task, fieldId: string): unknown {
   switch (fieldId) {
     case "field_title":

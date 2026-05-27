@@ -1,23 +1,14 @@
-/**
- * HighlightPicker - Color picker popover for text highlighting.
- *
- * Displays a small grid of color circles and a remove option.
- * Positioned near the text selection via portal.
- */
-
 import { useEffect, useRef } from 'react';
 import { HIGHLIGHT_COLORS, colorToBg } from '@/components/editor/plugins/highlight/index';
 
 interface HighlightPickerProps {
-  /** Bounding rect of the text selection for positioning */
   anchorRect: DOMRect;
-  /** Called with color hex value, or null to remove highlight */
+  /** Hex color, or null to remove the highlight. */
   onSelect: (color: string | null) => void;
-  /** Called when the picker should close without action */
   onClose: () => void;
 }
 
-// Eraser SVG icon (Phosphor Eraser, 16x16)
+// Phosphor Eraser, 16x16.
 const ERASER_ICON = (
   <svg
     xmlns="http://www.w3.org/2000/svg"

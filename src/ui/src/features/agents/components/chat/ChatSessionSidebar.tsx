@@ -1,11 +1,3 @@
-/**
- * ChatSessionSidebar - Session list sidebar for the chat view.
- *
- * Shows all user sessions sorted by most recent activity.
- * Includes a "New Chat" button with agent picker, session switching,
- * inline rename (double-click), and archive (hover action).
- */
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Trash, ChatCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -191,12 +183,10 @@ export function ChatSessionSidebar() {
 
     return (
         <div className="flex flex-col h-full bg-card">
-            {/* Header with New Chat button */}
             <div className="px-3 pt-3 pb-2">
                 <AgentPicker onSelectAgent={handleNewChat} />
             </div>
 
-            {/* Session list */}
             <div className="flex-1 overflow-y-auto px-2 pb-2">
                 {sessionsLoading && sessions.length === 0 ? (
                     <AgentsSidebarSkeleton />

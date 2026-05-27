@@ -15,13 +15,7 @@ function loadSet(scope: string, projectId: string): Set<string> {
   }
 }
 
-/**
- * Persists a Set<string> per (scope, projectId) in localStorage. Used for
- * collapse/expand state of swimlanes, outline subtasks, etc.
- *
- * Reloads when projectId changes so the hook works even when the parent
- * mounts before the project has finished loading.
- */
+/** Persists a Set per (scope, projectId) in localStorage; reloads on key change. */
 export function useProjectCollapsedSet(scope: string, projectId: string) {
   const [set, setSet] = useState<Set<string>>(() => loadSet(scope, projectId));
   const lastKeyRef = useRef(storageKey(scope, projectId));

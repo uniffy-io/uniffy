@@ -1,13 +1,3 @@
-/**
- * CollapsibleSidebarRail - Collapsed sidebar icon rail with hover-to-expand overlay.
- *
- * When the sidebar is collapsed, renders a narrow icon rail (w-12) showing
- * section icons and an expand button. Hovering the rail reveals the full sidebar
- * content as an overlay that slides out from the left.
- *
- * Used by all domain layouts for consistent sidebar collapse behavior.
- */
-
 import { type ReactNode } from 'react';
 import type { Icon } from '@phosphor-icons/react';
 import { CaretDoubleRight } from '@phosphor-icons/react';
@@ -37,7 +27,6 @@ export function CollapsibleSidebarRail({
 }: CollapsibleSidebarRailProps) {
   return (
     <div className="group/sidebar h-full relative">
-      {/* Icon rail - always visible */}
       <div className="h-full flex flex-col items-center pt-3 gap-0.5 bg-background border-r border-border">
         <button
           type="button"
@@ -71,7 +60,6 @@ export function CollapsibleSidebarRail({
         })}
       </div>
 
-      {/* Full sidebar overlay on hover */}
       <div
         className={cn(
           'absolute inset-y-0 left-0 z-10',

@@ -1,11 +1,4 @@
-/**
- * Hook to get a cache-busted avatar URL for a user.
- *
- * Returns `null` when we know the user has no avatar (member loaded with
- * `hasAvatar === false`). Returns a constructed URL when the member has an
- * avatar OR when the member is not yet loaded — callers must still tolerate
- * a 404 in the latter case via image `onError`.
- */
+/** Returns null when `hasAvatar === false`, a constructed URL when the member is loaded with an avatar or not yet loaded. Callers must tolerate 404 via `onError` in the latter case. */
 
 import { useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';

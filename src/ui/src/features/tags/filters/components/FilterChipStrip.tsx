@@ -1,12 +1,3 @@
-/**
- * <FilterChipStrip>
- *
- * Renders the active criteria as removable chips above the explorer
- * panels. Each chip clears just its slice when clicked. The strip
- * sits in the page header and complements the persistent rail; the
- * user always sees what is narrowing the view.
- */
-
 import type { ReactNode } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';

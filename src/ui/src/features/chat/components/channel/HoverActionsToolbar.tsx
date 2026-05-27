@@ -48,7 +48,6 @@ function HoverActionsToolbarInner({
 
   const isOwnMessage = senderId === currentUserId;
 
-  // Close more menu on click outside
   useEffect(() => {
     if (!showMoreMenu) return;
 
@@ -147,7 +146,6 @@ function HoverActionsToolbarInner({
       )}
       data-testid={`chat-message-actions-${messageId}`}
     >
-      {/* Add reaction */}
       <button
         ref={emojiButtonRef}
         className={buttonClass}
@@ -165,7 +163,6 @@ function HoverActionsToolbarInner({
         />
       )}
 
-      {/* Reply in thread */}
       <button
         className={buttonClass}
         title="Reply in thread"
@@ -175,7 +172,6 @@ function HoverActionsToolbarInner({
         <ChatText size={16} />
       </button>
 
-      {/* Pin/unpin */}
       <button
         className={buttonClass}
         title={isPinned ? 'Unpin message' : 'Pin message'}
@@ -186,7 +182,6 @@ function HoverActionsToolbarInner({
         <PushPin size={16} weight={isPinned ? 'fill' : 'regular'} />
       </button>
 
-      {/* Quote reply */}
       <button
         className={buttonClass}
         title="Quote reply"
@@ -196,7 +191,6 @@ function HoverActionsToolbarInner({
         <ArrowBendUpLeft size={16} />
       </button>
 
-      {/* More actions */}
       <div className="relative" ref={moreMenuRef}>
         <button
           className={buttonClass}

@@ -1,13 +1,4 @@
-/**
- * ProseMirror plugin that maintains the per-view heading outline. On every
- * transaction with `docChanged` it walks top-level children of the document
- * looking for `heading` nodes, computes the slug + occurrence suffix, and
- * publishes the entries to `tocOutlineSubject`.
- *
- * Top-level-only filter: headings inside tables, code blocks, blockquotes,
- * or any other container are intentionally excluded -- only ToC entries for
- * structural document headings make sense.
- */
+// Top-level only: headings inside tables/code/blockquotes are intentionally excluded — only structural document headings appear in the ToC.
 
 import { $prose } from '@milkdown/kit/utils';
 import { Plugin, PluginKey } from '@milkdown/prose/state';

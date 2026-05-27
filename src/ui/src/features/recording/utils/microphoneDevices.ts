@@ -1,12 +1,4 @@
-/**
- * Enumerate microphone devices for the popover picker.
- *
- * Browsers withhold device labels until the user has granted *some* mic
- * permission to the origin in the past. We do not force a permission prompt
- * on popover open; if labels come back blank we fall back to a generic name
- * with the device id suffix so the user can still pick one. Once they record
- * once with the mic on, subsequent popover opens get real labels.
- */
+/** Browsers withhold device labels until mic permission has ever been granted; fall back to id-suffix labels. */
 
 export interface MicrophoneDevice {
     deviceId: string;

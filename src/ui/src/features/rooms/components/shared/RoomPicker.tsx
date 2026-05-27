@@ -1,10 +1,3 @@
-/**
- * RoomPicker - Reusable room selector for embedding in forms
- *
- * Provides a button that toggles a dropdown with search, amenity filter,
- * and room list. Shows availability status when startTime/endTime are provided.
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Door, X, MagnifyingGlass, Users, Check, Circle, Funnel } from '@phosphor-icons/react';
@@ -31,9 +24,6 @@ interface RoomPickerProps {
   className?: string;
 }
 
-/**
- * Collect all unique amenities across rooms for the filter.
- */
 function collectAmenities(rooms: Room[]): string[] {
   const set = new Set<string>();
   for (const room of rooms) {
@@ -63,10 +53,7 @@ export function RoomPicker({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  // Fetch rooms once per (org) mount. Gating on ``rooms.length === 0``
-  // would loop forever for orgs with no rooms: the fulfilled action
-  // leaves ``loading.rooms`` false and the empty list as-is, so the
-  // dep tuple fires again on each commit.
+  // Gate on org id ref, not rooms.length: zero-room orgs would loop forever.
   const fetchedForOrg = useRef<string | null>(null);
   useEffect(() => {
     if (fetchedForOrg.current === organizationId) return;
@@ -126,7 +113,6 @@ export function RoomPicker({
     }
   }, [isOpen, updatePosition]);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
     function handleClick(e: MouseEvent) {
@@ -141,7 +127,6 @@ export function RoomPicker({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -174,7 +159,6 @@ export function RoomPicker({
     });
   };
 
-  // Check availability for the selected time range
   const { availableRoomIds } = usePickerAvailability(startTime, endTime, organizationId);
 
   const dropdown = isOpen && position ? createPortal(
@@ -192,7 +176,6 @@ export function RoomPicker({
         'animate-in fade-in-0 slide-in-from-top-2 duration-100',
       )}
     >
-      {/* Search + amenity filter toggle */}
       <div className="p-2 border-b border-border space-y-2">
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1">
@@ -225,7 +208,6 @@ export function RoomPicker({
           )}
         </div>
 
-        {/* Amenity filter chips */}
         {showAmenityFilter && (
           <div className="flex flex-wrap gap-1">
             {allAmenities.map((amenity) => {
@@ -251,7 +233,6 @@ export function RoomPicker({
           </div>
         )}
 
-        {/* Clear all filters */}
         {(search.trim() || requiredAmenities.size > 0) && (
           <button
             type="button"
@@ -266,7 +247,6 @@ export function RoomPicker({
         )}
       </div>
 
-      {/* Room list */}
       <div className="max-h-60 overflow-y-auto py-1">
         {loading.rooms ? (
           <div className="px-3 py-4 text-center text-sm text-muted-foreground">
@@ -279,7 +259,6 @@ export function RoomPicker({
         ) : (
           filteredRooms.map((room) => {
             const isSelected = room.id === selectedRoomId;
-            // If we have time-based availability data, use it; otherwise null
             const availability = availableRoomIds ? availableRoomIds.has(room.id) : null;
             return (
               <button
@@ -311,7 +290,6 @@ export function RoomPicker({
                     )}
                   </div>
                 </div>
-                {/* Availability indicator */}
                 {availability !== null && (
                   <span
                     className={cn(

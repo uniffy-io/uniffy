@@ -5,18 +5,10 @@ import { formatTimeRemaining } from '@/shared/utils/dateFormatting';
 interface CustomStatusDisplayProps {
     userId: string;
     className?: string;
-    /**
-     * Compact mode shows only the emoji with the text/time exposed via the
-     * native title tooltip. Intended for tight rows like sidebar entries
-     * and message headers where horizontal space is at a premium.
-     */
+    /** Emoji-only with text/time in the title tooltip. */
     compact?: boolean;
 }
 
-/**
- * Inline display of a user's custom status (emoji + text + time remaining).
- * Returns null if no custom status is set or it has expired.
- */
 export function CustomStatusDisplay({
     userId,
     className,

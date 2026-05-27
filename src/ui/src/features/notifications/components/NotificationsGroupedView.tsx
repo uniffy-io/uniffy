@@ -1,11 +1,3 @@
-/**
- * Grouped notification view for the full-page notifications.
- *
- * Groups notifications by source URN so all notifications about the
- * same content appear together. Shows latest notification per group
- * with expandable history.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CaretDown, CaretRight, BellSimple } from '@phosphor-icons/react';

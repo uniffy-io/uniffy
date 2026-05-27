@@ -1,7 +1,3 @@
-/**
- * GridLines - Horizontal and vertical grid lines for the calendar
- */
-
 import { GRID } from '@/features/calendar/constants';
 
 interface GridLinesProps {
@@ -16,7 +12,6 @@ export function GridLines({ columnCount, hourCount, topOffset = 0, hourHeight = 
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-      {/* Horizontal lines (hours) */}
       {Array.from({ length: hourCount + 1 }).map((_, i) => (
         <div
           key={`h-${i}`}
@@ -25,7 +20,6 @@ export function GridLines({ columnCount, hourCount, topOffset = 0, hourHeight = 
         />
       ))}
 
-      {/* Half-hour lines (subtle) */}
       {Array.from({ length: hourCount }).map((_, i) => (
         <div
           key={`hh-${i}`}
@@ -34,7 +28,6 @@ export function GridLines({ columnCount, hourCount, topOffset = 0, hourHeight = 
         />
       ))}
 
-      {/* Vertical lines (day separators) */}
       {Array.from({ length: columnCount - 1 }).map((_, i) => (
         <div
           key={`v-${i}`}

@@ -1,19 +1,3 @@
-/**
- * CalendarLayout - Main three-panel layout for the Calendar feature
- *
- * Structure:
- * - Left sidebar (280px default): Navigation, calendars, categories
- * - Main content (flexible): Calendar grid
- * - Right detail panel (300px): Event details (conditional)
- *
- * Responsive:
- * - Mobile: sidebar and detail panel as drawers, content full width
- * - Tablet: sidebar inline (narrower), detail panel as drawer
- * - Desktop: all panels inline and resizable
- *
- * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
- */
-
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import {
@@ -81,14 +65,13 @@ export function CalendarLayout({
 
   const sidebarAsDrawer = isMobile;
   const detailAsDrawer = isMobileOrTablet;
-  // On desktop, use modal when user prefers it; on mobile/tablet always use drawer
+  // Modal mode is desktop-only; mobile/tablet always use the drawer.
   const useModalForDetail = !isMobileOrTablet && detailViewMode === 'modal';
   const showSidebar = !isZenMode && !isSidebarCollapsed;
   const showCollapsedRail = !isZenMode && isSidebarCollapsed && !sidebarAsDrawer;
 
   return (
     <div className="relative h-full bg-background overflow-hidden">
-      {/* Collapsed sidebar rail */}
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
           <CollapsibleSidebarRail
@@ -106,7 +89,6 @@ export function CalendarLayout({
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Left Sidebar - inline on tablet+, drawer on mobile */}
         {showSidebar && !sidebarAsDrawer && (
           <>
             <Panel
@@ -123,14 +105,12 @@ export function CalendarLayout({
           </>
         )}
 
-        {/* Main Calendar Content */}
         <Panel id="calendar-main" minSize={isMobileOrTablet ? 200 : 400}>
           <div className={cn('h-full overflow-hidden bg-card', showCollapsedRail && 'ml-12')}>
             {mainContent}
           </div>
         </Panel>
 
-        {/* Right Detail Panel - inline on desktop (sidebar mode only) */}
         {!isZenMode && isDetailPanelOpen && detailPanel && !detailAsDrawer && !useModalForDetail && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
@@ -149,7 +129,6 @@ export function CalendarLayout({
         )}
       </Group>
 
-      {/* Mobile sidebar drawer */}
       {sidebarAsDrawer && (
         <Drawer
           open={showSidebar}
@@ -162,7 +141,6 @@ export function CalendarLayout({
         </Drawer>
       )}
 
-      {/* Tablet/mobile detail drawer */}
       {detailAsDrawer && (
         <Drawer
           open={!isZenMode && isDetailPanelOpen && !!detailPanel}
@@ -176,7 +154,6 @@ export function CalendarLayout({
         </Drawer>
       )}
 
-      {/* Desktop detail modal (modal mode) */}
       {!isZenMode && isDetailPanelOpen && useModalForDetail && (
         <EventDetailModal />
       )}

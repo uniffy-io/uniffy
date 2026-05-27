@@ -1,14 +1,7 @@
 import { useAppSelector } from '@/app/hooks';
 import { ContentRole, AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
-/**
- * Returns the current user's effective role on a piece of content.
- *
- * Preferred usage: callers read the `userRole` field from their domain slice
- * row directly and pass it as `explicitRole`. For content without a domain
- * slice entry, falls back to deriving from the permissions slice policy
- * (fetched by `useContentMembers`).
- */
+/** Prefer `explicitRole` from the domain slice; fall back to policy resolution. */
 export function useMyContentRole(
     contentType: number,
     contentId: string,
@@ -19,9 +12,7 @@ export function useMyContentRole(
         (s) => s.permissions.byContent[`${contentType}:${contentId}`]?.policy,
     );
 
-    // Treat UNSPECIFIED (0) as "not set" so a stale or in-flight proto value
-    // falls through to the policy-based resolution below instead of forcing
-    // a no-access verdict on the caller.
+    // UNSPECIFIED means "not set" - fall through rather than denying access.
     if (
         explicitRole !== undefined
         && explicitRole !== null

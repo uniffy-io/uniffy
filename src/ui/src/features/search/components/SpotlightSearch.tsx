@@ -1,15 +1,3 @@
-/**
- * Spotlight Search Component
- *
- * A macOS Spotlight-style search popup that can be triggered globally.
- * Opens with Ctrl+K (Cmd+K on Mac) and navigates to selected result.
- *
- * Supports Google-style keyword filters:
- * - Type filters: note:, file:, user:, calendar:
- * - Tag filters: tag:work
- * - Ownership: my: (current user's content)
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
@@ -45,7 +33,7 @@ export function SpotlightSearch() {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Exclude chat messages from search results when not in the chat domain
+    // Chat messages only surface when the user is already inside the chat domain.
     const isInChatDomain = location.pathname.startsWith('/chat');
     const searchOptions = useMemo(() => {
         if (isInChatDomain) return undefined;
@@ -55,7 +43,6 @@ export function SpotlightSearch() {
     const { query, setQuery, results, isLoading, clearResults, parsedQuery, hasFilters } = useSearch(searchOptions);
     const shortcutDisplay = useFormattedKeybinding('nav.search');
 
-    // Filter removal handlers
     const handleRemoveTypeFilter = useCallback((type: number) => {
         const newQuery = removeTypeFilterFromQuery(query, type);
         setQuery(newQuery);
@@ -86,21 +73,18 @@ export function SpotlightSearch() {
         inputRef.current?.focus();
     }, [setQuery]);
 
-    // Compute bounded index inline to handle when results change
-    // This avoids calling setState in an effect which causes cascading renders
+    // Bound inline rather than via effect to avoid cascading renders when results change.
     const boundedSelectedIndex = results.length === 0 ? 0 : Math.min(selectedIndex, results.length - 1);
 
-    // Copy selected result's URN to clipboard
     const copySelectedUrn = useCallback(async () => {
         const selected = results[boundedSelectedIndex];
         if (!selected?.urn) return;
 
         try {
-            // Try modern clipboard API first
             if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(selected.urn);
             } else {
-                // Fallback for non-HTTPS contexts
+                // navigator.clipboard is gated to secure contexts; fall back to execCommand.
                 const textArea = document.createElement('textarea');
                 textArea.value = selected.urn;
                 textArea.style.position = 'fixed';
@@ -117,7 +101,6 @@ export function SpotlightSearch() {
         }
     }, [results, boundedSelectedIndex]);
 
-    // Open spotlight with keyboard shortcut or programmatic trigger
     const handleOpen = useCallback(() => {
         setIsOpen(true);
     }, []);
@@ -128,10 +111,8 @@ export function SpotlightSearch() {
     }, [clearResults]);
 
     const handleResultSelect = useCallback(async (result: SearchResultItem) => {
-        // For FILE results, open the viewer modal instead of navigating
-        // This keeps the user on their current page
+        // Files open in the viewer modal so the user stays on the current page.
         if (result.type === SearchResultType.FILE) {
-            // Extract file ID from URN (urn:uniffy:content:FILE:uuid)
             const fileId = result.urn.split(':').pop();
             if (fileId) {
                 dispatch(openViewerWithFetch({ fileId }));
@@ -140,9 +121,7 @@ export function SpotlightSearch() {
             return;
         }
 
-        // For USER results, open (or create) the 1:1 DM with that user instead
-        // of routing to the user profile page. The backend create_dm path is
-        // idempotent for 1:1 pairs so an existing chat is reused.
+        // Users open the 1:1 DM (create_dm is idempotent for pairs) instead of a profile page.
         if (result.type === SearchResultType.USER) {
             const userId = result.urn.split(':').pop();
             if (userId) {
@@ -158,7 +137,7 @@ export function SpotlightSearch() {
                     handleClose();
                     return;
                 } catch {
-                    // Fall through to default navigation if DM open failed.
+                    // Fall through to default navigation.
                 }
             }
         }
@@ -170,10 +149,8 @@ export function SpotlightSearch() {
     useShortcutHandler('nav.search', handleOpen);
     useSpotlightOpenListener(handleOpen);
 
-    // Focus input when opened
     useEffect(() => {
         if (isOpen) {
-            // Small delay to ensure the input is rendered
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 10);
@@ -181,7 +158,6 @@ export function SpotlightSearch() {
         }
     }, [isOpen]);
 
-    // Close on escape or click outside
     useEffect(() => {
         if (!isOpen) return;
 
@@ -212,7 +188,6 @@ export function SpotlightSearch() {
     };
 
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        // Handle Ctrl/Cmd+C to copy URN
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
             if (results.length > 0) {
                 e.preventDefault();
@@ -232,18 +207,14 @@ export function SpotlightSearch() {
 
     return (
         <>
-            {/* Backdrop overlay */}
             <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[999] animate-in fade-in-0 duration-150" />
 
-            {/* Centered popup container */}
             <div className="fixed inset-0 z-[1000] flex items-start justify-center pt-[15vh]">
                 <div
                     ref={containerRef}
                     className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
                 >
-                    {/* Search input card */}
                     <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
-                        {/* Search input */}
                         <div className="relative flex items-center border-b border-border/50">
                             <MagnifyingGlass size={20} weight="bold" className="absolute left-4 text-muted-foreground" />
                             <input
@@ -278,7 +249,6 @@ export function SpotlightSearch() {
                             </div>
                         </div>
 
-                        {/* Active filters display */}
                         {hasFilters && (
                             <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b border-border/50 bg-muted/30">
                                 {parsedQuery.filters.types.map((type) => (
@@ -319,7 +289,6 @@ export function SpotlightSearch() {
                             </div>
                         )}
 
-                        {/* Results or empty prompt */}
                         {query.trim() || isLoading || hasFilters ? (
                             <SearchResultsList
                                 results={results}

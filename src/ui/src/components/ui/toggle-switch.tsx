@@ -1,9 +1,3 @@
-/**
- * ToggleSwitch - Custom toggle switch component
- *
- * Used across settings pages for boolean toggles.
- */
-
 import { cn } from "@/shared/utils/cn";
 
 interface ToggleSwitchProps {

@@ -1,9 +1,3 @@
-/**
- * CreateTaskModal - Modal for creating a new task
- *
- * Form with title, description, status, priority, assignee, and dates.
- */
-
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { X, Plus, CaretDown } from "@phosphor-icons/react";
 import { TaskRecurrenceSelector } from "@/features/projects/components/detail/TaskRecurrenceSelector";

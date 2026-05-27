@@ -1,7 +1,3 @@
-/**
- * Hook for calendar date navigation
- */
-
 import { useCallback, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
@@ -20,41 +16,26 @@ import {
   parseISO,
 } from '@/features/calendar/utils';
 
-/**
- * Hook for managing calendar navigation
- */
 export function useCalendarNavigation() {
   const dispatch = useAppDispatch();
   const { currentDate, viewMode } = useAppSelector((state) => state.calendarUi);
 
   const currentDateObj = useMemo(() => parseISO(currentDate), [currentDate]);
 
-  /**
-   * Navigate to the previous period (day/week/month based on view mode)
-   */
   const goToPrevious = useCallback(() => {
     const newDate = navigateDate(currentDate, 'previous', viewMode);
     dispatch(setCurrentDate(newDate.toISOString().split('T')[0]));
   }, [currentDate, viewMode, dispatch]);
 
-  /**
-   * Navigate to the next period (day/week/month based on view mode)
-   */
   const goToNext = useCallback(() => {
     const newDate = navigateDate(currentDate, 'next', viewMode);
     dispatch(setCurrentDate(newDate.toISOString().split('T')[0]));
   }, [currentDate, viewMode, dispatch]);
 
-  /**
-   * Navigate to today
-   */
   const handleGoToToday = useCallback(() => {
     dispatch(goToToday());
   }, [dispatch]);
 
-  /**
-   * Navigate to a specific date
-   */
   const goToDate = useCallback(
     (date: Date | string) => {
       const dateString =
@@ -64,9 +45,6 @@ export function useCalendarNavigation() {
     [dispatch]
   );
 
-  /**
-   * Change the view mode
-   */
   const changeViewMode = useCallback(
     (mode: ViewMode) => {
       dispatch(setViewMode(mode));
@@ -74,9 +52,6 @@ export function useCalendarNavigation() {
     [dispatch]
   );
 
-  /**
-   * Get the header title based on current view
-   */
   const headerTitle = useMemo(() => {
     switch (viewMode) {
       case 'day':
@@ -92,25 +67,16 @@ export function useCalendarNavigation() {
     }
   }, [currentDate, viewMode]);
 
-  /**
-   * Get week dates for the current week
-   */
   const weekDates = useMemo(
     () => getWeekDates(currentDate),
     [currentDate]
   );
 
-  /**
-   * Get day columns for the current week
-   */
   const weekColumns = useMemo(
     () => getWeekColumns(currentDate),
     [currentDate]
   );
 
-  /**
-   * Get day columns for the current month
-   */
   const monthColumns = useMemo(
     () => getMonthColumns(currentDate),
     [currentDate]

@@ -1,14 +1,3 @@
-/**
- * RoadmapView - Gantt-style timeline view
- *
- * Features:
- * - Left panel: Task list (340px)
- * - Right panel: Timeline grid with gantt bars
- * - Synchronized scrolling
- * - Zoom controls (day/week/month)
- * - Today navigation
- */
-
 import { useState, useRef, useMemo, useCallback } from "react";
 import { CaretLeft, CaretRight, CalendarBlank } from "@phosphor-icons/react";
 import { startOfDay, format } from "date-fns";

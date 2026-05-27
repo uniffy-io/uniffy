@@ -1,11 +1,3 @@
-/**
- * TaskRedirectPage - Resolves a task ID to its project and redirects.
- *
- * Handles the route /projects/task/:taskId by fetching the task
- * from the API, reading its projectId, and navigating to
- * /projects/:projectId/tasks/:taskId.
- */
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";

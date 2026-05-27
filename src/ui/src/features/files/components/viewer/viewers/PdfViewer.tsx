@@ -1,11 +1,3 @@
-/**
- * PDF Viewer
- *
- * PDF viewer using react-pdf with page navigation and zoom.
- * Controls are in the main toolbar (ViewerToolbar).
- * Arrow keys navigate pages (handled by parent modal).
- */
-
 import { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -32,7 +24,6 @@ export function PdfViewer({ file }: PdfViewerProps) {
 
     const [error, setError] = useState<string | null>(null);
 
-    // Handle document load success
     const handleDocumentLoadSuccess = useCallback(
         ({ numPages }: { numPages: number }) => {
             dispatch(setTotalPages(numPages));
@@ -41,7 +32,6 @@ export function PdfViewer({ file }: PdfViewerProps) {
         [dispatch]
     );
 
-    // Handle document load error
     const handleDocumentLoadError = useCallback(
         () => {
             setError('Failed to load PDF');
@@ -50,7 +40,6 @@ export function PdfViewer({ file }: PdfViewerProps) {
         [dispatch]
     );
 
-    // Show loading while downloading
     if (downloadLoading) {
         return (
             <div className="viewer-loading">

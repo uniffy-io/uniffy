@@ -45,25 +45,20 @@ export function ThreadFooter({
         }
       }}
     >
-      {/* Participant avatars */}
       <SubjectAvatarStack subjectIds={participantIds} size="xs" maxDisplay={4} />
 
-      {/* Unread dot */}
       {hasUnread && (
         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
       )}
 
-      {/* Reply count */}
       <span className="text-xs font-medium text-primary">
         {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
       </span>
 
-      {/* Last reply time */}
       <span className="text-xs text-muted-foreground">
         Last reply {formatRelativeTime(lastReplyAt)}
       </span>
 
-      {/* Arrow */}
       <CaretRight
         size={12}
         className="text-muted-foreground group-hover/thread:text-primary transition-colors ml-auto"

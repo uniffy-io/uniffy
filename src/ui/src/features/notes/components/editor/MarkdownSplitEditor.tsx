@@ -20,16 +20,12 @@ import { replaceMarkdownYText } from '@/features/notes/realtime/markdown';
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
-  /** Optional title/metadata block rendered above the editor surface in the preview pane. */
   titleSlot?: ReactNode;
-  /**
-   * Both panes read / write the shared ``Y.Text("markdown")`` so the
-   * editor and the preview cannot drift.
-   */
+  // Both panes share Y.Text("markdown") so editor + preview cannot drift.
   realtime?: CrepeRealtimeBinding;
 }
 
-const MIN_PANE_WIDTH = 200; // Minimum width in pixels
+const MIN_PANE_WIDTH = 200;
 
 const defaultSettings = { editorMode: 'markdown' as const, showMarkdownPreview: true, showMarkdownLineNumbers: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
@@ -42,9 +38,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
   const { resolvedTheme } = useTheme();
   const stackVertically = isMobile && showMarkdownPreview;
 
-  // CodeMirror takes remote updates immediately. The preview pane
-  // rebuilds Milkdown per value change, so it gets a small debounce
-  // to avoid thrashing when a peer is typing.
+  // Preview rebuilds Milkdown per value change - debounce so a typing peer does not thrash it.
   const whenSynced = realtime?.whenSynced ?? null;
   const content = useRealtimeMarkdownContent(realtime?.ydoc ?? null, note.content, {
     whenSynced,
@@ -54,18 +48,15 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     debounceMs: 300,
   });
 
-  // CodeMirror refs
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const codemirrorViewRef = useRef<EditorView | null>(null);
   const themeCompartmentRef = useRef<Compartment>(new Compartment());
-  
-  // Resizer state
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const [splitRatio, setSplitRatio] = useState(0.5); // 50% by default
+  const [splitRatio, setSplitRatio] = useState(0.5);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Records the position of `@` so we know what range to overwrite
-  // with `[[[label|urn]]]` when the user selects a result.
+  // Track `@` position so we know what range to overwrite with `[[[label|urn]]]`.
   const [mentionPopup, setMentionPopup] = useState<{ triggerFrom: number; triggerTo: number; query: string } | null>(null);
   const mentionPopupRef = useRef(mentionPopup);
   mentionPopupRef.current = mentionPopup;
@@ -86,8 +77,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       setMentionPopup(null);
       return;
     }
-    // Extend the replace range over partial query text typed between
-    // the `@` and the popup taking focus (e.g. "@fo").
+    // Extend replace range over any partial query typed before popup focus (e.g. "@fo").
     const doc = view.state.doc;
     let to = popup.triggerTo;
     while (to < doc.length) {
@@ -110,7 +100,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     codemirrorViewRef.current?.focus();
   }, []);
 
-  // Handle resize drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -125,12 +114,11 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       const containerRect = containerRef.current.getBoundingClientRect();
       const containerWidth = containerRect.width;
       const mouseX = e.clientX - containerRect.left;
-      
-      // Calculate ratio with min/max constraints
+
       const minRatio = MIN_PANE_WIDTH / containerWidth;
       const maxRatio = 1 - minRatio;
       const newRatio = Math.max(minRatio, Math.min(maxRatio, mouseX / containerWidth));
-      
+
       setSplitRatio(newRatio);
     };
 
@@ -147,11 +135,9 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     };
   }, [isDragging]);
 
-  // Initialize CodeMirror editor
   useEffect(() => {
     if (!editorContainerRef.current) return;
 
-    // Destroy existing instance
     if (codemirrorViewRef.current) {
       codemirrorViewRef.current.destroy();
       codemirrorViewRef.current = null;
@@ -175,8 +161,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
             const newContent = update.state.doc.toString();
             handleContentChange(newContent);
           }
-          // Detect a single `@` inserted at a word boundary. Running
-          // after the change is committed avoids races with beforeinput.
+          // After-change detection avoids races with beforeinput.
           if (update.docChanged && !mentionPopupRef.current) {
             update.changes.iterChanges((_fromA, _toA, fromB, _toB, inserted) => {
               if (inserted.length !== 1 || inserted.sliceString(0) !== '@') return;
@@ -202,13 +187,10 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
         codemirrorViewRef.current = null;
       }
     };
-    // Only re-init when the note swaps. Theme + sizing live in a
-    // Compartment so they reconfigure in place.
+    // Re-init only on note swap; theme + sizing live in a Compartment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
 
-  // Live-reconfigure the editor theme when the app theme or any of the
-  // baked-in display settings (font, line height, gutter, breakpoint) change.
   useEffect(() => {
     const view = codemirrorViewRef.current;
     if (!view) return;
@@ -225,7 +207,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     });
   }, [resolvedTheme, settings?.fontSize, settings?.lineHeight, showLineNumbers, isMobile]);
 
-  // Update CodeMirror content when external changes happen
   useEffect(() => {
     if (!codemirrorViewRef.current) return;
 
@@ -243,9 +224,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
 
   return (
     <div className="flex flex-col h-full">
-      {/* Editor Content */}
       <div ref={containerRef} className={`flex-1 overflow-hidden relative ${stackVertically ? 'flex flex-col' : 'flex'}`}>
-        {/* CodeMirror Editor Pane */}
         <div
           className="overflow-hidden"
           style={stackVertically
@@ -256,7 +235,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           <div ref={editorContainerRef} className="h-full" />
         </div>
 
-        {/* Resizer Handle - horizontal on mobile, vertical on desktop */}
         {showMarkdownPreview && !stackVertically && (
           <div
             onMouseDown={handleMouseDown}
@@ -266,9 +244,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
               transition-colors
             `}
           >
-            {/* Wider hit area for easier grabbing */}
             <div className="absolute inset-y-0 -left-1 -right-1" />
-            {/* Visual indicator on hover/drag */}
             <div
               className={`
                 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -280,12 +256,10 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           </div>
         )}
 
-        {/* Horizontal separator on mobile stacked layout */}
         {showMarkdownPreview && stackVertically && (
           <div className="h-px w-full bg-border flex-shrink-0" />
         )}
 
-        {/* Preview Pane - Using CrepeEditor in readonly mode */}
         {showMarkdownPreview && (
           <div
             className="overflow-hidden"
@@ -305,7 +279,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           </div>
         )}
 
-        {/* Overlay to capture mouse events while dragging */}
         {isDragging && (
           <div className="absolute inset-0 cursor-col-resize z-50" />
         )}

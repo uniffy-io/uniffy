@@ -1,14 +1,4 @@
-/**
- * Note Mention Preview Card
- *
- * Shows note type indicator, title, content preview (first ~200 chars),
- * tags, and editing indicator. Uses primary/violet accent.
- *
- * Markup uses only inline elements (`<span>` with `block`/`flex` Tailwind
- * classes) so the card is HTML-valid as a descendant of `<p>` when chat
- * markdown wraps mentions inline.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,

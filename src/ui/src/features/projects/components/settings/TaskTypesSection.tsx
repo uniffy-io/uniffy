@@ -1,7 +1,3 @@
-/**
- * TaskTypesSection - Configure which custom fields are shown/required per task type
- */
-
 import { useState, useCallback } from "react";
 import { StackSimple, Check } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";

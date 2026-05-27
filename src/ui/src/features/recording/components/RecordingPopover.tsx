@@ -1,16 +1,3 @@
-/**
- * Recording popover anchored to the AppHeader trigger. Hosts the source
- * picker, microphone picker, optional tab-audio toggle (only visible when
- * source=tab), and the pre-flight quota banner. The "Record" button kicks
- * off the recording thunk and closes the popover.
- *
- * Behaviour:
- * - Click outside / Escape closes.
- * - Mobile is unsupported (`getDisplayMedia` is not reliable on mobile
- *   browsers); the trigger is hidden one level up so the popover never
- *   actually mounts there.
- */
-
 import { useEffect, useRef } from 'react';
 import { VideoCamera } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -40,9 +27,6 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
         usedBytes,
     });
 
-    // The Record button is disabled while a previous recording is still
-    // tearing down or ramping up; idle / done / error are the only states
-    // where it makes sense to launch a new capture.
     const canRecord =
         recordingState === 'idle'
         || recordingState === 'done'
@@ -53,10 +37,7 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
             const target = event.target as Node;
             if (panelRef.current?.contains(target)) return;
             if (anchorRef.current?.contains(target)) return;
-            // Sub-component popovers (e.g. the mic Select) render their
-            // dropdown via createPortal to document.body so the click target
-            // sits outside our panel ref. Skip those so picking an option
-            // doesn't close the parent popover.
+            // Sub-popovers (mic Select) portal to document.body; skip those so picking an option doesn't close the parent.
             if (
                 target instanceof Element
                 && target.closest('[data-select-portal]')
@@ -87,10 +68,7 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
         onClose();
     };
 
-    // Browser security: `getDisplayMedia` always presents the OS-level
-    // picker. We can pre-select the tab via `displaySurface`, but cannot
-    // skip the confirm. Setting expectations here avoids confusion when
-    // a second prompt appears.
+    // `getDisplayMedia` always shows the OS picker; `displaySurface` is only a hint.
     const SHARE_HINT_BY_SOURCE: Record<typeof source, string> = {
         screen: 'Your browser will ask which screen to share.',
         window: 'Your browser will ask which window to share.',

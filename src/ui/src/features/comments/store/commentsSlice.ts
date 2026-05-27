@@ -3,9 +3,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import type { Comment as ProtoComment, CommentReaction as ProtoReaction } from '@uniffy/proto/comments/v1/comments_pb';
 
-/**
- * Serialized comment data for Redux store.
- */
 export interface SerializedComment {
     id: string;
     organizationId: string;
@@ -59,9 +56,6 @@ const initialState: CommentsState = {
     showResolved: false,
 };
 
-/**
- * Serialize a proto Comment to a plain object for Redux.
- */
 export function serializeComment(comment: ProtoComment): SerializedComment {
     return {
         id: comment.id,
@@ -158,7 +152,7 @@ const commentsSlice = createSlice({
         ) {
             const key = contentKey(action.payload.contentType, action.payload.contentId);
             if (state.commentsByContent[key]) {
-                // If it's a reply, don't add to top level
+                // Reply thread merge: top-level comments push into the list; replies arrive nested under their parent.
                 if (!action.payload.comment.parentCommentId) {
                     state.commentsByContent[key].comments.push(action.payload.comment);
                     state.commentsByContent[key].totalCount += 1;

@@ -1,11 +1,3 @@
-/**
- * SprintsSection - Manage project sprints (list, create, edit, delete)
- *
- * This is the configuration and list-management surface for sprints.
- * Tactical planning actions (drag tasks into sprints, start a sprint,
- * complete a sprint) still live in the Backlog view.
- */
-
 import { useState, useMemo, useEffect } from "react";
 import {
   Lightning,
@@ -257,7 +249,6 @@ export function SprintsSection({ project }: SprintsSectionProps) {
   );
 }
 
-// ===== Sprint Row =====
 
 interface SprintRowProps {
   sprint: Sprint;
@@ -443,7 +434,6 @@ function SprintRow({
   );
 }
 
-// ===== Inline Create Form =====
 
 interface CreateSprintInlineProps {
   projectId: string;
@@ -520,7 +510,6 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
   );
 }
 
-// ===== Status Badge =====
 
 function StatusBadge({ status }: { status: Sprint["status"] }) {
   const config = {

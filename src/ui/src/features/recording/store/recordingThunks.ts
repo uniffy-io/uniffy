@@ -1,13 +1,3 @@
-/**
- * Recording thunks - imperative side-effect-bearing actions that drive the
- * `recordingController` singleton and synchronise the slice state.
- *
- * Source / mic / tab-audio choices live on the slice (set by the popover)
- * and are read here at start-time. Pause/resume bridge the
- * `MediaRecorder.pause/resume` calls into slice transitions; cumulative
- * paused duration lives on the slice so the timer stays accurate.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'sonner';
 import type { AppDispatch, RootState } from '@/app/store';
@@ -82,19 +72,13 @@ export const startRecording = createAsyncThunk<void, void, ThunkApiConfig>(
             return rejectWithValue('not_supported');
         }
 
-        // First-time recording: pause here and surface the consent modal.
-        // The modal's Continue button dispatches `firstUseAcknowledged` and
-        // re-dispatches `startRecording`. The flag is persisted, so this
-        // gate fires once per user.
+        // First-time consent modal gates the start; persisted flag fires once per user.
         if (!state.recording.firstUseAcknowledged) {
             dispatch(firstUseModalOpened());
             return;
         }
 
-        // Refuse to start if another tab of the same origin already holds
-        // the recording lock. Two screen captures concurrently is a tab
-        // bandwidth fight and a quota landmine; the second tab gets a
-        // friendly toast instead.
+        // Refuse if another same-origin tab holds the recording lock.
         const lockResult = await acquireLock();
         if (!lockResult.acquired) {
             toast.error('Another tab is already recording. Stop that one first.');
@@ -142,10 +126,7 @@ export const startRecording = createAsyncThunk<void, void, ThunkApiConfig>(
                 onBackpressure: (level) => {
                     dispatch(networkStatusChanged(backpressureToNetworkStatus(level)));
                     if (level === 'auto-stop') {
-                        // Memory / IndexedDB ceiling hit. Save what we have
-                        // rather than crashing the tab. The slice will
-                        // transition through stopping -> flushing -> done
-                        // exactly as a manual Stop.
+                        // Backlog ceiling hit: save what we have rather than crashing the tab.
                         toast.error('Recording stopped: upload backlog too large.');
                         void dispatch(stopRecording());
                     }
@@ -166,13 +147,8 @@ export const startRecording = createAsyncThunk<void, void, ThunkApiConfig>(
                         ? 'not_supported'
                         : 'unknown';
             const message = e?.message ?? 'Failed to start recording';
-            // `getDisplayMedia` throws `NotAllowedError` for both the
-            // OS-level deny and the user clicking Cancel on the browser
-            // picker. Chrome does not differentiate. Treating cancel as
-            // an "error" surfaces a toast + the floating "Recording
-            // failed" tile, which is hostile UX for what is just an
-            // intentional bail-out. Return silently so the global
-            // errorToastMiddleware does not fire either.
+            // `getDisplayMedia` throws NotAllowedError for both OS-level deny and the user
+            // clicking Cancel on the browser picker (Chrome does not differentiate). Treat as silent bail-out.
             releaseLock();
             if (code === 'permission_denied') {
                 dispatch(backToIdle());
@@ -218,12 +194,7 @@ export const stopRecording = createAsyncThunk<void, void, ThunkApiConfig>(
             return;
         }
 
-        // Sub-second recordings are almost always accidental clicks (Start
-        // immediately followed by Stop, or a misfired keyboard shortcut).
-        // The S3 multipart with zero parts would also fail server-side on
-        // completeUpload. Abort the multipart, drop any IndexedDB
-        // bookkeeping, and surface a friendly toast instead of letting the
-        // user think they saved a clip.
+        // Sub-second recordings are accidental clicks; a zero-part multipart also fails completeUpload server-side.
         const startedAt = state.recording.startedAt;
         const pausedDurationMs = state.recording.pausedDurationMs;
         const pausedAt = state.recording.pausedAt;
@@ -259,10 +230,6 @@ export const stopRecording = createAsyncThunk<void, void, ThunkApiConfig>(
                 action: {
                     label: 'Open',
                     onClick: () => {
-                        // Open the viewer modal in place rather than
-                        // navigating to /files - the modal is mounted
-                        // globally and can stand alone with file data
-                        // fetched via fetchFile.
                         void (async () => {
                             try {
                                 const file = await dispatch(fetchFile(recordingFileId)).unwrap();
@@ -272,10 +239,6 @@ export const stopRecording = createAsyncThunk<void, void, ThunkApiConfig>(
                                     fileData: file,
                                 }));
                             } catch {
-                                // If the fetch fails (race against a
-                                // delete or quota abort), fall back to
-                                // the files list so the user is not
-                                // stranded on a stale toast click.
                                 window.location.href = '/files';
                             }
                         })();
@@ -306,8 +269,7 @@ export const retryUpload = createAsyncThunk<void, void, ThunkApiConfig>(
         try {
             const result = await resumeUpload(uploadId);
             if (!result) {
-                // Upload was already aborted/expired on the server.
-                // Nothing recoverable; clear the slice and move on.
+                // Upload already aborted/expired server-side; nothing recoverable.
                 dispatch(backToIdle());
                 toast.error('Upload could not be retried; the recording session has expired.');
                 return rejectWithValue('upload_no_longer_active');

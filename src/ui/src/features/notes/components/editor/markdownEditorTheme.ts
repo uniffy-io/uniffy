@@ -11,14 +11,6 @@ interface MarkdownEditorThemeOptions {
   isMobile: boolean;
 }
 
-/**
- * Build the CodeMirror theme for the Markdown source editor.
- *
- * Pulls every color from the app's CSS variables so the editor stays in lock
- * step with the active theme (and the user's accent). Returns a combined
- * extension array so the caller can hand it to a `Compartment` and reconfigure
- * on theme / setting changes without rebuilding the editor.
- */
 export function createMarkdownEditorTheme({
   isDark,
   fontSize,
@@ -26,9 +18,7 @@ export function createMarkdownEditorTheme({
   showLineNumbers,
   isMobile,
 }: MarkdownEditorThemeOptions): Extension[] {
-  // Editor surface mirrors the app header (`--card`), not the deeper
-  // `--background` shade used for the app shell. Otherwise the markdown pane
-  // reads as a black void next to the rest of the UI.
+  // Use --card (matches header), not --background, or the pane reads as a black void.
   const bg = 'hsl(var(--card))';
   const fg = 'hsl(var(--foreground))';
   const muted = 'hsl(var(--muted))';
@@ -36,20 +26,17 @@ export function createMarkdownEditorTheme({
   const border = 'hsl(var(--border))';
   const primary = 'hsl(var(--primary))';
   const gutterBg = 'hsl(var(--muted))';
-  // Markdown syntax palette - fixed per resolved theme. We deliberately do not
-  // derive every token from the user's `--primary`: a dim user accent (brown,
-  // gold) becomes unreadable on either surface. The user's accent still drives
-  // the editor chrome (cursor, selection, search match) above.
+  // Fixed syntax palette per resolved theme: a dim user --primary (brown, gold) becomes unreadable.
   const syntax = isDark
     ? {
-        heading: '#ff7b72', // red-salmon
-        link: '#58a6ff',    // blue
-        url: '#a5d6ff',     // light blue
+        heading: '#ff7b72',
+        link: '#58a6ff',
+        url: '#a5d6ff',
         code: '#a5d6ff',
-        marker: '#ff7b72',  // `#`, `*`, `>`, list bullets
+        marker: '#ff7b72',
         keyword: '#ff7b72',
         literal: '#79c0ff',
-        tag: '#7ee787',     // tag / class names
+        tag: '#7ee787',
       }
     : {
         heading: '#cf222e',
@@ -167,7 +154,6 @@ export function createMarkdownEditorTheme({
       '.cm-selectionMatch': {
         backgroundColor: 'hsl(var(--primary) / 0.15)',
       },
-      // Markdown fenced code block background - reuse muted surface.
       '.cm-line:has(.tok-monospace), .cm-line.cm-codeblock': {
         backgroundColor: 'hsl(var(--muted) / 0.40)',
       },
@@ -175,9 +161,7 @@ export function createMarkdownEditorTheme({
     { dark: isDark },
   );
 
-  // High-contrast markdown highlighter built from theme tokens. Every spec
-  // sets an explicit color so CodeMirror writes inline `style=` attributes
-  // that survive on top of any default fallback style.
+  // Explicit colors so CodeMirror writes inline style= and overrides defaults.
   const highlightStyle = HighlightStyle.define([
     { tag: t.heading1, color: syntax.heading, fontWeight: '700' },
     { tag: t.heading2, color: syntax.heading, fontWeight: '700' },
@@ -203,7 +187,6 @@ export function createMarkdownEditorTheme({
     { tag: t.invalid, color: 'hsl(var(--destructive, 0 84% 60%))' },
   ]);
 
-  // No `fallback: true` here - we must override basicSetup's default style
-  // which paints markdown markers in `#404740` (designed for light surfaces).
+  // No `fallback: true` - override basicSetup's marker color (#404740, designed for light surfaces).
   return [theme, syntaxHighlighting(highlightStyle)];
 }

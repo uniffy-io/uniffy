@@ -1,11 +1,3 @@
-/**
- * Redux slice for the agents governance admin surface.
- *
- * Holds the org budget row, current-period spend snapshot, per-org
- * rate-limit overrides, the org's display currency, and the manual
- * exchange-rate table.
- */
-
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import {
     fetchOrgBudget,

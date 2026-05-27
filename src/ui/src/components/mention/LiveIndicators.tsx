@@ -1,18 +1,3 @@
-/**
- * Live Status Indicators
- *
- * Type-specific inline indicators that render next to the mention label.
- * Each content type has its own visual language:
- * - TASK: colored status pill with animated transitions
- * - CALENDAR_EVENT: temporal context with pulsing "now" dot
- * - FILE: processing spinner or size/type badge
- * - NOTE: editing indicator with pencil pulse
- * - PROJECT: mini progress arc with percentage
- *
- * These are designed to be tiny, information-dense, and non-intrusive.
- * State changes trigger choreographed CSS transitions.
- */
-
 import { useEffect, useMemo, useState } from 'react';
 import {
   Pencil,
@@ -22,7 +7,6 @@ import {
 import { cn } from '@/shared/utils/cn';
 import type { MentionLiveState } from '@/components/mention/types';
 
-/** Categorize a task status string into a visual bucket */
 interface StatusStyle {
   bg: string;
   text: string;
@@ -32,7 +16,6 @@ interface StatusStyle {
 function getTaskStatusStyle(status: string): StatusStyle {
   const lower = status.toLowerCase();
 
-  // "Done" statuses
   if (lower.includes('done') || lower.includes('complete') || lower.includes('closed')) {
     return {
       bg: 'bg-green-500/15 dark:bg-green-400/15',
@@ -41,7 +24,6 @@ function getTaskStatusStyle(status: string): StatusStyle {
     };
   }
 
-  // "In progress" statuses
   if (lower.includes('progress') || lower.includes('active') || lower.includes('review') || lower.includes('doing')) {
     return {
       bg: 'bg-amber-500/15 dark:bg-amber-400/15',
@@ -50,7 +32,6 @@ function getTaskStatusStyle(status: string): StatusStyle {
     };
   }
 
-  // Default: "To do" / open / other
   return {
     bg: 'bg-blue-500/15 dark:bg-blue-400/15',
     text: 'text-blue-700 dark:text-blue-300',
@@ -58,7 +39,6 @@ function getTaskStatusStyle(status: string): StatusStyle {
   };
 }
 
-/** Convert "status_in_progress" -> "In progress" */
 function formatStatusLabel(status: string): string {
   return status
     .replace(/^status_/, '')
@@ -71,10 +51,6 @@ function isCompletedStatus(status: string): boolean {
   return lower.includes('done') || lower.includes('complete') || lower.includes('closed');
 }
 
-/**
- * Task status pill - uses resolved label/color when available,
- * falls back to heuristic-based styling from status ID string.
- */
 export function TaskStatusIndicator({
   status,
   label,
@@ -88,7 +64,6 @@ export function TaskStatusIndicator({
   const isDone = isCompletedStatus(status);
   const displayLabel = label || fallbackStyle.label;
 
-  // Use resolved color from project field definitions when available
   if (color) {
     return (
       <span
@@ -130,9 +105,6 @@ export function TaskStatusIndicator({
   );
 }
 
-/**
- * Task priority indicator - colored dot with label
- */
 export function TaskPriorityIndicator({
   label,
   color,
@@ -153,9 +125,6 @@ export function TaskPriorityIndicator({
   );
 }
 
-/**
- * Task due date indicator - color-coded urgency
- */
 export function TaskDueDateIndicator({ dueDate }: { dueDate: string }) {
   const label = useMemo(() => {
     const due = new Date(dueDate);
@@ -186,10 +155,6 @@ export function TaskDueDateIndicator({ dueDate }: { dueDate: string }) {
   );
 }
 
-/**
- * Calendar temporal context - shows time-relative state
- * Updates every 30 seconds via a global interval
- */
 export function CalendarTemporalIndicator({
   startTime,
   endTime,
@@ -200,7 +165,7 @@ export function CalendarTemporalIndicator({
 }) {
   const [, setTick] = useState(0);
 
-  // Re-render every 30 seconds to keep temporal labels fresh
+  // Re-render periodically so relative labels stay fresh.
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(id);
@@ -211,7 +176,6 @@ export function CalendarTemporalIndicator({
     const end = endTime ? new Date(endTime) : null;
     const now = new Date();
 
-    // Currently happening
     if (now >= start && end && now <= end) {
       return { text: 'Now', isLive: true };
     }
@@ -219,7 +183,6 @@ export function CalendarTemporalIndicator({
     const diffMs = start.getTime() - now.getTime();
     const diffMins = Math.round(diffMs / 60_000);
 
-    // In the future
     if (diffMins > 0) {
       if (diffMins <= 5) return { text: 'Starting', isLive: true };
       if (diffMins < 60) return { text: `In ${diffMins}m`, isLive: false };
@@ -230,7 +193,6 @@ export function CalendarTemporalIndicator({
       return { text: `In ${days}d`, isLive: false };
     }
 
-    // In the past
     const absMins = Math.abs(diffMins);
     if (absMins < 60) return { text: `${absMins}m ago`, isLive: false };
     const absHours = Math.round(absMins / 60);
@@ -262,9 +224,6 @@ export function CalendarTemporalIndicator({
   );
 }
 
-/**
- * Note editing indicator - pulsing pencil when someone is editing
- */
 export function NoteEditingIndicator({ editorName }: { editorName?: string }) {
   return (
     <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground italic">
@@ -280,9 +239,6 @@ export function NoteEditingIndicator({ editorName }: { editorName?: string }) {
   );
 }
 
-/**
- * File processing indicator - spinner while processing, meta after
- */
 export function FileProcessingIndicator({
   status,
   mimeType,
@@ -321,9 +277,6 @@ export function FileProcessingIndicator({
   return null;
 }
 
-/**
- * Project progress indicator - mini bar with percentage
- */
 export function ProjectProgressIndicator({
   completed,
   total,
@@ -335,7 +288,6 @@ export function ProjectProgressIndicator({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      {/* Mini progress bar */}
       <span className="w-10 h-[3px] rounded-full bg-muted overflow-hidden">
         <span
           className="h-full rounded-full bg-orange-500 dark:bg-orange-400 transition-all duration-500 ease-out"
@@ -349,10 +301,6 @@ export function ProjectProgressIndicator({
   );
 }
 
-/**
- * Renders the appropriate live indicator based on URN type and live state.
- * Returns null if no live state data is available for this type.
- */
 export function LiveIndicator({
   urnType,
   liveState,

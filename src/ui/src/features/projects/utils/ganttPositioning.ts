@@ -1,7 +1,3 @@
-/**
- * Utility functions for Gantt/Roadmap view positioning
- */
-
 import {
   differenceInDays,
   getDaysInMonth,
@@ -20,32 +16,23 @@ import {
 
 export type ZoomLevel = "day" | "week" | "month";
 
-/**
- * Column width in pixels for each zoom level
- */
 export const COLUMN_WIDTHS: Record<ZoomLevel, number> = {
   day: 40,
   week: 120,
   month: 200,
 };
 
-/**
- * Get the start of period based on zoom level
- */
 export function getStartOfPeriod(date: Date, zoom: ZoomLevel): Date {
   switch (zoom) {
     case "day":
       return startOfDay(date);
     case "week":
-      return startOfWeek(date, { weekStartsOn: 1 }); // Monday start
+      return startOfWeek(date, { weekStartsOn: 1 });
     case "month":
       return startOfMonth(date);
   }
 }
 
-/**
- * Add periods based on zoom level
- */
 export function addPeriods(date: Date, count: number, zoom: ZoomLevel): Date {
   switch (zoom) {
     case "day":
@@ -57,9 +44,6 @@ export function addPeriods(date: Date, count: number, zoom: ZoomLevel): Date {
   }
 }
 
-/**
- * Get the difference in periods between two dates
- */
 export function getDifferenceInPeriods(
   startDate: Date,
   endDate: Date,
@@ -76,9 +60,6 @@ export function getDifferenceInPeriods(
   }
 }
 
-/**
- * Format date header label based on zoom level
- */
 export function formatPeriodLabel(date: Date, zoom: ZoomLevel): string {
   switch (zoom) {
     case "day":
@@ -90,37 +71,19 @@ export function formatPeriodLabel(date: Date, zoom: ZoomLevel): string {
   }
 }
 
-/**
- * Format month header label
- */
 export function formatMonthLabel(date: Date): string {
   return format(date, "MMMM yyyy");
 }
 
-/**
- * Days per column for each zoom level (used for proportional positioning)
- */
 const DAYS_PER_COLUMN: Record<ZoomLevel, number> = {
   day: 1,
   week: 7,
   month: 30.44,
 };
 
-/**
- * Minimum bar width in pixels (ensures bars remain visible/clickable)
- */
 const MIN_BAR_WIDTH = 20;
 
-/**
- * Convert a date to its pixel X position on the timeline.
- *
- * For day/week zoom: uses a fixed pixels-per-day ratio (columns are
- * fixed-duration).
- *
- * For month zoom: calculates the exact month offset plus the fractional
- * position within that month, so bars align correctly to calendar month
- * columns regardless of varying month lengths (28-31 days).
- */
+/** Month zoom uses fractional day-in-month to align bars across variable month lengths. */
 export function dateToPixelX(
   date: Date,
   viewStartDate: Date,
@@ -132,22 +95,15 @@ export function dateToPixelX(
     const monthsDiff =
       (date.getFullYear() - viewStartDate.getFullYear()) * 12 +
       (date.getMonth() - viewStartDate.getMonth());
-    const dayInMonth = date.getDate() - 1; // 0-based
+    const dayInMonth = date.getDate() - 1;
     const daysInMonth = getDaysInMonth(date);
     return (monthsDiff + dayInMonth / daysInMonth) * columnWidth;
   }
 
-  // Day and week: columns have fixed duration, linear math is accurate
   const pixelsPerDay = columnWidth / DAYS_PER_COLUMN[zoom];
   return differenceInDays(date, viewStartDate) * pixelsPerDay;
 }
 
-/**
- * Calculate gantt bar position and width.
- *
- * Uses dateToPixelX for accurate positioning at all zoom levels,
- * including month zoom where column durations vary.
- */
 export interface GanttBarPosition {
   left: number;
   width: number;
@@ -169,19 +125,16 @@ export function calculateBarPosition(
   const start = parseISO(taskStartDate);
   const end = parseISO(taskEndDate);
 
-  // Task is completely outside the view
   if (isAfter(start, viewEndDate) || isBefore(end, viewStartDate)) {
     return null;
   }
 
-  // Determine actual visible start and end
   const visibleStart = isBefore(start, viewStartDate) ? viewStartDate : start;
   const visibleEnd = isAfter(end, viewEndDate) ? viewEndDate : end;
 
   const left = dateToPixelX(visibleStart, viewStartDate, zoom);
   const endX = dateToPixelX(addDays(visibleEnd, 1), viewStartDate, zoom);
-  // Minimum bar width: enough to be visible/clickable without inflating
-  // the bar beyond its actual date range (especially at month zoom)
+  // Keep a minimum width so a 1-day bar stays clickable at month zoom.
   const width = Math.max(endX - left, MIN_BAR_WIDTH);
 
   return {
@@ -192,9 +145,6 @@ export function calculateBarPosition(
   };
 }
 
-/**
- * Convert a pixel X position back to a date (inverse of bar positioning).
- */
 export function pixelToDate(
   pixelX: number,
   viewStartDate: Date,
@@ -217,9 +167,6 @@ export function pixelToDate(
   return addDays(viewStartDate, dayOffset);
 }
 
-/**
- * Generate column data for timeline header
- */
 export interface TimelineColumn {
   date: Date;
   label: string;
@@ -270,9 +217,6 @@ export function generateTimelineColumns(
   return columns;
 }
 
-/**
- * Calculate visible date range based on scroll position
- */
 export function calculateVisibleRange(
   scrollLeft: number,
   containerWidth: number,
@@ -289,9 +233,6 @@ export function calculateVisibleRange(
   };
 }
 
-/**
- * Check if a task is within the visible date range
- */
 export function isTaskVisible(
   taskStartDate: string | null,
   taskEndDate: string | null,
@@ -299,7 +240,7 @@ export function isTaskVisible(
   viewEndDate: Date
 ): boolean {
   if (!taskStartDate && !taskEndDate) {
-    return false; // No dates, not visible in roadmap
+    return false;
   }
 
   const interval = { start: viewStartDate, end: viewEndDate };
@@ -314,7 +255,6 @@ export function isTaskVisible(
     if (isWithinInterval(end, interval)) return true;
   }
 
-  // Check if task spans the entire view
   if (taskStartDate && taskEndDate) {
     const start = parseISO(taskStartDate);
     const end = parseISO(taskEndDate);

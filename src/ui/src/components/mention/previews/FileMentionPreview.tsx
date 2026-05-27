@@ -1,12 +1,4 @@
-/**
- * File Mention Preview Card
- *
- * Shows file type icon, MIME type, size, processing status,
- * thumbnail for images, and embed button for media. Uses blue accent.
- *
- * Markup uses only inline elements so the card stays HTML-valid inside `<p>`.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,

@@ -30,10 +30,7 @@ export const chatChannelsSlice = createSlice({
       state.channels = action.payload;
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
-      // Idempotent: backend dedups DMs against existing pairs and returns the
-      // existing channel, so a "create" call may yield an id we already hold.
-      // Replace in place so the sidebar doesn't grow duplicate entries that
-      // both point at the same channel id.
+      // Idempotent: backend dedups DMs and may return an id we already hold.
       const index = state.channels.findIndex((c) => c.id === action.payload.id);
       if (index >= 0) {
         state.channels[index] = action.payload;
@@ -145,8 +142,6 @@ export const {
   clearSplitChannel,
   clearChatChannels,
 } = chatChannelsSlice.actions;
-
-// -- Selectors --
 
 export const selectChannels = (state: RootState): ChatChannel[] =>
   state.chatChannels.channels;

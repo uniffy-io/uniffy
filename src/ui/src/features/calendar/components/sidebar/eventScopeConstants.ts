@@ -1,7 +1,4 @@
-/**
- * EventScopeFilter constants - extracted to avoid react-refresh warnings
- * when mixing component and non-component exports.
- */
+/** Extracted from EventScopeFilter to avoid react-refresh warnings on mixed exports. */
 
 import { CalendarBlank, LockSimple, Buildings } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';

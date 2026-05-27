@@ -1,11 +1,3 @@
-/**
- * ThumbnailImage Component
- *
- * Displays a thumbnail for files using the backend thumbnail proxy.
- * The Service Worker intercepts requests and adds auth headers.
- * Backend serves thumbnails with HTTP cache headers for browser caching.
- */
-
 import { useEffect, useState } from 'react';
 import { ExtractionStatus } from '@uniffy/proto/files/v1/files_pb';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
@@ -20,7 +12,7 @@ export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
     const [error, setError] = useState(false);
     const { url, loading } = useThumbnailUrl(file.id);
 
-    // Reset error when extraction status changes (file was re-processed)
+    // Re-extracted files bump extractionStatus; clear the error so we retry.
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when extractionStatus changes is valid
         setError(false);

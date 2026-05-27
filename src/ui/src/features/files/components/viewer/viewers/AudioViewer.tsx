@@ -1,12 +1,4 @@
-/**
- * Audio Viewer
- *
- * Cinematic audio player with vinyl disc animation and waveform visualization.
- * Features spinning disc, circular progress, ambient particles, and glow effects.
- *
- * Uses Range-based streaming for immediate playback (like video) and loads the
- * real waveform in the background. Files >100MB skip waveform computation.
- */
+/** Streams via Range for immediate playback; waveform is built in the background and skipped for files >100MB. */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import WaveSurfer from 'wavesurfer.js';
@@ -48,10 +40,7 @@ interface AudioViewerProps {
     file: SerializedFile;
 }
 
-/**
- * Generate a flat placeholder peak array so the waveform area is not empty
- * while the real peaks are being computed in the background.
- */
+/** Flat placeholder bars rendered while real peaks compute in the background. */
 function generatePlaceholderPeaks(count: number): Float32Array {
     const peaks = new Float32Array(count);
     for (let i = 0; i < count; i++) {
@@ -100,7 +89,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
         ? `${thumbnailUrl}?v=${file.extractionStatus}`
         : null;
 
-    // Get the computed primary color from CSS variables (read once during initialization)
     const [primaryColor] = useState(() => {
         const root = document.documentElement;
         const computedStyle = getComputedStyle(root);
@@ -108,21 +96,19 @@ export function AudioViewer({ file }: AudioViewerProps) {
         return primaryHsl ? `hsl(${primaryHsl})` : 'hsl(262, 83%, 58%)';
     });
 
-    // Calculate progress percentage for circular indicator
     const progressPercent = useMemo(() => {
         if (!duration || duration === 0) return 0;
         return (currentTime / duration) * 100;
     }, [currentTime, duration]);
 
-    // SVG circle properties for progress ring
     const circleRadius = 110;
     const circumference = 2 * Math.PI * circleRadius;
     const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
-    // Duration from file metadata (available before audio loads)
+    // Available from metadata before the audio element has loaded.
     const fileDuration = file.metadata?.durationSeconds ?? 0;
 
-    // Initialize WaveSurfer with hidden <audio> element for Range-based playback
+    // Hidden <audio> element so playback uses Range requests for seeking.
     useEffect(() => {
         if (!containerRef.current || !streamUrl || !audioRef.current) return;
 
@@ -132,13 +118,12 @@ export function AudioViewer({ file }: AudioViewerProps) {
         const audio = audioRef.current;
         audio.src = streamUrl;
 
-        // Get computed primary color for waveform
         const root = document.documentElement;
         const computedStyle = getComputedStyle(root);
         const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
         const waveColorBase = primaryHsl ? `hsl(${primaryHsl}` : 'hsl(262, 83%, 58%';
 
-        // Placeholder peaks so the waveform area shows bars immediately
+        // Show placeholder bars while the real peaks load.
         const placeholderPeaks = generatePlaceholderPeaks(PLACEHOLDER_BARS);
 
         const wavesurfer = WaveSurfer.create({
@@ -151,16 +136,13 @@ export function AudioViewer({ file }: AudioViewerProps) {
             barGap: 2,
             barRadius: 3,
             normalize: true,
-            // Use the hidden <audio> element for playback (Range-based seeking)
             media: audio,
-            // Show placeholder peaks immediately; real peaks loaded in background
             peaks: [Array.from(placeholderPeaks)],
             duration: fileDuration || undefined,
         });
 
         wavesurferRef.current = wavesurfer;
 
-        // Event handlers
         wavesurfer.on('ready', () => {
             dispatch(setDuration(wavesurfer.getDuration()));
             dispatch(setViewerLoading(false));
@@ -191,7 +173,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
             dispatch(setViewerLoading(false));
         });
 
-        // Cleanup
         return () => {
             wavesurfer.unAll();
             wavesurfer.destroy();
@@ -199,11 +180,10 @@ export function AudioViewer({ file }: AudioViewerProps) {
         };
     }, [streamUrl, dispatch, fileDuration]);
 
-    // Background waveform computation: fetch full file, decode, and update peaks
+    // Background waveform: fetch the whole file, decode, then swap in real peaks. Skipped above WAVEFORM_SIZE_LIMIT.
     useEffect(() => {
         if (!streamUrl || !isReady) return;
 
-        // Skip waveform computation for large files
         if (file.sizeBytes > WAVEFORM_SIZE_LIMIT) {
             return;
         }
@@ -240,7 +220,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
                         for (let i = 0; i < numBars; i++) peaks[i] /= max;
                     }
 
-                    // Update WaveSurfer with real peaks
                     const ws = wavesurferRef.current;
                     if (ws) {
                         ws.load(streamUrl, [Array.from(peaks)], decoded.duration);
@@ -259,7 +238,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
         };
     }, [streamUrl, isReady, file.sizeBytes]);
 
-    // Sync play state
     useEffect(() => {
         const ws = wavesurferRef.current;
         if (!ws || !isReady) return;
@@ -309,7 +287,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
         };
     }, [isReady]);
 
-    // Calculate angle from disc center to a point
     const getAngleFromCenter = useCallback((clientX: number, clientY: number) => {
         const disc = discRef.current;
         if (!disc) return 0;
@@ -346,13 +323,11 @@ export function AudioViewer({ file }: AudioViewerProps) {
         const currentAngle = getAngleFromCenter(e.clientX, e.clientY);
         let delta = currentAngle - scratchRef.current.lastAngle;
 
-        // Handle wrapping around -180/180
         if (delta > 180) delta -= 360;
         if (delta < -180) delta += 360;
 
         scratchRef.current.lastAngle = currentAngle;
 
-        // Apply rotation to the disc
         rotationRef.current += delta;
         if (discRef.current) {
             discRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
@@ -422,10 +397,8 @@ export function AudioViewer({ file }: AudioViewerProps) {
         [dispatch, isMuted]
     );
 
-    // Get volume icon based on level
     const VolumeIcon = isMuted ? SpeakerSlash : volume < 0.5 ? SpeakerLow : SpeakerHigh;
 
-    // Show loading while waiting for service worker
     if (swLoading) {
         return (
             <div className="viewer-loading">
@@ -434,7 +407,6 @@ export function AudioViewer({ file }: AudioViewerProps) {
         );
     }
 
-    // Show error from service worker (e.g., SW not available)
     if (swError) {
         return (
             <div className="viewer-error">

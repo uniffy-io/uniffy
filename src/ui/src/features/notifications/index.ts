@@ -1,11 +1,3 @@
-/**
- * Notifications feature public exports.
- *
- * Provides real-time notification management with server streaming,
- * unread badge, notification panel with search and filters, and
- * full-page notifications view.
- */
-
 export { notificationsApi } from '@/features/notifications/api/notificationsApi';
 
 export {

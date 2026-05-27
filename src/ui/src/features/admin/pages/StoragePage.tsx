@@ -1,10 +1,3 @@
-/**
- * Storage Page
- *
- * Admin page for managing storage quotas and monitoring usage.
- * Accessible to org admins (files domain) and system admins.
- */
-
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';

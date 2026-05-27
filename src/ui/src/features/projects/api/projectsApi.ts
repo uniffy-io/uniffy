@@ -1,10 +1,3 @@
-/**
- * Projects API Service
- *
- * ConnectRPC client for projects operations.
- * All API calls go through this service for consistent error handling.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
 import { create } from '@bufbuild/protobuf';
@@ -42,14 +35,8 @@ import type { FieldDefinition, FieldValue } from '../types/fields';
 import type { ViewConfig, ViewSpecificConfig } from '../types/views';
 import type { TaskActivity, ActivityAction } from '../types/activity';
 
-/**
- * Create a projects service client with the shared transport.
- */
 const projectsClient = createClient(ProjectsService, unaryTransport);
 
-/**
- * Convert frontend field type to proto enum
- */
 function frontendFieldTypeToProto(type: string): ProtoFieldType {
   switch (type.toLowerCase()) {
     case 'text':
@@ -71,9 +58,6 @@ function frontendFieldTypeToProto(type: string): ProtoFieldType {
   }
 }
 
-/**
- * Convert proto field type to frontend string
- */
 function protoFieldTypeToFrontend(type: ProtoFieldType): string {
   switch (type) {
     case ProtoFieldType.TEXT:
@@ -95,9 +79,6 @@ function protoFieldTypeToFrontend(type: ProtoFieldType): string {
   }
 }
 
-/**
- * Convert frontend view type to proto enum
- */
 function frontendViewTypeToProto(type: string): ProtoViewType {
   switch (type.toLowerCase()) {
     case 'table':
@@ -111,9 +92,6 @@ function frontendViewTypeToProto(type: string): ProtoViewType {
   }
 }
 
-/**
- * Convert proto view type to frontend string
- */
 function protoViewTypeToFrontend(type: ProtoViewType): string {
   switch (type) {
     case ProtoViewType.TABLE:
@@ -127,9 +105,6 @@ function protoViewTypeToFrontend(type: ProtoViewType): string {
   }
 }
 
-/**
- * Convert proto Project to frontend Project
- */
 function protoProjectToFrontend(proto: ProtoProject): Project {
   return {
     id: proto.id,
@@ -163,18 +138,12 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
   };
 }
 
-/**
- * Convert proto Task to frontend Task
- */
 function protoTaskToFrontend(proto: ProtoTask): Task {
-  // Parse field_values map - each value is a JSON-encoded string
   const fieldValues: Record<string, FieldValue> = {};
   Object.entries(proto.fieldValues).forEach(([key, jsonStr]) => {
     try {
-      // Try parsing as JSON (for arrays/objects)
       fieldValues[key] = JSON.parse(jsonStr);
     } catch {
-      // If it fails, it's a plain string
       fieldValues[key] = jsonStr;
     }
   });
@@ -215,11 +184,7 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
   };
 }
 
-/**
- * Convert proto FieldDefinition to frontend FieldDefinition
- */
 function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefinition {
-  // Parse config_json string to object
   let config: Record<string, unknown> = {};
   if (proto.configJson) {
     try {
@@ -243,11 +208,7 @@ function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefin
   };
 }
 
-/**
- * Convert proto ViewConfig to frontend ViewConfig
- */
 function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
-  // Parse config_json string to object
   let config: Record<string, unknown> = {};
   if (proto.configJson) {
     try {
@@ -269,9 +230,6 @@ function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
   };
 }
 
-/**
- * Convert proto ActivityAction enum to frontend string
- */
 function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAction {
   switch (action) {
     case ProtoActivityAction.CREATED:
@@ -295,9 +253,6 @@ function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAct
   }
 }
 
-/**
- * Convert proto TaskActivity to frontend TaskActivity
- */
 function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
   return {
     id: proto.id,
@@ -311,9 +266,6 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
   };
 }
 
-/**
- * Convert proto Sprint to frontend Sprint
- */
 function protoSprintToFrontend(proto: ProtoSprint): Sprint {
   return {
     id: proto.id,
@@ -332,9 +284,6 @@ function protoSprintToFrontend(proto: ProtoSprint): Sprint {
   };
 }
 
-/**
- * Convert frontend field values to proto map (JSON-encode complex values)
- */
 function frontendFieldValuesToProto(fieldValues: Record<string, FieldValue>): Record<string, string> {
   const result: Record<string, string> = {};
   Object.entries(fieldValues).forEach(([key, value]) => {
@@ -347,15 +296,7 @@ function frontendFieldValuesToProto(fieldValues: Record<string, FieldValue>): Re
   return result;
 }
 
-/**
- * Projects API service with typed methods.
- */
 export const projectsApi = {
-  // ===== Projects =====
-
-  /**
-   * List all projects for the current organization
-   */
   listProjects: async (
     organizationId: string,
   ): Promise<{ projects: Project[]; protoProjects: ProtoProject[] }> => {
@@ -368,9 +309,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Get a single project by ID
-   */
   getProject: async (
     id: string,
     organizationId: string,
@@ -385,9 +323,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Create a new project
-   */
   createProject: async (
     data: FrontendCreateProjectRequest,
     organizationId: string
@@ -409,14 +344,10 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Update an existing project
-   */
   updateProject: async (
     data: FrontendUpdateProjectRequest,
     organizationId: string
   ): Promise<{ project: Project; protoProject: ProtoProject }> => {
-    // Convert type field schemas to proto format
     const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
     if (data.typeFieldSchemas) {
       for (const [typeName, schema] of Object.entries(data.typeFieldSchemas)) {
@@ -443,9 +374,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Delete a project (soft delete)
-   */
   deleteProject: async (id: string, organizationId: string): Promise<{ success: boolean }> => {
     const response = await projectsClient.deleteProject({
       organizationId,
@@ -457,11 +385,6 @@ export const projectsApi = {
     };
   },
 
-  // ===== Tasks =====
-
-  /**
-   * List all tasks for a project
-   */
   listTasks: async (
     projectId: string,
     organizationId: string,
@@ -499,9 +422,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Get a single task by ID
-   */
   getTask: async (
     id: string,
     organizationId: string,
@@ -516,9 +436,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Create a new task
-   */
   createTask: async (
     data: FrontendCreateTaskRequest,
     organizationId: string
@@ -554,9 +471,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Update an existing task
-   */
   updateTask: async (
     data: FrontendUpdateTaskRequest,
     organizationId: string
@@ -599,10 +513,7 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Move a task to a different status/position
-   * Optimized for drag-and-drop operations
-   */
+  /** Optimized path for drag-and-drop reorder. */
   moveTask: async (
     data: FrontendMoveTaskRequest,
     organizationId: string
@@ -630,9 +541,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Delete a task (soft delete)
-   */
   deleteTask: async (id: string, organizationId: string): Promise<{ success: boolean }> => {
     const response = await projectsClient.deleteTask({
       organizationId,
@@ -644,9 +552,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Delete multiple tasks (soft delete)
-   */
   deleteTasks: async (taskIds: string[], organizationId: string): Promise<{ success: boolean; deletedCount: number }> => {
     const response = await projectsClient.deleteTasks({
       organizationId,
@@ -659,9 +564,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Bulk update tasks
-   */
   bulkUpdateTasks: async (
     taskIds: string[],
     updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null },
@@ -682,11 +584,6 @@ export const projectsApi = {
     };
   },
 
-  // ===== Fields =====
-
-  /**
-   * Add a custom field to a project
-   */
   createField: async (
     projectId: string,
     field: Omit<FieldDefinition, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>,
@@ -706,9 +603,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Update a field definition
-   */
   updateField: async (
     projectId: string,
     fieldId: string,
@@ -729,9 +623,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Delete a custom field
-   */
   deleteField: async (
     projectId: string,
     fieldId: string,
@@ -747,11 +638,6 @@ export const projectsApi = {
     };
   },
 
-  // ===== Views =====
-
-  /**
-   * Create a new view for a project
-   */
   createView: async (
     projectId: string,
     view: Omit<ViewConfig, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>,
@@ -770,9 +656,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Update a view configuration
-   */
   updateView: async (
     projectId: string,
     viewId: string,
@@ -792,9 +675,6 @@ export const projectsApi = {
     };
   },
 
-  /**
-   * Delete a view
-   */
   deleteView: async (
     projectId: string,
     viewId: string,
@@ -810,11 +690,6 @@ export const projectsApi = {
     };
   },
 
-  // ===== Activities =====
-
-  /**
-   * List activities for a task
-   */
   listActivities: async (
     taskId: string,
     organizationId: string
@@ -828,20 +703,13 @@ export const projectsApi = {
     };
   },
 
-  // ===== Users =====
-
-  /**
-   * Get project members for person field.
-   * Returns empty array until a dedicated endpoint is implemented.
-   */
+  /** Stubbed until a dedicated members endpoint exists. */
   getProjectMembers: async (
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _projectId: string
   ): Promise<{ members: Array<{ id: string; name: string; initials: string; color: string }> }> => {
     return { members: [] };
   },
-
-  // ===== Sprints =====
 
   listSprints: async (projectId: string, organizationId: string): Promise<{ sprints: Sprint[] }> => {
     const response = await projectsClient.listSprints({
@@ -910,8 +778,6 @@ export const projectsApi = {
     });
     return { success: response.success };
   },
-
-  // ===== Task Watchers =====
 
   toggleTaskWatcher: async (taskId: string, organizationId: string) => {
     const response = await projectsClient.toggleTaskWatcher({

@@ -1,7 +1,3 @@
-/**
- * EventBlock - Individual event block on the calendar grid
- */
-
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent, startDrag, endDrag, openEditEvent } from '@/features/calendar/store';
 import type { PositionedEvent } from '@/features/calendar/types';
@@ -10,8 +6,7 @@ import { formatTimeRange } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
 import { Warning, Users, ArrowsClockwise } from '@phosphor-icons/react';
 
-// Default color when category is not found
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -30,7 +25,6 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const isSharedEvent = event.organizerId !== currentUserId;
   const multiDayPosition = event.multiDayPosition ?? 'single';
 
-  // Current user's RSVP status for this event
   const currentUserAttendee = currentUserId
     ? event.attendees.find((a) => a.id === currentUserId)
     : null;
@@ -38,13 +32,11 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const isPendingOrTentative = currentUserAttendee != null
     && (currentUserAttendee.status === 'pending' || currentUserAttendee.status === 'tentative');
 
-  // Determine if we should show content (only on start/single)
+  // Middle/end day segments of a multi-day event hide the label.
   const showContent = multiDayPosition === 'start' || multiDayPosition === 'single';
 
-  // Look up category color from Redux state (real categories from backend)
   const category = event.categoryId ? categories[event.categoryId] : null;
   const categoryColor = category?.color ?? DEFAULT_COLOR;
-  // Shared events have slightly more transparent background
   const backgroundColor = hexToRgba(categoryColor, isSharedEvent ? 0.07 : 0.1);
 
   const handleClick = () => {
@@ -55,29 +47,26 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
     dispatch(openEditEvent(event.id));
   };
 
-  // Calculate position as percentages within the column
   const leftPercent = event.left * columnWidth;
   const widthPercent = event.width * columnWidth;
 
-  // Check if event is short (less than 45 minutes display)
   const isShort = event.height < 45;
 
-  // Determine border radius based on multi-day position
+  // Multi-day spans round only on outer edges so adjacent day segments visually connect.
   const getBorderRadius = () => {
     switch (multiDayPosition) {
       case 'start':
-        return '6px 0 0 6px'; // rounded left, flat right
+        return '6px 0 0 6px';
       case 'middle':
-        return '0'; // flat both sides
+        return '0';
       case 'end':
-        return '0 6px 6px 0'; // flat left, rounded right
+        return '0 6px 6px 0';
       default:
-        return '6px'; // rounded all (single day)
+        return '6px';
     }
   };
 
-  // Get selection border styles based on multi-day position
-  // Only show borders on outer edges, not between days
+  // Selection borders skip the seams between day segments.
   const getSelectionBorderStyle = (): React.CSSProperties => {
     if (!isSelected) return {};
 
@@ -106,7 +95,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
           borderLeft: 'none',
           borderRight: `${borderWidth} solid ${borderColor}`,
         };
-      default: // single
+      default:
         return {
           border: `${borderWidth} solid ${borderColor}`,
         };
@@ -114,18 +103,17 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Only allow left click drag
     if (e.button !== 0) {
       e.preventDefault();
       return;
     }
 
     dispatch(startDrag(event.id));
-    
-    // Set ghost image effect
+
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', event.id); // Required for Firefox
+      // Firefox requires non-empty dataTransfer data to fire drag events.
+      e.dataTransfer.setData('text/plain', event.id);
     }
   };
 
@@ -159,8 +147,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         ...getSelectionBorderStyle(),
       }}
     >
-      {/* Left color bar - only show on start/single */}
-      {/* Shared events get a dashed pattern instead of solid */}
+      {/* Shared events render the color bar as a dashed pattern. */}
       {(multiDayPosition === 'start' || multiDayPosition === 'single') && (
         <div
           className={cn(
@@ -176,10 +163,8 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         />
       )}
 
-      {/* Content - only show on start/single */}
       {showContent && (
         <div className={cn('pl-2.5 pr-2', isShort ? 'py-0.5' : 'py-1.5')}>
-          {/* Title with conflict and shared indicators */}
           <div
             className={cn(
               'font-semibold text-foreground truncate flex items-center gap-1',
@@ -217,14 +202,12 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
             <span className={cn('truncate', isDeclined && 'line-through')}>{event.title}</span>
           </div>
 
-          {/* Time (hide for short events) */}
           {!isShort && (
             <div className="text-[10px] text-muted-foreground truncate">
               {formatTimeRange(event.startTime, event.endTime)}
             </div>
           )}
 
-          {/* Resource indicators (for taller events) */}
           {event.height > 60 && event.linkedResources.length > 0 && (
             <div className="absolute bottom-1 right-2 flex gap-0.5 text-[10px] text-muted-foreground">
               {event.linkedResources.slice(0, 3).map((resource) => (
@@ -239,7 +222,6 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
             </div>
           )}
 
-          {/* Attendee avatars (for taller events) */}
           {event.height > 80 && event.attendees.length > 0 && (
             <div className="mt-2 flex -space-x-1.5">
               {event.attendees.slice(0, 3).map((attendee, index) => (
@@ -266,7 +248,6 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         </div>
       )}
 
-      {/* Focus time indicator - only show on start/single */}
       {event.isFocusTime && showContent && (
         <div className="absolute top-1 right-1 text-[10px]">🔕</div>
       )}

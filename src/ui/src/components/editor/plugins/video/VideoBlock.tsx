@@ -1,13 +1,4 @@
-/**
- * VideoBlock Component
- *
- * Renders an inline video player within the notes editor using Video.js.
- * Uses the /media-stream/ URL pattern for service worker streaming
- * with Range header support for seeking.
- *
- * Shows an animated uploading indicator when src starts with "uploading:".
- * Displays filename header when title is provided.
- */
+// `src` starting with `uploading:` renders the in-progress placeholder; `/media-stream/` URLs flow through the SW for ranged seek.
 
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';

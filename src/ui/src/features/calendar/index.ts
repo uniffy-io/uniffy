@@ -1,21 +1,5 @@
-/**
- * Calendar Feature
- *
- * A full-featured calendar module for UNIFFY with:
- * - Day/Week/Month views
- * - Event management (create, edit, delete)
- * - Categories and color coding
- * - Templates for quick event creation
- * - Focus time blocks
- * - Attendee management
- * - Resource linking (notes, files, chats)
- * - Organization-wide event visibility
- */
-
-// Main page
 export { CalendarPage } from '@/features/calendar/pages/CalendarPage';
 
-// Layout components
 export {
   CalendarLayout,
   CalendarHeader,
@@ -24,7 +8,6 @@ export {
   DetailPanel,
 } from '@/features/calendar/components/layout';
 
-// Calendar grid components
 export {
   WeekView,
   DayView,
@@ -37,7 +20,6 @@ export {
   CurrentTimeIndicator,
 } from '@/features/calendar/components/calendar';
 
-// Sidebar components
 export {
   SidebarSection,
   QuickAccess,
@@ -48,30 +30,24 @@ export {
   EventScopeFilter,
 } from '@/features/calendar/components/sidebar';
 
-// Modals
 export { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
 export { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 
-// Redux store
 export {
   calendarReducer,
   calendarUiReducer,
-  // Event actions
   setEvents,
   addEvent,
   updateEvent,
   removeEvent,
-  // Category actions
   addCategory,
   updateCategory,
   removeCategory,
-  // Filter actions
   setFilters,
   clearFilters,
   setSearchQuery,
   toggleCategoryFilter,
   toggleTagFilter,
-  // UI actions
   setViewMode,
   setCurrentDate,
   goToToday,
@@ -110,10 +86,8 @@ export {
   removeAttendees,
 } from '@/features/calendar/store/calendarThunks';
 
-// Quick view (header widget)
 export { CalendarQuickView } from '@/features/calendar/components/quick-view/CalendarQuickView';
 
-// Hooks
 export {
   useCalendarNavigation,
   useCalendarEvents,
@@ -122,7 +96,6 @@ export {
   useTodayEvents,
 } from '@/features/calendar/hooks';
 
-// Utilities
 export {
   getWeekDates,
   getWeekColumns,

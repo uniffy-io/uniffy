@@ -1,12 +1,4 @@
-/**
- * Project Mention Preview Card
- *
- * Shows project name, progress bar with task counts, status,
- * and description. Uses orange accent (project URN color).
- *
- * Markup uses only inline elements so the card stays HTML-valid inside `<p>`.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,

@@ -1,13 +1,8 @@
-/**
- * Keyboard shortcuts settings section.
- */
-
 import React, { useState } from 'react';
 import { useKeyboardBindings, formatShortcut } from '@/features/settings/hooks/useKeyboardShortcuts';
 import { useSettings } from '@/features/settings/hooks/useSettings';
 import { Button } from '@/components/ui/button';
 
-// Group shortcuts by category
 const SHORTCUT_CATEGORIES = [
     {
         id: 'navigation',
@@ -107,7 +102,6 @@ const SHORTCUT_CATEGORIES = [
     },
 ];
 
-// Helper to find action label from categories
 const getActionLabel = (action: string): string => {
     for (const category of SHORTCUT_CATEGORIES) {
         const shortcut = category.shortcuts.find(s => s.action === action);
@@ -116,7 +110,7 @@ const getActionLabel = (action: string): string => {
     return action;
 };
 
-// Normalize binding for comparison (handle Ctrl/Cmd equivalence)
+// Mac Cmd and Win/Linux Ctrl are equivalent in our binding language; collapse both for conflict checks.
 const normalizeBinding = (binding: string): string => {
     return binding.toLowerCase().replace(/cmd/g, 'ctrl');
 };
@@ -140,12 +134,11 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
     const [tempBinding, setTempBinding] = useState('');
     const [conflict, setConflict] = useState<ConflictInfo | null>(null);
 
-    // Check for conflicts when temp binding changes
     const checkConflict = (binding: string): ConflictInfo | null => {
         const normalizedNew = normalizeBinding(binding);
 
         for (const [otherAction, otherBinding] of Object.entries(allBindings)) {
-            if (otherAction === action) continue; // Skip self
+            if (otherAction === action) continue;
             if (!otherBinding) continue;
 
             if (normalizeBinding(otherBinding) === normalizedNew) {
@@ -161,19 +154,16 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
 
-        // Build the shortcut string
         const parts: string[] = [];
         if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
         if (e.shiftKey) parts.push('Shift');
         if (e.altKey) parts.push('Alt');
 
-        // Get the key
         let key = e.key;
         if (key === ' ') key = 'Space';
         else if (key.length === 1) key = key.toUpperCase();
         else if (key.startsWith('Arrow')) key = key.replace('Arrow', '');
 
-        // Ignore modifier-only presses
         if (['Control', 'Shift', 'Alt', 'Meta'].includes(key)) return;
 
         parts.push(key);
@@ -267,7 +257,7 @@ export function KeyboardShortcutsSection() {
     const { updateSettings } = useSettings();
 
     const handleUpdate = (action: string, binding: string, conflictingAction?: string) => {
-        // If there's a conflict, remove the binding from the conflicting action
+        // Sparse update: undefined entries clear the override and fall back to DEFAULT_SHORTCUTS.
         const bindingsUpdate: Record<string, string | undefined> = { [action]: binding };
         if (conflictingAction) {
             bindingsUpdate[conflictingAction] = undefined;
@@ -281,7 +271,6 @@ export function KeyboardShortcutsSection() {
     };
 
     const handleReset = (action: string) => {
-        // Reset by setting to undefined (will use default)
         updateSettings({
             keyboardShortcuts: {
                 bindings: { [action]: undefined as unknown as string },

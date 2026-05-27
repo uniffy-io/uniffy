@@ -1,70 +1,33 @@
-/**
- * Time range constants and utilities for the Calendar feature
- */
-
-/**
- * Default working hours configuration
- */
 export const WORKING_HOURS = {
-  /** Start of work day (24h format) */
   START: '09:00',
-  /** End of work day (24h format) */
   END: '17:00',
-  /** Lunch break start */
   LUNCH_START: '12:00',
-  /** Lunch break end */
   LUNCH_END: '13:00',
 } as const;
 
-/**
- * Default event durations (in minutes)
- */
 export const DEFAULT_DURATIONS = {
-  /** Quick meeting */
   QUICK: 15,
-  /** Short meeting */
   SHORT: 30,
-  /** Standard meeting */
   STANDARD: 60,
-  /** Long meeting */
   LONG: 90,
-  /** Focus block */
   FOCUS: 120,
-  /** All day */
   ALL_DAY: 480,
 } as const;
 
-/**
- * Time slot intervals (in minutes)
- */
 export const TIME_INTERVALS = {
-  /** Finest granularity for time picker */
   FINE: 5,
-  /** Standard granularity for grid */
   STANDARD: 15,
-  /** Coarse granularity for quick view */
   COARSE: 30,
-  /** Hour blocks */
   HOUR: 60,
 } as const;
 
-/**
- * Available time format options
- */
 export const TIME_FORMATS = {
-  /** 12-hour format (9:00 AM) */
   TWELVE_HOUR: 'h:mm A',
-  /** 24-hour format (09:00) */
   TWENTY_FOUR_HOUR: 'HH:mm',
-  /** Hour only 12-hour (9 AM) */
   HOUR_ONLY_12: 'h A',
-  /** Hour only 24-hour (09) */
   HOUR_ONLY_24: 'HH',
 } as const;
 
-/**
- * Common timezones for quick selection
- */
 export const COMMON_TIMEZONES = [
   { label: 'Pacific Time (PT)', value: 'America/Los_Angeles', offset: 'GMT-8' },
   { label: 'Mountain Time (MT)', value: 'America/Denver', offset: 'GMT-7' },
@@ -81,9 +44,6 @@ export const COMMON_TIMEZONES = [
   { label: 'Australian Eastern Time', value: 'Australia/Sydney', offset: 'GMT+11' },
 ] as const;
 
-/**
- * Generate time slots for a time picker
- */
 export function generateTimeSlots(
   intervalMinutes: number = TIME_INTERVALS.STANDARD,
   startHour: number = 0,
@@ -97,7 +57,6 @@ export function generateTimeSlots(
       const minuteStr = minute.toString().padStart(2, '0');
       const value = `${hourStr}:${minuteStr}`;
 
-      // Format label in 12-hour format
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
       const period = hour < 12 ? 'AM' : 'PM';
       const label = minute === 0
@@ -111,16 +70,10 @@ export function generateTimeSlots(
   return slots;
 }
 
-/**
- * Get business hours slots only
- */
 export function getBusinessHoursSlots(): { value: string; label: string }[] {
   return generateTimeSlots(TIME_INTERVALS.STANDARD, 8, 18);
 }
 
-/**
- * Duration options for event form
- */
 export const DURATION_OPTIONS = [
   { value: 15, label: '15 min' },
   { value: 30, label: '30 min' },
@@ -132,9 +85,6 @@ export const DURATION_OPTIONS = [
   { value: 240, label: '4 hours' },
 ] as const;
 
-/**
- * Reminder time options (in minutes before event)
- */
 export const REMINDER_OPTIONS = [
   { value: 0, label: 'At time of event' },
   { value: 5, label: '5 minutes before' },
@@ -147,18 +97,12 @@ export const REMINDER_OPTIONS = [
   { value: 2880, label: '2 days before' },
 ] as const;
 
-/**
- * Week start options
- */
 export const WEEK_START_OPTIONS = [
   { value: 0, label: 'Sunday' },
   { value: 1, label: 'Monday' },
   { value: 6, label: 'Saturday' },
 ] as const;
 
-/**
- * Hours array for time column display
- */
 export const DISPLAY_HOURS = [
   { hour: 0, label: '12 AM' },
   { hour: 1, label: '1 AM' },

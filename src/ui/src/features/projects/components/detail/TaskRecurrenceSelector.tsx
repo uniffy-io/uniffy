@@ -1,10 +1,3 @@
-/**
- * TaskRecurrenceSelector - Recurrence configuration for tasks.
- *
- * Compact toggle with expandable configuration panel.
- * Stores/reads structured JSON in the task's recurrenceRule field.
- */
-
 import { useState, useMemo, useCallback } from "react";
 import { ArrowsClockwise, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
@@ -77,9 +70,6 @@ function getEndCondition(config: RecurrenceConfig): EndCondition {
   return "never";
 }
 
-/**
- * Build a human-readable summary of the recurrence config.
- */
 function describeSummary(config: RecurrenceConfig): string {
   const pattern = config.pattern as RecurrencePattern;
   const interval = config.interval;

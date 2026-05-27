@@ -1,23 +1,10 @@
-/**
- * Video Upload Utility for Editor
- *
- * Handles uploading video files from the Crepe editor to the Attachments system.
- * Supports drag-drop, paste, file picker, and slash command uploads.
- * Returns /media-stream/ URLs for service worker streaming with seek support.
- * Works with any content type (notes, calendar events, tasks, etc.).
- */
-
 import { filesApi } from '@/features/files/api/filesApi';
 import { attachmentsApi } from '@/features/attachments';
 import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
-// Cache for attachments folder ID per organization
 const attachmentsFolderCache = new Map<string, string>();
 
-/**
- * Get the user's attachments folder ID, with caching.
- */
 async function getAttachmentsFolderId(organizationId: string): Promise<string> {
     const cached = attachmentsFolderCache.get(organizationId);
     if (cached) {
@@ -34,41 +21,21 @@ async function getAttachmentsFolderId(organizationId: string): Promise<string> {
 }
 
 export interface UploadVideoOptions {
-    /** The video file to upload */
     file: File;
-    /** Organization ID for the upload */
     organizationId: string;
-    /** Content ID to attach the video to (empty string = deferred attachment) */
+    /** Empty string defers attachment until the editor flushes content. */
     contentId: string;
-    /** Content type for the attachment */
     contentType: ContentType;
-    /** Optional progress callback (0-100) */
     onProgress?: (percent: number) => void;
-    /** Called with the uploaded file ID (useful for deferred attachment when contentId is empty) */
     onFileUploaded?: (fileId: string) => void;
 }
 
-/**
- * Upload a video file and attach it to content.
- *
- * Flow:
- * 1. Get attachments folder ID (cached per org)
- * 2. Initiate upload via FilesService
- * 3. Upload file chunks
- * 4. Complete upload to get file ID
- * 5. Attach file to content via AttachmentsService
- * 6. Return media-stream URL for video playback with seeking
- *
- * @returns URL to stream the video: /media-stream/{orgId}/{fileId}
- */
 export async function uploadVideo(options: UploadVideoOptions): Promise<string> {
     const { file, organizationId, contentId, contentType, onProgress, onFileUploaded } = options;
 
-    // 1. Get attachments folder ID
     const folderId = await getAttachmentsFolderId(organizationId);
     onProgress?.(5);
 
-    // 2. Initiate upload
     const initiateResponse = await filesApi.initiateUpload({
         organizationId,
         filename: file.name,
@@ -80,9 +47,8 @@ export async function uploadVideo(options: UploadVideoOptions): Promise<string> 
     const { uploadId, chunkSize, totalChunks } = initiateResponse;
     onProgress?.(10);
 
-    // 3. Upload chunks
     const fileBuffer = await file.arrayBuffer();
-    const progressPerChunk = 70 / totalChunks; // 10-80% for chunk uploads
+    const progressPerChunk = 70 / totalChunks;
 
     for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
         const start = (chunkNumber - 1) * chunkSize;
@@ -99,7 +65,6 @@ export async function uploadVideo(options: UploadVideoOptions): Promise<string> 
         onProgress?.(10 + chunkNumber * progressPerChunk);
     }
 
-    // 4. Complete upload
     const completeResponse = await filesApi.completeUpload({
         uploadId,
     });
@@ -110,7 +75,6 @@ export async function uploadVideo(options: UploadVideoOptions): Promise<string> 
     }
     onProgress?.(85);
 
-    // 5. Attach file to content (skip when contentId is empty - deferred mode)
     if (contentId) {
         await attachmentsApi.attachFile({
             organizationId,
@@ -122,21 +86,9 @@ export async function uploadVideo(options: UploadVideoOptions): Promise<string> 
     onFileUploaded?.(fileId);
     onProgress?.(100);
 
-    // 6. Return media-stream URL (service worker handles auth + Range seeking)
     return buildMediaStreamUrl(organizationId, fileId);
 }
 
-/**
- * Create a video upload handler function for the Crepe editor.
- *
- * This factory function captures the contentId, contentType, and organizationId
- * so the returned handler can be passed directly to slash command callbacks.
- *
- * @param contentType - The content type for the attachment
- * @param contentId - The content ID to attach uploaded videos to
- * @param organizationId - The organization ID for the upload
- * @returns An async function that takes a File and returns a URL string
- */
 export function createVideoUploadHandler(
     contentType: ContentType,
     contentId: string,

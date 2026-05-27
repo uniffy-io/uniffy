@@ -1,28 +1,7 @@
 /**
- * Recover orphaned screen recordings on app start.
- *
- * The streaming uploader mirrors every part to IndexedDB before sending
- * and removes it on ack. A tab crash mid-record leaves chunks behind in
- * IDB, indexed by the `MultipartUpload.id` they belong to. Server side,
- * the upload row stays `ACTIVE` for 24 h (then the reaper aborts it).
- *
- * On boot we:
- *   1. List upload ids whose chunks have been idle for > 60 s (the
- *      grace gives the live recording session in this tab a chance to
- *      ack its own chunks before we treat them as orphans).
- *   2. For each, ask the server `getUploadStatus`. If anything but
- *      `ACTIVE`, drop our local copy - the server already moved on.
- *   3. Otherwise upload any chunks the server doesn't have, then call
- *      `completeUpload`. The transcode / thumbnail pipelines run as
- *      normal because the server cannot tell the difference between a
- *      live finish and a recovered one.
- *   4. Surface a toast linking to the recovered file. On any failure,
- *      wipe local state and let the server-side reaper finish the
- *      cleanup - we never want recovery to loop forever.
- *
- * Idempotent across browser refreshes (each successful run clears its
- * state from IDB) and across tabs (a `recovery_lock:{uploadId}` BroadcastChannel
- * sentinel keeps two tabs from racing on the same upload).
+ * Recovers orphaned screen recordings on boot: IDB-buffered chunks whose `MultipartUpload` is still
+ * ACTIVE server-side (24h TTL) get re-uploaded and completed. 60s idle grace skips the live session's
+ * own chunks. Cross-tab races guarded by a BroadcastChannel claim.
  */
 
 import { UploadStatus } from '@uniffy/proto/files/v1/files_pb';
@@ -73,19 +52,7 @@ export interface RecoveryResult {
     filename: string;
 }
 
-/**
- * Attempt to push every locally-buffered chunk for a single upload up
- * to the server, then call `completeUpload`.
- *
- * Used by:
- *   - the auto-recovery sweep on app boot (`recoverOrphanedRecordings`),
- *   - the manual "Retry" button on the inline trigger when state=error.
- *
- * Returns the recovered File metadata on success, `null` if the upload
- * is no longer active (server moved on; local state has been wiped).
- * Throws on transient failures so the caller can decide whether to
- * leave the IDB rows in place for a future attempt.
- */
+/** Pushes IDB-buffered chunks then completes; returns null if the server-side upload is no longer ACTIVE. */
 export async function resumeUpload(uploadId: string): Promise<RecoveryResult | null> {
     const status = await filesApi.getUploadStatus({ uploadId });
     if (status.status !== UploadStatus.ACTIVE) {

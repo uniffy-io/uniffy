@@ -1,7 +1,3 @@
-/**
- * Sessions API - wraps AuthService session management RPCs.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
 import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';

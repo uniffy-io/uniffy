@@ -1,27 +1,7 @@
 /**
- * Streaming uploader for screen recordings.
- *
- * Drives a multipart upload during recording: each `MediaRecorder.ondataavailable`
- * blob is fed into a `PartAggregator` that emits S3-legal parts (>= 5 MB except
- * the last). Parts upload concurrently (max 2 in-flight) with exponential
- * backoff retries on 5xx / network errors; the recording itself never blocks
- * on the upload queue.
- *
- * Production-hardening hooks:
- * - Each part is mirrored to IndexedDB before upload and removed on ack so a
- *   tab crash mid-record leaves the bytes recoverable against the same
- *   `MultipartUpload` row (24h server-side TTL).
- * - A queue-depth governor classifies the backlog into normal / slow /
- *   falling-behind / auto-stop and fires `onBackpressure` so the slice can
- *   surface a banner and the thunk can auto-stop on overflow.
- *
- * Threading: measured main-thread cost on a 5 MB / 5 s cadence
- * (`Blob.slice` is metadata-only, `Blob.arrayBuffer()` is async-yielded
- * by the browser, ConnectRPC's protobuf encoding for an
- * `UploadChunksRequest` is sub-millisecond at this size); jank is not
- * observable on Chrome / Brave. Worker form is held in reserve for a
- * profiler-driven follow-up if the recording UI ever shows frame drops
- * during upload bursts.
+ * Streaming multipart uploader. Parts (>=5MB) upload with max 2 concurrent + exponential backoff.
+ * Each part is mirrored to IndexedDB before send for tab-crash recovery; queue-depth governor
+ * fires `onBackpressure` so the slice can banner and auto-stop on overflow.
  */
 
 import { filesApi } from '@/features/files/api/filesApi';
@@ -121,8 +101,7 @@ export class StreamingUploader {
         if (!completion.file) {
             throw new Error('Server did not return a File on completeUpload');
         }
-        // Recording is durable on the server; drop any stragglers from the
-        // client-side recovery store so they do not haunt the next session.
+        // Server has it; drop client-side recovery rows so they don't haunt the next session.
         void clearUpload(this.uploadId);
         return {
             fileId: completion.file.id,
@@ -152,9 +131,7 @@ export class StreamingUploader {
         this.queue.push({ partNumber, data, attempts: 0 });
         this.bytesQueued += size;
         if (this.uploadId) {
-            // Persist before send. If IndexedDB is unavailable (private mode,
-            // quota), `putChunk` returns false and we silently fall back to
-            // in-memory only. The upload itself proceeds either way.
+            // Persist before send; in-memory-only fallback when IDB is unavailable.
             void putChunk(this.uploadId, partNumber, data);
         }
         this.evaluateBackpressure();

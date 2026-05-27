@@ -1,10 +1,3 @@
-/**
- * Search input for filtering notifications within the panel.
- *
- * Provides a compact search field with clear button,
- * styled to match the SpotlightSearch input pattern.
- */
-
 import { useRef, useCallback } from 'react';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

@@ -1,14 +1,3 @@
-/**
- * MessageContent - Renders chat message content as markdown.
- *
- * Handles:
- * - Markdown formatting (bold, italic, strikethrough, lists, headings)
- * - Fenced code blocks with syntax highlighting, language label, and copy button
- * - Inline code
- * - URN mention chips: [[[label|urn]]] rendered as interactive MentionChipCompact
- * - Links, GFM tables
- */
-
 import { memo, useState, useCallback, useMemo, type ReactNode } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -22,38 +11,26 @@ import { cn } from '@/shared/utils/cn';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
 
-// Mention preprocessing
-
-// Convert [[[label|urn]]] mentions to markdown links so react-markdown processes them
+// Rewrite [[[label|urn]]] as markdown links so react-markdown processes them.
 const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
 function preprocessMentions(content: string): string {
   return content.replace(MENTION_RE, '[@$1]($2)');
 }
 
-// Markdown collapses single newlines into spaces, so an agent reply
-// like "Line one\nLine two" renders as "Line one Line two" once it
-// settles -- which looks like text was eaten between the streaming
-// view (plain pre-wrap) and the markdown view. Convert single
-// newlines into hard breaks (`  \n`) so the laid-out result matches
-// what the user saw mid-stream. Existing blank-line paragraph breaks
-// (`\n\n`) and code blocks are left alone.
+// Promote single newlines to hard breaks so markdown layout matches what users saw mid-stream; leave fenced code untouched.
 const FENCED_CODE_RE = /(```[\s\S]*?```)/g;
 
 function preserveSingleNewlines(content: string): string {
   if (!content.includes('\n')) return content;
-  // Split on fenced code blocks so we don't rewrite newlines inside
-  // them; rejoin with the originals untouched.
   return content
     .split(FENCED_CODE_RE)
     .map((segment, i) => {
-      if (i % 2 === 1) return segment; // fenced code -- leave alone
+      if (i % 2 === 1) return segment;
       return segment.replace(/([^\n])\n(?!\n)/g, '$1  \n');
     })
     .join('');
 }
-
-// Emoticon to emoji conversion
 
 const EMOTICON_MAP: [RegExp, string][] = [
   [/(?<!\w)<3(?!\w)/g, '\u2764\uFE0F'],       // <3 -> red heart
@@ -80,14 +57,11 @@ const EMOTICON_MAP: [RegExp, string][] = [
   [/(?<!\w):\|(?!\w)/g, '\uD83D\uDE10'],       // :| -> neutral
 ];
 
-// Only convert emoticons outside of code blocks/spans
 const CODE_BLOCK_RE = /(`{1,3}[^`]*`{1,3})/g;
 
 function convertEmoticons(text: string): string {
-  // Split on code segments to avoid converting inside them
   const parts = text.split(CODE_BLOCK_RE);
   return parts.map((part, i) => {
-    // Odd indices are code segments - leave them alone
     if (i % 2 === 1) return part;
     let result = part;
     for (const [pattern, emoji] of EMOTICON_MAP) {
@@ -97,8 +71,6 @@ function convertEmoticons(text: string): string {
   }).join('');
 }
 
-// Custom markdown renderers
-
 function MentionLink({ href, children, compact }: { href: string; children: ReactNode; compact: boolean }) {
   const dispatch = useAppDispatch();
   const label = String(children ?? '').replace(/^@/, '');
@@ -106,17 +78,12 @@ function MentionLink({ href, children, compact }: { href: string; children: Reac
 
   const handleClick = useCallback((e?: React.MouseEvent) => {
     if (!parsed.isValid) return;
-    // FILE mentions open the viewer modal in place. Avoids navigating to
-    // /files/:id which would mount FilesPage in the background and strand
-    // the user there after closing the modal.
+    // FILE mentions open the viewer modal in place (avoids stranding on /files/:id).
     if (parsed.type === UrnType.FILE && parsed.id && !e?.metaKey && !e?.ctrlKey) {
       dispatch(openViewerWithFetch({ fileId: parsed.id }));
       return;
     }
-    // Prefer the resolved URL from the search index -- it carries
-    // type-specific routing the local ``urnToPath`` shortcut cannot
-    // reconstruct (e.g. chat messages need ``/chat/{channel}#{msg}``,
-    // and the channel id is not derivable from the message URN).
+    // Prefer search-index URLs; urnToPath can't reconstruct e.g. chat message routes.
     const resolved = getMentionUrl(href);
     const path = resolved || urnToPath(href);
     if (!path || path === '#') return;
@@ -195,7 +162,6 @@ function CopyButton({ text }: { text: string }) {
 function CodeBlockPre(props: any) {
   const { children, ...rest } = props;
 
-  // Detect fenced code block: <pre> containing a <code> with className
   const codeChild = children?.props ?? {};
   const className = codeChild.className ?? '';
   const language = className.replace(/language-/, '').replace(/hljs/, '').trim();
@@ -218,7 +184,6 @@ function CodeBlockPre(props: any) {
   return <pre {...rest}>{children}</pre>;
 }
 
-// Extract plain text from React children tree (for copy button)
 function extractText(node: ReactNode): string {
   if (node == null) return '';
   if (typeof node === 'string') return node;
@@ -233,7 +198,7 @@ function extractText(node: ReactNode): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function InlineCode(props: any) {
   const { children, className, ...rest } = props;
-  // If it has a language class, it's inside a <pre> - let rehype-highlight handle it
+  // With a language class it lives inside <pre>; let rehype-highlight handle it.
   if (className) {
     return <code className={className} {...rest}>{children}</code>;
   }
@@ -244,7 +209,6 @@ function InlineCode(props: any) {
   );
 }
 
-// Scale up emoji in paragraph text so they don't look tiny at text-sm
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function EmojiParagraph(props: any) {
   const { children, ...rest } = props;
@@ -253,7 +217,6 @@ function EmojiParagraph(props: any) {
 
 function scaleEmoji(node: ReactNode): ReactNode {
   if (typeof node === 'string') {
-    // Split text into emoji and non-emoji segments
     const parts = node.split(EMOJI_RE);
     const matches = node.match(EMOJI_RE);
     if (!matches) return node;
@@ -291,22 +254,15 @@ const markdownComponentsCompact = {
   p: EmojiParagraph,
 };
 
-// react-markdown v10 strips non-http URLs by default.
-// Allow urn: protocol so URN mention links pass through to our custom <a>.
+// Allow urn: protocol; react-markdown v10 strips non-http URLs by default.
 function urlTransform(url: string): string {
   if (url.startsWith('urn:uniffy:')) return url;
   return defaultUrlTransform(url);
 }
 
-// Emoji sizing
-
-// Matches emoji characters (including multi-codepoint sequences like flags, skin tones)
 const EMOJI_RE = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu;
 
-/**
- * Detect if the message is emoji-only (1-3 emoji, no other text).
- * Used to render emoji-only messages in jumbo size like Slack/Discord.
- */
+/** Emoji-only messages (1-3 emoji, no other text) render jumbo-sized. */
 function isEmojiOnly(text: string): boolean {
   const stripped = text.replace(/\s/g, '');
   if (!stripped) return false;
@@ -316,16 +272,10 @@ function isEmojiOnly(text: string): boolean {
   return withoutEmoji.length === 0 && emojiMatches.length <= 3;
 }
 
-// MessageContent component
-
 interface MessageContentProps {
   content: string;
   className?: string;
-  /**
-   * Force mention chips to render as compact pills regardless of the user's
-   * `mentionDisplay` setting. Used in dense contexts (reply previews, thread
-   * previews) where an expanded card would dominate the surrounding line.
-   */
+  /** Force compact mention chips for dense surfaces (reply/thread previews). */
   compactMentions?: boolean;
 }
 
@@ -333,7 +283,6 @@ function MessageContentInner({ content, className, compactMentions = false }: Me
   const withEmoticons = convertEmoticons(content ?? '');
   const jumbo = useMemo(() => isEmojiOnly(withEmoticons), [withEmoticons]);
 
-  // Emoji-only messages: render large without markdown
   if (jumbo) {
     return (
       <div className={cn('text-4xl leading-snug py-0.5', className)}>
@@ -352,19 +301,11 @@ function MessageContentInner({ content, className, compactMentions = false }: Me
       }}
       className={cn(
         'prose prose-sm dark:prose-invert max-w-none',
-        // Recommended chat-message body typography:
-        // mobile  -> 15px / 1.45 (a touch larger + airier for thumb reading)
-        // desktop -> 14px / 1.40 (denser, doc-grade)
+        // Mobile 15/1.45 for thumb reading; desktop 14/1.4 for density.
         'text-foreground/90 font-[450] text-[15px] leading-[1.45] md:text-sm md:leading-[1.4]',
-        // `my-2` gives blank-line paragraph breaks visible breathing
-        // room. With my-0.5 (2px) the stanza separators in long agent
-        // replies collapsed to nothing and the prose looked like one
-        // wall of text, even though `\n\n` was preserved in the source.
+        // `my-2` keeps blank-line paragraph breaks visible; tighter values collapsed stanzas.
         'prose-p:my-2 prose-pre:my-0 prose-ul:my-1 prose-ol:my-1',
-        // Strip the leading and trailing prose margin on the outermost paragraphs
-        // so the message container's own padding controls between-message
-        // spacing. Without this, every single-line reply leaks 8px above and
-        // below into the gap between consecutive messages from the same sender.
+        // Strip outer paragraph margins so the container controls between-message spacing.
         '[&>p:first-child]:mt-0 [&>p:last-child]:mb-0',
         'prose-headings:my-2 prose-headings:text-foreground',
         'prose-code:before:content-none prose-code:after:content-none',
@@ -387,8 +328,5 @@ function MessageContentInner({ content, className, compactMentions = false }: Me
   );
 }
 
-// Memoized so the heavy react-markdown + rehype-highlight pass only
-// runs when content/className actually change. Without this, every
-// streaming AGENT_TOKEN_DELTA causes the parent message list to
-// re-render which re-parses every other message in the channel.
+// Memoized: react-markdown + rehype-highlight is expensive; streaming deltas re-render the list.
 export const MessageContent = memo(MessageContentInner);

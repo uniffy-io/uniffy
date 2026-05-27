@@ -63,16 +63,14 @@ export function UserMenu() {
 
         function handleClickOutside(event: MouseEvent) {
             const target = event.target as Node;
-            // Ignore clicks inside the menu
             if (menuRef.current && menuRef.current.contains(target)) return;
-            // Ignore clicks inside portal-rendered dropdowns (Select, etc.)
-            // that are logically children of this menu
+            // Portal-rendered descendants (Select etc.) live outside the DOM subtree but belong logically.
             const portalEl = (target as Element).closest?.('[data-select-portal]');
             if (portalEl) return;
             setIsOpen(false);
         }
 
-        // Add listener on next tick to avoid the opening click from triggering close
+        // Defer to the next tick so the opening click itself doesn't immediately close the menu.
         const timeoutId = setTimeout(() => {
             document.addEventListener('mousedown', handleClickOutside);
         }, 0);
@@ -100,18 +98,13 @@ export function UserMenu() {
     };
 
     const handleLogout = () => {
-        // Cancel any in-flight screen recording (aborts S3 multipart, clears state)
         void dispatch(cancelRecording());
-        // Notify backend to revoke the session (fire-and-forget)
         if (refreshToken) {
             const client = createClient(AuthService, unaryTransport);
             client.logout({ refreshToken }).catch(() => { });
         }
-        // Clear memory access token (security: remove from memory)
         clearMemoryAccessToken();
-        // Tear down client-side storage encryption (clears keys, notifies other tabs)
         teardownStorageEncryption();
-        // Clear all user/org-specific state
         dispatch(logout());
         dispatch(resetSettings());
         dispatch(clearNotes());
@@ -128,11 +121,8 @@ export function UserMenu() {
         dispatch(clearChatUi());
         dispatch(clearAgentMessages());
         dispatch(clearTags());
-        // Clear IndexedDB cache (async, fire and forget)
         clearNotesCache().catch(console.error);
-        // Clear file blob cache
         clearBlobCache();
-        // Navigate to auth page
         navigate('/auth');
     };
 
@@ -179,7 +169,6 @@ export function UserMenu() {
 
             {isOpen && (
                 <div className="absolute right-0 z-100 mt-1.5 w-[min(240px,calc(100vw-2rem))] origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
-                    {/* User info header */}
                     <div className="px-3 py-2.5 border-b border-border">
                         <div className="flex items-center gap-2.5">
                             <div className={cn(
@@ -209,7 +198,6 @@ export function UserMenu() {
                         </div>
                     </div>
 
-                    {/* Custom status */}
                     <div className="border-b border-border py-1.5 px-1.5">
                         {showStatusPicker ? (
                             <CustomStatusPicker
@@ -237,7 +225,6 @@ export function UserMenu() {
                         )}
                     </div>
 
-                    {/* Quick actions */}
                     <div className="py-1.5 px-1.5">
                         <button
                             onClick={() => {
@@ -292,7 +279,6 @@ export function UserMenu() {
                         )}
                     </div>
 
-                    {/* Theme switcher */}
                     <div className="border-t border-border py-1.5 px-1.5">
                         <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             Appearance
@@ -329,7 +315,6 @@ export function UserMenu() {
                         </div>
                     </div>
 
-                    {/* Sign out */}
                     <div className="border-t border-border pt-1.5 px-1.5">
                         <button
                             onClick={requestLogout}

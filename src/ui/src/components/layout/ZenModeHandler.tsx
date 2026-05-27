@@ -3,10 +3,7 @@ import { useAppDispatch } from '@/app/hooks';
 import { toggleZenMode } from '@/app/zenModeSlice';
 import { useShortcutHandler } from '@/features/settings';
 
-/**
- * Global handler for Zen Mode keyboard shortcut.
- * Renders nothing — just registers the shortcut listener.
- */
+/** Renders nothing — just registers the global Zen Mode shortcut. */
 export function ZenModeHandler() {
     const dispatch = useAppDispatch();
 

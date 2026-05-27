@@ -1,26 +1,7 @@
 /**
- * Cross-tab single-recording lock.
- *
- * Two tabs of the same origin running concurrent recordings would each
- * try to grab the screen, fight over upload bandwidth, double-charge the
- * user's quota, and surface confusing race conditions in the slice.
- *
- * The lock is a soft, advisory `BroadcastChannel` protocol:
- *
- *   - On `acquireLock()`, this tab broadcasts `who-holds?`. Any active
- *     holder responds `held` with its `ownerId`. If a response arrives
- *     within 150ms, this tab gives up and returns `held-by-other`.
- *   - On a clean acquire, this tab starts heartbeating `held` every
- *     5 seconds. Listeners that miss two heartbeats (~12s) treat the
- *     holder as gone and clear their "another tab is recording" badge.
- *   - On `releaseLock()`, this tab broadcasts `released` and stops the
- *     heartbeat.
- *
- * This is best-effort: a frozen tab won't actively release. The 12s
- * miss timeout covers the freeze case. A user can still bypass by
- * disabling BroadcastChannel (private mode quirks); we accept that and
- * fall through to a no-op (the worst case is two recordings, not data
- * corruption - the server-side `MultipartUpload` rows are independent).
+ * Cross-tab single-recording advisory lock over BroadcastChannel. Probe with 150ms timeout;
+ * 5s heartbeats and 12s stale-holder timeout cover frozen tabs. Falls through to no-op when
+ * BroadcastChannel is unavailable (worst case: two concurrent recordings, no data corruption).
  */
 
 const CHANNEL_NAME = 'uniffy-recording';
@@ -106,7 +87,6 @@ function handleMessage(event: MessageEvent<Message>): void {
 export interface AcquireResult {
     acquired: boolean;
     ownerId: string | null;
-    /** Set when `acquired` is false: the id of the tab currently recording. */
     heldByOwnerId: string | null;
 }
 
@@ -151,6 +131,7 @@ export async function acquireLock(): Promise<AcquireResult> {
     return { acquired: true, ownerId: myId, heldByOwnerId: null };
 }
 
+
 export function releaseLock(): void {
     if (heldOwnerId === null) return;
     const ownerId = heldOwnerId;
@@ -171,8 +152,7 @@ function startHeartbeat(): void {
             });
         }
     }, HEARTBEAT_INTERVAL_MS);
-    // Fire once immediately so peers know about us before the first
-    // interval elapses.
+    // Fire once immediately so peers learn about us before the first interval.
     channel?.postMessage({
         kind: 'held',
         ownerId: heldOwnerId!,

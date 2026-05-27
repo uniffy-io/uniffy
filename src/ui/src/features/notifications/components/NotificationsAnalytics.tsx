@@ -1,10 +1,3 @@
-/**
- * Analytics section for the full-page notifications view.
- *
- * Displays charts for notifications over time, breakdown by type,
- * and read vs unread ratio using Recharts.
- */
-
 import { useCallback } from 'react';
 import {
     AreaChart,

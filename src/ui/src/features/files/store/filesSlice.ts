@@ -1,9 +1,3 @@
-/**
- * Files Redux Slice
- *
- * Manages file state including files list, current file, and loading states.
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import {
@@ -17,10 +11,8 @@ import {
 } from '@/features/files/store/filesThunks';
 import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 
-// Details panel tabs
 export type DetailsPanelTab = 'info' | 'metadata' | 'permissions';
 
-// LocalStorage key for files view settings
 const FILES_VIEW_STORAGE_KEY = 'uniffy-files-view';
 
 interface FilesViewSettings {
@@ -58,7 +50,7 @@ function loadFilesViewSettings(): FilesViewSettings {
             };
         }
     } catch {
-        // Ignore errors
+        // ignore
     }
     return {
         viewMode: 'grid',
@@ -78,7 +70,7 @@ function saveFilesViewSettings(settings: FilesViewSettings): void {
             JSON.stringify(settings),
         );
     } catch {
-        // Ignore errors
+        // ignore
     }
 }
 
@@ -95,48 +87,39 @@ function persistViewState(state: FilesState): void {
 }
 
 interface FilesState {
-    // All files indexed by ID
     files: Record<string, SerializedFile>;
-
-    // Deleted file IDs (trash)
     deletedFileIds: string[];
-
-    // Currently selected file ID (for viewing)
     currentFileId: string | null;
 
-    // Selection mode state
     isSelectMode: boolean;
     selectedFileIds: string[];
     selectedFolderIds: string[];
-    lastSelectedId: string | null; // Anchor for shift+click range selection
+    /** Anchor for shift+click range selection. */
+    lastSelectedId: string | null;
     lastSelectedType: 'file' | 'folder' | null;
 
-    // Loading states
     loading: boolean;
     loadingFileId: string | null;
     savingFile: boolean;
 
-    // Error states
     error: string | null;
 
-    // Filters
     filters: {
         searchQuery: string;
         sortBy: 'filename' | 'updated_at' | 'created_at' | 'size_bytes';
         sortOrder: 'asc' | 'desc';
         showDeleted: boolean;
-        folderId: string | null; // null = root, "all" = all files
+        /** null = root, "all" = all files */
+        folderId: string | null;
         viewScope: 'all' | 'personal' | 'shared' | 'organization';
     };
 
-    // Active filter (from saved filters)
     activeFilter: {
         id: string | null;
         name: string | null;
         criteria: SerializedFilterCriteria | null;
     };
 
-    // Pagination
     pagination: {
         page: number;
         pageSize: number;
@@ -144,20 +127,16 @@ interface FilesState {
         totalPages: number;
     };
 
-    // View mode
     viewMode: 'grid' | 'list';
 
-    // Icon size for grid view (0 = small, 1 = medium, 2 = large, 3 = extra large)
+    /** 0..3 = small, medium, large, xlarge. */
     iconSize: number;
 
-    // Details panel state (right side panel for file info/metadata)
     isDetailsPanelOpen: boolean;
     detailsPanelTab: DetailsPanelTab;
 
-    // Sidebar open/collapsed state (shared across all files pages)
     sidebarOpen: boolean;
 
-    // Current user's storage usage (for sidebar indicator)
     myStorageUsage: {
         usedBytes: number;
         quotaBytes: number | null;
@@ -167,7 +146,6 @@ interface FilesState {
     };
 }
 
-// Load persisted view settings
 const persistedViewSettings = loadFilesViewSettings();
 
 const initialState: FilesState = {
@@ -220,7 +198,6 @@ export const filesSlice = createSlice({
     name: 'files',
     initialState,
     reducers: {
-        // Set all files
         setFiles: (state, action: PayloadAction<SerializedFile[]>) => {
             state.files = {};
             action.payload.forEach((file) => {
@@ -228,12 +205,10 @@ export const filesSlice = createSlice({
             });
         },
 
-        // Add or update a single file
         setFile: (state, action: PayloadAction<SerializedFile>) => {
             state.files[action.payload.id] = action.payload;
         },
 
-        // Remove a file
         removeFile: (state, action: PayloadAction<string>) => {
             delete state.files[action.payload];
             if (state.currentFileId === action.payload) {
@@ -241,12 +216,10 @@ export const filesSlice = createSlice({
             }
         },
 
-        // Set current file
         setCurrentFile: (state, action: PayloadAction<string | null>) => {
             state.currentFileId = action.payload;
         },
 
-        // Selection mode actions
         toggleSelectMode: (state) => {
             state.isSelectMode = !state.isSelectMode;
             if (!state.isSelectMode) {
@@ -271,10 +244,8 @@ export const filesSlice = createSlice({
             } else {
                 state.selectedFileIds.push(fileId);
             }
-            // Track last selected item as anchor for range selection
             state.lastSelectedId = fileId;
             state.lastSelectedType = 'file';
-            // Auto-enable select mode if selecting items
             if (state.selectedFileIds.length > 0 || state.selectedFolderIds.length > 0) {
                 state.isSelectMode = true;
             }
@@ -288,19 +259,15 @@ export const filesSlice = createSlice({
             } else {
                 state.selectedFolderIds.push(folderId);
             }
-            // Track last selected item as anchor for range selection
             state.lastSelectedId = folderId;
             state.lastSelectedType = 'folder';
-            // Auto-enable select mode if selecting items
             if (state.selectedFileIds.length > 0 || state.selectedFolderIds.length > 0) {
                 state.isSelectMode = true;
             }
         },
 
-        // Select a range of files (for shift+click)
         selectFileRange: (state, action: PayloadAction<{ fileIds: string[]; anchorId: string }>) => {
             const { fileIds, anchorId } = action.payload;
-            // Add all files in range to selection (union with existing)
             const newSelection = new Set(state.selectedFileIds);
             fileIds.forEach((id) => newSelection.add(id));
             state.selectedFileIds = Array.from(newSelection);
@@ -309,10 +276,8 @@ export const filesSlice = createSlice({
             state.isSelectMode = true;
         },
 
-        // Select a range of folders (for shift+click)
         selectFolderRange: (state, action: PayloadAction<{ folderIds: string[]; anchorId: string }>) => {
             const { folderIds, anchorId } = action.payload;
-            // Add all folders in range to selection (union with existing)
             const newSelection = new Set(state.selectedFolderIds);
             folderIds.forEach((id) => newSelection.add(id));
             state.selectedFolderIds = Array.from(newSelection);
@@ -359,7 +324,6 @@ export const filesSlice = createSlice({
             state.lastSelectedType = null;
         },
 
-        // Loading states
         setLoading: (state, action: PayloadAction<boolean>) => {
             state.loading = action.payload;
         },
@@ -368,7 +332,6 @@ export const filesSlice = createSlice({
             state.loadingFileId = action.payload;
         },
 
-        // Error state
         setError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
@@ -377,7 +340,6 @@ export const filesSlice = createSlice({
             state.error = null;
         },
 
-        // Filters
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.filters.searchQuery = action.payload;
         },
@@ -402,11 +364,9 @@ export const filesSlice = createSlice({
 
         setViewScope: (state, action: PayloadAction<'all' | 'personal' | 'shared' | 'organization'>) => {
             state.filters.viewScope = action.payload;
-            // Reset to root when changing scope
             state.filters.folderId = null;
         },
 
-        // Active filter (from saved filters)
         setActiveFilter: (state, action: PayloadAction<{ id: string; name: string; criteria: SerializedFilterCriteria }>) => {
             state.activeFilter = {
                 id: action.payload.id,
@@ -425,24 +385,20 @@ export const filesSlice = createSlice({
             persistViewState(state);
         },
 
-        // Pagination
         setPagination: (state, action: PayloadAction<Partial<FilesState['pagination']>>) => {
             state.pagination = { ...state.pagination, ...action.payload };
         },
 
-        // View mode
         setViewMode: (state, action: PayloadAction<'grid' | 'list'>) => {
             state.viewMode = action.payload;
             persistViewState(state);
         },
 
-        // Icon size (0-3: small, medium, large, xlarge)
         setIconSize: (state, action: PayloadAction<number>) => {
             state.iconSize = Math.max(0, Math.min(3, action.payload));
             persistViewState(state);
         },
 
-        // Details panel
         toggleDetailsPanel: (state) => {
             state.isDetailsPanelOpen = !state.isDetailsPanelOpen;
         },
@@ -455,12 +411,10 @@ export const filesSlice = createSlice({
             state.detailsPanelTab = action.payload;
         },
 
-        // Toggle sidebar open/collapsed
         toggleSidebar: (state) => {
             state.sidebarOpen = !state.sidebarOpen;
         },
 
-        // Set current user's storage usage
         setMyStorageUsage: (state, action: PayloadAction<{
             usedBytes: number;
             quotaBytes: number | null;
@@ -477,7 +431,6 @@ export const filesSlice = createSlice({
             state.myStorageUsage.loading = action.payload;
         },
 
-        // Clear all files (for logout)
         clearFiles: (state) => {
             state.files = {};
             state.deletedFileIds = [];
@@ -488,7 +441,6 @@ export const filesSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // fetchFiles
         builder
             .addCase(fetchFiles.pending, (state) => {
                 state.loading = true;
@@ -511,7 +463,6 @@ export const filesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch files';
             });
 
-        // fetchFile
         builder
             .addCase(fetchFile.pending, (state, action) => {
                 state.loadingFileId = action.meta.arg;
@@ -525,7 +476,6 @@ export const filesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch file';
             });
 
-        // updateFile
         builder
             .addCase(updateFile.pending, (state) => {
                 state.savingFile = true;
@@ -539,7 +489,6 @@ export const filesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to update file';
             });
 
-        // deleteFile
         builder
             .addCase(deleteFile.fulfilled, (state, action) => {
                 const { fileId, permanent } = action.payload;
@@ -555,18 +504,15 @@ export const filesSlice = createSlice({
                 if (state.currentFileId === fileId) {
                     state.currentFileId = null;
                 }
-                // Remove from selection
                 state.selectedFileIds = state.selectedFileIds.filter(id => id !== fileId);
             });
 
-        // restoreFile
         builder
             .addCase(restoreFile.fulfilled, (state, action) => {
                 state.files[action.payload.id] = action.payload;
                 state.deletedFileIds = state.deletedFileIds.filter(id => id !== action.payload.id);
             });
 
-        // initializeFilesData
         builder
             .addCase(initializeFilesData.pending, (state, action) => {
                 if (!action.meta.arg?.forceRefresh) {
@@ -641,7 +587,6 @@ export const {
 
 export const filesReducer = filesSlice.reducer;
 
-// Re-export thunks for convenience
 export {
     fetchFiles,
     fetchFile,

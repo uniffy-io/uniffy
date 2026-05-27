@@ -91,8 +91,6 @@ export function DependenciesList({ taskId, blockedByTaskIds, blocksTaskIds }: De
   );
 }
 
-// ===== Task picker for adding blockers =====
-
 interface TaskPickerProps {
   taskId: string;
   excludeIds: string[];
@@ -179,7 +177,6 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   );
 }
 
-// ===== Item components =====
 
 function BlockedByItem({ taskId, onRemove }: { taskId: string; onRemove: (id: string) => void }) {
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);

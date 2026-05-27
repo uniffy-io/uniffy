@@ -1,10 +1,3 @@
-/**
- * useDashboardLayout - Widget order and visibility preferences
- *
- * Persists dashboard customization to localStorage per user.
- * Provides default layout for new users and reset option.
- */
-
 import { useState, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
 

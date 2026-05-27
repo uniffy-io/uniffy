@@ -1,12 +1,4 @@
-/**
- * Hook for downloading files directly via ConnectRPC.
- *
- * Use this for images, PDFs, CSVs, and other files that don't need
- * Range-based seeking. For video/audio, use useMediaStream instead.
- *
- * Returns a blob URL that can be used directly in <img>, <iframe>, etc.
- * Uses an LRU cache to avoid re-downloading files when navigating.
- */
+/** For images/PDFs/etc. that don't need Range-based seeking; for video/audio use useMediaStream. */
 
 import { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';
@@ -14,49 +6,22 @@ import { filesApi } from '@/features/files/api/filesApi';
 import { getCachedBlob, setCachedBlob } from '@/features/files/components/viewer/hooks/blobCache';
 
 interface FileDownloadResult {
-    /** Blob URL for the file (use in src attribute) */
     url: string | null;
-    /** File content as Blob (for further processing) */
     blob: Blob | null;
-    /** MIME type of the file */
     mimeType: string | null;
-    /** Filename from server */
     filename: string | null;
-    /** Total file size in bytes */
     size: number | null;
-    /** Loading state */
     loading: boolean;
-    /** Download progress (0-100) */
     progress: number;
-    /** Error message if download failed */
     error: string | null;
-    /** Retry the download */
     retry: () => void;
 }
 
 interface UseFileDownloadOptions {
-    /** Skip download (useful for conditional fetching) */
     skip?: boolean;
-    /** Specific version ID to download */
     versionId?: string;
 }
 
-/**
- * Hook to download a file via ConnectRPC and get a blob URL.
- *
- * @param fileId - The file ID to download
- * @param options - Optional settings
- * @returns Object with url, blob, loading, progress, and error states
- *
- * @example
- * ```tsx
- * const { url, loading, error } = useFileDownload(fileId);
- *
- * if (loading) return <Spinner />;
- * if (error) return <Error message={error} />;
- * return <img src={url} />;
- * ```
- */
 export function useFileDownload(
     fileId: string | null,
     options?: UseFileDownloadOptions
@@ -73,7 +38,6 @@ export function useFileDownload(
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
 
-    // Track the current URL for cleanup
     const urlRef = useRef<string | null>(null);
 
     const retry = () => {
@@ -81,15 +45,12 @@ export function useFileDownload(
     };
 
     useEffect(() => {
-        // Skip if no file ID, no org, or skip option is set
         if (!fileId || !organizationId || options?.skip) {
             return;
         }
 
-        // Check cache first
         const cached = getCachedBlob(fileId, options?.versionId);
         if (cached) {
-            // Use cached blob - no need to download
             setBlob(cached.blob);
             setUrl(cached.url);
             setMimeType(cached.mimeType);
@@ -98,7 +59,7 @@ export function useFileDownload(
             setProgress(100);
             setLoading(false);
             setError(null);
-            // Store ref for cleanup tracking (but don't revoke - cache owns it)
+            // Cache owns the blob URL; do not revoke it here.
             urlRef.current = cached.url;
             return;
         }
@@ -117,7 +78,6 @@ export function useFileDownload(
                 let fileMimeType = 'application/octet-stream';
                 let fileFilename = 'file';
 
-                // Stream chunks from backend
                 for await (const response of filesApi.downloadFile({
                     fileId,
                     organizationId,
@@ -128,14 +88,12 @@ export function useFileDownload(
                     chunks.push(response.data);
                     receivedBytes += response.data.length;
 
-                    // Extract metadata from first chunk
                     if (response.chunkNumber === 1) {
                         totalSize = Number(response.totalSize);
                         fileMimeType = response.mimeType || 'application/octet-stream';
                         fileFilename = response.filename || 'file';
                     }
 
-                    // Update progress
                     if (totalSize > 0) {
                         setProgress(Math.round((receivedBytes / totalSize) * 100));
                     }
@@ -143,7 +101,6 @@ export function useFileDownload(
 
                 if (cancelled) return;
 
-                // Combine chunks into single buffer
                 const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
                 const combined = new Uint8Array(totalLength);
                 let offset = 0;
@@ -152,14 +109,12 @@ export function useFileDownload(
                     offset += chunk.length;
                 }
 
-                // Create blob and URL
                 const fileBlob = new Blob([combined], { type: fileMimeType });
                 const blobUrl = URL.createObjectURL(fileBlob);
 
-                // Cache the blob for future use (cache manages URL lifecycle)
+                // The cache assumes ownership of the blob URL (lifecycle handled by LRU eviction).
                 setCachedBlob(fileId, fileBlob, blobUrl, fileMimeType, fileFilename, options?.versionId);
 
-                // Store ref (but don't revoke on unmount - cache owns it now)
                 urlRef.current = blobUrl;
 
                 setBlob(fileBlob);
@@ -187,12 +142,8 @@ export function useFileDownload(
         };
     }, [fileId, organizationId, options?.skip, options?.versionId, retryCount]);
 
-    // Note: We don't revoke URLs on unmount because the cache now owns them.
-    // The cache handles URL lifecycle with LRU eviction.
-    // This allows navigating back to previously viewed files without re-downloading.
     useEffect(() => {
         return () => {
-            // Clear local ref but don't revoke (cache manages the URL)
             urlRef.current = null;
         };
     }, []);
@@ -210,10 +161,6 @@ export function useFileDownload(
     };
 }
 
-/**
- * Simplified hook that just returns the blob URL.
- * Returns null while loading or on error.
- */
 export function useFileUrl(fileId: string | null, options?: UseFileDownloadOptions): string | null {
     const { url } = useFileDownload(fileId, options);
     return url;

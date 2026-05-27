@@ -1,11 +1,4 @@
-/**
- * MessageCompose - Rich compose box for sending chat messages.
- *
- * Uses a contentEditable div to support inline MentionChip rendering
- * alongside plain text. Mentions are inserted as non-editable chip
- * elements with a data-urn attribute, and serialized back to
- * [[[label|urn]]] syntax on send.
- */
+/** ContentEditable compose; mention chips serialize back to `[[[label|urn]]]` on send. */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import {
@@ -70,9 +63,6 @@ const CHAR_WARN_THRESHOLD = 28_000;
 const MENTION_ATTR = 'data-mention-urn';
 const MENTION_LABEL_ATTR = 'data-mention-label';
 
-/**
- * Serialize the contentEditable innerHTML back to markdown with [[[label|urn]]] mentions.
- */
 function serializeToMarkdown(container: HTMLDivElement): string {
   let result = '';
 
@@ -85,7 +75,6 @@ function serializeToMarkdown(container: HTMLDivElement): string {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
 
-      // Mention chip element
       const urn = el.getAttribute(MENTION_ATTR);
       if (urn) {
         const label = el.getAttribute(MENTION_LABEL_ATTR) ?? el.textContent ?? '';
@@ -93,13 +82,11 @@ function serializeToMarkdown(container: HTMLDivElement): string {
         return;
       }
 
-      // Line breaks
       if (el.tagName === 'BR') {
         result += '\n';
         return;
       }
 
-      // Block elements add newlines
       if (el.tagName === 'DIV' || el.tagName === 'P') {
         if (result.length > 0 && !result.endsWith('\n')) {
           result += '\n';
@@ -110,7 +97,6 @@ function serializeToMarkdown(container: HTMLDivElement): string {
         return;
       }
 
-      // Walk children for other elements
       for (const child of el.childNodes) {
         walk(child);
       }
@@ -124,13 +110,7 @@ function serializeToMarkdown(container: HTMLDivElement): string {
   return result;
 }
 
-/**
- * Static chip used inside the compose contentEditable. Mirrors the visual
- * language of `MentionChipBasic` but never renders an `<img>` for user
- * avatars — under `renderToStaticMarkup` the onError fallback in
- * `MentionChipBasic` cannot run, leaving broken-image glyphs when the
- * subject has no avatar. Initials/type icons are deterministic from props.
- */
+/** Static chip for the compose contentEditable; avoids `<img>` since onError can't run under renderToStaticMarkup. */
 function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }) {
   const parsed = parseUrn(urn);
   const config = getContentTypeConfig(parsed.type);
@@ -176,11 +156,6 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
   );
 }
 
-/**
- * Create a mention chip DOM element to insert into contentEditable.
- * Outer wrapper carries the data attributes used by `serializeToMarkdown`
- * to recover `[[[label|urn]]]`; inner content is static HTML.
- */
 function createMentionElement(label: string, urn: string): HTMLSpanElement {
   const wrapper = document.createElement('span');
   wrapper.setAttribute(MENTION_ATTR, urn);
@@ -288,8 +263,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     e.preventDefault();
   }, []);
 
-  // Clipboard paste: route file items (images, etc.) through the attachments
-  // upload pipeline. Plain text/HTML continues through the default paste path.
+  // Route clipboard file items through the upload pipeline; plain text/HTML uses the default path.
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     const items = e.clipboardData?.items;
     if (!items || items.length === 0) return;
@@ -307,8 +281,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     e.preventDefault();
     const dt = new DataTransfer();
     for (const f of files) {
-      // Pasted screenshots arrive as "image.png"; stamp a unique name so
-      // multiple pastes in one message don't collide on the server.
+      // Stamp unique names; multiple pasted screenshots all arrive as "image.png".
       const named = f.name && f.name !== 'image.png'
         ? f
         : new File([f], `pasted-${Date.now()}.${(f.type.split('/')[1] ?? 'png')}`, { type: f.type });
@@ -317,7 +290,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     handleFilesSelected(dt.files);
   }, [handleFilesSelected]);
 
-  // Auto-focus editor when replying to a message
   useEffect(() => {
     if (replyTo) {
       editorRef.current?.focus();
@@ -335,7 +307,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     setCharCount(text.length);
   }, [pendingFiles.length]);
 
-  // Populate editor with message content when entering edit mode
   const prevEditIdRef = useRef<string | null>(null);
   useEffect(() => {
     const el = editorRef.current;
@@ -345,7 +316,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       el.textContent = editingMessage.content;
       updateState();
       el.focus();
-      // Move cursor to end
       const range = document.createRange();
       const sel = window.getSelection();
       range.selectNodeContents(el);
@@ -359,14 +329,12 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     }
   }, [editingMessage, updateState]);
 
-  // Handle input changes
   const handleInput = useCallback(() => {
     updateState();
     onTyping?.();
 
     if (mentionActive) return;
 
-    // Detect @ trigger
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
@@ -381,7 +349,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     const atIndex = textBefore.lastIndexOf('@');
     if (atIndex === -1) return;
 
-    // @ must be at start or preceded by whitespace
+    // @ must be at start or after whitespace.
     if (atIndex > 0 && textBefore[atIndex - 1] !== ' ' && textBefore[atIndex - 1] !== '\n') return;
 
     const query = textBefore.slice(atIndex + 1);
@@ -393,7 +361,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     setMentionActive(true);
   }, [updateState, mentionActive, onTyping]);
 
-  // Handle mention selection from popup
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     const el = editorRef.current;
     if (!el) return;
@@ -407,7 +374,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     const text = startNode.textContent ?? '';
     const atOffset = mentionStartOffsetRef.current;
 
-    // Find current cursor position to determine how much text to replace
     const sel = window.getSelection();
     let endOffset = text.length;
     if (sel && sel.rangeCount > 0) {
@@ -417,23 +383,21 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       }
     }
 
-    // Create the mention chip
     const chip = createMentionElement(result.title, result.urn);
 
-    // Split the text node: [before @] [chip] [after cursor]
+    // Split text into [before @] [chip] [after cursor].
     const before = text.slice(0, atOffset);
     const after = text.slice(endOffset);
 
     const parent = startNode.parentNode;
     const beforeNode = document.createTextNode(before);
-    const afterNode = document.createTextNode(after.length > 0 ? after : '\u00A0'); // nbsp to keep cursor position
+    const afterNode = document.createTextNode(after.length > 0 ? after : '\u00A0'); // nbsp anchors the caret
 
     parent.insertBefore(beforeNode, startNode);
     parent.insertBefore(chip, startNode);
     parent.insertBefore(afterNode, startNode);
     parent.removeChild(startNode);
 
-    // Place cursor after the chip
     const newRange = document.createRange();
     newRange.setStart(afterNode, after.length > 0 ? 0 : 1);
     newRange.collapse(true);
@@ -454,7 +418,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     editorRef.current?.focus();
   }, []);
 
-  // Handle send
   const handleSend = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -483,11 +446,8 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     updateState();
   }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit]);
 
-  // Handle keydown
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Backspace deletes a mention chip when the caret sits immediately
-    // after one. Browsers leave contentEditable=false elements partially
-    // selectable, so we delete them programmatically.
+    // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
     if (e.key === 'Backspace' && !e.shiftKey) {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
@@ -520,10 +480,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       }
     }
 
-    // Edit last own message (Slack-style). Only when compose is empty,
-    // not already editing, no reply preview, no mention popup, and no
-    // pending uploads — otherwise the keystroke belongs to the editor
-    // (e.g. caret navigation).
+    // Edit-last (Slack-style) only fires when compose is idle; otherwise the keystroke belongs to the editor.
     if (
       onEditLast
       && editLastBinding
@@ -539,13 +496,11 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       return;
     }
 
-    // Block Enter while mention popup is open
     if (mentionActive && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       return;
     }
 
-    // Escape closes mention popup, cancels edit, or clears reply preview
     if (e.key === 'Escape') {
       if (mentionActive) {
         handleMentionClose();
@@ -561,14 +516,12 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       }
     }
 
-    // Enter sends, Shift+Enter inserts newline
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
       return;
     }
 
-    // Markdown shortcuts
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
@@ -595,7 +548,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     }
   }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
 
-  // Trigger mention from toolbar @ button
   const handleAtButtonClick = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -607,25 +559,21 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
 
     const range = sel.getRangeAt(0);
 
-    // Insert @ at cursor
     const atText = document.createTextNode('@');
     range.deleteContents();
     range.insertNode(atText);
 
-    // Move cursor after @
     range.setStartAfter(atText);
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
 
-    // Trigger mention detection
     mentionStartNodeRef.current = atText;
     mentionStartOffsetRef.current = 0;
     setMentionQuery('');
     setMentionActive(true);
   }, []);
 
-  // Insert emoji at cursor position
   const handleEmojiSelect = useCallback((emoji: string) => {
     const el = editorRef.current;
     if (!el) return;
@@ -649,7 +597,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     setShowEmojiPicker(false);
   }, [updateState]);
 
-  // Insert a fenced code block at cursor
   const handleCodeBlockInsert = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -661,7 +608,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       const codeBlock = document.createTextNode('```\n\n```');
       range.deleteContents();
       range.insertNode(codeBlock);
-      // Position cursor inside the code block
       range.setStart(codeBlock, 4); // after the opening ``` and newline
       range.collapse(true);
       sel.removeAllRanges();
@@ -671,7 +617,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     updateState();
   }, [updateState]);
 
-  // Insert bold markers at cursor or wrap selection
   const handleBoldInsert = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -694,7 +639,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
       const marker = document.createTextNode('**text**');
       range.deleteContents();
       range.insertNode(marker);
-      // Select the word "text" so user can type over it
+      // Select "text" so the next keystroke replaces it.
       range.setStart(marker, 2);
       range.setEnd(marker, 6);
       sel.removeAllRanges();
@@ -704,7 +649,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     updateState();
   }, [updateState]);
 
-  // Auto-resize
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -742,7 +686,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         data-testid="chat-compose-root"
         data-mode={editingMessage ? 'edit' : replyTo ? 'reply' : 'normal'}
       >
-        {/* Edit mode banner */}
         {editingMessage && (
           <div
             className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-primary/5 rounded-t-xl"
@@ -764,7 +707,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
           </div>
         )}
 
-        {/* Reply preview banner */}
         {replyTo && !editingMessage && (
           <div
             className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-muted/40 rounded-t-xl"
@@ -787,7 +729,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
           </div>
         )}
 
-        {/* Character count warning */}
         {charCount >= CHAR_WARN_THRESHOLD && (
           <div className="flex justify-end px-4 pt-1">
             <span className="text-xs text-muted-foreground">
@@ -796,9 +737,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
           </div>
         )}
 
-        {/* Editable area */}
         <div className="relative">
-          {/* Placeholder */}
           {isEmpty && (
             <div className="absolute px-4 pt-3 pb-2 text-sm text-muted-foreground pointer-events-none select-none">
               {displayPlaceholder}
@@ -821,15 +760,12 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
           />
         </div>
 
-        {/* Pending attachments */}
         <AttachmentPreviewBar
           files={pendingFiles}
           onRemove={handleRemovePendingFile}
         />
 
-        {/* Toolbar */}
         <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
-          {/* Left actions */}
           <div className="flex items-center gap-0.5">
             <button
               type="button"
@@ -878,7 +814,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
             </button>
           </div>
 
-          {/* Right actions */}
           <div className="flex items-center gap-0.5">
             <button
               type="button"
@@ -909,7 +844,6 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         </div>
       </div>
 
-      {/* Mention search popup */}
       {mentionActive && (
         <ChatMentionPopup
           initialQuery={mentionQuery}

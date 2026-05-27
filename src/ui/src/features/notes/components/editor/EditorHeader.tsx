@@ -56,16 +56,9 @@ interface EditorHeaderProps {
   canShare?: boolean;
   isCanvas?: boolean;
   realtimeStatus?: RealtimeStatus;
-  /** Awareness from the active session; powers the participant
-   * avatar stack. ``null`` while no session is attached. */
   realtimeAwareness?: Awareness | null;
 }
 
-/**
- * Collapsible breadcrumb that shows first item, collapsed middle items, and last 2 items
- * when there are more than 3 levels of nesting.
- * Clicking on a folder expands it in the tree and selects it.
- */
 interface CollapsibleBreadcrumbProps {
   items: BreadcrumbItem[];
   noteAccessMode?: number;
@@ -79,7 +72,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!isDropdownOpen) return;
 
@@ -93,12 +85,9 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
-  // Handle clicking on a breadcrumb item - expand all ancestors and select the folder
   const handleItemClick = useCallback((item: BreadcrumbItem, itemIndex: number) => {
-    // Only handle clicks on folders (not the current note which is the last item)
     if (itemIndex === items.length - 1) return;
 
-    // Open sidebar if closed
     if (!isSidebarOpen) {
       dispatch(setSidebarOpen(true));
     }
@@ -110,17 +99,14 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
         : 'personal';
     dispatch(expandNode(sectionId));
 
-    // Expand all folders from root to the clicked item
     for (let i = 0; i <= itemIndex; i++) {
       if (items[i].isFolder) {
         dispatch(expandNode(items[i].id));
       }
     }
 
-    // Select the clicked folder (for visual highlight)
     dispatch(setSelectedNode(item.id));
 
-    // Scroll to the folder in the tree after a short delay to allow expansion
     setTimeout(() => {
       const folderElement = document.querySelector(`[data-node-id="${item.id}"]`);
       if (folderElement) {
@@ -129,7 +115,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
     }, 100);
   }, [dispatch, items, isSidebarOpen, noteAccessMode, noteOwnerId, currentUserId]);
 
-  // If 3 or fewer items, show all
   if (items.length <= 3) {
     return (
       <nav className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
@@ -153,7 +138,7 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
     );
   }
 
-  // For 4+ items: show first, ..., last 2
+  // 4+ items: show first, collapsed middle, last 2.
   const firstItem = items[0];
   const collapsedItems = items.slice(1, -2);
   const lastTwoItems = items.slice(-2);
@@ -161,7 +146,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
 
   return (
     <nav className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
-      {/* First item */}
       <span
         onClick={() => firstItem.isFolder && handleItemClick(firstItem, 0)}
         className="truncate max-w-[120px] hover:text-foreground cursor-pointer hover:underline"
@@ -172,7 +156,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
 
       <CaretRight size={12} weight="bold" className="shrink-0" />
 
-      {/* Collapsed items dropdown */}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -188,7 +171,7 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
               <button
                 key={item.id}
                 onClick={() => {
-                  handleItemClick(item, index + 1); // +1 because firstItem is at index 0
+                  handleItemClick(item, index + 1);
                   setIsDropdownOpen(false);
                 }}
                 className="w-full px-3 py-1.5 text-left text-sm hover:bg-muted truncate"
@@ -203,7 +186,6 @@ function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: Collapsib
 
       <CaretRight size={12} weight="bold" className="shrink-0" />
 
-      {/* Last two items */}
       {lastTwoItems.map((item, index) => {
         const actualIndex = lastTwoStartIndex + index;
         const isLast = actualIndex === items.length - 1;
@@ -245,7 +227,6 @@ export function EditorHeader({
 
   const { openFor: openAccessDialog } = useAccessPolicyDialog();
 
-  // Build breadcrumb path from parent folders
   const breadcrumb = useMemo(() => {
     const notesArray = Object.values(allNotes);
     return buildBreadcrumbPath(notesArray, note.id);
@@ -255,7 +236,6 @@ export function EditorHeader({
     openAccessDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
   };
 
-  // Only show edit modes if user has edit permission
   const viewModes: Array<{
     mode: EditorMode;
     icon: typeof PencilSimple;
@@ -273,15 +253,10 @@ export function EditorHeader({
 
   return (
     <div className="border-b border-border bg-card">
-      {/* Top Bar: Breadcrumb + Actions */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
-        {/* Left: Sidebar Toggle + Breadcrumb */}
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          {/* Breadcrumb */}
           <CollapsibleBreadcrumb items={breadcrumb} noteAccessMode={note.accessMode} noteOwnerId={note.ownerId} />
 
-          {/* Realtime status badge - hides on steady ``connected``,
-              surfaces on reconnect / offline / permission changes. */}
           <div className="hidden sm:flex items-center gap-2 ml-2 md:ml-4">
             <RealtimeStatusBadge status={realtimeStatus} />
             {realtimeAwareness && (
@@ -301,9 +276,7 @@ export function EditorHeader({
           </div>
         </div>
 
-        {/* Right Actions */}
         <div className="flex items-center gap-1">
-          {/* View Mode Selector - hidden for canvas notes, hidden on mobile */}
           {!isCanvas && <div className="hidden sm:flex items-center gap-0.5 mr-3 border-r border-border pr-3">
             {viewModes.map(({ mode, icon: Icon, label }) => (
               <button
@@ -322,7 +295,6 @@ export function EditorHeader({
             ))}
           </div>}
 
-          {/* Share Button - only show if user has share permission (admin/owner) */}
           {canShare && (
             <button
               onClick={handleShare}
@@ -333,7 +305,6 @@ export function EditorHeader({
             </button>
           )}
 
-          {/* Canvas title block hide / show toggle */}
           {isCanvas && (
             <button
               onClick={() => dispatch(toggleCanvasTitleHidden())}
@@ -354,7 +325,6 @@ export function EditorHeader({
             </button>
           )}
 
-          {/* Toolbar pin toggle - only in crepe edit mode */}
           {!isCanvas && editorMode === 'crepe' && canEdit && (
             <button
               onClick={() => dispatch(toggleToolbarPin())}
@@ -374,7 +344,6 @@ export function EditorHeader({
             </button>
           )}
 
-          {/* Right panel toggle */}
           <button
             onClick={() => dispatch(toggleMetadataPanel())}
             className={cn(

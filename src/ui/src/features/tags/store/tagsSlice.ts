@@ -1,13 +1,3 @@
-/**
- * Tags Redux slice.
- *
- * Holds the per-org tag namespace, the URN -> tag-id assignment cache,
- * the explorer's tag-list page, the per-tag content list, and the
- * saved-filter store. Domain slices (notes, files, calendar, ...)
- * dispatch ``bulkUpsertTags`` whenever their responses surface
- * hydrated ``Tag`` rows so chips render without a follow-up RPC.
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 

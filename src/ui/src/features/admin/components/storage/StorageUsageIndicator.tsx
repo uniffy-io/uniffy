@@ -1,11 +1,3 @@
-/**
- * Storage Usage Indicator
- *
- * Compact storage usage display for use in the files sidebar.
- * Shows a thin progress bar with used/total label.
- * Links to admin page for admin users.
- */
-
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

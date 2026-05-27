@@ -14,9 +14,6 @@ import {
 } from "../store/projectsThunks";
 import type { CreateProjectRequest, UpdateProjectRequest } from "../types/project";
 
-/**
- * Hook for managing projects
- */
 export function useProjects() {
   const dispatch = useAppDispatch();
 

@@ -4,16 +4,11 @@ import { cn } from '@/shared/utils/cn';
 
 interface UniffyLogoProps {
   className?: string;
-  /** Force a specific variant regardless of theme */
+  /** Force a specific variant regardless of theme. */
   variant?: 'light' | 'dark';
 }
 
-/**
- * Processes the source PNG (dark logo on white background) into a
- * transparent-background data URL using an offscreen canvas.
- * Pixels brighter than the threshold become fully transparent;
- * the remaining logo pixels are recolored to the target color.
- */
+/** Knocks out the white background and recolors the logo pixels to `color`; result is cached per color. */
 function useTransparentLogo(color: string): string | null {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const cacheRef = useRef<Record<string, string>>({});
@@ -37,7 +32,7 @@ function useTransparentLogo(color: string): string | null {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // Parse target color
+      // Resolve `color` (named/hex/css var) to RGB by letting the browser parse it.
       const temp = document.createElement('div');
       temp.style.color = color;
       document.body.appendChild(temp);
@@ -46,10 +41,9 @@ function useTransparentLogo(color: string): string | null {
       const match = computed.match(/(\d+)/g);
       const [tr, tg, tb] = match ? match.map(Number) : [0, 0, 0];
 
-      // Process pixels: white background -> transparent, dark logo -> target color
+      // White background -> transparent, dark logo -> target color (threshold ~200).
       for (let i = 0; i < data.length; i += 4) {
         const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        // Logo pixels are dark (brightness < 200), background is white (brightness >= 200)
         const logoOpacity = Math.max(0, Math.min(1, (200 - brightness) / 160));
         data[i] = tr;
         data[i + 1] = tg;
@@ -68,13 +62,6 @@ function useTransparentLogo(color: string): string | null {
   return dataUrl;
 }
 
-/**
- * Cross-browser Uniffy logo that adapts to theme.
- *
- * The source PNG has a dark logo on an opaque white background. At mount time,
- * the component processes it through a canvas to remove the background and
- * recolor the logo for the current theme. The result is cached per color.
- */
 export function UniffyLogo({ className, variant }: UniffyLogoProps) {
   const { resolvedTheme } = useTheme();
 
@@ -86,7 +73,7 @@ export function UniffyLogo({ className, variant }: UniffyLogoProps) {
   const dataUrl = useTransparentLogo(logoColor);
 
   if (!dataUrl) {
-    // Placeholder while processing - invisible same-size element
+    // Invisible same-size placeholder so layout doesn't shift while we knock out the background.
     return <div className={cn('select-none', className)} role="img" aria-label="Uniffy" />;
   }
 

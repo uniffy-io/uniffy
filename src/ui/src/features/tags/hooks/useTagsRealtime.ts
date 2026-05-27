@@ -1,21 +1,7 @@
 /**
- * useTagsRealtime
- *
- * Subscribes the tags slice to the ``MENTION_STATE_CHANGED`` stream so
- * cross-client tag mutations land in-app within ~1s. The stream is
- * mounted once in ``MainLayout`` via ``useNotificationStream``; the
- * per-recipient filter and projection happen server-side in
- * ``TagEventRelay``. This hook translates the projected events into
- * Redux dispatches.
- *
- * Two event shapes flow through:
- *
- * - Tag URN events (``urn:uniffy:content:TAG:{id}``):
- *   * ``status === 'deleted'`` -> ``removeTagLocal``.
- *   * Otherwise -> ``bulkUpsertTags`` with the denormalized tag state.
- * - Content URN events:
- *   * ``tagAssignmentsAdded`` / ``tagAssignmentsRemoved`` deltas ->
- *     ``applyAssignmentChange`` against ``assignmentsByUrn``.
+ * Projects `MENTION_STATE_CHANGED` events into the tags slice:
+ *  - tag URN, `status === 'deleted'` -> `removeTagLocal`; otherwise `bulkUpsertTags` / `patchTag`.
+ *  - content URN with `tagAssignmentsAdded/Removed` -> `applyAssignmentChange`.
  */
 
 import { useEffect } from 'react';

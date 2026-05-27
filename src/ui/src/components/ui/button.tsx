@@ -23,7 +23,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'active:translate-y-0 active:scale-[0.97]',
           'cursor-pointer',
 
-          // Default - the hero button. Layered shadows for a pressed-glass feel.
           variant === 'default' && [
             'bg-primary text-primary-foreground',
             'border border-white/[0.08]',
@@ -34,7 +33,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'active:brightness-[0.96]',
           ],
 
-          // Secondary - subtle surface button with crisp border
           variant === 'secondary' && [
             'bg-muted/70 text-foreground',
             'border border-border/60',
@@ -44,7 +42,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'active:bg-muted/90 active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]',
           ],
 
-          // Outline - clean, precise border treatment
           variant === 'outline' && [
             'bg-transparent text-foreground',
             'border border-border/70',
@@ -54,14 +51,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'active:bg-muted/60 active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]',
           ],
 
-          // Ghost - invisible until interaction, stays grounded
           variant === 'ghost' && [
             'text-muted-foreground',
             'hover:bg-muted/50 hover:text-foreground hover:translate-y-0',
             'active:bg-muted/70',
           ],
 
-          // Destructive - danger, same layered treatment as default
           variant === 'destructive' && [
             'bg-red-600 text-white dark:bg-red-600',
             'border border-red-500/20',
@@ -70,7 +65,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2),0_0_0_0.5px_rgba(220,38,38,0.12)]',
           ],
 
-          // Warning - amber/yellow, same layered treatment
           variant === 'warning' && [
             'bg-amber-600 text-white dark:bg-amber-600',
             'border border-amber-500/20',
@@ -79,7 +73,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2),0_0_0_0.5px_rgba(217,119,6,0.12)]',
           ],
 
-          // Sizes
           size === 'xs' && 'h-6 px-2 text-xs',
           size === 'sm' && 'h-7 px-2.5 text-[13px]',
           size === 'md' && 'h-8 px-3.5 text-[13px]',

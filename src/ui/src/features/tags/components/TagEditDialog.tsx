@@ -1,13 +1,4 @@
-/**
- * <TagEditDialog>
- *
- * Rename / recolor / describe / delete / merge a tag. Drives all four
- * mutations through the slice's thunks. The colour picker exposes the
- * 12-slug palette plus a "no color" option that nulls the field and
- * reverts the chip to the workspace accent. Slug collisions on rename
- * raise ``ALREADY_EXISTS``; the dialog catches that and offers to
- * merge into the colliding tag via ``MergeTags``.
- */
+/** Slug collisions on rename raise ALREADY_EXISTS; the dialog catches that and offers to merge into the colliding tag. */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CaretRight, Trash, X } from '@phosphor-icons/react';

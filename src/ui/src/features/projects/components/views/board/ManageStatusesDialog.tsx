@@ -1,7 +1,3 @@
-/**
- * ManageStatusesDialog - Dialog for managing status options (add/edit/delete)
- */
-
 import { useState, useRef, useEffect } from "react";
 import { X, PencilSimple, Trash, Check, Plus } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";

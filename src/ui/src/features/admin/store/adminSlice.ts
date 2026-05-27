@@ -1,9 +1,3 @@
-/**
- * Admin Redux Slice
- *
- * Manages state for organization administration (permission defaults, groups, members).
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type {
     ContentTypeDefaults,
@@ -44,9 +38,6 @@ import {
     type SerializedOrgSettings,
 } from '@/features/admin/store/adminThunks';
 
-/**
- * Serialized content type defaults.
- */
 export interface SerializedContentTypeDefaults {
     contentType: number;
     defaultAccessMode: number;
@@ -54,9 +45,6 @@ export interface SerializedContentTypeDefaults {
     updatedAt: { seconds: string; nanos: number } | null;
 }
 
-/**
- * Serialized member info.
- */
 export interface SerializedMemberInfo {
     userId: string;
     displayName: string;
@@ -68,9 +56,6 @@ export interface SerializedMemberInfo {
     isActive: boolean;
 }
 
-/**
- * Serialized group info.
- */
 export interface SerializedGroupInfo {
     id: string;
     name: string;
@@ -84,9 +69,6 @@ export interface SerializedGroupInfo {
     updatedAt: { seconds: number; nanos: number } | null;
 }
 
-/**
- * Serialized group member info.
- */
 export interface SerializedGroupMemberInfo {
     userId: string;
     displayName: string;
@@ -96,9 +78,6 @@ export interface SerializedGroupMemberInfo {
     joinedAt: { seconds: number; nanos: number } | null;
 }
 
-/**
- * Serialized organization overview.
- */
 export interface SerializedOrgOverview {
     organizationId: string;
     name: string;
@@ -108,7 +87,6 @@ export interface SerializedOrgOverview {
     createdAt: { seconds: number; nanos: number } | null;
 }
 
-// Serialization functions - convert bigint timestamps to numbers for Redux
 export function serializeContentTypeDefaults(d: ContentTypeDefaults): SerializedContentTypeDefaults {
     return {
         contentType: d.contentType,
@@ -157,9 +135,6 @@ export function serializeGroupMemberInfo(m: GroupMemberInfo): SerializedGroupMem
     };
 }
 
-/**
- * Serialized domain admin info.
- */
 export interface SerializedDomainAdminInfo {
     id: string;
     userId: string;
@@ -186,7 +161,6 @@ export function serializeDomainAdminInfo(d: DomainAdminInfo): SerializedDomainAd
 
 export function serializeOrgOverview(o: OrganizationOverview): SerializedOrgOverview {
     const contentCounts: Record<string, number> = {};
-    // Convert array of ContentTypeCount to Record<string, number>
     for (const item of o.contentCounts) {
         contentCounts[String(item.contentType)] = item.count;
     }
@@ -200,9 +174,6 @@ export function serializeOrgOverview(o: OrganizationOverview): SerializedOrgOver
     };
 }
 
-/**
- * Serialized org storage quota.
- */
 export interface SerializedOrgStorageQuota {
     id: string;
     organizationId: string;
@@ -212,9 +183,6 @@ export interface SerializedOrgStorageQuota {
     enforce: boolean;
 }
 
-/**
- * Serialized user storage quota override.
- */
 export interface SerializedUserQuotaOverride {
     id: string;
     organizationId: string;
@@ -224,9 +192,6 @@ export interface SerializedUserQuotaOverride {
     createdBy: string;
 }
 
-/**
- * Serialized storage usage for a user.
- */
 export interface SerializedStorageUsageInfo {
     userId: string;
     organizationId: string;
@@ -238,38 +203,31 @@ export interface SerializedStorageUsageInfo {
 }
 
 export interface AdminState {
-    // Permission defaults
     permissionDefaults: SerializedContentTypeDefaults[];
     permissionDefaultsLoading: boolean;
     permissionDefaultsError: string | null;
 
-    // Organization overview
     overview: SerializedOrgOverview | null;
     overviewLoading: boolean;
 
-    // Members
     members: SerializedMemberInfo[];
     membersLoading: boolean;
     membersFetched: boolean;
     membersTotalCount: number;
 
-    // Groups
     groups: SerializedGroupInfo[];
     groupsLoading: boolean;
     groupsFetched: boolean;
     groupsTotalCount: number;
 
-    // Group members (keyed by group ID)
     groupMembers: Record<string, SerializedGroupMemberInfo[]>;
     groupMembersLoading: Record<string, boolean>;
 
-    // Domain admins
     domainAdmins: SerializedDomainAdminInfo[];
     domainAdminsLoading: boolean;
     domainAdminsFetched: boolean;
     domainAdminsTotalCount: number;
 
-    // Storage quotas
     orgQuota: SerializedOrgStorageQuota | null;
     orgQuotaLoading: boolean;
     orgTotalUsedBytes: number;
@@ -279,12 +237,10 @@ export interface AdminState {
     userUsageList: SerializedStorageUsageInfo[];
     userUsageListLoading: boolean;
 
-    // Organization settings (JSONB blob)
     orgSettings: SerializedOrgSettings | null;
     orgSettingsLoading: boolean;
     orgSettingsSaving: boolean;
 
-    // General error
     error: string | null;
 }
 
@@ -333,7 +289,6 @@ const adminSlice = createSlice({
         clearAdmin: () => initialState,
     },
     extraReducers: (builder) => {
-        // Permission defaults
         builder.addCase(fetchPermissionDefaults.pending, (state) => {
             state.permissionDefaultsLoading = true;
             state.permissionDefaultsError = null;
@@ -358,7 +313,6 @@ const adminSlice = createSlice({
             }
         });
 
-        // Overview
         builder.addCase(fetchOrganizationOverview.pending, (state) => {
             state.overviewLoading = true;
         });
@@ -370,7 +324,6 @@ const adminSlice = createSlice({
             state.overviewLoading = false;
         });
 
-        // Members
         builder.addCase(fetchMembers.pending, (state) => {
             state.membersLoading = true;
         });
@@ -398,7 +351,6 @@ const adminSlice = createSlice({
             state.membersTotalCount -= 1;
         });
 
-        // Groups
         builder.addCase(fetchGroups.pending, (state) => {
             state.groupsLoading = true;
         });
@@ -431,7 +383,6 @@ const adminSlice = createSlice({
             state.groupsTotalCount -= 1;
         });
 
-        // Group members
         builder.addCase(fetchGroupMembers.pending, (state, action) => {
             state.groupMembersLoading[action.meta.arg.groupId] = true;
         });
@@ -448,7 +399,6 @@ const adminSlice = createSlice({
             const { groupId } = action.meta.arg;
             const members = state.groupMembers[groupId] || [];
             state.groupMembers[groupId] = [...members, action.payload];
-            // Update group member count
             const group = state.groups.find((g) => g.id === groupId);
             if (group) {
                 group.memberCount += 1;
@@ -459,14 +409,12 @@ const adminSlice = createSlice({
             const { groupId, userId } = action.meta.arg;
             const members = state.groupMembers[groupId] || [];
             state.groupMembers[groupId] = members.filter((m) => m.userId !== userId);
-            // Update group member count
             const group = state.groups.find((g) => g.id === groupId);
             if (group && group.memberCount > 0) {
                 group.memberCount -= 1;
             }
         });
 
-        // Domain admins
         builder.addCase(fetchDomainAdmins.pending, (state) => {
             state.domainAdminsLoading = true;
         });
@@ -495,7 +443,6 @@ const adminSlice = createSlice({
             state.domainAdminsTotalCount = Math.max(0, state.domainAdminsTotalCount - 1);
         });
 
-        // Storage: org quota
         builder.addCase(fetchOrgStorageQuota.pending, (state) => {
             state.orgQuotaLoading = true;
         });
@@ -514,7 +461,6 @@ const adminSlice = createSlice({
             state.orgQuota = action.payload;
         });
 
-        // Storage: user overrides
         builder.addCase(fetchUserStorageQuotaOverrides.pending, (state) => {
             state.userOverridesLoading = true;
         });
@@ -542,7 +488,6 @@ const adminSlice = createSlice({
             );
         });
 
-        // Storage: org usage list
         builder.addCase(fetchOrgStorageUsage.pending, (state) => {
             state.userUsageListLoading = true;
         });

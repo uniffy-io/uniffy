@@ -1,17 +1,7 @@
-/**
- * Table Component
- *
- * A styled table with header, body, row, and cell components.
- * Includes loading and empty state helpers.
- */
-
 import { forwardRef } from 'react';
 import { cn } from '@/shared/utils/cn';
 
-// Table Root
-
 export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
-    /** Add a wrapper with rounded corners and border */
     rounded?: boolean;
 }
 
@@ -40,8 +30,6 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 );
 Table.displayName = 'Table';
 
-// Table Header
-
 export const TableHeader = forwardRef<
     HTMLTableSectionElement,
     React.HTMLAttributes<HTMLTableSectionElement>
@@ -53,8 +41,6 @@ export const TableHeader = forwardRef<
     />
 ));
 TableHeader.displayName = 'TableHeader';
-
-// Table Body
 
 export const TableBody = forwardRef<
     HTMLTableSectionElement,
@@ -68,10 +54,7 @@ export const TableBody = forwardRef<
 ));
 TableBody.displayName = 'TableBody';
 
-// Table Row
-
 export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
-    /** Enable hover highlight effect */
     hoverable?: boolean;
 }
 
@@ -90,10 +73,7 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
 );
 TableRow.displayName = 'TableRow';
 
-// Table Head (th)
-
 export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
-    /** Text alignment */
     align?: 'left' | 'center' | 'right';
 }
 
@@ -114,10 +94,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 );
 TableHead.displayName = 'TableHead';
 
-// Table Cell (td)
-
 export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
-    /** Text alignment */
     align?: 'left' | 'center' | 'right';
 }
 
@@ -138,12 +115,8 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
 );
 TableCell.displayName = 'TableCell';
 
-// Table Loading State
-
 export interface TableLoadingProps {
-    /** Number of columns to span */
     colSpan: number;
-    /** Loading message */
     message?: string;
 }
 
@@ -160,18 +133,11 @@ export function TableLoading({ colSpan, message = 'Loading...' }: TableLoadingPr
     );
 }
 
-// Table Empty State
-
 export interface TableEmptyProps {
-    /** Number of columns to span */
     colSpan: number;
-    /** Icon to display */
     icon?: React.ReactNode;
-    /** Primary message */
     title?: string;
-    /** Secondary message */
     description?: string;
-    /** Optional action button */
     action?: React.ReactNode;
 }
 

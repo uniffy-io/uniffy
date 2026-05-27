@@ -1,7 +1,3 @@
-/**
- * DayHeader - Header cell showing day name and date
- */
-
 import type { DayColumn } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
 
@@ -12,7 +8,6 @@ interface DayHeaderProps {
 export function DayHeader({ day }: DayHeaderProps) {
   return (
     <div className="flex flex-col items-center justify-center py-2">
-      {/* Day name */}
       <span
         className={cn(
           'text-xs font-medium',
@@ -22,7 +17,6 @@ export function DayHeader({ day }: DayHeaderProps) {
         {day.dayName}
       </span>
 
-      {/* Day number */}
       <span
         className={cn(
           'w-9 h-9 flex items-center justify-center text-lg font-medium rounded-full',
@@ -46,7 +40,6 @@ export function DayHeadersRow({ days }: DayHeadersRowProps) {
 
   return (
     <div className="relative flex flex-1 h-full">
-      {/* Day header cells */}
       {days.map((day) => (
         <div
           key={day.dateString}
@@ -56,7 +49,7 @@ export function DayHeadersRow({ days }: DayHeadersRowProps) {
         </div>
       ))}
 
-      {/* Vertical dividers - use same positioning as GridLines for perfect alignment */}
+      {/* Dividers mirror GridLines positioning for pixel alignment. */}
       {Array.from({ length: columnCount - 1 }).map((_, i) => (
         <div
           key={`divider-${i}`}

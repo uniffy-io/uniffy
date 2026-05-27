@@ -1,18 +1,3 @@
-/**
- * TagsExplorerPage - the unified ``/tags`` (and ``/tags/:slug``) view.
- *
- * Mirrors the layout shell of the other domain pages (Notifications,
- * Files, Notes): ``AppHeader`` + collapsible filter sidebar +
- * ``Group/Panel`` resizable content area, with the filter rail
- * collapsing into a ``CollapsibleSidebarRail`` icon strip on desktop
- * and a ``Drawer`` on mobile.
- *
- * The middle column is the tag index (search + cloud / list); the
- * right column is the matching-content panel for the selected tag.
- * Filter state is URL-synced via ``useTagFilterState``; saved-filter
- * CRUD lives behind the header dropdown.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Panel, Group, Separator } from 'react-resizable-panels';

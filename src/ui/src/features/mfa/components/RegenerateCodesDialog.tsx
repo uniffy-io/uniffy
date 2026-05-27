@@ -10,10 +10,7 @@ interface RegenerateCodesDialogProps {
     onRegenerated: () => void;
 }
 
-/**
- * Re-issue a fresh batch of ten recovery codes. Old codes are killed
- * server-side; the new set is shown once and never again.
- */
+/** Old codes are invalidated server-side; the new batch is shown once. */
 export function RegenerateCodesDialog({ onClose, onRegenerated }: RegenerateCodesDialogProps) {
     const [code, setCode] = useState('');
     const [codes, setCodes] = useState<string[] | null>(null);

@@ -1,15 +1,4 @@
-/**
- * ChatStreamProvider - Single persistent chat stream.
- *
- * Maintains one streaming connection for the entire authenticated session.
- * Never reconnects on channel switches - all channel events are fanned out
- * server-side to the user's Valkey channel. The frontend filters channel
- * events against the active channelId from Redux.
- *
- * Handles:
- * - User-level events: unread counts, thread activity, mentions
- * - Channel-level events: messages, typing, reactions (filtered by active channel)
- */
+/** One persistent stream per session; channel filtering happens client-side against the active channelId. */
 
 import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -42,17 +31,12 @@ import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_str
 import type { AppDispatch } from '@/app/store';
 import type { StreamUserChatEventsResponse } from '@uniffy/proto/chat/v1/chat_stream_pb';
 
-// Module-level singleton: guarantees at most one active stream connection.
+// At most one active stream connection per page.
 let _activeController: AbortController | null = null;
 
 const MAX_BACKOFF_MS = 30_000;
 const INITIAL_BACKOFF_MS = 1_000;
 
-/**
- * Handle a channel-level event wrapped in the unified stream.
- * Filters by channel_id on the ChatEvent proto to only dispatch
- * events for the currently active channel.
- */
 function handleChannelEvent(
   event: StreamUserChatEventsResponse,
   activeChannelId: string | null,
@@ -65,9 +49,7 @@ function handleChannelEvent(
   const ce = event.payload.value;
   const channelId = ce.channelId;
 
-  // Member events apply globally (not just the active channel).
-  // When the current user is added to a channel, fetch it into the sidebar.
-  // When viewing the affected channel, refresh the member list.
+  // Member events apply globally, not just the active channel.
   if (ce.eventType === ChatEventType.MEMBER_JOINED) {
     if (ce.payload.case === 'member' && ce.payload.value) {
       const joinedUserId = ce.payload.value.userId;
@@ -104,11 +86,6 @@ function handleChannelEvent(
     return;
   }
 
-  // Batched MEMBERS_ADDED / MEMBERS_REMOVED carry a list of affected user_ids
-  // (one event per admin call). If the current user is in the list and the
-  // event is an add we fetch the channel into the sidebar; if it is a remove
-  // we drop it. Anyone viewing the channel refreshes the member list once
-  // (no per-affected-user thrash).
   if (ce.eventType === ChatEventType.MEMBERS_ADDED) {
     if (ce.payload.case === 'membersChanged' && ce.payload.value) {
       const ids = ce.payload.value.userIds || [];
@@ -145,7 +122,6 @@ function handleChannelEvent(
     return;
   }
 
-  // All other channel events filter to active channel only
   if (!activeChannelId || channelId !== activeChannelId) return;
 
   switch (ce.eventType) {
@@ -284,10 +260,7 @@ function handleChannelEvent(
     case ChatEventType.AGENT_TOKEN_DELTA: {
       if (ce.payload.case === 'agentTokenDelta' && ce.payload.value) {
         const { messageId, delta, sequence, final } = ce.payload.value;
-        // The placeholder may live in either the channel store (root
-        // turn) or a thread bucket (agent reply inside a thread). We
-        // dispatch to both; the slice that owns the row updates, the
-        // other no-ops.
+        // Placeholder lives in channel store OR thread bucket; dispatch to both, the non-owner no-ops.
         const payload = {
           channelId: activeChannelId,
           messageId,
@@ -306,8 +279,7 @@ function handleChannelEvent(
       break;
     }
     case ChatEventType.AGENT_TOOL_CALL: {
-      // AGENT_TOOL_CALL is redundant with the MESSAGE_CREATED companion the
-      // backend emits for every persisted tool_call / tool_result row.
+      // Redundant with the MESSAGE_CREATED companion the backend emits for each tool row.
       break;
     }
     case ChatEventType.AGENT_CONFIRMATION_REQUESTED: {
@@ -353,10 +325,6 @@ function handleChannelEvent(
   }
 }
 
-/**
- * Single persistent chat stream - depends only on organizationId.
- * Channel filtering happens client-side using a ref to activeChannelId.
- */
 function usePersistentChatStream() {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -364,7 +332,7 @@ function usePersistentChatStream() {
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
   const channels = useAppSelector((state) => state.chatChannels.channels);
 
-  // Use refs so the effect doesn't re-run on channel switch or user change
+  // Refs keep the effect from re-running on channel switch or user change.
   const channelIdRef = useRef(activeChannelId);
   channelIdRef.current = activeChannelId;
   const userIdRef = useRef(currentUserId);
@@ -374,13 +342,11 @@ function usePersistentChatStream() {
   channelIdsRef.current = new Set(channels.map((c) => c.id));
   const byIdRef = useRef(byId);
   byIdRef.current = byId;
-  // Track in-flight fetches to avoid duplicate requests
   const fetchingChannelsRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!organizationId) return;
 
-    // Abort any previously active stream
     _activeController?.abort();
 
     let backoff = INITIAL_BACKOFF_MS;
@@ -398,7 +364,6 @@ function usePersistentChatStream() {
             controller.signal,
           );
 
-          // Reset backoff on successful connection
           backoff = INITIAL_BACKOFF_MS;
 
           for await (const event of stream) {
@@ -409,7 +374,7 @@ function usePersistentChatStream() {
                 if (event.payload.case === 'unreadCount' && event.payload.value) {
                   const p = event.payload.value;
 
-                  // If we don't know this channel (e.g. new DM), fetch and add it
+                  // Unknown channel (e.g. new DM): fetch and add it.
                   if (
                     !channelIdsRef.current.has(p.channelId) &&
                     !fetchingChannelsRef.current.has(p.channelId) &&
@@ -427,7 +392,7 @@ function usePersistentChatStream() {
                         }
                       })
                       .catch(() => {
-                        // Non-fatal - channel will appear on next full refresh
+                        // Non-fatal; appears on next full refresh.
                       })
                       .finally(() => {
                         fetchingChannelsRef.current.delete(p.channelId);
@@ -464,12 +429,11 @@ function usePersistentChatStream() {
             }
           }
         } catch {
-          // Connection failed, dropped, or aborted
+          // Connection failed, dropped, or aborted.
         }
 
         if (!mounted) break;
 
-        // Exponential backoff with jitter before reconnecting
         const jitter = Math.random() * 1000;
         await new Promise(resolve => setTimeout(resolve, backoff + jitter));
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
@@ -488,9 +452,7 @@ function usePersistentChatStream() {
   }, [organizationId, dispatch]);
 }
 
-/**
- * Render this once at the app level to maintain the persistent chat stream.
- */
+/** Mount once at the app level to maintain the persistent chat stream. */
 export function ChatStreamProvider() {
   usePersistentChatStream();
   return null;

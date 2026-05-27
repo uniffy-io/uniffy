@@ -1,10 +1,3 @@
-/**
- * Organization Quota Section
- *
- * Displays the current org quota configuration with an edit button.
- * Shows a progress bar of total org usage.
- */
-
 import { useState } from 'react';
 import { PencilSimple } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';

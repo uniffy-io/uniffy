@@ -1,7 +1,3 @@
-/**
- * QuickAccess - Quick filter buttons for Today, This Week, Upcoming, Bookmarked
- */
-
 import { BookmarkSimple } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setQuickAccessFilter, goToToday } from '@/features/calendar/store';
@@ -27,13 +23,11 @@ export function QuickAccess() {
   const activeFilter = useAppSelector(
     (state) => state.calendarUi.quickAccessFilter
   );
-  // Get bookmarked calendar events count
   const calendarBookmarks = useBookmarksByType('calendar_event');
   const bookmarkCount = calendarBookmarks.length;
 
   const handleClick = (filter: QuickAccessFilter) => {
     if (activeFilter === filter) {
-      // Deselect if clicking the active filter
       dispatch(setQuickAccessFilter(null));
     } else {
       dispatch(setQuickAccessFilter(filter));

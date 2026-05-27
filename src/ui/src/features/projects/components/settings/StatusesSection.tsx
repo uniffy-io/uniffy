@@ -1,7 +1,3 @@
-/**
- * StatusesSection - Manage project task statuses (add/edit/delete/reorder)
- */
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { CirclesThree, Trash, PencilSimple, Plus, Check, DotsSixVertical } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";

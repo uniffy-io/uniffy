@@ -1,11 +1,3 @@
-/**
- * MultiSelect Component
- *
- * A styled multi-select dropdown that matches the app's theme.
- * Displays selected items as removable chips, with a portal-based
- * dropdown for selecting/deselecting options.
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CaretDown, Check, X } from '@phosphor-icons/react';

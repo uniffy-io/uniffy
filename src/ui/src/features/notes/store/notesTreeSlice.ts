@@ -11,7 +11,6 @@ import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 import { bulkUpsertTags } from '@/features/tags/store/tagsSlice';
 import { tagToPlain } from '@/features/tags/store/tagsThunks';
 
-// Helper to convert proto Note to PlainMessage
 const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
@@ -69,36 +68,18 @@ interface NotesTreeState {
         organization: TreeNode[];
         trash: TreeNode[];
     };
-
-    // Expanded/collapsed state (note IDs and folder IDs)
     expandedNodes: string[];
-
-    // Selected node in tree
     selectedNodeId: string | null;
-
-    // Drag & drop state
     draggedNodeId: string | null;
     dropTargetId: string | null;
-
-    // UI state
     treeWidth: number;
     isTreeCollapsed: boolean;
-
-    // Loading state
     loading: boolean;
     error: string | null;
-
-    // True once the tree has been populated from initializeNotesData (or its
-    // background refresh). Used as the source of truth for "is the tree
-    // hydrated?" so callers don't conflate it with state.notes.notes count,
-    // which fetchNote / searchNotes can populate without ever loading the tree.
+    // Distinguishes "tree hydrated" from "state.notes populated", since fetchNote/searchNotes can fill notes without tree.
     treeLoaded: boolean;
 }
 
-/**
- * Fetch and organize notes tree from API.
- * Automatically fetches all pages to build complete tree.
- */
 export const fetchNotesTree = createAsyncThunk<
     NotesTreeState['tree'],
     void,
@@ -115,7 +96,6 @@ export const fetchNotesTree = createAsyncThunk<
 
         const pageSize = 100;
 
-        // Fetch first page
         const firstResponse = await notesApi.listNotes({
             organizationId,
             page: 1,
@@ -126,7 +106,6 @@ export const fetchNotesTree = createAsyncThunk<
 
         const allNotes = [...firstResponse.notes];
 
-        // Fetch remaining pages if needed
         if (firstResponse.totalPages > 1) {
             const remainingPages = Array.from(
                 { length: firstResponse.totalPages - 1 },
@@ -170,7 +149,6 @@ export const fetchNotesTree = createAsyncThunk<
     }
 });
 
-// Empty initial state - will be populated from API
 const emptyTree: NotesTreeState['tree'] = {
     bookmarked: [],
     personal: [],
@@ -181,11 +159,11 @@ const emptyTree: NotesTreeState['tree'] = {
 
 const initialState: NotesTreeState = {
     tree: emptyTree,
-    expandedNodes: ['personal'], // Personal expanded by default, will be overwritten from localStorage
+    expandedNodes: ['personal'],
     selectedNodeId: null,
     draggedNodeId: null,
     dropTargetId: null,
-    treeWidth: 280, // Legacy - not used for panel sizing anymore
+    treeWidth: 280,
     isTreeCollapsed: false,
     loading: false,
     error: null,
@@ -196,12 +174,10 @@ export const notesTreeSlice = createSlice({
     name: 'notesTree',
     initialState,
     reducers: {
-        // Set entire tree
         setTree: (state, action: PayloadAction<NotesTreeState['tree']>) => {
             state.tree = action.payload;
         },
 
-        // Set tree nodes for a specific section
         setBookmarkedNodes: (state, action: PayloadAction<TreeNode[]>) => {
             state.tree.bookmarked = action.payload;
         },
@@ -222,7 +198,6 @@ export const notesTreeSlice = createSlice({
             state.tree.trash = action.payload;
         },
 
-        // Add a single node to a section
         addNodeToSection: (state, action: PayloadAction<{
             section: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
             node: TreeNode;
@@ -230,17 +205,14 @@ export const notesTreeSlice = createSlice({
         }>) => {
             const { section, node, parentId } = action.payload;
             if (parentId) {
-                // TODO: Add to specific parent within section
                 state.tree[section].push(node);
             } else {
                 state.tree[section].push(node);
             }
         },
 
-        // Update a node title and re-sort its containing array
         updateNodeTitle: (state, action: PayloadAction<{ nodeId: string; title: string }>) => {
             const { nodeId, title } = action.payload;
-            // Search all sections for the node, update title, and re-sort the containing array
             const updateAndSort = (nodes: TreeNode[]): boolean => {
                 for (const node of nodes) {
                     if (node.id === nodeId) {
@@ -297,7 +269,6 @@ export const notesTreeSlice = createSlice({
         },
 
         expandAll: (state) => {
-            // Helper to recursively collect all folder IDs
             const collectFolderIds = (nodes: TreeNode[]): string[] => {
                 const ids: string[] = [];
                 for (const node of nodes) {
@@ -322,12 +293,10 @@ export const notesTreeSlice = createSlice({
             state.expandedNodes = [];
         },
 
-        // Selection
         setSelectedNode: (state, action: PayloadAction<string | null>) => {
             state.selectedNodeId = action.payload;
         },
 
-        // Drag & drop
         setDraggedNode: (state, action: PayloadAction<string | null>) => {
             state.draggedNodeId = action.payload;
         },
@@ -336,7 +305,6 @@ export const notesTreeSlice = createSlice({
             state.dropTargetId = action.payload;
         },
 
-        // UI state
         setTreeWidth: (state, action: PayloadAction<number>) => {
             state.treeWidth = action.payload;
         },
@@ -349,17 +317,14 @@ export const notesTreeSlice = createSlice({
             state.isTreeCollapsed = action.payload;
         },
 
-        // Loading
         setTreeLoading: (state, action: PayloadAction<boolean>) => {
             state.loading = action.payload;
         },
 
-        // Error
         setTreeError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
 
-        // Clear tree
         clearTree: (state) => {
             state.tree = emptyTree;
             state.expandedNodes = ['personal'];
@@ -383,10 +348,8 @@ export const notesTreeSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to load notes tree';
             })
-            // Sync tree when a note is updated (e.g., title change from editor)
             .addCase(updateNote.fulfilled, (state, action) => {
                 const { id, title, icon } = action.payload;
-                // Update the node title and icon, then re-sort the containing array
                 const updateAndSort = (nodes: TreeNode[]): boolean => {
                     for (const node of nodes) {
                         if (node.id === id) {
@@ -425,9 +388,7 @@ export const notesTreeSlice = createSlice({
                     if (updateInArray(state.tree[section])) break;
                 }
             })
-            // Listen to unified initializeNotesData - updates tree from same API call as notesSlice
             .addCase(initializeNotesData.pending, (state, action) => {
-                // Only show loading if not already loaded (prevents flash on cache load)
                 const hasNodes = state.tree.personal.length > 0 ||
                     state.tree.organization.length > 0 ||
                     state.tree.shared.length > 0;
@@ -447,12 +408,10 @@ export const notesTreeSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to load notes tree';
             })
-            // Sync tree when a note is created
             .addCase(createNote.fulfilled, (state, action) => {
                 const note = action.payload;
                 const newNode: TreeNode = noteToTreeNode(note);
 
-                // Helper to add node to parent or root
                 const addToParent = (nodes: TreeNode[], parentId: string | undefined): boolean => {
                     if (!parentId) return false;
                     for (const node of nodes) {
@@ -469,7 +428,6 @@ export const notesTreeSlice = createSlice({
                     return false;
                 };
 
-                // Created notes are always owned by the current user.
                 // OPEN_TO_ORG -> organization, otherwise personal.
                 const targetSection: 'personal' | 'organization' =
                     note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
@@ -484,22 +442,18 @@ export const notesTreeSlice = createSlice({
                         }
                     }
                     if (!added) {
-                        // Parent not found, add to root of target section
                         state.tree[targetSection].push(newNode);
                         sortTreeNodes(state.tree[targetSection]);
                     }
                 } else {
-                    // Add to root of appropriate section
                     state.tree[targetSection].push(newNode);
                     sortTreeNodes(state.tree[targetSection]);
                 }
             })
-            // Sync tree when a note is deleted
             .addCase(deleteNote.fulfilled, (state, action) => {
                 const { noteId, permanent } = action.payload;
 
                 if (permanent) {
-                    // Permanently deleted - remove from tree entirely
                     const removeFromArray = (nodes: TreeNode[]): TreeNode[] => {
                         return nodes
                             .filter(n => n.id !== noteId)
@@ -513,7 +467,6 @@ export const notesTreeSlice = createSlice({
                         state.tree[section] = removeFromArray(state.tree[section]);
                     }
                 } else {
-                    // Soft deleted - move to trash
                     let removedNode: TreeNode | null = null;
 
                     const removeAndCapture = (nodes: TreeNode[]): TreeNode[] => {
@@ -531,36 +484,29 @@ export const notesTreeSlice = createSlice({
                         return result;
                     };
 
-                    // Remove from all non-trash sections
                     for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
                         state.tree[section] = removeAndCapture(state.tree[section]);
                     }
 
-                    // Add to trash if found
                     if (removedNode) {
                         state.tree.trash.push(removedNode);
                     }
                 }
             })
-            // Sync tree when a note is restored from trash
             .addCase(restoreNote.fulfilled, (state, action) => {
                 const note = action.payload;
 
-                // Remove from trash
                 state.tree.trash = state.tree.trash.filter(n => n.id !== note.id);
 
-                // Create node from restored note
                 const restoredNode: TreeNode = noteToTreeNode(note);
 
                 const section = note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
                 state.tree[section].push(restoredNode);
                 sortTreeNodes(state.tree[section]);
             })
-            // Sync tree when a note is moved between visibility scopes
             .addCase(moveNote.fulfilled, (state, action) => {
                 const note = action.payload;
 
-                // Helper to find and remove a node from a tree array (recursively)
                 const findAndRemoveNode = (nodes: TreeNode[], nodeId: string): TreeNode | null => {
                     for (let i = 0; i < nodes.length; i++) {
                         if (nodes[i].id === nodeId) {
@@ -575,7 +521,6 @@ export const notesTreeSlice = createSlice({
                     return null;
                 };
 
-                // Try to find and remove the node from all sections
                 let movedNode: TreeNode | null = null;
                 for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
                     movedNode = findAndRemoveNode(state.tree[section], note.id);
@@ -589,13 +534,11 @@ export const notesTreeSlice = createSlice({
                 movedNode.ownerId = note.ownerId;
                 movedNode.updatedAt = note.updatedAt?.seconds?.toString();
 
-                // Add to the appropriate section based on new access mode
                 const targetSection = note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
                 state.tree[targetSection].push(movedNode);
                 sortTreeNodes(state.tree[targetSection]);
             })
-            // Sync tree when a note's access mode is changed via the Share dialog
-            // (MembersService.SetAccessMode, distinct from the legacy moveNote RPC).
+            // SetAccessMode via Share dialog is distinct from moveNote RPC.
             .addCase(setContentAccessMode.fulfilled, (state, action) => {
                 if (action.meta.arg.contentType !== ContentType.NOTE) return;
                 const noteId = action.meta.arg.contentId;
@@ -627,17 +570,14 @@ export const notesTreeSlice = createSlice({
                 state.tree[targetSection].push(movedNode);
                 sortTreeNodes(state.tree[targetSection]);
             })
-            // Handle background refresh (stale-while-revalidate pattern)
             .addMatcher(
                 (action): action is PayloadAction<{ tree: NotesTreeState['tree'] }> =>
                     action.type === 'notes/backgroundRefreshComplete',
                 (state, action) => {
-                    // Update tree silently (no loading state change)
                     state.tree = action.payload.tree;
                     state.treeLoaded = true;
                 }
             )
-            // Handle restore expanded nodes from localStorage
             .addMatcher(
                 (action): action is PayloadAction<string[]> =>
                     action.type === 'notesTree/setExpandedNodesFromStorage',

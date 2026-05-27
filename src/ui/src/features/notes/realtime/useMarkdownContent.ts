@@ -3,25 +3,12 @@ import * as Y from 'yjs';
 import { getMarkdownYText } from '@/features/notes/realtime/markdown';
 
 interface RealtimeMarkdownOptions {
-  /**
-   * Resolves on first server sync. Before resolution the hook returns
-   * `fallback` to avoid a blank-content flash; afterward the Y type is
-   * authoritative (so a user clearing the doc reads as empty).
-   */
+  // Before resolution we return `fallback` to avoid a blank-content flash; after, Y.Text is authoritative.
   whenSynced?: Promise<void> | null;
-  /**
-   * Coalesce remote updates into one render. Use 0 for cheap consumers
-   * (CodeMirror) and ~250-300ms for ones that rebuild heavy children
-   * on every value change (Milkdown readonly preview).
-   */
   debounceMs?: number;
 }
 
-/**
- * Subscribe to the canonical markdown in `Y.Text("markdown")`. When `ydoc`
- * is null the caller is outside a realtime session and we fall through to
- * the static `fallback` from the Redux store.
- */
+/** Subscribes to canonical markdown in `Y.Text("markdown")`; falls back to Redux when no session. */
 export function useRealtimeMarkdownContent(
   ydoc: Y.Doc | null,
   fallback: string,
@@ -89,8 +76,7 @@ export function useRealtimeMarkdownContent(
         timerRef.current = null;
       }
     };
-    // `fallback` is read via ref so a parent render bumping note.content
-    // does not re-subscribe; `synced`/`whenSynced` are sticky once set.
+    // `fallback` read via ref so parent bumping note.content does not re-subscribe; sync flags sticky.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ydoc, debounce, whenSynced]);
 

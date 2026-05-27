@@ -7,10 +7,7 @@ interface SelectionInfo {
     rect: DOMRect;
 }
 
-/**
- * Hook to detect non-empty text selection in a ProseMirror editor.
- * Returns the selection range, text, and bounding rect for popover positioning.
- */
+/** Detect non-empty selection in a ProseMirror editor; returns range + bounding rect for popover positioning. */
 export function useSelectionComment(editorContainerRef: React.RefObject<HTMLElement | null>) {
     const [selection, setSelection] = useState<SelectionInfo | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,7 +21,7 @@ export function useSelectionComment(editorContainerRef: React.RefObject<HTMLElem
         if (!container) return;
 
         const handleMouseUp = () => {
-            // Delay to let ProseMirror update its selection
+            // Defer to let ProseMirror finish updating its own selection state.
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
@@ -42,13 +39,11 @@ export function useSelectionComment(editorContainerRef: React.RefObject<HTMLElem
                     return;
                 }
 
-                // Check that selection is inside the editor
                 if (!container.contains(range.commonAncestorContainer)) {
                     setSelection(null);
                     return;
                 }
 
-                // Get the editor view from the global reference
                 const view = (window as Window & { __milkdownEditorView?: { state: { selection: { from: number; to: number } } } }).__milkdownEditorView;
                 if (!view) {
                     setSelection(null);
@@ -66,7 +61,6 @@ export function useSelectionComment(editorContainerRef: React.RefObject<HTMLElem
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            // Also check on shift+arrow keys for keyboard selection
             if (e.shiftKey) {
                 handleMouseUp();
             }

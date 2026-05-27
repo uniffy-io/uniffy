@@ -1,20 +1,6 @@
-/**
- * URN Type Colors
- *
- * Centralized color definitions for URN entity types.
- * Used across the app for consistent styling of notes, files, users, etc.
- *
- * Provides both:
- * - Hex colors for canvas/SVG rendering
- * - Tailwind classes for component styling
- */
-
 import { UrnType } from '@/shared/utils/urnTypes';
 
-/**
- * Hex color values for each URN type.
- * Used for canvas rendering (graphs, charts, etc.)
- */
+/** Hex color values for canvas/SVG rendering (graphs, charts). */
 export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.NOTE]: '#8b5cf6',           // violet-500 (fallback, usually uses primary)
   [UrnType.FILE]: '#3b82f6',           // blue-500
@@ -32,26 +18,18 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
-/**
- * Tailwind theme configuration for each URN type.
- * Used for component styling with proper light/dark mode support.
- */
 export interface UrnTypeTheme {
-  /** Gradient background for selected/highlighted states */
   gradient: string;
-  /** Background gradient for icon badges (legacy: solid type-color box with white icon) */
+  /** Solid type-color box with white icon. */
   iconBg: string;
-  /** Accent-tinted icon box (matches landing page treatment): border + faint bg + accent-colored icon */
+  /** Accent-tinted icon box (border + faint bg + accent-colored icon). */
   iconBoxAccent: string;
-  /** Accent text color with dark mode variant */
   accentText: string;
-  /** Background for subtle badges/pills */
   badgeBg: string;
-  /** Border color */
   border: string;
-  /** Shadow color for glow effects (strong, used in hover states) */
+  /** Outer glow color for hover states. */
   shadow: string;
-  /** Subtle per-type colored INNER glow (Tailwind 4 inset-shadow). Sits inside the chip/card edge so users differentiate types without outer halo */
+  /** Tailwind 4 inset-shadow per-type tint - sits inside the chip edge. */
   glow: string;
 }
 
@@ -198,26 +176,14 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
   },
 };
 
-/**
- * Get hex color for a URN type.
- * For canvas/SVG rendering where Tailwind classes can't be used.
- */
 export function getUrnTypeHexColor(type: UrnType): string {
   return URN_TYPE_HEX_COLORS[type] || URN_TYPE_HEX_COLORS[UrnType.UNKNOWN];
 }
 
-/**
- * Get Tailwind theme classes for a URN type.
- * For component styling with proper light/dark mode support.
- */
 export function getUrnTypeTheme(type: UrnType): UrnTypeTheme {
   return URN_TYPE_THEMES[type] || URN_TYPE_THEMES[UrnType.UNKNOWN];
 }
 
-/**
- * Legend items for displaying URN type colors.
- * Useful for graph legends, filter lists, etc.
- */
 export const URN_TYPE_LEGEND: Array<{
   type: UrnType;
   label: string;

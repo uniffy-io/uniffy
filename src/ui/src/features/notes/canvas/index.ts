@@ -1,7 +1,3 @@
-/**
- * Canvas Notes - Public exports
- */
-
 export { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
 export { CanvasToolbar } from '@/features/notes/canvas/CanvasToolbar';
 export { CanvasContextMenu } from '@/features/notes/canvas/CanvasContextMenu';

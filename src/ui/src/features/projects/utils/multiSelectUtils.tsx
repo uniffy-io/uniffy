@@ -1,10 +1,3 @@
-/**
- * Multi-select field component for projects domain.
- *
- * Adapts the shared MultiSelect to work with project field
- * SelectOption (id/label/color) format.
- */
-
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { SelectOption } from "@/features/projects/types";
 
@@ -19,10 +12,7 @@ interface MultiSelectFieldProps {
   size?: "sm" | "md";
 }
 
-/**
- * Adapter component that bridges project SelectOption (id/label/color)
- * to the shared MultiSelect component (value/label).
- */
+/** Adapts project `SelectOption` (id/label/color) to the shared MultiSelect (value/label). */
 export function MultiSelectField({
   options,
   value,

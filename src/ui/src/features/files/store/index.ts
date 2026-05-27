@@ -1,7 +1,3 @@
-/**
- * Files Store Exports
- */
-
 export {
     filesReducer,
     setFiles,
@@ -66,7 +62,6 @@ export {
 } from '@/features/files/store/uploadSlice';
 export type { UploadItem } from '@/features/files/store/uploadSlice';
 
-// Memoized selectors
 export {
     selectAllFiles,
     selectFilesForCurrentFolder,
@@ -78,7 +73,6 @@ export {
     selectTotalPendingUploads,
 } from '@/features/files/store/selectors';
 
-// Saved filters
 export {
     savedFiltersReducer,
     fetchSavedFilters,
@@ -99,7 +93,6 @@ export {
 } from '@/features/files/store/savedFiltersSlice';
 export type { SerializedSavedFilter, SerializedFilterCriteria, SerializedIconValue } from '@/features/files/store/savedFiltersSlice';
 
-// File viewer
 export {
     viewerReducer,
     openViewer,
@@ -127,10 +120,8 @@ export {
     setError as setViewerError,
 } from '@/features/files/store/viewerSlice';
 
-// Viewer thunks
 export { openViewerWithFetch } from '@/features/files/store/viewerThunks';
 
-// Image editor
 export {
     imageEditorReducer,
     enterEditMode,

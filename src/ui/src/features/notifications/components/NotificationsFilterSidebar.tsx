@@ -1,10 +1,3 @@
-/**
- * Filter sidebar for the notifications page.
- *
- * Matches the domain sidebar pattern used by Notes, Files, and Projects:
- * header with toggle, collapsible sections, consistent spacing and styling.
- */
-
 import { useCallback, useMemo, useState } from 'react';
 import {
     ShareNetwork,

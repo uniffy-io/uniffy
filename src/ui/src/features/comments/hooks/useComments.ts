@@ -18,9 +18,6 @@ import {
 import type { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import type { JsonObject } from '@bufbuild/protobuf';
 
-/**
- * Hook for fetching and accessing comments for a content item.
- */
 export function useComments(contentType: number, contentId: string) {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -50,17 +47,11 @@ export function useComments(contentType: number, contentId: string) {
     };
 }
 
-/**
- * Hook for getting comment count for a content item (for badges).
- */
 export function useCommentCount(contentType: number, contentId: string) {
     const key = `${contentType}:${contentId}`;
     return useAppSelector((state) => state.comments.counts[key] ?? 0);
 }
 
-/**
- * Hook for comment actions (create, update, delete, resolve, etc.).
- */
 export function useCommentActions() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -145,9 +136,6 @@ export function useCommentActions() {
     return { create, update, remove, resolve, reopen, react, unreact, fetchCounts };
 }
 
-/**
- * Hook for getting/setting the active comment ID.
- */
 export function useActiveComment() {
     const dispatch = useAppDispatch();
     const activeCommentId = useAppSelector((state) => state.comments.activeCommentId);

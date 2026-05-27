@@ -1,15 +1,3 @@
-/**
- * LeftSidebar - Left sidebar container for the calendar
- *
- * Contains:
- * - New Event button
- * - Event Scope Filter (All, Personal, Organization) - compact icons with hover expand
- * - Quick Access (Today, This Week, Upcoming, Bookmarked)
- * - Mini Calendar
- * - Categories
- * - Tags
- */
-
 import { Plus, CalendarBlank, CaretDoubleLeft } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -34,7 +22,6 @@ export function LeftSidebar() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         <button
           type="button"
@@ -71,21 +58,15 @@ export function LeftSidebar() {
         )}
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-3 md:px-5 pb-4 space-y-4 md:space-y-6 pt-3 md:pt-4">
-        {/* Quick Access */}
         <QuickAccess />
 
-        {/* Mini Calendar */}
         <MiniCalendar />
 
-        {/* Categories */}
         <CategoryList />
 
-        {/* Templates */}
         <TemplateList />
 
-        {/* Tags */}
         <TagCloud />
       </div>
     </div>

@@ -70,7 +70,6 @@ export const setCustomStatus = createAsyncThunk(
             const userId = state.auth.user?.id;
             if (!userId) return rejectWithValue('Not authenticated');
 
-            // Optimistic update
             const customStatus: CustomStatus = {
                 emoji,
                 text,

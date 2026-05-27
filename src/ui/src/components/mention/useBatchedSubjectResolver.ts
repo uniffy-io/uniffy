@@ -1,12 +1,4 @@
-/**
- * Batched URN resolver.
- *
- * Coalesces N concurrent URN-preview lookups into a single bulk
- * `resolveUrns` RPC. Pending URNs accumulate inside a microtask;
- * when the microtask flushes, one round-trip resolves every URN
- * collected since the last flush. The cache is process-wide so
- * remounting components does not re-fetch.
- */
+/** Coalesces concurrent URN-preview lookups into a single bulk `resolveUrns` RPC, flushed on the next microtask. Cache is process-wide. */
 
 import { useCallback } from 'react';
 import { searchApi } from '@/features/search';
@@ -96,8 +88,7 @@ async function flush(): Promise<void> {
         metadata: r.metadata,
       };
       previewCache.set(urn, data);
-      // Broadcast live state so chips that consume this URN through
-      // the module-level emitter (editor NodeViews etc.) wake up.
+      // Wake up chips that subscribe via the module-level emitter (e.g. editor NodeViews outside the React provider).
       publishMentionState(urn, previewDataToLiveState(urn, data));
     } else {
       const parsed = parseUrn(urn);
@@ -114,12 +105,7 @@ async function flush(): Promise<void> {
   }
 }
 
-/**
- * Convert a resolved ``UrnPreviewData`` into a typed
- * ``MentionLiveState`` patch. Mirrors the metadata-dict mapping in
- * ``MentionStateProvider`` so chip behaviour is identical whether the
- * state arrives via the React provider or the module-level emitter.
- */
+/** Mirrors `metadataToLiveState` in MentionStateProvider so chips behave the same via React provider or module emitter. */
 function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveState {
   const m = data.metadata ?? {};
   const parsed = parseUrn(urn);

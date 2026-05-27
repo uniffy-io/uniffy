@@ -1,10 +1,3 @@
-/**
- * Rooms Async Thunks
- *
- * Redux async thunks for room and booking API operations.
- * All async operations go through these thunks for proper state management.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { roomsApi } from '@/features/rooms/api/roomsApi';
 import type { RootState } from '@/app/store';
@@ -32,18 +25,12 @@ import type {
 import { DEFAULT_PAGE_SIZE } from '@/features/rooms/constants';
 
 
-/**
- * Convert proto timestamp to ISO string.
- */
 const timestampToIso = (ts: Timestamp | undefined): string => {
   if (!ts) return new Date().toISOString();
   const seconds = typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds;
   return new Date(seconds * 1000).toISOString();
 };
 
-/**
- * Convert ISO string to proto timestamp.
- */
 const isoToTimestamp = (iso: string): Timestamp => {
   const date = new Date(iso);
   return create(TimestampSchema, {
@@ -51,8 +38,6 @@ const isoToTimestamp = (iso: string): Timestamp => {
     nanos: 0,
   });
 };
-
-// Enum Converters
 
 const ROOM_TYPE_FROM_PROTO: Record<ProtoRoomType, RoomType> = {
   [ProtoRoomType.UNSPECIFIED]: 'meeting_room',
@@ -103,11 +88,6 @@ function accessModeToFrontendVisibility(mode: number): 'private' | 'organization
   return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
 }
 
-// Proto to Domain Converters
-
-/**
- * Convert proto room to domain room.
- */
 const roomFromProto = (proto: ProtoRoom): Room => ({
   id: proto.id,
   organizationId: proto.organizationId,
@@ -127,9 +107,6 @@ const roomFromProto = (proto: ProtoRoom): Room => ({
   updatedAt: timestampToIso(proto.updatedAt),
 });
 
-/**
- * Convert proto booking to domain booking.
- */
 const bookingFromProto = (proto: ProtoRoomBooking): RoomBooking => ({
   id: proto.id,
   roomId: proto.roomId,
@@ -147,9 +124,6 @@ const bookingFromProto = (proto: ProtoRoomBooking): RoomBooking => ({
   updatedAt: timestampToIso(proto.updatedAt),
 });
 
-/**
- * Convert proto time slot to domain time slot.
- */
 const timeSlotFromProto = (proto: ProtoTimeSlot): TimeSlot => ({
   startTime: timestampToIso(proto.startTime),
   endTime: timestampToIso(proto.endTime),
@@ -159,11 +133,6 @@ const timeSlotFromProto = (proto: ProtoTimeSlot): TimeSlot => ({
   bookerName: proto.bookerName,
 });
 
-// Room Thunks
-
-/**
- * Fetch rooms with optional filters.
- */
 export const fetchRooms = createAsyncThunk<
   { rooms: Room[]; totalCount: number; page: number; pageSize: number; totalPages: number },
   {
@@ -205,13 +174,7 @@ export const fetchRooms = createAsyncThunk<
   }
 });
 
-/**
- * Initialize all rooms by loading every page upfront.
- *
- * Fetches the first page, then fires remaining pages in parallel and merges
- * everything into a single result. This ensures the user always sees all
- * rooms regardless of total count.
- */
+/** Loads first page then fans out remaining pages in parallel. */
 export const initializeRoomsData = createAsyncThunk<
   { rooms: Room[]; totalCount: number },
   {
@@ -274,9 +237,6 @@ export const initializeRoomsData = createAsyncThunk<
   }
 });
 
-/**
- * Fetch a single room by ID.
- */
 export const fetchRoom = createAsyncThunk<
   Room,
   { roomId: string; organizationId: string },
@@ -296,9 +256,6 @@ export const fetchRoom = createAsyncThunk<
   }
 });
 
-/**
- * Create a new room.
- */
 export const createRoom = createAsyncThunk<
   Room,
   {
@@ -341,9 +298,6 @@ export const createRoom = createAsyncThunk<
   }
 });
 
-/**
- * Update an existing room.
- */
 export const updateRoom = createAsyncThunk<
   Room,
   {
@@ -390,9 +344,6 @@ export const updateRoom = createAsyncThunk<
   }
 });
 
-/**
- * Delete a room.
- */
 export const deleteRoom = createAsyncThunk<
   { roomId: string },
   { roomId: string; organizationId: string },
@@ -412,11 +363,6 @@ export const deleteRoom = createAsyncThunk<
   }
 });
 
-// Booking Thunks
-
-/**
- * Create a new booking.
- */
 export const createBooking = createAsyncThunk<
   RoomBooking,
   {
@@ -449,9 +395,6 @@ export const createBooking = createAsyncThunk<
   }
 });
 
-/**
- * Cancel a booking.
- */
 export const cancelBooking = createAsyncThunk<
   RoomBooking,
   { bookingId: string; organizationId: string },
@@ -471,9 +414,6 @@ export const cancelBooking = createAsyncThunk<
   }
 });
 
-/**
- * Fetch bookings with optional filters.
- */
 export const fetchBookings = createAsyncThunk<
   { bookings: RoomBooking[]; totalCount: number; page: number; pageSize: number; totalPages: number },
   {
@@ -511,11 +451,6 @@ export const fetchBookings = createAsyncThunk<
   }
 });
 
-// Availability Thunks
-
-/**
- * Check availability for a specific room over a date range.
- */
 export const checkAvailability = createAsyncThunk<
   { roomId: string; slots: TimeSlot[] },
   { organizationId: string; roomId: string; startDate: string; endDate: string },
@@ -537,9 +472,6 @@ export const checkAvailability = createAsyncThunk<
   }
 });
 
-/**
- * Find available rooms for a given time range.
- */
 export const findAvailableRooms = createAsyncThunk<
   Room[],
   {
@@ -567,10 +499,7 @@ export const findAvailableRooms = createAsyncThunk<
   }
 });
 
-/**
- * Fetch available room IDs for a time range (RoomPicker side-channel).
- * Returns only IDs without replacing the rooms map in state.
- */
+/** IDs-only fetch for RoomPicker; does not replace the rooms map. */
 export const fetchAvailableRoomIds = createAsyncThunk<
   string[],
   {

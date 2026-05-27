@@ -105,7 +105,7 @@ export function PlatformAuditPage() {
                     next ? '0' : '1',
                 );
             } catch {
-                // localStorage unavailable - non-fatal
+                // localStorage unavailable
             }
             return next;
         });

@@ -1,8 +1,3 @@
-/**
- * Notification bell icon for the app header.
- * Shows unread count badge capped at 99+ and opens the notification panel.
- */
-
 import { useRef } from 'react';
 import { Bell } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

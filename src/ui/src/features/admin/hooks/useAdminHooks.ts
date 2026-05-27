@@ -1,9 +1,3 @@
-/**
- * Admin Hooks
- *
- * React hooks for organization administration.
- */
-
 import { useCallback, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { clearAdminError } from '@/features/admin/store/adminSlice';
@@ -27,14 +21,6 @@ import {
 } from '@/features/admin/store/adminThunks';
 import { ContentType, AccessMode, ContentRole, OrganizationRole, DomainType } from '@uniffy/proto/common/v1/common_pb';
 
-/**
- * Hook for checking admin access permissions.
- *
- * Returns flags indicating whether the current user is an org admin or system admin,
- * and whether they can access the admin panel.
- *
- * @returns Object with isOrgAdmin, isSystemAdmin, and canAccessAdmin flags
- */
 export function useAdminAccess() {
     const user = useAppSelector((state) => state.auth.user);
     const currentOrganizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
@@ -44,19 +30,13 @@ export function useAdminAccess() {
         const isOrgAdminRole = ['ADMIN', 'OWNER'].includes(currentOrganizationRole ?? '');
 
         return {
-            /** Whether the user is a system-wide administrator (platform operator) */
             isSystemAdmin,
-            /** Whether the user is an admin/owner of the current organization */
             isOrgAdmin: isOrgAdminRole,
-            /** Whether the user can access the org admin panel (/admin/*) */
             canAccessAdmin: isOrgAdminRole || isSystemAdmin,
         };
     }, [user?.isSystemAdmin, currentOrganizationRole]);
 }
 
-/**
- * Hook for managing permission defaults.
- */
 export function usePermissionDefaults() {
     const dispatch = useAppDispatch();
     const defaults = useAppSelector((state) => state.admin.permissionDefaults);
@@ -99,9 +79,6 @@ export function usePermissionDefaults() {
     };
 }
 
-/**
- * Hook for organization overview.
- */
 export function useOrganizationOverview() {
     const dispatch = useAppDispatch();
     const overview = useAppSelector((state) => state.admin.overview);
@@ -111,7 +88,6 @@ export function useOrganizationOverview() {
         dispatch(fetchOrganizationOverview());
     }, [dispatch]);
 
-    // Fetch on mount
     useEffect(() => {
         refresh();
     }, [refresh]);
@@ -123,9 +99,6 @@ export function useOrganizationOverview() {
     };
 }
 
-/**
- * Hook for managing organization members.
- */
 export function useOrgMembers() {
     const dispatch = useAppDispatch();
     const members = useAppSelector((state) => state.admin.members);
@@ -165,9 +138,6 @@ export function useOrgMembers() {
     };
 }
 
-/**
- * Hook for managing groups.
- */
 export function useGroups() {
     const dispatch = useAppDispatch();
     const groups = useAppSelector((state) => state.admin.groups);
@@ -213,9 +183,6 @@ export function useGroups() {
     };
 }
 
-/**
- * Hook for managing group members.
- */
 export function useGroupMembers(groupId: string) {
     const dispatch = useAppDispatch();
     const members = useAppSelector((state) => state.admin.groupMembers[groupId] || []);
@@ -242,7 +209,6 @@ export function useGroupMembers(groupId: string) {
         [dispatch, groupId]
     );
 
-    // Fetch on mount
     useEffect(() => {
         if (groupId) {
             refresh();
@@ -258,9 +224,6 @@ export function useGroupMembers(groupId: string) {
     };
 }
 
-/**
- * Get human-readable label for content type.
- */
 export function getContentTypeLabel(contentType: number): string {
     switch (contentType) {
         case ContentType.NOTE:
@@ -282,9 +245,6 @@ export function getContentTypeLabel(contentType: number): string {
     }
 }
 
-/**
- * Get human-readable label for access mode.
- */
 export function getAccessModeLabel(mode: number): string {
     switch (mode) {
         case AccessMode.OWNER_ONLY:
@@ -298,9 +258,6 @@ export function getAccessModeLabel(mode: number): string {
     }
 }
 
-/**
- * Get human-readable label for content role.
- */
 export function getContentRoleLabel(role: number): string {
     switch (role) {
         case ContentRole.VIEWER:
@@ -320,9 +277,6 @@ export function getContentRoleLabel(role: number): string {
     }
 }
 
-/**
- * Get human-readable label for organization role.
- */
 export function getOrgRoleLabel(role: number): string {
     switch (role) {
         case OrganizationRole.OWNER:
@@ -336,16 +290,10 @@ export function getOrgRoleLabel(role: number): string {
     }
 }
 
-/**
- * Check if a role is admin or higher.
- */
 export function isOrgAdmin(role: number): boolean {
     return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
 }
 
-/**
- * Hook for managing domain admins.
- */
 export function useDomainAdmins() {
     const dispatch = useAppDispatch();
     const domainAdmins = useAppSelector((state) => state.admin.domainAdmins);
@@ -376,9 +324,6 @@ export function useDomainAdmins() {
     return { domainAdmins, loading, totalCount, refresh, grant, revoke };
 }
 
-/**
- * Get human-readable label for a domain type.
- */
 export function getDomainTypeLabel(domain: number): string {
     switch (domain) {
         case DomainType.CHAT:

@@ -1,15 +1,4 @@
-/**
- * Bridge `online` / `offline` browser events into the recording slice.
- *
- * Browsers fire `online` / `offline` on `window` whenever the OS-level
- * network changes. We mirror those into `state.recording.network`.
- *
- * The `slow` and `falling-behind` levels are NOT set here - they come
- * from the upload-backpressure governor in the streaming uploader.
- * This hook only handles the binary online/offline transitions; the
- * thunk owns the "uplink is too slow" narrative because it's the only
- * code path with access to actual queue depth.
- */
+/** Bridges `online`/`offline` window events into the slice. `slow` and `falling-behind` come from the uploader's backpressure governor, not here. */
 
 import { useEffect } from 'react';
 import { useAppDispatch } from '@/app/hooks';

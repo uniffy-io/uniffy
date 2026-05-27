@@ -1,12 +1,3 @@
-/**
- * Shared parent-container breadcrumb for mention preview cards.
- *
- * Used by chat (category), note (folder), and file (folder) chips so
- * the "lives inside X" hint sits in the same slot every time -- first
- * item in the meta row, just before the type label. Keeping the visual
- * treatment in one place avoids per-type drift.
- */
-
 import { FolderSimple } from '@phosphor-icons/react';
 
 interface ParentBadgeProps {
@@ -25,7 +16,6 @@ export function ParentBadge({ label }: ParentBadgeProps) {
   );
 }
 
-/** Inline middle-dot used between meta-row entries. */
 export function MetaSeparator() {
   return <span className="text-muted-foreground/40">·</span>;
 }

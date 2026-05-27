@@ -1,6 +1,3 @@
-/**
- * Available field types for project custom fields
- */
 export type FieldType =
   | "text"
   | "number"
@@ -10,9 +7,6 @@ export type FieldType =
   | "person"
   | "reference";
 
-/**
- * Option for single/multi-select fields
- */
 export interface SelectOption {
   id: string;
   label: string;
@@ -20,127 +14,101 @@ export interface SelectOption {
   sortOrder: number;
 }
 
-/**
- * Type-specific configuration for fields
- */
 export interface FieldConfig {
-  // For select fields
   options?: SelectOption[];
-
-  // For reference fields - which content types are allowed
-  allowedTypes?: string[]; // 'NOTE', 'FILE', 'CHAT', etc.
-
-  // For date fields
+  allowedTypes?: string[];
   format?: "date" | "datetime";
   includeTime?: boolean;
-
-  // For number fields
   min?: number;
   max?: number;
-  precision?: number; // decimal places
-  prefix?: string; // e.g., "$"
-  suffix?: string; // e.g., "%"
-
-  // For person fields
+  precision?: number;
+  prefix?: string;
+  suffix?: string;
   allowMultiple?: boolean;
 }
 
-/**
- * Definition of a custom field in a project
- */
 export interface FieldDefinition {
   id: string;
   projectId: string;
   name: string;
   type: FieldType;
   isRequired: boolean;
-  isSystem: boolean; // True for Title, Status, Priority, etc.
+  /** True for built-in fields like Title, Status, Priority. */
+  isSystem: boolean;
   sortOrder: number;
   config: FieldConfig;
   createdAt: string;
   updatedAt: string;
 }
 
-/**
- * Possible values a field can hold
- */
 export type FieldValue =
-  | string // text, single_select, date
-  | number // number
-  | string[] // multi_select, person (multiple), reference
+  | string
+  | number
+  | string[]
   | null;
 
-/**
- * Field type metadata for UI display
- */
 export interface FieldTypeInfo {
   type: FieldType;
   label: string;
   description: string;
   icon: string;
   color: string;
-  isSpecial?: boolean; // For Reference field (UWOS unique)
+  isSpecial?: boolean;
 }
 
-/**
- * All available field types with their UI metadata
- */
 export const FIELD_TYPES: FieldTypeInfo[] = [
   {
     type: "text",
     label: "Text",
     description: "Single line of text",
     icon: "T",
-    color: "#3b82f6", // blue
+    color: "#3b82f6",
   },
   {
     type: "number",
     label: "Number",
     description: "Numeric values, supports sum",
     icon: "#",
-    color: "#8b5cf6", // violet
+    color: "#8b5cf6",
   },
   {
     type: "single_select",
     label: "Single-select",
     description: "Dropdown with one choice",
     icon: "▼",
-    color: "#22c55e", // green
+    color: "#22c55e",
   },
   {
     type: "multi_select",
     label: "Multi-select",
     description: "Tags with multiple choices",
     icon: "☰",
-    color: "#f59e0b", // amber
+    color: "#f59e0b",
   },
   {
     type: "date",
     label: "Date",
     description: "Date picker, usable in Roadmap",
     icon: "calendar",
-    color: "#ec4899", // pink
+    color: "#ec4899",
   },
   {
     type: "person",
     label: "Person",
     description: "Assign team members",
     icon: "person",
-    color: "#06b6d4", // cyan
+    color: "#06b6d4",
   },
   {
     type: "reference",
     label: "Reference",
     description: "Link to Notes, Files, Chats...",
     icon: "@",
-    color: "#3b82f6", // blue
+    color: "#3b82f6",
     isSpecial: true,
   },
 ];
 
-/**
- * System field IDs that are always present
- */
 export const SYSTEM_FIELD_IDS = {
   TITLE: "field_title",
   STATUS: "field_status",
@@ -150,18 +118,12 @@ export const SYSTEM_FIELD_IDS = {
   DUE_DATE: "field_due_date",
 } as const;
 
-/**
- * Default status options for new projects
- */
 export const DEFAULT_STATUS_OPTIONS: SelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
   { id: "status_in_progress", label: "In Progress", color: "#3b82f6", sortOrder: 1 },
   { id: "status_done", label: "Done", color: "#22c55e", sortOrder: 2 },
 ];
 
-/**
- * Default priority options for new projects
- */
 export const DEFAULT_PRIORITY_OPTIONS: SelectOption[] = [
   { id: "priority_low", label: "Low", color: "#22c55e", sortOrder: 0 },
   { id: "priority_medium", label: "Medium", color: "#f59e0b", sortOrder: 1 },
@@ -169,9 +131,6 @@ export const DEFAULT_PRIORITY_OPTIONS: SelectOption[] = [
   { id: "priority_urgent", label: "Urgent", color: "#dc2626", sortOrder: 3 },
 ];
 
-/**
- * Create default field definitions for a new project
- */
 export function createDefaultFieldDefinitions(projectId: string): FieldDefinition[] {
   const now = new Date().toISOString();
 

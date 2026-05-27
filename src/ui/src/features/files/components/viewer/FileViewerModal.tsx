@@ -1,11 +1,3 @@
-/**
- * File Viewer Modal
- *
- * Full-screen modal for viewing files with playlist navigation.
- * Supports images, videos, audio, PDFs, and text files.
- * Uses a cinematic dark theme optimized for media viewing.
- */
-
 import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
@@ -56,7 +48,7 @@ export function FileViewerModal() {
         currentFileId ? state.files.files[currentFileId] ?? null : null,
     );
 
-    // Get current file - prefer viewer's fileData, fallback to files store
+    // Prefer viewer-owned fileData (e.g. opened from search) over the files cache.
     // This allows viewer to work when opened from search without files domain loaded
     const file: SerializedFile | null = currentFileId
         ? fileData || fileFromStore || null
@@ -82,13 +74,11 @@ export function FileViewerModal() {
         setIsEditing(false);
     }, []);
 
-    // Reset editing state when file changes
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when currentFileId changes is valid
         setIsEditing(false);
     }, [currentFileId]);
 
-    // Handle download
     const handleDownload = useCallback(() => {
         if (!file) return;
         if (getDownloadGateState(file.transcodeStatus).disabled) return;
@@ -174,7 +164,6 @@ export function FileViewerModal() {
         { enabled: isOpen && !isEditing }
     );
 
-    // Handle fullscreen changes
     useEffect(() => {
         const handleFullscreenChange = () => {
             if (!document.fullscreenElement) {

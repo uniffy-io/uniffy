@@ -1,10 +1,3 @@
-/**
- * ChannelView - Main channel content area.
- *
- * Contains the channel header, message list, typing indicator, and compose box.
- * Wires together ChannelHeader, MessageList, and MessageCompose.
- */
-
 import { useCallback, useRef } from 'react';
 import { Hash } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
@@ -32,7 +25,6 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const dispatch = useAppDispatch();
   const lastTypingSentRef = useRef(0);
 
-  // Use prop if provided, otherwise read from Redux
   const activeChannelIdFromRedux = useAppSelector((state) => state.chatChannels.activeChannelId);
   const effectiveChannelId = channelIdProp ?? activeChannelIdFromRedux;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -156,10 +148,6 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     <div
       className="flex flex-col h-full"
       style={{
-        // Subtle polish: a faint primary-tinted spotlight in the top-right
-        // and a complementary cool wash in the bottom-left. Both alphas are
-        // tiny (4-6%) so the overall background still reads as bg-background
-        // but the canvas gains depth instead of feeling like a flat slab.
         backgroundImage:
           'radial-gradient(ellipse 90% 60% at 100% 0%, hsl(var(--primary) / 0.03), transparent 60%), radial-gradient(ellipse 80% 60% at 0% 100%, hsl(var(--ring) / 0.02), transparent 60%)',
       }}

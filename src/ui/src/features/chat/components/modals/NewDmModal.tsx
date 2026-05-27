@@ -1,10 +1,4 @@
-/**
- * NewDmModal - Modal for starting a new direct message conversation.
- *
- * User-to-user only. Creates DIRECT (1:1) or GROUP_DM (3+). Agent
- * conversations live in the "Agent Chats" sidebar section and are started
- * via AgentChatPickerModal -- they must not appear here.
- */
+/** User-to-user DM modal (1:1 or group); agent conversations live elsewhere and must not appear here. */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { X, MagnifyingGlass, Check, PaperPlaneTilt } from '@phosphor-icons/react';

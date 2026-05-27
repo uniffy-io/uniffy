@@ -1,9 +1,3 @@
-/**
- * Files Tree Redux Slice
- *
- * Manages the folder tree structure and folder operations.
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
@@ -17,28 +11,23 @@ import {
 } from '@/features/files/store/filesTreeThunks';
 
 export interface FilesTreeState {
-    // Tree nodes indexed by visibility section
     tree: {
-        bookmarked: SerializedTreeNode[];  // User's bookmarked files (populated from bookmarks store)
+        /** Populated from the bookmarks store. */
+        bookmarked: SerializedTreeNode[];
         personal: SerializedTreeNode[];
         shared: SerializedTreeNode[];
         organization: SerializedTreeNode[];
     };
 
-    // Folders indexed by ID
     folders: Record<string, SerializedFolder>;
 
-    // Expanded node IDs
     expandedNodes: string[];
 
-    // Selected folder ID (for navigation)
     selectedFolderId: string | null;
 
-    // Loading states
     loading: boolean;
     creatingFolder: boolean;
 
-    // Error states
     error: string | null;
 }
 
@@ -50,7 +39,7 @@ const initialState: FilesTreeState = {
         organization: [],
     },
     folders: {},
-    expandedNodes: ['bookmarked', 'personal', 'organization'], // Default expanded sections
+    expandedNodes: ['bookmarked', 'personal', 'organization'],
     selectedFolderId: null,
     loading: false,
     creatingFolder: false,
@@ -61,7 +50,6 @@ export const filesTreeSlice = createSlice({
     name: 'filesTree',
     initialState,
     reducers: {
-        // Toggle node expansion
         toggleNodeExpanded: (state, action: PayloadAction<string>) => {
             const nodeId = action.payload;
             const index = state.expandedNodes.indexOf(nodeId);
@@ -72,7 +60,6 @@ export const filesTreeSlice = createSlice({
             }
         },
 
-        // Expand all nodes
         expandAll: (state) => {
             const getAllNodeIds = (nodes: SerializedTreeNode[]): string[] => {
                 const ids: string[] = [];
@@ -97,22 +84,18 @@ export const filesTreeSlice = createSlice({
             ];
         },
 
-        // Collapse all nodes
         collapseAll: (state) => {
             state.expandedNodes = [];
         },
 
-        // Set selected folder
         setSelectedFolder: (state, action: PayloadAction<string | null>) => {
             state.selectedFolderId = action.payload;
         },
 
-        // Set bookmarked nodes (populated from bookmarks store)
         setBookmarkedNodes: (state, action: PayloadAction<SerializedTreeNode[]>) => {
             state.tree.bookmarked = action.payload;
         },
 
-        // Clear tree (for logout)
         clearTree: (state) => {
             state.tree = {
                 bookmarked: [],
@@ -125,13 +108,11 @@ export const filesTreeSlice = createSlice({
             state.selectedFolderId = null;
         },
 
-        // Clear error
         clearError: (state) => {
             state.error = null;
         },
     },
     extraReducers: (builder) => {
-        // fetchFilesTree
         builder
             .addCase(fetchFilesTree.pending, (state) => {
                 state.loading = true;
@@ -140,7 +121,6 @@ export const filesTreeSlice = createSlice({
             .addCase(fetchFilesTree.fulfilled, (state, action) => {
                 state.loading = false;
 
-                // Recursively index all folders into the flat lookup map
                 const indexFolders = (nodes: SerializedTreeNode[]) => {
                     for (const node of nodes) {
                         if (node.isFolder) {
@@ -160,7 +140,6 @@ export const filesTreeSlice = createSlice({
                 };
                 indexFolders(action.payload.nodes);
 
-                // Organize top-level nodes by visibility
                 const personal: SerializedTreeNode[] = [];
                 const shared: SerializedTreeNode[] = [];
                 const organization: SerializedTreeNode[] = [];
@@ -182,7 +161,6 @@ export const filesTreeSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch files tree';
             });
 
-        // createFolder
         builder
             .addCase(createFolder.pending, (state) => {
                 state.creatingFolder = true;
@@ -192,10 +170,8 @@ export const filesTreeSlice = createSlice({
                 state.creatingFolder = false;
                 const folder = action.payload;
 
-                // Add to folders map
                 state.folders[folder.id] = folder;
 
-                // Add to tree based on visibility
                 const newNode: SerializedTreeNode = {
                     id: folder.id,
                     name: folder.name,
@@ -208,7 +184,6 @@ export const filesTreeSlice = createSlice({
 
                 if (folder.accessMode === AccessMode.OWNER_ONLY || folder.accessMode === AccessMode.UNSPECIFIED) {
                     if (folder.parentId) {
-                        // Add as child to parent folder
                         const addToParent = (nodes: SerializedTreeNode[]): boolean => {
                             for (const node of nodes) {
                                 if (node.id === folder.parentId) {
@@ -254,13 +229,11 @@ export const filesTreeSlice = createSlice({
                 state.error = action.payload ?? 'Failed to create folder';
             });
 
-        // updateFolder
         builder
             .addCase(updateFolder.fulfilled, (state, action) => {
                 const folder = action.payload;
                 state.folders[folder.id] = folder;
 
-                // Update in tree
                 const updateInTree = (nodes: SerializedTreeNode[]): boolean => {
                     for (let i = 0; i < nodes.length; i++) {
                         if (nodes[i].id === folder.id) {
@@ -279,13 +252,11 @@ export const filesTreeSlice = createSlice({
                 updateInTree(state.tree.organization);
             });
 
-        // deleteFolder
         builder
             .addCase(deleteFolder.fulfilled, (state, action) => {
                 const { folderId } = action.payload;
                 delete state.folders[folderId];
 
-                // Remove from tree
                 const removeFromTree = (nodes: SerializedTreeNode[]): boolean => {
                     for (let i = 0; i < nodes.length; i++) {
                         if (nodes[i].id === folderId) {
@@ -322,7 +293,6 @@ export const {
 
 export const filesTreeReducer = filesTreeSlice.reducer;
 
-// Re-export thunks and types
 export {
     fetchFilesTree,
     createFolder,

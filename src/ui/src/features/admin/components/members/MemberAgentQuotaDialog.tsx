@@ -1,16 +1,3 @@
-/**
- * Per-user agent quota override dialog.
- *
- * Wraps BudgetsService.UpdateUserQuota / DeleteUserQuota / GetUserQuota
- * for one member of the current org. Mirrors the SetUserQuotaDialog
- * shape used by the storage admin so the two member-level overrides
- * feel consistent.
- *
- * Caps are optional. Empty fields mean "no cap" and the row is sent
- * as null so the backend treats it as unset. The hard-limit switch
- * decides whether overage rejects the request or just logs a warning.
- */
-
 import { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

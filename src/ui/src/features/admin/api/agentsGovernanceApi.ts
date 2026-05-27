@@ -1,11 +1,3 @@
-/**
- * Admin API for the agents governance surface.
- *
- * Wraps the three agents.v1 ConnectRPC services that drive the
- * /admin/agents page: budgets + per-user quotas, per-org rate-limit
- * overrides, model pricing.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import {

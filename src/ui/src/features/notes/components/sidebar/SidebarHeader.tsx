@@ -1,9 +1,3 @@
-/**
- * Sidebar Header Component
- *
- * Header bar for the notes sidebar with create dropdown, nav items, and toggle button.
- */
-
 import { Link, useLocation } from 'react-router-dom';
 import {
     CaretDoubleLeft,
@@ -28,10 +22,6 @@ const notesNavItems: NotesNavItem[] = [
     { name: 'Tags', path: '/tags?domain=note', icon: Tag },
 ];
 
-/**
- * Compact nav item that expands on hover to show label.
- * Matches the style of AppHeader's navigation items.
- */
 function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: boolean }) {
     const IconComponent = item.icon;
 
@@ -44,7 +34,6 @@ function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: bool
                 isActive && "text-foreground"
             )}
         >
-            {/* Active indicator */}
             <span
                 className={cn(
                     "absolute inset-0 rounded-lg transition-all duration-500",
@@ -52,10 +41,8 @@ function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: bool
                 )}
             />
 
-            {/* Hover underline effect */}
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-            {/* Icon */}
             <span className={cn(
                 "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
                 isActive
@@ -65,7 +52,6 @@ function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: bool
                 <IconComponent size={18} weight={isActive ? "fill" : "duotone"} />
             </span>
 
-            {/* Label - hidden by default, shows on hover */}
             <span className={cn(
                 "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
                 "group-hover:ml-1.5 group-hover:max-w-24",
@@ -106,7 +92,7 @@ export function SidebarHeader({
                 <CompactNavItem key={item.path} item={item} isActive={location.pathname === item.path} />
             ))}
             <div className="flex-1" />
-            {/* Hide collapse button on mobile (drawer has its own close) */}
+            {/* Mobile drawer has its own close. */}
             {!isMobile && (
                 <button
                     onClick={() => dispatch(toggleSidebar())}

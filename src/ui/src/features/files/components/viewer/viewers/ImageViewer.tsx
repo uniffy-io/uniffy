@@ -1,10 +1,4 @@
-/**
- * Image Viewer
- *
- * Displays images with zoom, pan, and rotate support.
- * Images automatically fit to the container by default.
- * Zoom is relative to the fitted size (100% = fit to screen).
- */
+/** Zoom is relative to the fitted size; 100% = fit to screen. */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Spinner } from '@phosphor-icons/react';
@@ -31,13 +25,11 @@ export function ImageViewer({ file }: ImageViewerProps) {
     const lastPos = useRef({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Handle image load
     const handleImageLoad = useCallback(() => {
         setImageLoaded(true);
         dispatch(setViewerLoading(false));
     }, [dispatch]);
 
-    // Handle image error
     const handleImageError = useCallback(() => {
         dispatch(setViewerLoading(false));
     }, [dispatch]);
@@ -82,7 +74,6 @@ export function ImageViewer({ file }: ImageViewerProps) {
         setIsDragging(false);
     }, []);
 
-    // Handle mouse leave
     const handleMouseLeave = useCallback(() => {
         setIsDragging(false);
     }, []);
@@ -118,14 +109,12 @@ export function ImageViewer({ file }: ImageViewerProps) {
         dispatch(setPan({ x: 0, y: 0 }));
     }, [dispatch]);
 
-    // Reset state when file changes
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when file.id changes is valid
         setImageLoaded(false);
         dispatch(setViewerLoading(true));
     }, [file.id, dispatch]);
 
-    // Show loading spinner while fetching file
     if (downloadLoading) {
         return (
             <div className="viewer-loading">
@@ -134,7 +123,6 @@ export function ImageViewer({ file }: ImageViewerProps) {
         );
     }
 
-    // Show error message
     if (downloadError || !imageUrl) {
         return (
             <div className="viewer-error">
@@ -173,7 +161,6 @@ export function ImageViewer({ file }: ImageViewerProps) {
                     maxWidth: zoom === 1 && panX === 0 && panY === 0 ? '100%' : 'none',
                     maxHeight: zoom === 1 && panX === 0 && panY === 0 ? '100%' : 'none',
                     objectFit: 'contain',
-                    // Apply transforms for zoom, pan, and rotation
                     transform: `translate(${panX}px, ${panY}px) scale(${zoom}) rotate(${rotation}deg)`,
                     transformOrigin: 'center center',
                     transition: isDragging ? 'none' : 'transform 0.15s ease-out',

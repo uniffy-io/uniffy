@@ -1,10 +1,3 @@
-/**
- * QuickActionsWidget - Grid of action cards for common operations
- *
- * Each card shows an icon, label, and keyboard shortcut hint.
- * 3x2 grid on desktop, 2x3 on tablet and mobile.
- */
-
 import { useNavigate } from 'react-router-dom';
 import {
   NotePencil,

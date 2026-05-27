@@ -1,9 +1,3 @@
-/**
- * Saved Filters Hook
- *
- * Provides access to saved file filters state and operations.
- */
-
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
@@ -22,9 +16,6 @@ import {
     type SerializedIconValue,
 } from '@/features/files/store/savedFiltersSlice';
 
-/**
- * Hook for accessing and managing saved file filters.
- */
 export function useSavedFilters() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -35,7 +26,6 @@ export function useSavedFilters() {
     const error = useAppSelector(selectSavedFiltersError);
     const saving = useAppSelector(selectSavingFilter);
 
-    // Fetch filters on mount
     useEffect(() => {
         if (organizationId) {
             dispatch(fetchSavedFilters({

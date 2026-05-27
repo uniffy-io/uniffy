@@ -1,10 +1,3 @@
-/**
- * Viewer Navigation
- *
- * Previous/Next navigation arrows for playlist navigation.
- * Uses glassmorphism design with smooth hover effects.
- */
-
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { useFormattedKeybinding } from '@/features/settings';
 

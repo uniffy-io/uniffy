@@ -1,10 +1,3 @@
-/**
- * AgentPicker - Dropdown for selecting an agent when starting a new conversation.
- *
- * Uses a fixed-position menu (same pattern as notes CreateDropdown).
- * Shows all available agents with avatar emoji, name, and model badge.
- */
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";

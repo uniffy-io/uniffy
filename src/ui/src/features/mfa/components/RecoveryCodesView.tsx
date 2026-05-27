@@ -5,12 +5,7 @@ interface RecoveryCodesViewProps {
     codes: string[];
 }
 
-/**
- * One-time display of recovery codes. Server hashes them on commit so
- * this is the only window the user has to grab them. The view favours
- * raw copy + download. No printing button -- printing happens through
- * the browser's own controls on the resulting blob.
- */
+/** Server hashes codes on commit, so this render is the only chance to save them. */
 export function RecoveryCodesView({ codes }: RecoveryCodesViewProps) {
     const handleCopy = async () => {
         await navigator.clipboard.writeText(codes.join('\n'));

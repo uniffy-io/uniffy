@@ -204,7 +204,6 @@ export function AuditLogsPage() {
     );
 
     useEffect(() => {
-        // Reset pagination state when filter changes.
         setPageTokens([null]);
         setPageIndex(0);
         fetchPage(null);

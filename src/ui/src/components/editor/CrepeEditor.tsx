@@ -90,45 +90,27 @@ export interface CrepeRealtimeBinding {
 }
 
 interface CrepeEditorProps {
-  /** Content type for uploads and comments */
   contentType: ContentType;
-  /** Content ID for uploads and comments */
   contentId: string;
-  /** Markdown content to display */
   value: string;
-  /** Called when content changes (consumers handle persistence) */
   onChange?: (markdown: string) => void;
-  /**
-   * When set, the editor binds to a Yjs document via y-prosemirror;
-   * the doc (not ``value``) is the source of truth. ``onChange`` still
-   * fires with serialized markdown for title / save-indicator slots.
-   */
+  /** When set, the Yjs doc is the source of truth; `value` is ignored. `onChange` still fires with serialized markdown. */
   realtime?: CrepeRealtimeBinding;
-  /** When true, the editor is read-only (no editing, no toolbar, no slash commands) */
   readonly?: boolean;
-  /** Custom class name for the wrapper */
   className?: string;
-  /** Enable inline comments (default: false) */
   enableComments?: boolean;
-  /** Enable file uploads - images, video, audio (default: true) */
   enableUpload?: boolean;
-  /** Placeholder text for empty editor */
   placeholder?: string;
-  /** Minimum height CSS value */
   minHeight?: string;
-  /** Maximum height CSS value */
   maxHeight?: string;
-  /** Compact mode - constrained height, minimal padding (default: false) */
   compact?: boolean;
-  /** Called with each uploaded file ID (for deferred attachment when contentId is empty) */
+  /** Called per uploaded file id so callers can defer attachment when `contentId` is empty. */
   onFileUploaded?: (fileId: string) => void;
-  /** Auto-embed media file mentions as inline image/video/audio blocks (default: false) */
   autoEmbedMedia?: boolean;
-  /** Called when the editor is fully created with a handle for external toolbars; called with null on unmount. */
   onEditorReady?: (handle: EditorHandle | null) => void;
-  /** Optional content rendered inside the editor scroll wrapper, above the editor surface. Use for in-doc title/cover blocks that should scroll with the content. */
+  /** In-doc content rendered above the editor surface (e.g. title, cover) that scrolls with the document. */
   headerSlot?: React.ReactNode;
-  /** Whether Crepe's built-in floating selection toolbar should mount. Default true; notes opts out because it ships its own. */
+  /** Default true; notes opt out because they ship their own floating toolbar. */
   floatingToolbar?: boolean;
 }
 
@@ -170,7 +152,6 @@ function buildRealtimeSelection(user: { color?: string } | null): { class?: stri
   };
 }
 
-/** Creates Crepe configuration */
 function createCrepeConfig(
   root: HTMLElement,
   content: string,
@@ -269,13 +250,8 @@ function createCrepeConfig(
   };
 }
 
-/**
- * Walk the ProseMirror document, find FILE mention nodes that are media files,
- * resolve their metadata, and replace them with inline image/video/audio blocks.
- * Same transformation as MentionNodeView.handleReplaceWithMedia but applied automatically.
- */
+/** Same transformation as `MentionNodeView.handleReplaceWithMedia` applied to every FILE mention in the document. */
 async function autoEmbedMediaMentions(view: EditorView, organizationId: string) {
-  // Collect all FILE mention nodes with their positions
   const fileMentions: Array<{ pos: number; node: Node; urn: string; label: string; fileId: string }> = [];
 
   view.state.doc.descendants((node, pos) => {

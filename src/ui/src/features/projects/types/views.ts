@@ -1,23 +1,11 @@
 import { SYSTEM_FIELD_IDS } from "./fields";
 
-/**
- * Available view types
- */
 export type ViewType = "table" | "board" | "roadmap" | "backlog" | "graph" | "resources";
 
-/**
- * Sort direction
- */
 export type SortDirection = "asc" | "desc";
 
-/**
- * Zoom level for roadmap view
- */
 export type RoadmapZoomLevel = "day" | "week" | "month";
 
-/**
- * Configuration specific to Table view
- */
 export interface TableViewConfig {
   type: "table";
   visibleFieldIds: string[];
@@ -27,35 +15,23 @@ export interface TableViewConfig {
   groupByFieldId: string | null;
 }
 
-/**
- * Configuration specific to Board view
- */
 export interface BoardViewConfig {
   type: "board";
-  statusFieldId: string; // Which field to use for columns
-  visibleFieldIds: string[]; // Fields shown on cards
-  collapsedColumnIds: string[]; // Which columns are collapsed
+  statusFieldId: string;
+  visibleFieldIds: string[];
+  collapsedColumnIds: string[];
 }
 
-/**
- * Configuration specific to Roadmap view
- */
 export interface RoadmapViewConfig {
   type: "roadmap";
   startDateFieldId: string;
   endDateFieldId: string;
   zoomLevel: RoadmapZoomLevel;
-  visibleFieldIds: string[]; // Fields shown in task list
+  visibleFieldIds: string[];
 }
 
-/**
- * Union of all view-specific configurations
- */
 export type ViewSpecificConfig = TableViewConfig | BoardViewConfig | RoadmapViewConfig;
 
-/**
- * A saved view configuration
- */
 export interface ViewConfig {
   id: string;
   projectId: string;
@@ -67,9 +43,6 @@ export interface ViewConfig {
   updatedAt: string;
 }
 
-/**
- * Filter operator types
- */
 export type FilterOperator =
   | "equals"
   | "not_equals"
@@ -81,9 +54,6 @@ export type FilterOperator =
   | "less_than"
   | "between";
 
-/**
- * A single filter condition
- */
 export interface FilterCondition {
   id: string;
   fieldId: string;
@@ -91,25 +61,16 @@ export interface FilterCondition {
   value: string | number | string[] | null;
 }
 
-/**
- * Filter configuration with multiple conditions
- */
 export interface FilterConfig {
   conditions: FilterCondition[];
   logic: "and" | "or";
 }
 
-/**
- * Sort configuration
- */
 export interface SortConfig {
   fieldId: string;
   direction: SortDirection;
 }
 
-/**
- * Create default view configurations for a new project
- */
 export function createDefaultViews(projectId: string): ViewConfig[] {
   const now = new Date().toISOString();
 

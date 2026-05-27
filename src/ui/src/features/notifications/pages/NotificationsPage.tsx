@@ -1,11 +1,3 @@
-/**
- * Full-page notifications view.
- *
- * Uses the same layout pattern as other domain pages (Notes, Files, Projects):
- * AppHeader + full-width layout with sidebar, content area, and optional analytics.
- * Supports Zen Mode, responsive breakpoints, and resizable panels.
- */
-
 import { useEffect, useCallback, useState } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { Funnel } from '@phosphor-icons/react';

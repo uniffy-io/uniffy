@@ -1,8 +1,3 @@
-/**
- * Calendar feature utility exports
- */
-
-// Date utilities
 export {
   getWeekDates,
   getWeekColumns,
@@ -32,7 +27,6 @@ export {
   getDateRangeLabel,
   getTimezoneOffset,
   convertTimezone,
-  // Re-exported from date-fns
   parseISO,
   format,
   isToday,
@@ -48,7 +42,6 @@ export {
   getYear,
 } from '@/features/calendar/utils/dateUtils';
 
-// Event positioning
 export {
   calculateEventPosition,
   eventsOverlap,

@@ -1,22 +1,4 @@
-/**
- * useChannelAgentContext - polled stats + actions for one (channel, agent).
- *
- * Mirrors the agents-builder ChatView meter (`features/agents/components/views/
- * ChatView.tsx::945-1029`) but talks to `chat.v1.ChatService.GetChannelAgentContextStats`
- * instead of the sessions surface. Auto-refreshes when the agent stops
- * typing (the typing entry transitions from present -> absent in
- * `chatMessages.typingByChannel`), which lines up with the
- * `AGENT_TYPING started=false` event the bridge emits at end-of-turn.
- *
- * Two siblings:
- *   - `useChannelAgentContextBatch(channelId, agentIds)` fans N agents into
- *     ONE `GetChannelAgentContextStatsBatch` call for the channel-agents
- *     popover. Coalesces typing-stop refreshes across the whole agent list
- *     into a single debounced batch fetch.
- *   - `useChannelAgentContextActions(channelId, agentId)` exposes only
- *     `compact` / `reset` (no auto-fetch) for callers that already own the
- *     stats source - i.e. the popover bar fed from the batch hook.
- */
+/** Per-(channel, agent) context stats + actions; refreshes on AGENT_TYPING-stop end-of-turn. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector } from '@/app/hooks';
@@ -206,7 +188,6 @@ export function useChannelAgentContext(
     }, [channelId, agentId, organizationId, stats]);
 
     useEffect(() => {
-        // Reset transient state when scope changes; refresh kicks in below.
         setStats(null);
         wasAgentTypingRef.current = false;
         if (!channelId || !agentId) return;
@@ -234,21 +215,7 @@ export function useChannelAgentContext(
     };
 }
 
-/**
- * Batched per-agent context stats for one channel.
- *
- * Coalesces N parallel single-agent fetches into ONE
- * `GetChannelAgentContextStatsBatch` call. Membership is keyed on the sorted
- * agent-id list so a stable list re-using the hook does not re-fire fetches
- * across renders. Typing-stop refresh is debounced across ALL agents in
- * `agentIds`, so a flurry of end-of-turn `AGENT_TYPING started=false`
- * events collapses into a single batch round-trip.
- *
- * Returns `null` for any agent the batch endpoint omits (not bound to the
- * channel, soft-deleted, unreadable). The batch endpoint intentionally does
- * not auto-create bindings - callers that need first-call binding creation
- * (e.g. the single-agent DM bar) keep using `useChannelAgentContext`.
- */
+/** Fans N agents into one batch fetch; debounces typing-stop refreshes across the whole list. */
 export function useChannelAgentContextBatch(
     channelId: string | undefined,
     agentIds: string[],
@@ -343,15 +310,7 @@ export function useChannelAgentContextBatch(
     return { statsByAgentId, isLoading, refresh };
 }
 
-/**
- * Compact + reset actions only - no auto-fetch, no stats state.
- *
- * For callers that already own the stats source (e.g. the channel-agents
- * popover bar fed by `useChannelAgentContextBatch`) and only need the
- * mutation surface. Mirrors the toast-on-error behaviour of
- * `useChannelAgentContext` so failed mutations still surface a friendly
- * error message to the user.
- */
+/** Mutation-only variant for callers that already own the stats source. */
 export function useChannelAgentContextActions(
     channelId: string | undefined,
     agentId: string | undefined,

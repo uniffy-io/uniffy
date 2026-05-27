@@ -38,16 +38,14 @@ export function NotesEditor() {
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
   const canvasTitleHidden = settings?.canvasTitleHidden ?? false;
 
-  // Pass the note row's userRole so the hook skips a separate fetch;
-  // UNSPECIFIED (0) falls through to the hook's own resolver.
+  // Pass note's userRole so hook skips a fetch; UNSPECIFIED (0) falls through.
   const role = useMyContentRole(
     ContentType.NOTE,
     currentNoteId ?? '',
     currentNote?.userRole,
   );
 
-  // Force readonly mode if user doesn't have edit permission
-  const canEdit = role === null ? true : roleCanEdit(role); // Default to true while loading
+  const canEdit = role === null ? true : roleCanEdit(role);
   const canShare = roleCanManage(role);
   const editorMode = canEdit ? userSelectedMode : 'readonly';
 
@@ -64,15 +62,13 @@ export function NotesEditor() {
 
   const noteContent = currentNote?.content ?? '';
 
-  // Scroll to heading when URL has a hash fragment (e.g. /notes/:id#heading-slug).
-  // The editor renders asynchronously, so we poll until the heading appears in the DOM.
+  // Poll until heading appears since editor renders async.
   const hashScrolledRef = useRef<string | null>(null);
 
   useEffect(() => {
     const hash = location.hash.replace(/^#/, '');
     if (!hash || !currentNote?.content) return;
 
-    // Avoid re-scrolling to the same hash on re-renders
     if (hashScrolledRef.current === `${currentNoteId}#${hash}`) return;
 
     let attempts = 0;
@@ -92,7 +88,6 @@ export function NotesEditor() {
       }
     };
 
-    // Start polling after a short delay to let the editor mount
     const timeoutId = setTimeout(() => {
       rafId = requestAnimationFrame(tryScroll);
     }, 100);
@@ -105,7 +100,6 @@ export function NotesEditor() {
 
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
-  // Editor handle - published by CrepeEditor on mount, consumed by formatting toolbar
   const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
   const handleEditorReady = useCallback((handle: EditorHandle | null) => {
     setEditorHandle(handle);
@@ -116,12 +110,8 @@ export function NotesEditor() {
     [isCanvas, noteContent]
   );
 
-  // Show loading state when:
-  // 1. We're loading the current note AND
-  // 2. Either we don't have the note yet OR the note has no content (from tree preview)
   const shouldShowLoading = isLoadingCurrentNote && (!currentNote || !currentNote.content);
 
-  // Loading state - show spinner when fetching note
   if (shouldShowLoading) {
     return (
       <div className="flex flex-col h-full bg-card">
@@ -133,11 +123,9 @@ export function NotesEditor() {
     );
   }
 
-  // Empty state - no note selected
   if (!currentNote) {
     return (
       <div className="flex flex-col h-full bg-card">
-        {/* Empty state */}
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <h3 className="text-xl font-semibold mb-2">No note selected</h3>
           <p className="text-sm">Select a note from the sidebar or create a new one</p>
@@ -150,8 +138,7 @@ export function NotesEditor() {
   const compactTitleBlock = <NoteTitleBlock note={currentNote} canEdit={canEdit} compact />;
   const toolbarPinned = settings?.toolbarPinned ?? true;
 
-  // Canvas notes: title block sits above the canvas because the
-  // canvas surface has no scrolling document of its own.
+  // Canvas surface has no scrolling document, so title sits above.
   if (isCanvas && canvasState) {
     return (
       <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
@@ -246,8 +233,7 @@ export function NotesEditor() {
             {renderEditor()}
           </ErrorBoundary>
         </div>
-        {/* Floating selection toolbar mounts only when the persistent
-            bar is unpinned and the user is editing in crepe mode. */}
+        {/* Floating toolbar only when persistent bar unpinned and in crepe mode. */}
         {canEdit && editorMode === 'crepe' && !toolbarPinned && (
           <FloatingFormattingToolbar />
         )}

@@ -1,11 +1,3 @@
-/**
- * ChannelHeader - Channel header with compact and expandable states.
- *
- * Compact mode shows channel name, member count, and action buttons.
- * Expanded mode reveals the channel description and creator info.
- * Includes split-screen button for side-by-side channel viewing (desktop only).
- */
-
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   Hash,
@@ -105,7 +97,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const searchBtnRef = useRef<HTMLButtonElement>(null);
   const contextBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Close picker on Escape
   useEffect(() => {
     if (!showPicker) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -158,10 +149,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
       : null,
   );
 
-  // Show the Gauge icon on every non-(1:1-DM) channel regardless of whether
-  // we have already fetched its member roster. Conditioning on
-  // `hasAgentMembers` made the button flicker between renders while the
-  // members slice was loading; the popover handles the empty state itself.
+  // Always show the Gauge icon on group channels; gating on member-load caused flicker.
   const isGroupChannel = !isOneOnOneDm;
 
   const headerName = useMemo(() => {
@@ -245,9 +233,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
       data-channel-id={activeChannel.id}
       data-channel-type={activeChannel.channelType}
     >
-      {/* Compact header row */}
       <div className="flex items-center gap-3 px-4 py-2">
-        {/* Mobile sidebar toggle - opens chat nav drawer */}
         {isMobile && !sidebarOpen && !showCloseButton && (
           <button
             type="button"
@@ -259,7 +245,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             <SidebarSimple size={16} />
           </button>
         )}
-        {/* Channel name + chevron (clickable to expand) */}
         {!isDm && (
           <ChannelIcon size={16} className="text-muted-foreground shrink-0" />
         )}
@@ -303,7 +288,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           </button>
         )}
 
-        {/* Member count (hidden for 1:1 DMs) */}
         {!(activeChannel.channelType === 'DIRECT') && (
           <button
             type="button"
@@ -317,10 +301,8 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           </button>
         )}
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Right action buttons */}
         <div className="flex items-center gap-1.5">
           {isAgentDm && agent && (
             <button
@@ -416,7 +398,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             <LinkSimple size={16} />
           </button>
 
-          {/* Split-screen button - desktop only */}
           {!isMobileOrTablet && !showCloseButton && (
             <div className="relative">
               <button
@@ -453,7 +434,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             </button>
           )}
 
-          {/* Close button for split pane */}
           {showCloseButton && onClose && (
             <button
               type="button"
@@ -469,8 +449,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
         </div>
       </div>
 
-      {/* Per-(channel, agent) context bar for 1:1 agent DMs.
-          Collapsed by default; toggled via the Gauge icon above. */}
       {isAgentDm && agent && showContextBar && (
         <AgentContextBar
           channelId={activeChannel.id}
@@ -479,7 +457,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
         />
       )}
 
-      {/* Expandable description section */}
       {!isDm && (
         <div
           className={cn(

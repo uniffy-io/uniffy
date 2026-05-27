@@ -1,10 +1,3 @@
-/**
- * User Quota Table
- *
- * Sortable, searchable table of user storage usage in an organization.
- * Shows progress bars, effective quotas, and override indicators.
- */
-
 import { useState, useMemo } from 'react';
 import { MagnifyingGlass, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

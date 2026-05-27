@@ -1,9 +1,3 @@
-/**
- * ProjectSettingsLayout - Sidebar + content layout for project settings
- *
- * Mirrors SettingsLayout pattern with URL-based section navigation.
- */
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Link } from "react-router-dom";

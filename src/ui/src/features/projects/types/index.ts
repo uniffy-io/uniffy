@@ -1,4 +1,3 @@
-// Project and Task types
 export type {
   Project,
   Task,
@@ -12,7 +11,6 @@ export type {
   MoveTaskRequest,
 } from "./project";
 
-// Field types
 export type {
   FieldType,
   FieldDefinition,
@@ -30,7 +28,6 @@ export {
   createDefaultFieldDefinitions,
 } from "./fields";
 
-// View types
 export type {
   ViewType,
   ViewConfig,
@@ -48,7 +45,6 @@ export type {
 
 export { createDefaultViews } from "./views";
 
-// UI state types
 export type {
   LoadingState,
   ErrorState,

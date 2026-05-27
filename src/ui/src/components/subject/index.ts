@@ -1,9 +1,3 @@
-/**
- * Subject Components
- *
- * Shared components for displaying and selecting users and groups.
- */
-
 export type {
     Subject,
     SubjectTypeValue,
@@ -21,7 +15,6 @@ export {
     isGroupSubject,
 } from '@/components/subject/utils';
 
-// Components
 export { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 export { SubjectAvatar, SubjectAvatarById } from '@/components/subject/SubjectAvatar';
 export { SubjectAvatarStack } from '@/components/subject/SubjectAvatarStack';
@@ -29,6 +22,5 @@ export { SubjectChip } from '@/components/subject/SubjectChip';
 export { SubjectPicker } from '@/components/subject/SubjectPicker';
 export { UserHoverCard } from '@/components/subject/UserHoverCard';
 
-// Hooks
 export { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
 export { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';

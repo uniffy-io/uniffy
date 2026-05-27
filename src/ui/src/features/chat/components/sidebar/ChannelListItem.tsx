@@ -1,10 +1,3 @@
-/**
- * ChannelListItem - Single channel row in the sidebar.
- *
- * Shows hash/lock icon, channel name, muted indicator, unread badge, and mention badge.
- * Supports right-click context menu for split view and notification settings.
- */
-
 import { useState, useCallback } from 'react';
 import { Hash, Lock, SpeakerSlash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

@@ -1,8 +1,3 @@
-/**
- * NewMessagesPill - Floating pill that appears when the user is scrolled up
- * and new messages arrive below the viewport.
- */
-
 import { ArrowDown } from '@phosphor-icons/react';
 
 interface NewMessagesPillProps {

@@ -21,29 +21,24 @@ export function NotesPage() {
   const location = useLocation();
   const { noteId } = useParams<{ noteId: string }>();
 
-  // All hooks must be called before any early returns (Rules of Hooks)
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { defaultEditor, markdownShowPreview, markdownShowLineNumbers } = useAppearanceSettings();
 
-  // Sync notes to IndexedDB cache for instant load on next visit
   useNotesCacheSync();
 
   const currentNoteId = notesState?.currentNoteId;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
 
-  // Check if we're on the graph route
   const isGraphRoute = location.pathname === '/notes/graph';
 
-  // Get current note title for dynamic document title
   const currentNote = currentNoteId ? notesState?.notes[currentNoteId] : null;
   const pageTitle = isGraphRoute ? 'Knowledge Graph' : (currentNote?.title || 'Notes');
   useDocumentTitle(pageTitle);
 
-  // Keyboard shortcut for toggling sidebar (global shortcut)
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
@@ -58,19 +53,15 @@ export function NotesPage() {
 
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
-  // Redirect to last opened note when navigating to /notes (but not /notes/graph)
   useLayoutEffect(() => {
-    // Only redirect from the base /notes route, not from /notes/graph
     if (!noteId && !isGraphRoute) {
       const lastNoteId = loadLastOpenedNote();
       if (lastNoteId) {
-        // Always redirect to last note when navigating to base /notes
         navigate(`/notes/${lastNoteId}`, { replace: true });
       }
     }
   }, [noteId, isGraphRoute, navigate]);
 
-  // Apply default editor mode from settings on initial mount only
   const hasAppliedDefaultEditor = useRef(false);
   useEffect(() => {
     if (!hasAppliedDefaultEditor.current && defaultEditor && ['crepe', 'markdown', 'readonly'].includes(defaultEditor)) {
@@ -81,25 +72,18 @@ export function NotesPage() {
     }
   }, [dispatch, defaultEditor, markdownShowPreview, markdownShowLineNumbers]);
 
-  // Check if notes are already loaded
   const notesLoading = notesState?.loading ?? false;
   const notesCount = Object.keys(notesState?.notes ?? {}).length;
   const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
 
-  // Load notes on mount only if the tree hasn't been hydrated yet.
-  // Gating on tree state (not notesCount) prevents fetchNote / searchNotes
-  // from masking an empty tree, which used to leave the sidebar blank until
-  // the user hit the refresh button.
+  // Gating on tree state (not notesCount) - fetchNote/searchNotes can mask an empty tree.
   useEffect(() => {
     if (!organizationId || treeLoaded) return;
 
     dispatch(initializeNotesData());
   }, [dispatch, organizationId, treeLoaded]);
 
-  // Select note from URL parameter and fetch full content (or clear if viewing dashboard).
-  // Always refetch when the route's noteId changes OR the page remounts, even when
-  // currentNoteId in Redux already matches - returning from another domain (e.g. /chat)
-  // would otherwise serve stale cached content and let autosave clobber concurrent edits.
+  // Always refetch on noteId change or remount - returning from /chat would serve stale content and autosave could clobber concurrent edits.
   useEffect(() => {
     if (noteId) {
       dispatch(setCurrentNote(noteId));
@@ -107,12 +91,10 @@ export function NotesPage() {
     } else if (currentNoteId && !isGraphRoute) {
       dispatch(setCurrentNote(null));
     }
-    // currentNoteId intentionally excluded - we want this effect to run on
-    // mount + noteId change, not when Redux updates currentNoteId itself.
+    // currentNoteId omitted: run on mount + noteId change, not on Redux currentNoteId updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, isGraphRoute, dispatch]);
 
-  // Determine if we should show the dashboard (graph route or no note selected)
   const showDashboard = isGraphRoute || !noteId;
 
   return (

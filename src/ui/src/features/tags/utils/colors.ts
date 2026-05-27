@@ -1,28 +1,9 @@
-/**
- * Tag color resolver.
- *
- * Per the unified-tags plan: ``tag.color`` carries one of a fixed
- * 12-slug palette aligned with the broader ``urnColors`` system. When
- * the column is null, callers MUST render the chip in the workspace
- * accent (``bg-primary/10 text-primary``) -- there is no hash-derived
- * fallback. Hashing makes chips noisy and overrides the user's accent
- * without intent.
- *
- * The accent path lives in the chip component (``TagChip`` flips on
- * ``Boolean(tag.color)``); this module only resolves named colors. A
- * caller that asks for a palette without supplying a color gets the
- * accent classes back so the chip default still works in component
- * call sites that pre-compute the palette.
- */
+/** Resolver for the 12-slug palette; null/unknown falls back to workspace accent. No hash-derived fallback. */
 
 export interface TagChipClasses {
-    /** Background classes (light + dark). */
     bg: string;
-    /** Foreground (text) classes. */
     text: string;
-    /** Border classes. */
     border: string;
-    /** Solid swatch background -- used by the color picker grid. */
     swatch: string;
 }
 
@@ -129,17 +110,6 @@ export function isTagPaletteSlug(value: string): value is TagPaletteSlug {
     return (TAG_PALETTE_SLUGS as readonly string[]).includes(value);
 }
 
-/**
- * Resolve chip Tailwind classes from a stored ``color`` slug.
- *
- * - When ``color`` is a known palette slug, returns the matching
- *   palette entry.
- * - When ``color`` is null / empty / unknown, returns the workspace
- *   accent classes so the chip blends with the user's theme.
- *
- * The first ``slug`` argument is kept for API compatibility; it is
- * never used to derive a colour.
- */
 export function tagColorClasses(
     _slug: string,
     color?: string | null

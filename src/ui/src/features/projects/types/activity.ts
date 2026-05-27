@@ -13,12 +13,10 @@ export type ActivityAction =
 export interface TaskActivity {
   id: string;
   taskId: string;
-  actorId: string; // User ID
+  actorId: string;
   action: ActivityAction;
   timestamp: string;
-
-  // For structured diffs
-  fieldId?: string; // If field_updated
+  fieldId?: string;
   previousValue?: unknown;
   newValue?: unknown;
 }

@@ -1,7 +1,3 @@
-/**
- * TemplateList - List of event templates for quick creation
- */
-
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { CopySimple, Plus, PencilSimple, Trash } from '@phosphor-icons/react';
 import { openCreateTemplateModal, openEditTemplateModal, openEventModal } from '@/features/calendar/store';

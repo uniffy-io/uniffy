@@ -1,10 +1,3 @@
-/**
- * Storage Progress Bar
- *
- * Visual bar showing storage usage with color transitions
- * at warning thresholds. Handles unlimited quota display.
- */
-
 import { useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { formatFileSize } from '@/shared/utils/dateFormatting';

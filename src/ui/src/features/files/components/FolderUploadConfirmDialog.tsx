@@ -1,11 +1,3 @@
-/**
- * Folder Upload Confirm Dialog
- *
- * Shows a summary of files to upload from a dropped/selected folder,
- * with checkboxes to exclude individual files or entire subfolders.
- * Displays total size, file count, and quota impact.
- */
-
 import { useState, useMemo, useCallback } from 'react';
 import {
     FolderOpen,
@@ -308,7 +300,6 @@ function TreePreviewNode({
 
     const hasContents = node.children.length > 0 || node.files.length > 0;
 
-    // Compute checkbox state: checked, unchecked, or indeterminate
     const checkState = useMemo(() => {
         if (isFolderExcluded) return 'unchecked';
         const descendants = collectDescendantPaths(node, folderPath);

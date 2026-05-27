@@ -1,9 +1,4 @@
-/**
- * Video Viewer
- *
- * Video player using Video.js for full playback controls.
- * Supports seeking via the Service Worker's Range request handling.
- */
+/** Seeking flows through the media service worker's Range handler. */
 
 import { useEffect, useRef, useState } from 'react';
 import videojs from 'video.js';
@@ -46,7 +41,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
     // Check for unsupported formats
     const isUnsupportedFormat = UNSUPPORTED_FORMATS.includes(file.mimeType);
 
-    // Initialize Video.js player
     useEffect(() => {
         if (!videoContainerRef.current || !streamUrl) {
             return;
@@ -60,12 +54,10 @@ export function VideoViewer({ file }: VideoViewerProps) {
 
         dispatch(setViewerLoading(true));
 
-        // Create video element
         const videoElement = document.createElement('video-js');
         videoElement.classList.add('vjs-big-play-centered', 'vjs-fluid');
         videoContainerRef.current.appendChild(videoElement);
 
-        // Initialize player
         const player = videojs(videoElement, {
             controls: true,
             autoplay: false,
@@ -165,7 +157,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
         }
     }, [volume, isMuted, error]);
 
-    // Show loading while waiting for service worker
     if (swLoading) {
         return (
             <div className="viewer-loading">
@@ -174,7 +165,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
         );
     }
 
-    // Show error from service worker (e.g., SW not available)
     if (swError) {
         return (
             <div className="viewer-error">

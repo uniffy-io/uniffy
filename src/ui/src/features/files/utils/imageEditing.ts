@@ -1,52 +1,27 @@
-/**
- * Image Editing Utility Functions
- *
- * Pure functions for image processing operations.
- * These operate on canvas ImageData or handle canvas transformations.
- */
-
-/**
- * Apply brightness adjustment to image data.
- *
- * @param imageData - The ImageData to modify (in-place)
- * @param value - Brightness value (-100 to 100)
- */
+/** Brightness in [-100, 100], applied in-place per RGB channel (alpha untouched). */
 export function applyBrightness(imageData: ImageData, value: number): void {
     const factor = (value / 100) * 255;
     const data = imageData.data;
 
     for (let i = 0; i < data.length; i += 4) {
-        data[i] = Math.max(0, Math.min(255, data[i] + factor)); // R
-        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + factor)); // G
-        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + factor)); // B
-        // Alpha (data[i + 3]) unchanged
+        data[i] = Math.max(0, Math.min(255, data[i] + factor));
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + factor));
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + factor));
     }
 }
 
-/**
- * Apply contrast adjustment to image data.
- *
- * @param imageData - The ImageData to modify (in-place)
- * @param value - Contrast value (-100 to 100)
- */
+/** Contrast in [-100, 100]; factor curve from the canonical -100=0, 0=1, 100=~2 mapping. */
 export function applyContrast(imageData: ImageData, value: number): void {
-    // Convert -100..100 to a factor
-    // At 0, factor = 1 (no change)
-    // At 100, factor = ~2 (high contrast)
-    // At -100, factor = ~0 (low contrast)
     const factor = (259 * (value + 255)) / (255 * (259 - value));
     const data = imageData.data;
 
     for (let i = 0; i < data.length; i += 4) {
-        data[i] = Math.max(0, Math.min(255, factor * (data[i] - 128) + 128)); // R
-        data[i + 1] = Math.max(0, Math.min(255, factor * (data[i + 1] - 128) + 128)); // G
-        data[i + 2] = Math.max(0, Math.min(255, factor * (data[i + 2] - 128) + 128)); // B
+        data[i] = Math.max(0, Math.min(255, factor * (data[i] - 128) + 128));
+        data[i + 1] = Math.max(0, Math.min(255, factor * (data[i + 1] - 128) + 128));
+        data[i + 2] = Math.max(0, Math.min(255, factor * (data[i + 2] - 128) + 128));
     }
 }
 
-/**
- * Crop rectangle definition.
- */
 export interface CropRect {
     x: number;
     y: number;
@@ -54,13 +29,6 @@ export interface CropRect {
     height: number;
 }
 
-/**
- * Crop an image using canvas.
- *
- * @param sourceCanvas - The source canvas
- * @param rect - The crop rectangle
- * @returns A new canvas with the cropped image
- */
 export function cropCanvas(sourceCanvas: HTMLCanvasElement, rect: CropRect): HTMLCanvasElement {
     const croppedCanvas = document.createElement('canvas');
     croppedCanvas.width = rect.width;
@@ -86,13 +54,6 @@ export function cropCanvas(sourceCanvas: HTMLCanvasElement, rect: CropRect): HTM
     return croppedCanvas;
 }
 
-/**
- * Rotate a canvas by the specified degrees.
- *
- * @param sourceCanvas - The source canvas
- * @param degrees - Rotation angle (0, 90, 180, 270)
- * @returns A new canvas with the rotated image
- */
 export function rotateCanvas(sourceCanvas: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
     const normalizedDegrees = ((degrees % 360) + 360) % 360;
 
@@ -102,7 +63,6 @@ export function rotateCanvas(sourceCanvas: HTMLCanvasElement, degrees: number): 
         throw new Error('Failed to get canvas context');
     }
 
-    // Swap dimensions for 90/270 degree rotations
     if (normalizedDegrees === 90 || normalizedDegrees === 270) {
         rotatedCanvas.width = sourceCanvas.height;
         rotatedCanvas.height = sourceCanvas.width;
@@ -113,7 +73,6 @@ export function rotateCanvas(sourceCanvas: HTMLCanvasElement, degrees: number): 
 
     ctx.save();
 
-    // Move to center, rotate, then draw
     ctx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
     ctx.rotate((normalizedDegrees * Math.PI) / 180);
     ctx.drawImage(sourceCanvas, -sourceCanvas.width / 2, -sourceCanvas.height / 2);
@@ -123,13 +82,6 @@ export function rotateCanvas(sourceCanvas: HTMLCanvasElement, degrees: number): 
     return rotatedCanvas;
 }
 
-/**
- * Flip a canvas horizontally or vertically.
- *
- * @param sourceCanvas - The source canvas
- * @param horizontal - True to flip horizontally, false for vertical
- * @returns A new canvas with the flipped image
- */
 export function flipCanvas(sourceCanvas: HTMLCanvasElement, horizontal: boolean): HTMLCanvasElement {
     const flippedCanvas = document.createElement('canvas');
     flippedCanvas.width = sourceCanvas.width;
@@ -156,15 +108,7 @@ export function flipCanvas(sourceCanvas: HTMLCanvasElement, horizontal: boolean)
     return flippedCanvas;
 }
 
-/**
- * Apply brightness and contrast to a canvas using CSS filters.
- * Note: This method uses CSS filters which are more performant for preview.
- *
- * @param sourceCanvas - The source canvas
- * @param brightness - Brightness value (-100 to 100)
- * @param contrast - Contrast value (-100 to 100)
- * @returns A new canvas with adjustments applied
- */
+/** Uses ctx.filter (CSS) which is much cheaper than per-pixel work for live preview. */
 export function applyAdjustmentsCanvas(
     sourceCanvas: HTMLCanvasElement,
     brightness: number,
@@ -179,9 +123,6 @@ export function applyAdjustmentsCanvas(
         throw new Error('Failed to get canvas context');
     }
 
-    // Convert values to CSS filter format
-    // brightness: 0% to 200% (100% = no change)
-    // contrast: 0% to 200% (100% = no change)
     const brightnessPercent = 100 + brightness;
     const contrastPercent = 100 + contrast;
 
@@ -192,12 +133,6 @@ export function applyAdjustmentsCanvas(
     return adjustedCanvas;
 }
 
-/**
- * Load an image from a URL into a canvas.
- *
- * @param imageUrl - The image URL (blob URL or data URL)
- * @returns Promise resolving to a canvas with the image
- */
 export async function loadImageToCanvas(imageUrl: string): Promise<HTMLCanvasElement> {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -226,13 +161,6 @@ export async function loadImageToCanvas(imageUrl: string): Promise<HTMLCanvasEle
     });
 }
 
-/**
- * Apply all transforms to a canvas.
- *
- * @param sourceCanvas - The source canvas
- * @param options - Transform options
- * @returns A new canvas with all transforms applied
- */
 export interface TransformOptions {
     rotation: number;
     flipH: boolean;
@@ -248,17 +176,15 @@ export function applyAllTransforms(
 ): HTMLCanvasElement {
     let result = sourceCanvas;
 
-    // Apply crop first (if any)
+    // Crop must precede rotation/flip so the rect maps to source coordinates.
     if (options.cropRect) {
         result = cropCanvas(result, options.cropRect);
     }
 
-    // Apply rotation
     if (options.rotation !== 0) {
         result = rotateCanvas(result, options.rotation);
     }
 
-    // Apply flips
     if (options.flipH) {
         result = flipCanvas(result, true);
     }
@@ -266,7 +192,6 @@ export function applyAllTransforms(
         result = flipCanvas(result, false);
     }
 
-    // Apply brightness/contrast
     if (options.brightness !== 0 || options.contrast !== 0) {
         result = applyAdjustmentsCanvas(result, options.brightness, options.contrast);
     }
@@ -274,14 +199,6 @@ export function applyAllTransforms(
     return result;
 }
 
-/**
- * Export canvas to a Blob.
- *
- * @param canvas - The canvas to export
- * @param mimeType - Output MIME type ('image/png' or 'image/jpeg')
- * @param quality - JPEG quality (0-1), ignored for PNG
- * @returns Promise resolving to Blob
- */
 export async function exportCanvasToBlob(
     canvas: HTMLCanvasElement,
     mimeType: 'image/png' | 'image/jpeg' = 'image/png',
@@ -302,29 +219,12 @@ export async function exportCanvasToBlob(
     });
 }
 
-/**
- * Get CSS filter string for preview rendering.
- * Uses CSS filters for better performance during live preview.
- *
- * @param brightness - Brightness value (-100 to 100)
- * @param contrast - Contrast value (-100 to 100)
- * @returns CSS filter string
- */
 export function getCssFilter(brightness: number, contrast: number): string {
     const brightnessPercent = 100 + brightness;
     const contrastPercent = 100 + contrast;
     return `brightness(${brightnessPercent}%) contrast(${contrastPercent}%)`;
 }
 
-/**
- * Get CSS transform string for preview rendering.
- *
- * @param rotation - Rotation in degrees
- * @param flipH - Horizontal flip
- * @param flipV - Vertical flip
- * @param scale - Scale factor (default 1)
- * @returns CSS transform string
- */
 export function getCssTransform(
     rotation: number,
     flipH: boolean,

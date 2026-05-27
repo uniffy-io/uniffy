@@ -1,25 +1,5 @@
-/**
- * Table of Contents Block Plugin for Milkdown/Crepe Editor
- *
- * Adds a block-level `tocBlock` node that renders a live, clickable outline
- * of every heading in the document. Persists as Markdown literal:
- *
- *   [[[toc|min=1|max=3|numbered=false|style=flat]]]
- *
- * Live updates are driven by a companion ProseMirror plugin
- * (`tocOutlinePlugin`) which traverses top-level heading nodes after every
- * doc-changing transaction and broadcasts entries to the NodeView.
- *
- * Plugin components:
- * - tocBlockNode: Block-level atomic node schema (attrs: min/max/numbered/style)
- * - tocBlockRemarkPlugin: Parses [[[toc|...]]] from markdown
- * - tocBlockView: React NodeView rendering TocBlockView
- * - tocOutlinePlugin: Outline derivation + broadcast
- *
- * Registration order: this plugin must be registered BEFORE the mention
- * remark plugin so that [[[toc|...]]] patterns are consumed before the
- * general mention regex picks them up.
- */
+// Register BEFORE the mention remark plugin so `[[[toc|...]]]` is consumed before the general mention regex.
+// Markdown literal: `[[[toc|min=1|max=3|numbered=false|style=flat]]]`.
 
 import { $node, $view, $remark } from '@milkdown/kit/utils';
 import { Node } from '@milkdown/kit/prose/model';

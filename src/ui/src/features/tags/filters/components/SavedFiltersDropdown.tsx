@@ -1,12 +1,3 @@
-/**
- * <SavedFiltersDropdown>
- *
- * Header dropdown for the explorer that loads or saves the active
- * criteria. "Save as..." opens the ``TagFilterBuilder`` modal; "Reset"
- * clears the filter rail. Loading a saved filter copies its criteria
- * into local state via the parent's ``onLoad`` callback.
- */
-
 import { useEffect, useRef, useState } from 'react';
 import { CaretDown, FloppyDisk, ArrowsClockwise, Star } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';

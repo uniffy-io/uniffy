@@ -1,10 +1,3 @@
-/**
- * WeekView - Week calendar grid view
- *
- * On desktop/tablet: shows full 7-day week
- * On mobile: shows 3-day view centered on the current date
- */
-
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEventThunk, openEventModal } from '@/features/calendar/store';
@@ -29,30 +22,25 @@ export function WeekView() {
   const { weekColumns, currentDate } = useCalendarNavigation();
   const { getPositionedEventsWeek, events } = useCalendarEvents();
 
-  // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
   const [dropPreview, setDropPreview] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
-  // On mobile, show 3 days centered on currentDate; on desktop show full 7-day week
+  // Mobile shows a 3-day window centered on currentDate; desktop shows the full 7-day week.
   const displayColumns = useMemo(() => {
     if (!isMobile) return weekColumns;
 
-    // Find the index of the current date in the week
     const currentIndex = weekColumns.findIndex(col => col.dateString === currentDate);
     if (currentIndex === -1) {
-      // Current date not in this week - show first 3 days
       return weekColumns.slice(0, 3);
     }
 
-    // Center on current date: show [prev, current, next]
     const start = Math.max(0, Math.min(currentIndex - 1, weekColumns.length - 3));
     return weekColumns.slice(start, start + 3);
   }, [isMobile, weekColumns, currentDate]);
 
   const columnCount = displayColumns.length;
 
-  // Get positioned events for the week (always fetch full week, filter display below)
   const weekDates = useMemo(
     () => weekColumns.map((col) => col.date),
     [weekColumns]
@@ -63,7 +51,6 @@ export function WeekView() {
     [getPositionedEventsWeek, weekDates]
   );
 
-  // All-day events
   const { visibleEvents } = useCalendarEvents();
   const allDayPositions = useMemo(
     () => positionAllDayEvents(visibleEvents, weekDates),
@@ -77,25 +64,22 @@ export function WeekView() {
   const categories = useAppSelector((state) => state.calendar.categories);
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
-  // Calculate grid height
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
   const gridHeight = hourCount * GRID.HOUR_HEIGHT;
 
-  // Auto-scroll to current time on mount
   useEffect(() => {
     if (scrollRef.current) {
       const now = new Date();
       const currentHour = now.getHours();
 
       if (currentHour >= GRID.START_HOUR && currentHour <= GRID.END_HOUR) {
-        // Scroll to current hour minus 1 for context
+        // Anchor one hour above current time for context.
         const scrollTop = (currentHour - GRID.START_HOUR - 1) * GRID.HOUR_HEIGHT;
         scrollRef.current.scrollTop = Math.max(0, scrollTop);
       }
     }
   }, []);
 
-  // Clear selected slot on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedSlot) {
@@ -107,9 +91,6 @@ export function WeekView() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedSlot]);
 
-  /**
-   * Calculate grid slot from mouse coordinates
-   */
   const getSlotFromCoordinates = useCallback((clientX: number, clientY: number) => {
     if (!gridRef.current || !scrollRef.current) return null;
 
@@ -140,11 +121,8 @@ export function WeekView() {
     };
   }, [displayColumns, columnCount]);
 
-  /**
-   * Handle drag over to show preview
-   */
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); // Allow dropping
+    e.preventDefault();
 
     if (!draggedEventId) return;
 
@@ -160,9 +138,6 @@ export function WeekView() {
     }
   }, [draggedEventId, getSlotFromCoordinates]);
 
-  /**
-   * Handle drop to reschedule event
-   */
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setDropPreview(null);
@@ -172,7 +147,6 @@ export function WeekView() {
     const slot = getSlotFromCoordinates(e.clientX, e.clientY);
     if (!slot) return;
 
-    // Calculate new start time
     const newStartDate = new Date(slot.dateObj);
     newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
 
@@ -187,7 +161,6 @@ export function WeekView() {
 
     if (!eventToUpdate) return;
 
-    // Calculate duration
     const start = new Date(eventToUpdate.startTime);
     const end = new Date(eventToUpdate.endTime);
     const durationMs = end.getTime() - start.getTime();
@@ -205,13 +178,10 @@ export function WeekView() {
     }
   }, [draggedEventId, getSlotFromCoordinates, positionedEventsMap, dispatch]);
 
-  /**
-   * Handle clicks on empty grid cells - select half-hour slots
-   */
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
-    // Only handle clicks on empty grid area (not on events or other interactive elements)
+    // Ignore clicks on events or other interactive elements - empty grid only.
     if (
       target.closest('[data-event-block]') ||
       target.closest('[data-event]') ||
@@ -232,7 +202,6 @@ export function WeekView() {
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
-      // Double-click: open event creation modal with prefilled date/time
       const clickedHour = hour + (isHalf ? 0.5 : 0);
       const startMinutes = Math.round((clickedHour % 1) * 60);
       const endHourVal = clickedHour + 1;
@@ -249,11 +218,9 @@ export function WeekView() {
           date: date,
           startTime: startDt.toISOString(),
           endTime: endDt.toISOString(),
-        },
-      }));
+        },      }));
       setSelectedSlot(null);
     } else {
-      // Single click: select slot
       setSelectedSlot({ date, hour, isHalf });
       lastClickTimeRef.current = currentTime;
     }
@@ -262,19 +229,15 @@ export function WeekView() {
   return (
     <>
       <div className="h-full flex flex-col">
-        {/* Day headers container - use same flex structure as grid below */}
         <div className="flex border-b border-border flex-shrink-0 min-w-0 overflow-y-scroll invisible-scrollbar">
-          {/* Time column header spacer */}
           <div
             className="flex-shrink-0 bg-muted/50 border-r border-border"
             style={{ width: LAYOUT.TIME_COLUMN_WIDTH }}
           />
 
-          {/* Day headers */}
           <DayHeadersRow days={displayColumns} />
         </div>
 
-        {/* All-day events bar */}
         {allDaySectionHeight > 0 && (
           <div className="flex border-b border-border flex-shrink-0 min-w-0">
             <div
@@ -286,13 +249,11 @@ export function WeekView() {
             <div className="flex-1 relative" style={{ height: allDaySectionHeight }}>
               {allDayPositions
                 .filter(({ startColumn, spanColumns }) => {
-                  // Only show events that overlap with displayed columns
                   const displayStart = weekColumns.indexOf(displayColumns[0]);
                   const displayEnd = displayStart + displayColumns.length;
                   return startColumn < displayEnd && startColumn + spanColumns > displayStart;
                 })
                 .map(({ event, startColumn, spanColumns, row }) => {
-                  // Adjust column positions for mobile 3-day view
                   const displayStart = weekColumns.indexOf(displayColumns[0]);
                   const adjustedStart = Math.max(0, startColumn - displayStart);
                   const adjustedEnd = Math.min(columnCount, startColumn + spanColumns - displayStart);
@@ -331,13 +292,10 @@ export function WeekView() {
           </div>
         )}
 
-        {/* Scrollable grid area */}
         <div ref={scrollRef} className="flex-1 overflow-y-scroll overflow-x-auto min-w-0">
           <div className="flex min-w-full">
-            {/* Time column */}
             <TimeColumn />
 
-            {/* Grid columns */}
             <div
               ref={gridRef}
               className="flex-1 relative cursor-pointer select-none"
@@ -346,10 +304,8 @@ export function WeekView() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              {/* Grid lines */}
               <GridLines columnCount={columnCount} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} />
 
-              {/* Drop Preview */}
               {dropPreview && (
                 <div
                   className="absolute bg-primary/30 border border-primary pointer-events-none z-30 transition-all duration-75 rounded"
@@ -365,7 +321,6 @@ export function WeekView() {
                 />
               )}
 
-              {/* Selected half-hour slot indicator */}
               {selectedSlot && (
                 <div
                   className="absolute bg-primary/20 border-2 border-primary pointer-events-none"
@@ -378,7 +333,6 @@ export function WeekView() {
                 />
               )}
 
-              {/* Today highlight */}
               {displayColumns.map((day, index) => (
                 day.isToday && (
                   <div
@@ -394,7 +348,6 @@ export function WeekView() {
                 )
               ))}
 
-              {/* Events */}
               {displayColumns.map((day, columnIndex) => {
                 const dayEvents = positionedEventsMap.get(day.dateString) || [];
                 const colWidth = 100 / columnCount;
@@ -424,7 +377,6 @@ export function WeekView() {
                 );
               })}
 
-              {/* Current time indicator - spans displayed days */}
               <CurrentTimeIndicator
                 days={displayColumns}
                 topOffset={TIME_COLUMN_TOP_PADDING}

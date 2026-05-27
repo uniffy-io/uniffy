@@ -1,9 +1,3 @@
-/**
- * Three-option radio for the recording source: entire screen, a specific
- * window, or a browser tab. Wires straight into the slice; the choice is
- * persisted across sessions.
- */
-
 import { Monitor, AppWindow, Browsers } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';

@@ -1,13 +1,3 @@
-/**
- * ProjectHeader - Header section for the project view
- *
- * Contains:
- * - Project icon and title
- * - Task/member counts
- * - View tabs (Table/Board/Roadmap)
- * - Filter bar with search, filter builder, group by
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear, TreeView } from "@phosphor-icons/react";
@@ -118,8 +108,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         fieldId: SYSTEM_FIELD_IDS.STATUS,
         changes: { config: updatedConfig },
       }));
-    
-      // API update
+
       dispatch(updateFieldThunk({
         projectId: project.id,
         fieldId: SYSTEM_FIELD_IDS.STATUS,
@@ -508,8 +497,6 @@ function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
   );
 }
 
-// ===== Group By Dropdown =====
-
 export const GROUP_BY_TAGS_KEY = "__tags__";
 export const GROUP_BY_EPIC_KEY = "__epic__";
 
@@ -536,8 +523,6 @@ interface GroupByDropdownProps {
   defaultLabel?: string;
   triggerLabel?: string;
 }
-
-// ===== Quick Filter Dropdown =====
 
 interface QuickFilterOption {
   value: string | null;
@@ -707,8 +692,6 @@ function GroupByDropdown({
   );
 }
 
-// ===== Tags Quick Filter =====
-
 interface TagsQuickFilterProps {
   filterConfig: FilterConfig | null;
   onChange: (next: FilterConfig | null) => void;
@@ -802,8 +785,6 @@ function TagsQuickFilter({ filterConfig, onChange }: TagsQuickFilterProps) {
     </div>
   );
 }
-
-// ===== Bulk Action Toolbar =====
 
 interface BulkActionToolbarProps {
   selectedCount: number;

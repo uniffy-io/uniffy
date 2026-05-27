@@ -1,5 +1,3 @@
-// Chat domain types - mirrors proto definitions for mock/UI usage
-
 export type ChannelType = 'PUBLIC' | 'PRIVATE' | 'DIRECT' | 'GROUP_DM';
 export type ChannelRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 export type SenderType = 'USER' | 'AGENT' | 'SYSTEM' | 'GUEST';
@@ -32,7 +30,7 @@ export interface ChatChannel {
   slug: string;
   description: string;
   channelType: ChannelType;
-  categoryId: string | null; // FK to ChatChannelCategory, null = uncategorized
+  categoryId: string | null;
   isEncrypted: boolean;
   isArchived: boolean;
   isDefault: boolean;
@@ -40,25 +38,16 @@ export interface ChatChannel {
   icon: string | null;
   createdAt: string;
   updatedAt: string;
-  // Stats (from ChatChannelStats)
   messageCount: number;
   rootMessageCount: number;
   lastMessageAt: string | null;
   lastRootMessageAt: string | null;
   memberCount: number;
-  // DM participant user IDs (populated for DIRECT and GROUP_DM)
   dmMemberIds: string[];
-  // Named agent chat metadata. `isAgentDm` is true for 1:1 user-agent DMs;
-  // `customName` overrides `name` when set; `agentId` denormalises the agent
-  // participant for sidebar grouping and "all chats with agent X" lookups.
   isAgentDm: boolean;
   customName?: string;
   agentId?: string;
-  // Hydrated unified-tag ids assigned to this channel. Server populates the
-  // `tags` proto field on every read; the slice mirrors them as ids and the
-  // UI renders chips by looking up `state.tags.byId`. Empty for DM/GROUP_DM.
   tagIds: string[];
-  // Unread tracking (populated from GetUnreadCounts)
   unreadCount?: number;
   mentionCount?: number;
 }
@@ -81,29 +70,25 @@ export interface ChatMessage {
   channelId: string;
   senderId: string;
   senderType: SenderType;
-  content: string; // markdown with [[[label|urn]]] mentions
-  rootId: string | null; // null = root message, set = thread reply
-  replyToId: string | null; // inline quote reply reference
-  replyContext?: ReplyContext; // snapshot of the quoted message
+  content: string;
+  rootId: string | null;
+  replyToId: string | null;
+  replyContext?: ReplyContext;
   editedAt: string | null;
   isDeleted: boolean;
   isPinned: boolean;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
-  // Denormalized thread info (only on root messages that have replies)
   thread?: {
     replyCount: number;
     lastReplyAt: string;
     participantIds: string[];
     hasUnread: boolean;
   };
-  // Reaction groups from API
   reactions?: ReactionGroupData[];
-  // Denormalized sender info
   senderName?: string;
   senderAvatarUrl?: string;
-  // File attachments linked to this message
   attachments?: MessageAttachment[];
 }
 
@@ -153,7 +138,7 @@ export interface ChatResource {
   id: string;
   channelId: string;
   urn: string;
-  contentType: string; // NOTE, FILE, TASK, CALENDAR_EVENT, PROJECT
+  contentType: string;
   firstMentionedAt: string;
   lastMentionedAt: string;
   mentionCount: number;

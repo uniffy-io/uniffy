@@ -1,12 +1,4 @@
-/**
- * MessageList - Main scrollable message list for a channel.
- *
- * Virtualised via react-virtuoso. The Virtuoso instance owns scroll
- * position, follow-output sticky-bottom, and on-demand row mounting.
- * Older messages load via startReached; the list anchors via
- * firstItemIndex shifts when older rows are prepended or oldest rows
- * are evicted.
- */
+/** Virtualised message list; anchors via firstItemIndex shifts when older rows are prepended or oldest are evicted. */
 
 import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Hash, Lock } from '@phosphor-icons/react';

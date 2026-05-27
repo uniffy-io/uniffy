@@ -1,7 +1,3 @@
-/**
- * Shared types for sidebar components.
- */
-
 import type { TreeNode } from '@/features/notes/store/notesTreeSlice';
 
 export interface TreeNodeActions {

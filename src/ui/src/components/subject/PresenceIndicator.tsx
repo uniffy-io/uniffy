@@ -14,12 +14,7 @@ const SIZE_CLASSES: Record<PresenceIndicatorSize, string> = {
     lg: 'w-3 h-3',
 };
 
-/**
- * Small colored dot indicating a user's presence status.
- *
- * Positioned absolute bottom-right on a parent with `relative`.
- * Uses a card-colored ring to visually separate from the avatar edge.
- */
+/** Positioned absolute on a `relative` parent; the card-colored ring separates the dot from the avatar edge. */
 export function PresenceIndicator({
     status,
     size = 'md',

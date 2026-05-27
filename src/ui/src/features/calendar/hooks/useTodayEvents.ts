@@ -1,8 +1,3 @@
-/**
- * Hook for fetching and grouping today's calendar events.
- * Used by the CalendarQuickView header component.
- */
-
 import { useEffect, useMemo, useCallback, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchEventsInRange } from '@/features/calendar/store/calendarThunks';
@@ -76,13 +71,12 @@ export function useTodayEvents(enabled: boolean): UseTodayEventsResult {
     dispatch(fetchEventsInRange(range));
   }, [dispatch]);
 
-  // Fetch events when enabled (panel opens)
   useEffect(() => {
     if (!enabled) return;
     refresh();
   }, [enabled, refresh]);
 
-  // Refresh time every minute to update current/next grouping
+  // Tick every minute so current/next regrouping stays accurate.
   useEffect(() => {
     if (!enabled) return;
     const interval = setInterval(() => {
@@ -91,7 +85,6 @@ export function useTodayEvents(enabled: boolean): UseTodayEventsResult {
     return () => clearInterval(interval);
   }, [enabled]);
 
-  // Re-fetch events every 5 minutes while panel is open
   useEffect(() => {
     if (!enabled) return;
     const interval = setInterval(refresh, 300_000);

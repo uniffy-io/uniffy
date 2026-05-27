@@ -1,11 +1,4 @@
-/**
- * useDashboardData - Aggregates data from all domain stores for the dashboard
- *
- * Provides staggered data fetching with individual loading states per data source.
- * Priority 1 (immediate): today's events, my tasks, unread notifications
- * Priority 2 (after 200ms): recent activity, bookmarks, presence
- * Priority 3 (after 500ms): analytics data, agent sessions
- */
+// Staggered priority gates throttle widget render order: P1 immediate, P2 +200ms, P3 +500ms.
 
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { createSelector } from '@reduxjs/toolkit';

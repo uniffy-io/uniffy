@@ -1,12 +1,3 @@
-/**
- * ChannelSettingsModal - Modal for editing channel settings and managing members.
- *
- * Two tabs: Overview (edit name, description, category, channel type card)
- * and Members (search-to-add with chips, member list with role badges).
- * Danger zone for archive/delete at the bottom.
- * Permission-gated: only channel OWNER/ADMIN, org admin, or chat domain admin can edit.
- */
-
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -84,16 +75,13 @@ export function ChannelSettingsModal() {
   const channelId = activeChannel?.id ?? '';
   const members = useAppSelector((s) => selectChannelMembers(s, channelId));
 
-  // Local tab state initialized from Redux
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
-  // Form state for overview
   const [name, setName] = useState(activeChannel?.name ?? '');
   const [description, setDescription] = useState(activeChannel?.description ?? '');
   const [categoryId, setCategoryId] = useState<string | undefined>(activeChannel?.categoryId ?? undefined);
   const [tagIds, setTagIds] = useState<string[]>(activeChannel?.tagIds ?? []);
 
-  // Action states
   const [isSaving, setIsSaving] = useState(false);
   const [addMemberQuery, setAddMemberQuery] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
@@ -109,7 +97,6 @@ export function ChannelSettingsModal() {
 
   const addInputRef = useRef<HTMLInputElement>(null);
 
-  // Resolve member user IDs to Subject objects for display names
   const memberUserIds = useMemo(() => members.map((m) => m.userId), [members]);
   const { subjects: memberSubjects } = useSubjectResolver(memberUserIds);
   const memberSubjectMap = useMemo(() => {
@@ -120,7 +107,6 @@ export function ChannelSettingsModal() {
     return map;
   }, [memberSubjects]);
 
-  // Determine edit permission
   const currentUserMember = useMemo(
     () => members.find((m) => m.userId === currentUserId),
     [members, currentUserId],
@@ -128,7 +114,6 @@ export function ChannelSettingsModal() {
   const currentUserRole = currentUserMember?.role;
   const canEdit = canManageChat || currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
 
-  // Dirty detection for overview form
   const isDirty = useMemo(() => {
     if (!activeChannel) return false;
     const sortedNew = [...tagIds].sort().join(',');
@@ -141,7 +126,6 @@ export function ChannelSettingsModal() {
     );
   }, [name, description, categoryId, tagIds, activeChannel]);
 
-  // Fetch members on mount
   useEffect(() => {
     if (channelId) {
       dispatch(fetchMembers(channelId));
@@ -154,7 +138,6 @@ export function ChannelSettingsModal() {
 
   const existingMemberIds = useMemo(() => members.map((m) => m.userId), [members]);
 
-  // Sort members: OWNER first, then ADMIN, then MEMBER
   const sortedMembers = useMemo(() => {
     const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
     return [...members].sort(
@@ -169,7 +152,6 @@ export function ChannelSettingsModal() {
 
   const isChannelPublic = activeChannel?.channelType === 'PUBLIC';
 
-  // Subject search for adding members
   const { results: searchResults, loading: searchLoading, search } = useSubjectSearch({
     subjectTypes: 'all',
     excludeIds: existingMemberIds,
@@ -179,11 +161,7 @@ export function ChannelSettingsModal() {
     search(addMemberQuery);
   }, [addMemberQuery, search]);
 
-  // Agents don't live in the subject search index; surface them client-side
-  // from the agents slice. `existingMemberIds` carries user ids only, so
-  // already-added agents still show up here — the backend rejects duplicates
-  // via the (channel_id, subject_type, subject_id) PK and the thunk's
-  // rejection surfaces as a toast.
+  // Agents aren't in the subject search index; pull from the agents slice and let the backend reject dupes.
   const agentsMap = useAppSelector(selectAllAgents);
   const agentMatches = useMemo(() => {
     const needle = addMemberQuery.trim().toLowerCase();
@@ -193,7 +171,6 @@ export function ChannelSettingsModal() {
       .slice(0, 10);
   }, [agentsMap, addMemberQuery]);
 
-  // Don't render for DM channels
   if (!activeChannel || activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM') {
     return null;
   }
@@ -305,7 +282,6 @@ export function ChannelSettingsModal() {
     <>
       <Modal onClose={handleClose} closeDisabled={isSaving || isDeleting} maxWidth="max-w-lg">
         <div className="flex flex-col" style={{ maxHeight: '75vh' }} data-testid="chat-channel-settings-modal" data-tab={activeTab}>
-          {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
             <h2 className="text-xl font-semibold text-foreground">
               Channel settings
@@ -321,7 +297,6 @@ export function ChannelSettingsModal() {
             </button>
           </div>
 
-          {/* Channel identity card */}
           <div className="mx-6 mt-2 mb-4 shrink-0">
             <div className={cn(
               'flex items-center gap-3 rounded-lg border p-3.5',
@@ -352,7 +327,6 @@ export function ChannelSettingsModal() {
             </div>
           </div>
 
-          {/* Tab bar */}
           <div className="flex gap-1 px-6 shrink-0">
             {(['overview', 'members'] as const).map((tab) => (
               <button
@@ -373,14 +347,11 @@ export function ChannelSettingsModal() {
             ))}
           </div>
 
-          {/* Divider */}
           <div className="border-b border-border mt-2 shrink-0" />
 
-          {/* Tab content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === 'overview' ? (
               <div className="px-6 py-5 space-y-5">
-                {/* Channel name */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
                     Channel name
@@ -405,7 +376,6 @@ export function ChannelSettingsModal() {
                   </div>
                 </div>
 
-                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
                     Channel Purpose
@@ -424,7 +394,6 @@ export function ChannelSettingsModal() {
                   </p>
                 </div>
 
-                {/* Tags */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
                     Tags
@@ -441,7 +410,6 @@ export function ChannelSettingsModal() {
                   </p>
                 </div>
 
-                {/* Category */}
                 {categories.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -458,7 +426,6 @@ export function ChannelSettingsModal() {
                   </div>
                 )}
 
-                {/* Info row: created date */}
                 {activeChannel.createdAt && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                     <CalendarBlank size={14} />
@@ -466,7 +433,6 @@ export function ChannelSettingsModal() {
                   </div>
                 )}
 
-                {/* Danger zone */}
                 {canEdit && (
                   <div className="mt-2 pt-4 border-t border-border">
                     <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-4">
@@ -499,7 +465,6 @@ export function ChannelSettingsModal() {
               </div>
             ) : (
               <div className="flex flex-col">
-                {/* Add member search */}
                 {canEdit && (
                   <div className="px-6 pt-4 pb-3">
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
@@ -519,7 +484,6 @@ export function ChannelSettingsModal() {
                       />
                     </div>
 
-                    {/* Search results dropdown */}
                     {showAddMember && addMemberQuery.length >= 2 && (
                       <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[260px] overflow-y-auto">
                         {searchLoading && searchResults.length === 0 && agentMatches.length === 0 ? (
@@ -604,7 +568,6 @@ export function ChannelSettingsModal() {
                   </div>
                 )}
 
-                {/* Member list */}
                 <div className="px-3 pb-4">
                   {sortedMembers.length === 0 ? (
                     <div className="flex flex-col items-center py-8 text-muted-foreground">
@@ -670,7 +633,6 @@ export function ChannelSettingsModal() {
                                 </p>
                               )}
                             </div>
-                            {/* Role badge */}
                             <span className={cn(
                               'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
                               ROLE_BADGE_STYLES[member.role],
@@ -678,7 +640,6 @@ export function ChannelSettingsModal() {
                               {RoleIcon && <RoleIcon size={11} weight="fill" />}
                               {member.role}
                             </span>
-                            {/* Agent context toggle */}
                             {isAgentMember && (
                               <button
                                 type="button"
@@ -697,7 +658,6 @@ export function ChannelSettingsModal() {
                                 <Gauge size={14} />
                               </button>
                             )}
-                            {/* Remove button */}
                             {canEdit && !isOwner && !isSelf && (
                               <button
                                 type="button"
@@ -733,7 +693,6 @@ export function ChannelSettingsModal() {
             )}
           </div>
 
-          {/* Footer */}
           {activeTab === 'overview' && canEdit && isDirty && (
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
               <Button
@@ -763,7 +722,6 @@ export function ChannelSettingsModal() {
         </div>
       </Modal>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
@@ -775,7 +733,6 @@ export function ChannelSettingsModal() {
         loading={isDeleting}
       />
 
-      {/* Archive confirmation */}
       <ConfirmDialog
         isOpen={showArchiveConfirm}
         onClose={() => setShowArchiveConfirm(false)}
@@ -787,7 +744,6 @@ export function ChannelSettingsModal() {
         loading={isArchiving}
       />
 
-      {/* Remove member confirmation */}
       <ConfirmDialog
         isOpen={showRemoveConfirm}
         onClose={() => {

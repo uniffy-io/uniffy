@@ -1,10 +1,3 @@
-/**
- * Hook for checking chat-specific permissions.
- *
- * Derives whether the current user can manage channels and categories
- * from their org role and domain admin status stored in auth state.
- */
-
 import { useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { DomainType } from '@uniffy/proto/common/v1/common_pb';

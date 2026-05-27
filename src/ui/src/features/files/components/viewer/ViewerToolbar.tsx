@@ -1,10 +1,3 @@
-/**
- * Viewer Toolbar
- *
- * Top toolbar with file info, zoom controls, and actions.
- * Uses glassmorphism design for an elevated, cinematic feel.
- */
-
 import {
     X,
     DownloadSimple,

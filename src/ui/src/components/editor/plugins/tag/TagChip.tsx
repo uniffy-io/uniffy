@@ -1,21 +1,8 @@
-/**
- * Tag Chip Component
- *
- * Renders an inline tag badge using the primary accent color.
- * Soft background tint with the # as a prefix marker.
- * Sized to be clearly visible inline without dominating text flow.
- *
- * No Redux dependency — pure presentational component.
- */
-
 interface TagChipProps {
   name: string;
   selected?: boolean;
 }
 
-/**
- * Inline tag badge with primary accent background tint.
- */
 export function TagChip({ name, selected = false }: TagChipProps) {
   return (
     <span

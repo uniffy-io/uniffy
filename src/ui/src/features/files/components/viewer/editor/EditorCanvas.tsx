@@ -1,10 +1,4 @@
-/**
- * Editor Canvas Component
- *
- * Canvas-based image display with transform preview.
- * Renders the image with all transforms applied using CSS for performance.
- * The actual canvas manipulation happens during export.
- */
+/** Previews transforms via CSS for cheap repaints; canvas manipulation only happens at export. */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Spinner } from '@phosphor-icons/react';
@@ -53,7 +47,7 @@ export function EditorCanvas({
     const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
-    // Track container size - use a callback ref to handle when container becomes available
+    // Callback ref so the observer attaches once the container mounts.
     const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 
     const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -63,8 +57,7 @@ export function EditorCanvas({
     useEffect(() => {
         if (!containerElement) return;
 
-        // Initial size
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- seeding initial size before the observer fires
         setContainerSize({
             width: containerElement.clientWidth,
             height: containerElement.clientHeight,
@@ -81,7 +74,6 @@ export function EditorCanvas({
         return () => observer.disconnect();
     }, [containerElement]);
 
-    // Handle image load
     const handleImageLoad = useCallback(() => {
         if (imageRef.current) {
             setImageDimensions({
@@ -92,24 +84,22 @@ export function EditorCanvas({
         }
     }, []);
 
-    // Reset loaded state when image changes
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when imageUrl changes is valid
         setImageLoaded(false);
     }, [imageUrl]);
 
-    // Calculate display dimensions to fit container while maintaining aspect ratio
     const calculateDisplayDimensions = useCallback(() => {
         if (!imageDimensions.width || !imageDimensions.height || !containerSize.width || !containerSize.height) {
             return { width: 0, height: 0, offsetX: 0, offsetY: 0 };
         }
 
-        // For 90/270 rotations, swap the image dimensions for calculation
+        // Swap image dimensions for 90/270 rotations.
         const isRotated = rotation === 90 || rotation === 270;
         const imgWidth = isRotated ? imageDimensions.height : imageDimensions.width;
         const imgHeight = isRotated ? imageDimensions.width : imageDimensions.height;
 
-        // Use 90% of container to leave some padding
+        // Reserve ~10% as visual padding.
         const maxWidth = containerSize.width * 0.9;
         const maxHeight = containerSize.height * 0.9;
 
@@ -120,7 +110,6 @@ export function EditorCanvas({
         const displayWidth = imgWidth * scale;
         const displayHeight = imgHeight * scale;
 
-        // Center in container
         const offsetX = (containerSize.width - displayWidth) / 2;
         const offsetY = (containerSize.height - displayHeight) / 2;
 
@@ -129,10 +118,8 @@ export function EditorCanvas({
 
     const displayDims = calculateDisplayDimensions();
 
-    // Calculate CSS filter string
     const filter = `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`;
 
-    // Calculate CSS transform string
     const transforms: string[] = [];
 
     if (rotation !== 0) {
@@ -147,7 +134,6 @@ export function EditorCanvas({
 
     const transform = transforms.length > 0 ? transforms.join(' ') : undefined;
 
-    // Show loading state
     if (loading || !imageUrl) {
         return (
             <div className="flex-1 flex items-center justify-center">

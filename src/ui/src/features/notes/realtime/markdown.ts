@@ -15,11 +15,7 @@ export function getProsemirrorFragment(ydoc: Y.Doc): Y.XmlFragment {
   return ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
 }
 
-/**
- * Replace the contents of `Y.Text(markdown)` with `next` under a single
- * transact tagged with `origin`. Delete-then-insert is fine here: the
- * snapshot mirror is never re-rendered as ProseMirror.
- */
+/** Snapshot mirror is never re-rendered as ProseMirror, so delete-then-insert is safe. */
 export function replaceMarkdownYText(
   ydoc: Y.Doc,
   next: string,
@@ -34,18 +30,13 @@ export function replaceMarkdownYText(
   }, origin);
 }
 
-/** Serialize the current editor doc to markdown via Milkdown's serializer. */
 export function serializeEditorMarkdown(ctx: Ctx): string {
   const view = ctx.get(editorViewCtx);
   const serializer = ctx.get(serializerCtx);
   return serializer(view.state.doc as Node);
 }
 
-/**
- * Seed an empty `Y.XmlFragment` from a parsed ProseMirror node. Used on
- * cold-start hydration when the note has content in PG but no snapshot
- * blob; the server hydrates from snapshot bytes when one is present.
- */
+/** Cold-start hydration when PG has content but no snapshot blob. */
 export function seedFragmentFromProsemirror(
   fragment: Y.XmlFragment,
   doc: Node,

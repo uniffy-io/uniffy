@@ -1,27 +1,17 @@
-/**
- * Client-side storage encryption module.
- *
- * Provides AES-256-GCM encryption for IndexedDB content using a three-key hierarchy:
- * - cache_key_seed (backend, per user) -> KEK (in memory, derived via HKDF) -> DEK (in memory, wraps content)
- *
- * See docs/specs/client-storage-encryption-spec.md for full design.
- */
+/** AES-256-GCM at-rest encryption for IndexedDB content. Three-key chain: backend seed -> HKDF KEK -> in-memory DEK. */
 
 const HKDF_SALT = new TextEncoder().encode('uniffy-client-storage-kek');
 const WRAPPED_DEK_KEY = 'uniffy_wrapped_dek';
 const ENCRYPTION_CHANNEL_NAME = 'uniffy-storage-encryption';
 
-// Module state lives outside Redux (see spec Section 7.4).
+// Module-scoped state so DEK material never leaves memory.
 let activeDEK: CryptoKey | null = null;
 let cachedKEK: CryptoKey | null = null;
 let cachedSeed: Uint8Array | null = null;
 let cachedUserId: string | null = null;
 let encryptionChannel: BroadcastChannel | null = null;
 
-// DOM events consumers (e.g. the realtime Yjs IDB adapter) listen
-// to so they can re-seed or stop writing without reaching into
-// module state. Fired alongside the BroadcastChannel.
-
+// DOM events fired alongside BroadcastChannel so consumers (e.g. realtime Yjs IDB adapter) can react without reaching into module state.
 export const ENCRYPTION_REKEY_EVENT = 'uniffy:encryption:rekey';
 export const ENCRYPTION_TEARDOWN_EVENT = 'uniffy:encryption:teardown';
 
@@ -176,10 +166,7 @@ function initStorageFallback(): void {
   });
 }
 
-/**
- * Initialize client-side storage encryption. Called once per
- * session after GetCacheKeySeed returns.
- */
+/** Called once per session after GetCacheKeySeed returns. */
 export async function initStorageEncryption(
   cacheKeySeed: Uint8Array,
   userId: string,
@@ -203,22 +190,19 @@ export async function initStorageEncryption(
       initEncryptionChannel();
       return;
     } catch {
-      // Unwrap failed: seed was rotated or data corrupted
+      // Unwrap failed - seed rotated or stored DEK corrupted.
       await clearAllEncryptedStorage();
       localStorage.removeItem(WRAPPED_DEK_KEY);
     }
   }
 
-  // First login on this device (or cache was cleared)
   activeDEK = await generateDEK();
   const wrapped = await wrapDEK(activeDEK, kek);
   localStorage.setItem(WRAPPED_DEK_KEY, arrayBufferToBase64(wrapped));
   initEncryptionChannel();
 }
 
-/**
- * Tear down encryption on logout. Clears all in-memory keys and notifies other tabs.
- */
+/** Clears all in-memory keys and notifies other tabs. */
 export function teardownStorageEncryption(): void {
   encryptionChannel?.postMessage({ type: 'ENCRYPTION_TEARDOWN' } as EncryptionMessage);
   encryptionChannel?.close();
@@ -231,17 +215,11 @@ export function teardownStorageEncryption(): void {
   dispatchTeardown();
 }
 
-/**
- * Check if storage encryption is initialized and ready.
- */
 export function isStorageEncryptionReady(): boolean {
   return activeDEK !== null;
 }
 
-/**
- * Encrypt an object for IndexedDB storage. Returns an ArrayBuffer
- * containing [12-byte IV | ciphertext].
- */
+/** Returns ArrayBuffer of [12-byte IV | AES-GCM ciphertext]. */
 export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
   if (!activeDEK) {
     throw new Error('Storage encryption not initialized');
@@ -256,10 +234,7 @@ export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
   return result.buffer;
 }
 
-/**
- * Decrypt an ArrayBuffer from IndexedDB storage.
- * Expects format [12-byte IV | ciphertext].
- */
+/** Expects [12-byte IV | AES-GCM ciphertext]. */
 export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Promise<T> {
   if (!activeDEK) {
     throw new Error('Storage encryption not initialized');
@@ -271,10 +246,7 @@ export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Prom
   return JSON.parse(new TextDecoder().decode(plaintext)) as T;
 }
 
-/**
- * Clear this device only (no backend call). Deletes all encrypted
- * IndexedDB stores and generates a new DEK.
- */
+/** Local-only wipe (no backend call): deletes encrypted IDB stores and generates a fresh DEK. */
 export async function clearLocalEncryptedStorage(): Promise<void> {
   await clearAllEncryptedStorage();
   localStorage.removeItem(WRAPPED_DEK_KEY);
@@ -287,10 +259,7 @@ export async function clearLocalEncryptedStorage(): Promise<void> {
   dispatchRekey();
 }
 
-/**
- * Clear all devices (after backend RotateCacheKeySeed call).
- * Re-initializes with the new seed and notifies other tabs.
- */
+/** Called after backend RotateCacheKeySeed: reinit with the new seed and notify other tabs. */
 export async function rotateAndClearAll(
   newCacheKeySeed: Uint8Array,
   userId: string,
@@ -307,10 +276,7 @@ export async function rotateAndClearAll(
   dispatchRekey();
 }
 
-/**
- * IndexedDB databases that hold encrypted content. New encrypted
- * stores must be registered here.
- */
+// Encrypted IDB databases - new stores must be registered via registerEncryptedDatabase().
 const ENCRYPTED_DB_NAMES: string[] = [
   'uniffy-realtime-yjs',
 ];
@@ -330,10 +296,7 @@ async function clearAllEncryptedStorage(): Promise<void> {
   }
 }
 
-/**
- * Register an IndexedDB database name as containing encrypted content.
- * Registered databases are cleared on seed rotation and device clear.
- */
+/** Registered databases get wiped on seed rotation and device clear. */
 export function registerEncryptedDatabase(dbName: string): void {
   if (!ENCRYPTED_DB_NAMES.includes(dbName)) {
     ENCRYPTED_DB_NAMES.push(dbName);

@@ -1,14 +1,3 @@
-/**
- * ProjectsLayout - Main three-panel layout for the Projects feature
- *
- * Responsive:
- * - Mobile: sidebar as drawer, detail panel as drawer
- * - Tablet: sidebar inline (narrower), detail panel as drawer
- * - Desktop: all panels inline and resizable
- *
- * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
- */
-
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import {
@@ -242,9 +231,6 @@ export function ProjectsLayout() {
   );
 }
 
-/**
- * Placeholder when no project is selected
- */
 function NoProjectSelected() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();

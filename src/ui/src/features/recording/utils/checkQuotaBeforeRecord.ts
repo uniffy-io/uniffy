@@ -1,12 +1,4 @@
-/**
- * Pre-flight quota check for the recording popover.
- *
- * Soft warning only: a 30-minute capture at default settings is ~150-300 MB,
- * so 2 GB free is comfortable. Below that we render a yellow banner; the
- * user can still hit Record. The hard cap is the server's quota check at
- * `complete_upload` (it aborts the multipart and refunds bytes if the user
- * blows the quota mid-capture).
- */
+/** Soft 2 GB warning; hard cap lives in the server's quota check at `complete_upload`. */
 
 const SOFT_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 

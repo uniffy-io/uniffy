@@ -1,10 +1,3 @@
-/**
- * ChannelContextMenu - Right-click context menu for channel list items.
- *
- * Provides actions like opening a channel in split view and granular
- * notification settings (mute duration, notification level, thread follow).
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SquareSplitHorizontal, SpeakerSlash, SpeakerHigh, CaretRight, PencilSimple, Trash } from '@phosphor-icons/react';

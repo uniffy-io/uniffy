@@ -18,7 +18,6 @@ import {
 import { setContentAccessMode } from '@/features/permissions/store/permissionsThunks';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
-// LocalStorage key for last opened note
 const LAST_NOTE_STORAGE_KEY = 'uniffy-last-note';
 
 export function loadLastOpenedNote(): string | null {
@@ -41,20 +40,11 @@ function saveLastOpenedNote(noteId: string | null): void {
     }
 }
 
-/**
- * Normalize a note to ensure all values are serializable for Redux.
- * The note is already serialized from the thunk, just return it.
- */
 function normalizeNote(note: SerializedNote): SerializedNote {
     return note;
 }
 
-/**
- * Merge a note from a bulk/list fetch into the store, preserving the existing
- * `content` field when the incoming note was fetched with `excludeContent: true`.
- * This prevents background refreshes from wiping out content that was loaded
- * via a full `fetchNote` call.
- */
+/** Preserve existing `content` when incoming note was fetched with `excludeContent: true`. */
 function mergeNote(existing: SerializedNote | undefined, incoming: SerializedNote): SerializedNote {
     if (!existing || incoming.content) {
         return normalizeNote(incoming);
@@ -63,51 +53,30 @@ function mergeNote(existing: SerializedNote | undefined, incoming: SerializedNot
 }
 
 interface NotesState {
-    // All notes indexed by ID
     notes: Record<string, SerializedNote>;
-
-    // Deleted notes IDs (trash)
     deletedNoteIds: string[];
-
-    // Currently selected note ID
     currentNoteId: string | null;
-
-    // Open tabs (for multi-note editing in future)
     openTabs: string[];
-
-    // Active tab index
     activeTabIndex: number;
-
-    // Loading states
     loading: boolean;
     loadingNoteId: string | null;
     creatingNote: boolean;
     savingNote: boolean;
-
-    // Error states
     error: string | null;
-
-    // Search state
     searchResults: string[];
     searchLoading: boolean;
-
-    // Filters
     filters: {
         searchQuery: string;
         sortBy: 'title' | 'updated' | 'created';
         sortOrder: 'asc' | 'desc';
         showDeleted: boolean;
     };
-
-    // Pagination
     pagination: {
         page: number;
         pageSize: number;
         totalCount: number;
         totalPages: number;
     };
-
-    // Backlinks cache
     backlinks: Record<string, Array<{ id: string; title: string; slug: string }>>;
 }
 
@@ -143,7 +112,6 @@ export const notesSlice = createSlice({
     name: 'notes',
     initialState,
     reducers: {
-        // Set all notes
         setNotes: (state, action: PayloadAction<SerializedNote[]>) => {
             state.notes = {};
             action.payload.forEach((note) => {
@@ -151,12 +119,10 @@ export const notesSlice = createSlice({
             });
         },
 
-        // Add or update a single note
         setNote: (state, action: PayloadAction<SerializedNote>) => {
             state.notes[action.payload.id] = normalizeNote(action.payload);
         },
 
-        // Remove a note
         removeNote: (state, action: PayloadAction<string>) => {
             delete state.notes[action.payload];
             if (state.currentNoteId === action.payload) {
@@ -165,16 +131,13 @@ export const notesSlice = createSlice({
             state.openTabs = state.openTabs.filter(id => id !== action.payload);
         },
 
-        // Set current note
         setCurrentNote: (state, action: PayloadAction<string | null>) => {
             state.currentNoteId = action.payload;
-            // Only persist when opening a note, not when clearing
             if (action.payload) {
                 saveLastOpenedNote(action.payload);
             }
         },
 
-        // Tab management
         addTab: (state, action: PayloadAction<string>) => {
             if (!state.openTabs.includes(action.payload)) {
                 state.openTabs.push(action.payload);
@@ -196,7 +159,6 @@ export const notesSlice = createSlice({
             state.activeTabIndex = action.payload;
         },
 
-        // Loading states
         setLoading: (state, action: PayloadAction<boolean>) => {
             state.loading = action.payload;
         },
@@ -205,12 +167,10 @@ export const notesSlice = createSlice({
             state.loadingNoteId = action.payload;
         },
 
-        // Error state
         setError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
 
-        // Filters
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.filters.searchQuery = action.payload;
         },
@@ -227,12 +187,10 @@ export const notesSlice = createSlice({
             state.filters.showDeleted = action.payload;
         },
 
-        // Pagination
         setPagination: (state, action: PayloadAction<Partial<NotesState['pagination']>>) => {
             state.pagination = { ...state.pagination, ...action.payload };
         },
 
-        // Clear all notes (bookmarks are managed separately in bookmarks store)
         clearNotes: (state) => {
             state.notes = {};
             state.deletedNoteIds = [];
@@ -243,13 +201,11 @@ export const notesSlice = createSlice({
             state.backlinks = {};
         },
 
-        // Clear error
         clearError: (state) => {
             state.error = null;
         },
     },
     extraReducers: (builder) => {
-        // fetchNotes
         builder
             .addCase(fetchNotes.pending, (state) => {
                 state.loading = true;
@@ -257,7 +213,6 @@ export const notesSlice = createSlice({
             })
             .addCase(fetchNotes.fulfilled, (state, action) => {
                 state.loading = false;
-                // Add/update notes in the store, preserving content from full fetches
                 action.payload.notes.forEach((note) => {
                     state.notes[note.id] = mergeNote(state.notes[note.id], note);
                 });
@@ -273,7 +228,6 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch notes';
             });
 
-        // fetchDeletedNotes
         builder
             .addCase(fetchDeletedNotes.fulfilled, (state, action) => {
                 state.deletedNoteIds = action.payload.map(n => n.id);
@@ -282,7 +236,6 @@ export const notesSlice = createSlice({
                 });
             });
 
-        // fetchNote
         builder
             .addCase(fetchNote.pending, (state, action) => {
                 state.loadingNoteId = action.meta.arg;
@@ -296,7 +249,6 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch note';
             });
 
-        // createNote
         builder
             .addCase(createNote.pending, (state) => {
                 state.creatingNote = true;
@@ -312,7 +264,6 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to create note';
             });
 
-        // updateNote
         builder
             .addCase(updateNote.pending, (state) => {
                 state.savingNote = true;
@@ -326,7 +277,6 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to update note';
             });
 
-        // updateNoteIcon
         builder
             .addCase(updateNoteIcon.pending, (state) => {
                 state.savingNote = true;
@@ -340,35 +290,30 @@ export const notesSlice = createSlice({
                 state.error = action.payload ?? 'Failed to update note icon';
             });
 
-        // deleteNote
         builder
             .addCase(deleteNote.fulfilled, (state, action) => {
                 const { noteId, permanent } = action.payload;
                 if (permanent) {
                     delete state.notes[noteId];
                 } else {
-                    // Soft delete: mark as deleted
                     const note = state.notes[noteId];
                     if (note) {
                         note.isDeleted = true;
                         state.deletedNoteIds.push(noteId);
                     }
                 }
-                // Clear current note if deleted
                 if (state.currentNoteId === noteId) {
                     state.currentNoteId = null;
                 }
                 state.openTabs = state.openTabs.filter(id => id !== noteId);
             });
 
-        // restoreNote
         builder
             .addCase(restoreNote.fulfilled, (state, action) => {
                 state.notes[action.payload.id] = normalizeNote(action.payload);
                 state.deletedNoteIds = state.deletedNoteIds.filter(id => id !== action.payload.id);
             });
 
-        // searchNotes
         builder
             .addCase(searchNotes.pending, (state) => {
                 state.searchLoading = true;
@@ -385,14 +330,12 @@ export const notesSlice = createSlice({
                 state.searchResults = [];
             });
 
-        // moveNote
         builder
             .addCase(moveNote.fulfilled, (state, action) => {
                 state.notes[action.payload.id] = normalizeNote(action.payload);
             });
 
-        // Keep the in-memory note row in sync with the new policy so
-        // accessMode-driven UI updates without a refetch.
+        // Keep the in-memory note row in sync with new policy so accessMode-driven UI updates without refetch.
         builder
             .addCase(setContentAccessMode.fulfilled, (state, action) => {
                 if (action.meta.arg.contentType !== ContentType.NOTE) return;
@@ -402,16 +345,13 @@ export const notesSlice = createSlice({
                 note.baselineRole = action.payload.policy.baselineRole;
             });
 
-        // copyNote
         builder
             .addCase(copyNote.fulfilled, (state, action) => {
                 state.notes[action.payload.id] = normalizeNote(action.payload);
             });
 
-        // initializeNotesData - unified fetch for both flat store and tree
         builder
             .addCase(initializeNotesData.pending, (state, action) => {
-                // Only show loading if not from cache (prevents flash)
                 if (!action.meta.arg?.forceRefresh) {
                     const hasNotes = Object.keys(state.notes).length > 0;
                     if (!hasNotes) {
@@ -424,7 +364,6 @@ export const notesSlice = createSlice({
             })
             .addCase(initializeNotesData.fulfilled, (state, action) => {
                 state.loading = false;
-                // Add/update notes in the store, preserving content from full fetches
                 action.payload.notes.forEach((note) => {
                     state.notes[note.id] = mergeNote(state.notes[note.id], note);
                 });
@@ -439,12 +378,11 @@ export const notesSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to initialize notes';
             })
-            // Handle background refresh (stale-while-revalidate pattern)
+            // Stale-while-revalidate background refresh.
             .addMatcher(
                 (action): action is PayloadAction<{ notes: ReturnType<typeof normalizeNote>[]; totalCount: number }> =>
                     action.type === 'notes/backgroundRefreshComplete',
                 (state, action) => {
-                    // Update notes silently (no loading state change), preserving content
                     action.payload.notes.forEach((note) => {
                         state.notes[note.id] = mergeNote(state.notes[note.id], note);
                     });
@@ -476,8 +414,6 @@ export const {
 
 export const notesReducer = notesSlice.reducer;
 
-// Re-export thunks for convenience
-// Note: Bookmark functionality is now in the bookmarks feature
 export {
     fetchNotes,
     fetchDeletedNotes,

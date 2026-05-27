@@ -1,12 +1,3 @@
-/**
- * ChannelAgentsPopover - per-agent context meters for group channels.
- *
- * Lists every AGENT member of the channel with an expandable `AgentContextBar`
- * (compact variant). Stats always visible; Compact / Reset actions only for
- * users with chat-admin or channel OWNER/ADMIN roles. Backend permission
- * checker still enforces on the wire.
- */
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CaretDown, Gauge, X } from '@phosphor-icons/react';

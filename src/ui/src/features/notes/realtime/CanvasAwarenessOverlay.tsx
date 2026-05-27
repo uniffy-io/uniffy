@@ -22,7 +22,6 @@ interface CanvasAwarenessPayload {
 interface CanvasAwarenessOverlayProps {
   binding: CanvasRealtimeBinding | null;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  /** Visibility mode for remote cursors. `'auto'` hides cursors past `AUTO_CURSORS_HIDE_THRESHOLD` peers. */
   cursorsMode?: CanvasCursorsMode;
   onPeerCountChange?: (count: number) => void;
 }
@@ -94,7 +93,6 @@ export function CanvasAwarenessOverlay({
   }, [binding, containerRef, flushPointer, screenToFlowPosition]);
 
   const peerCount = peers.length;
-  // Notify via effect so parent's setState does not tear the render phase.
   useEffect(() => {
     onPeerCountChange?.(peerCount);
   }, [peerCount, onPeerCountChange]);
@@ -106,8 +104,7 @@ export function CanvasAwarenessOverlay({
     || (cursorsMode === 'auto' && peerCount <= AUTO_CURSORS_HIDE_THRESHOLD);
   if (!cursorsVisible) return null;
 
-  // Dedupe by user.id: a peer mid-refresh holds two awareness clientIds
-  // during y-protocols' 30s GC window and would otherwise render twice.
+  // Dedupe by user.id: peer mid-refresh holds two awareness clientIds during y-protocols' 30s GC window.
   const seenUserIds = new Set<string>();
 
   return (

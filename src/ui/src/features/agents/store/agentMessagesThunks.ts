@@ -66,9 +66,7 @@ export const fetchMessages = createAsyncThunk<
     try {
         const organizationId = getOrganizationId(getState());
 
-        // First request with max page size to get all messages.
-        // Backend caps at 200 per page; compaction keeps active
-        // messages well under that for most sessions.
+        // Backend caps page size at 200; compaction keeps active messages well under that.
         const first = await sessionsApi.listMessages({
             organizationId,
             sessionId: params.sessionId,
@@ -77,7 +75,6 @@ export const fetchMessages = createAsyncThunk<
         const allMessages = first.messages.map(messageToPlain);
         const totalPages = first.pagination?.totalPages ?? 1;
 
-        // Fetch remaining pages if the session is very long
         for (let page = 2; page <= totalPages; page++) {
             const next = await sessionsApi.listMessages({
                 organizationId,
@@ -122,9 +119,7 @@ export const streamSendMessage = createAsyncThunk<
             userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
 
-        // RAF-based token batching: buffer tokens and flush once per
-        // animation frame so React re-renders at most ~60fps regardless
-        // of how fast individual tokens arrive from the server.
+        // RAF-batched token flush caps React re-renders at ~60fps regardless of token arrival rate.
         let tokenBuffer = '';
         let rafId: number | null = null;
 
@@ -173,7 +168,6 @@ export const streamSendMessage = createAsyncThunk<
                     }));
                 }
             } else if (event.event.case === 'done') {
-                // Flush any remaining buffered tokens before completing
                 if (rafId !== null) cancelAnimationFrame(rafId);
                 flushTokens();
                 const assistantMsg = event.event.value.assistantMessage;

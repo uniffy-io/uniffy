@@ -1,10 +1,3 @@
-/**
- * Files Async Thunks
- *
- * Redux async thunks for files API operations.
- * All async operations go through these thunks for proper state management.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import { bulkUpsertTags, tagToPlain } from '@/features/tags';
@@ -12,7 +5,6 @@ import type { RootState } from '@/app/store';
 import type { File } from '@uniffy/proto/files/v1/files_pb';
 import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
-// Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
     if (!orgId) {
@@ -21,7 +13,6 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-// Helper to convert proto File to serializable plain object
 export const fileToPlain = (file: File) => ({
     id: file.id,
     urn: file.urn,
@@ -75,18 +66,13 @@ export const fileToPlain = (file: File) => ({
     } : undefined,
 });
 
-/** Serialized file type for Redux storage (bigints converted to numbers) */
 export type SerializedFile = ReturnType<typeof fileToPlain>;
 
-/** Dispatch a bulkUpsertTags action for the unified-tag rows hydrated on a file response. */
 export const hydrateFileTags = (file: File, dispatch: (action: unknown) => void): void => {
     if (!file.tags.length) return;
     dispatch(bulkUpsertTags(file.tags.map(tagToPlain)));
 };
 
-/**
- * Fetch files with pagination and filters.
- */
 export const fetchFiles = createAsyncThunk<
     {
         files: SerializedFile[];
@@ -147,9 +133,6 @@ export const fetchFiles = createAsyncThunk<
     }
 });
 
-/**
- * Fetch a single file by ID.
- */
 export const fetchFile = createAsyncThunk<
     SerializedFile,
     string,
@@ -171,13 +154,7 @@ export const fetchFile = createAsyncThunk<
     }
 });
 
-/**
- * Update file metadata.
- *
- * ``tagIds`` is the replacement set of manual tag ids. Pass ``undefined``
- * to leave manual tags untouched; pass ``[]`` to clear every manual
- * assignment.
- */
+/** `tagIds` is the replacement set of manual tag ids; `undefined` leaves them untouched, `[]` clears every assignment. */
 export const updateFile = createAsyncThunk<
     SerializedFile,
     {
@@ -207,9 +184,6 @@ export const updateFile = createAsyncThunk<
     }
 });
 
-/**
- * Delete a file (soft delete by default).
- */
 export const deleteFile = createAsyncThunk<
     { fileId: string; permanent: boolean },
     { fileId: string; permanent?: boolean },
@@ -231,9 +205,6 @@ export const deleteFile = createAsyncThunk<
     }
 });
 
-/**
- * Restore a deleted file.
- */
 export const restoreFile = createAsyncThunk<
     SerializedFile,
     string,
@@ -255,9 +226,6 @@ export const restoreFile = createAsyncThunk<
     }
 });
 
-/**
- * Move files and/or folders to a different location and/or visibility scope.
- */
 export const moveItems = createAsyncThunk<
     {
         success: boolean;
@@ -295,10 +263,6 @@ export const moveItems = createAsyncThunk<
     }
 });
 
-/**
- * Initialize files data.
- * Load all files for the current organization.
- */
 export const initializeFilesData = createAsyncThunk<
     {
         files: SerializedFile[];
@@ -317,7 +281,6 @@ export const initializeFilesData = createAsyncThunk<
 
         const forceRefresh = params?.forceRefresh ?? false;
 
-        // Check if we already have files loaded
         const existingFilesCount = Object.keys(state.files.files).length;
         if (existingFilesCount > 0 && !forceRefresh) {
             return {
@@ -326,7 +289,6 @@ export const initializeFilesData = createAsyncThunk<
             };
         }
 
-        // Fetch all files (paginated, get all pages)
         const pageSize = 100;
         const firstResponse = await filesApi.listFiles({
             organizationId,
@@ -338,7 +300,6 @@ export const initializeFilesData = createAsyncThunk<
 
         const allFiles = [...firstResponse.files];
 
-        // Fetch remaining pages if needed
         if (firstResponse.totalPages > 1) {
             const remainingPages = Array.from(
                 { length: firstResponse.totalPages - 1 },

@@ -1,13 +1,3 @@
-/**
- * TimelineGrid - Right panel showing the date grid
- *
- * Features:
- * - Header with month/day labels
- * - Vertical grid lines
- * - Today marker (red line)
- * - Support for day/week/month zoom levels
- */
-
 import { useRef, useEffect, useMemo } from "react";
 import { parseISO } from "date-fns";
 import { cn } from "@/shared/utils/cn";
@@ -232,8 +222,6 @@ function groupColumnsByMonth(columns: TimelineColumn[], colWidth: number): Heade
 
   return groups;
 }
-
-// ===== Sprint Boundary Lines =====
 
 interface SprintBoundaryLinesProps {
   sprints: Sprint[];

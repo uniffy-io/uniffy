@@ -1,12 +1,3 @@
-/**
- * <TagList>
- *
- * Virtualised list of tags with usage counts and hover-revealed edit
- * actions. Pages of 100 from ``ListTags``; ``Virtuoso`` keeps the DOM
- * bounded as the user pages further. ``Load more`` follows the
- * next-page token via ``endReached``.
- */
-
 import { useCallback } from 'react';
 import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { Virtuoso } from 'react-virtuoso';

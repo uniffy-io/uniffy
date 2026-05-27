@@ -1,18 +1,4 @@
-/**
- * Recording slice - state machine for screen recording.
- *
- * State machine: idle / requesting / initiating-upload / recording / paused /
- * stopping / flushing / completing / done / error.
- *
- * Owns only serialisable state. The MediaRecorder, MediaStream, and
- * streamingUploader are owned by `recordingController` (a module-level singleton
- * outside Redux).
- *
- * Persisted via `redux-persist` whitelist: source, micDeviceId, captureTabAudio,
- * controllerCorner. Live state (`state`, `uploadId`, etc.) is wiped on rehydrate
- * so a refresh during a recording does not leave the slice "stuck"; the
- * underlying MediaStream cannot survive a reload anyway.
- */
+/** Screen recording state machine. Live state wipes on rehydrate (MediaStream cannot survive a reload); persisted picker prefs only. */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
@@ -52,29 +38,20 @@ export interface RecordingSliceState {
     uploadId: string | null;
     recordingsFolderId: string | null;
     startedAt: number | null;
-    /** Cumulative time the recording has spent in the paused state. */
     pausedDurationMs: number;
-    /** Wall-clock time at which the current pause started; null when not paused. */
     pausedAt: number | null;
     bytesQueued: number;
     bytesUploaded: number;
     lastFileId: string | null;
     error: RecordingErrorInfo | null;
     recents: RecordingsRecent[];
-    /** Last-used picker preferences; persisted across sessions. */
     source: RecordingSource;
     micDeviceId: string | null;
     captureTabAudio: boolean;
-    /** Persisted floating controller position. */
     controllerCorner: ControllerCorner;
-    /** When true, the floating controller renders as a compact pill. */
     controllerCollapsed: boolean;
-    /** Mic muted via the in-recording toggle. Resets on each new start. */
     micMuted: boolean;
-    /** True after the user clicks Continue on the first-use consent modal.
-     *  Persisted; the modal only ever shows once per user. */
     firstUseAcknowledged: boolean;
-    /** Ephemeral - true while the consent modal is open. Wiped on rehydrate. */
     firstUseModalOpen: boolean;
 }
 
@@ -145,8 +122,7 @@ const recordingSlice = createSlice({
         },
         stopRequested(state) {
             state.state = 'stopping';
-            // If we were paused when Stop was pressed, fold the in-flight
-            // pause into the cumulative total before the timer freezes.
+            // Fold in-flight pause window into cumulative total before the timer freezes.
             if (state.pausedAt !== null) {
                 state.pausedDurationMs += Date.now() - state.pausedAt;
                 state.pausedAt = null;

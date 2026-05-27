@@ -1,9 +1,3 @@
-/**
- * Input - A styled input component
- *
- * Provides a consistent input field styling across the application.
- */
-
 import * as React from "react";
 import { cn } from "@/shared/utils/cn";
 

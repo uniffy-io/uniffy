@@ -30,12 +30,7 @@ interface PeerResetInboxProps {
     onApproved?: () => void;
 }
 
-/**
- * Co-sign inbox for pending peer MFA reset requests. Polls every 30
- * seconds so the 10 minute window stays visible without manual
- * refresh. Approve calls ``approve_platform_peer_reset`` and the
- * server performs the actual reset in the same transaction.
- */
+/** Polls every 30s so the 10 minute peer-reset window stays visible without manual refresh. */
 export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
     const [requests, setRequests] = useState<PendingPeerReset[]>([]);
     const [loading, setLoading] = useState(true);

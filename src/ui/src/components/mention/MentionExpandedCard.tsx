@@ -1,14 +1,3 @@
-/**
- * Expanded Mention Card
- *
- * Renders the type-specific preview content inline as a block-level card.
- * Used as the default display for mention chips. Includes a collapse button
- * to shrink back to the compact inline chip.
- *
- * The card reuses the same preview components as the hover popover but
- * rendered inline in the content flow rather than in a fixed portal.
- */
-
 import { useCallback, useMemo } from 'react';
 import { CaretUp } from '@phosphor-icons/react';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
@@ -119,7 +108,6 @@ export function MentionExpandedCard({
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
     >
-      {/* Collapse button */}
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCollapse(); }}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}

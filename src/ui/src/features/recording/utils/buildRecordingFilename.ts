@@ -1,9 +1,4 @@
-/**
- * Build the canonical filename for a screen recording.
- *
- * Format: `Screen Recording 2026-05-09 13.42.05.mp4` (locale-independent).
- * Mirrors the macOS naming convention so users immediately recognise the file.
- */
+/** Format: `Screen Recording 2026-05-09 13.42.05.mp4` (locale-independent, mirrors macOS). */
 
 function pad(n: number): string {
     return n < 10 ? `0${n}` : String(n);

@@ -1,9 +1,3 @@
-/**
- * Icon Size Slider Component
- *
- * A slider control for adjusting grid icon sizes, similar to macOS Finder.
- */
-
 import { useCallback } from 'react';
 import { SquaresFour } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

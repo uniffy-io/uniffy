@@ -1,10 +1,3 @@
-/**
- * Hook for checking room availability over a date range.
- *
- * Dispatches the checkAvailability thunk and returns the time slots
- * with a computed isAvailable flag indicating whether all slots are free.
- */
-
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { checkAvailability } from '@/features/rooms/store/roomsThunks';

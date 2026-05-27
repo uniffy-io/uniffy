@@ -1,11 +1,3 @@
-/**
- * Byte Input Component
- *
- * Numeric input with unit selector (MB, GB, TB) that converts
- * to/from raw bytes. Uses the shared Select component for the unit
- * dropdown. Includes an "Unlimited" checkbox option.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { Input } from '@/components/ui/input';

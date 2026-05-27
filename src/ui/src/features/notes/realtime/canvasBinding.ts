@@ -7,11 +7,7 @@ import type {
   CanvasNodeData,
 } from '@/features/notes/canvas/types';
 
-/**
- * Per-node text fields stored as `Y.Text` inside the node's `data` map so
- * concurrent typing in the same cell merges char-by-char. Fields not listed
- * here are treated as plain values by `mutateNodeYMap`.
- */
+/** Per-node text fields stored as Y.Text so concurrent typing merges char-by-char. Mirror of backend `_NODE_TEXT_FIELDS`. */
 export const NODE_TEXT_FIELDS: Record<string, string> = {
   text: 'content',
   shape: 'label',
@@ -23,15 +19,7 @@ export function nodeTextFieldKey(nodeType: string | undefined): string | null {
   return NODE_TEXT_FIELDS[nodeType] ?? null;
 }
 
-/**
- * Yjs <-> React Flow binding for canvas notes.
- *
- * Shape: `Y.Map nodes` (id -> Y.Map with nested `data` Y.Map for clean
- * per-field merges), `Y.Array order` (render / z-order), `Y.Map edges`
- * (id -> flat Y.Map). Viewport is intentionally not synced - pan/zoom is
- * per-user UI state and would thrash the doc.
- */
-
+// Viewport (pan/zoom) is intentionally not synced - per-user UI state.
 export const Y_CANVAS_NODES_FIELD = 'nodes';
 export const Y_CANVAS_EDGES_FIELD = 'edges';
 export const Y_CANVAS_ORDER_FIELD = 'order';
@@ -131,18 +119,13 @@ function yMapToEdge(map: Y.Map<unknown>): CanvasEdge | null {
   return edge;
 }
 
-/**
- * Materialise React Flow `nodes[]` / `edges[]` from the shared Y types.
- * Order follows the `order` Y.Array; nodes missing from `order` are
- * appended to stay consistent during transitional writes.
- */
+/** Order follows the `order` Y.Array; nodes missing from `order` are appended. */
 export function readCanvasFromYDoc(ydoc: Y.Doc): {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
 } {
   const { nodes: yNodes, edges: yEdges, order: yOrder } = getCanvasYTypes(ydoc);
-  // Dedupe ids: IDB hydration merged with a server seed can leave the same
-  // id pushed twice into the CRDT, and React Flow rejects duplicate keys.
+  // Dedupe ids: IDB hydration + server seed can push the same id twice; React Flow rejects duplicate keys.
   const seen = new Set<string>();
   const nodes: CanvasNode[] = [];
   for (const id of yOrder) {
@@ -169,11 +152,7 @@ export function readCanvasFromYDoc(ydoc: Y.Doc): {
   return { nodes, edges };
 }
 
-/**
- * Seed Y types from a plain `CanvasState` once on cold start. Caller MUST
- * gate on sync completion AND the Y maps being empty to avoid duplicating
- * state when the server already pushed a populated snapshot via SyncStep2.
- */
+/** Caller MUST gate on sync completion AND empty Y maps to avoid duplicating state from a server SyncStep2 snapshot. */
 export function seedCanvasYDoc(
   ydoc: Y.Doc,
   state: { nodes: CanvasNode[]; edges: CanvasEdge[]; defaults?: CanvasDefaults },
@@ -197,19 +176,13 @@ export function seedCanvasYDoc(
   }, origin);
 }
 
-/** Read shared per-canvas defaults; returns `undefined` when unset so
- * callers can preserve their in-memory value. */
 export function readCanvasDefaults(ydoc: Y.Doc): CanvasDefaults | undefined {
   const { defaults: yDefaults } = getCanvasYTypes(ydoc);
   if (yDefaults.size === 0) return undefined;
   return Object.fromEntries(yDefaults.entries()) as CanvasDefaults;
 }
 
-/**
- * Merge `partial` into the shared defaults Y.Map. `undefined` values
- * clear the key. Runs in one transact tagged with `origin` so the
- * per-doc UndoManager groups it with the triggering action.
- */
+/** Single transact tagged with `origin` so UndoManager groups it with the triggering action. */
 export function writeCanvasDefaults(
   ydoc: Y.Doc,
   partial: Partial<CanvasDefaults>,
@@ -227,11 +200,7 @@ export function writeCanvasDefaults(
   }, origin);
 }
 
-/**
- * Diff React Flow `nodes[]` / `edges[]` into the shared Y types under a
- * single `ydoc.transact(origin)` so peers can skip self-echoes and the
- * UndoManager treats the result as one step.
- */
+/** Single `ydoc.transact(origin)` so peers skip self-echoes and UndoManager treats it as one step. */
 export function writeCanvasToYDoc(
   ydoc: Y.Doc,
   nodes: CanvasNode[],
@@ -292,8 +261,7 @@ function mutateNodeYMap(map: Y.Map<unknown>, node: CanvasNode): void {
     const liveKeys = new Set<string>();
     for (const [key, value] of Object.entries(node.data ?? {})) {
       liveKeys.add(key);
-      // Y.Text fields are owned by `writeNodeTextDiff`; skipping them here
-      // keeps a structural write from clobbering a concurrent char edit.
+      // Y.Text fields owned by `writeNodeTextDiff` - structural write would clobber concurrent char edits.
       if (key === textFieldKey) {
         if (!(dataMap.get(key) instanceof Y.Text)) {
           dataMap.set(key, new Y.Text(typeof value === 'string' ? value : ''));
@@ -342,8 +310,6 @@ function setOptionalBool(
   }
 }
 
-/** Convert a node's `data` Y.Map into the plain object React Flow consumes;
- * Y.Text values materialise as strings. */
 function materializeDataMap(dataMap: Y.Map<unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of dataMap.entries()) {
@@ -352,7 +318,6 @@ function materializeDataMap(dataMap: Y.Map<unknown>): Record<string, unknown> {
   return out;
 }
 
-/** Current string value of a node's text field, or `null` if missing. */
 export function readNodeTextField(
   ydoc: Y.Doc,
   nodeId: string,
@@ -371,14 +336,7 @@ export function readNodeTextField(
   return typeof raw === 'string' ? raw : null;
 }
 
-/**
- * Apply a minimal `(prev, next)` diff to a node's text field as a `Y.Text`
- * delta so concurrent char-level edits merge instead of overwriting.
- *
- * The diff is computed against `prev` (the user's last local snapshot),
- * not against the current `Y.Text`, so a remote insert that landed between
- * two keystrokes is preserved.
- */
+/** Diff against `prev` (last local snapshot), not current Y.Text, so concurrent peer inserts survive. */
 export function writeNodeTextDiff(
   ydoc: Y.Doc,
   nodeId: string,
@@ -393,7 +351,7 @@ export function writeNodeTextDiff(
   if (!yNode) return;
   let dataMap = yNode.get('data');
   if (!(dataMap instanceof Y.Map)) {
-    // Cold-start seed may leave `data` as a plain dict; upgrade in place.
+    // Cold-start seed may leave `data` as a plain dict - upgrade in place.
     const upgraded = new Y.Map<unknown>();
     if (dataMap && typeof dataMap === 'object') {
       for (const [key, value] of Object.entries(dataMap as Record<string, unknown>)) {
@@ -419,9 +377,6 @@ export function writeNodeTextDiff(
     yText = replacement;
   }
   const text = yText as Y.Text;
-  // Diff against `prev` (the user's last-known local snapshot) so concurrent
-  // peer inserts elsewhere in the string survive; Yjs's stable character ids
-  // make the delete+insert at our positions merge cleanly.
   let prefix = 0;
   const minLen = Math.min(prev.length, next.length);
   while (prefix < minLen && prev.charCodeAt(prefix) === next.charCodeAt(prefix)) prefix++;

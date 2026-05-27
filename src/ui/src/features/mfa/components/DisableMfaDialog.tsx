@@ -10,11 +10,7 @@ interface DisableMfaDialogProps {
     onDisabled: () => void;
 }
 
-/**
- * Confirm disabling two factor authentication. We require a current
- * authenticator code so a stolen session cannot turn off MFA. Server
- * also bumps token_version so other sessions get signed out.
- */
+/** Requires a current TOTP so a stolen session cannot disable MFA; server bumps token_version to sign other sessions out. */
 export function DisableMfaDialog({ onClose, onDisabled }: DisableMfaDialogProps) {
     const [code, setCode] = useState('');
     const [submitting, setSubmitting] = useState(false);

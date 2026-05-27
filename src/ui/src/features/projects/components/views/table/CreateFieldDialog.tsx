@@ -1,7 +1,3 @@
-/**
- * CreateFieldDialog - Popover for creating custom field definitions
- */
-
 import { useState, useRef, useEffect } from "react";
 import { X, Plus, Trash, TextT, Hash, CaretDown, Calendar } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";

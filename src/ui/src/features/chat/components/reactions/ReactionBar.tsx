@@ -3,7 +3,6 @@ import { Plus } from '@phosphor-icons/react';
 
 import { cn } from '@/shared/utils/cn';
 
-// Map internal emoji keys to unicode characters
 const EMOJI_UNICODE: Record<string, string> = {
   thumbs_up: '\u{1F44D}',
   thumbs_down: '\u{1F44E}',

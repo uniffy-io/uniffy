@@ -1,15 +1,3 @@
-/**
- * TaskCard - Draggable card for the Board view
- *
- * Features:
- * - Top color bar matching status
- * - Task title with number
- * - Priority badge
- * - Due date (red if overdue)
- * - Assignee avatars
- * - Reference chips
- */
-
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle, WarningCircle, ArrowsClockwise, Clock } from "@phosphor-icons/react";

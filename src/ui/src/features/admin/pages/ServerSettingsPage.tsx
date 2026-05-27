@@ -1,9 +1,3 @@
-/**
- * Server Settings Page
- *
- * System-wide server configuration (for system admins).
- */
-
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
@@ -97,22 +91,17 @@ export function ServerSettingsPage() {
     useDocumentTitle('Server Settings');
     const { themeMode, availableModes, setTheme } = useTheme();
 
-    // Wired flags resolved through `superadmin.v1.SystemConfigService`:
-    // deployment_settings row > env default > coded default.
     const [publicRegistration, setPublicRegistrationState] = useState(false);
     const [publicRegistrationSource, setPublicRegistrationSource] = useState<string>('default');
     const [publicRegistrationLoading, setPublicRegistrationLoading] = useState(true);
     const [publicRegistrationSaving, setPublicRegistrationSaving] = useState(false);
 
-    // Placeholder toggles -- visual only until wired the same way as
-    // public registration. Local state matches the rendered switch but is
-    // not persisted anywhere yet.
+    // Visual-only placeholder toggles; not persisted.
     const [maintenanceMode, setMaintenanceMode] = useState(false);
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [auditLogging, setAuditLogging] = useState(true);
     const [apiRateLimiting, setApiRateLimiting] = useState(true);
 
-    // MFA platform policy -- backed by SystemConfigService.GetMfaPolicy.
     const [mfaRequiredForAdmins, setMfaRequiredForAdmins] = useState(false);
     const [mfaPolicyLoading, setMfaPolicyLoading] = useState(true);
     const [mfaPolicySaving, setMfaPolicySaving] = useState(false);
@@ -213,7 +202,6 @@ export function ServerSettingsPage() {
                 </div>
             </div>
 
-            {/* Theme Selector Card */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
@@ -253,7 +241,6 @@ export function ServerSettingsPage() {
                 </div>
             </div>
 
-            {/* Security & Access Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
@@ -294,7 +281,6 @@ export function ServerSettingsPage() {
                 </div>
             </div>
 
-            {/* System & Monitoring Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
@@ -324,7 +310,6 @@ export function ServerSettingsPage() {
                 </div>
             </div>
 
-            {/* Notifications Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
@@ -346,7 +331,6 @@ export function ServerSettingsPage() {
                 </div>
             </div>
 
-            {/* Actions Footer */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 md:p-5">
                 <div>
                     <div className="font-medium text-foreground">Need to reset settings?</div>

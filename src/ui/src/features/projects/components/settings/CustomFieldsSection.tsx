@@ -1,7 +1,3 @@
-/**
- * CustomFieldsSection - Manage custom field definitions (create/edit/delete/reorder)
- */
-
 import { useState, useRef, useCallback } from "react";
 import {
   Columns,

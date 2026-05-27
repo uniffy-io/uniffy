@@ -1,14 +1,3 @@
-/**
- * ChatSidebar - Left sidebar with channels organized by categories, DMs, and threads.
- *
- * Structure:
- * - Header: action buttons + collapse toggle
- * - Search input: filters channel list
- * - Threads link with unread badge
- * - Channel categories (collapsible, each containing channels sorted by activity)
- * - Direct Messages section (collapsible, sorted by activity)
- */
-
 import { useState, useCallback, useMemo, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -64,10 +53,6 @@ import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 import { cn } from '@/shared/utils/cn';
 import type { Icon } from '@phosphor-icons/react';
 
-/**
- * Hover-expand pill button matching the notes sidebar header style.
- * Icon shows by default; label slides in on hover.
- */
 function CompactActionButton({
   icon: IconComponent,
   label,
@@ -133,7 +118,6 @@ export function ChatSidebar() {
     return false;
   }, [channelPreferences, allChannelMembers, currentUserId]);
 
-  // Unread counts from channel data (populated by API)
   const unreadCounts: Record<string, number> = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const c of channels) {
@@ -149,13 +133,11 @@ export function ChatSidebar() {
     [unreadCounts],
   );
 
-  // Filter channels by search query
   const filteredChannels = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return channels.filter(c => !query || c.name.toLowerCase().includes(query));
   }, [channels, searchQuery]);
 
-  // Split into non-DM channels (for categories) and DMs
   const nonDmChannels = useMemo(
     () => filteredChannels
       .filter(c => c.channelType !== 'DIRECT' && c.channelType !== 'GROUP_DM')
@@ -177,7 +159,6 @@ export function ChatSidebar() {
     [filteredChannels],
   );
 
-  // Group channels by category
   const categorizedChannels = useMemo(() => {
     const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
 
@@ -194,7 +175,6 @@ export function ChatSidebar() {
       }
     }
 
-    // Uncategorized channels
     const uncategorized = nonDmChannels.filter(c => !c.categoryId);
     if (uncategorized.length > 0) {
       groups.push({
@@ -212,14 +192,13 @@ export function ChatSidebar() {
       dispatch(setSplitChannel(channelId));
       return;
     }
-    // Navigate only - the URL effect in ChatPage handles setActiveChannel + fetchMessages
+    // ChatPage's URL effect handles setActiveChannel + fetchMessages.
     navigate(`/chat/${channelId}`);
     if (isMobile) {
       dispatch(collapseSidebar());
     }
   }, [dispatch, navigate, splitActive, focusedPane, isMobile]);
 
-  // Category drag-and-drop reordering
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
@@ -238,7 +217,6 @@ export function ChatSidebar() {
     const newIndex = sortableCategoryIds.indexOf(over.id as string);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Optimistic reorder in store
     const reordered = [...sortableCategoryIds];
     reordered.splice(oldIndex, 1);
     reordered.splice(newIndex, 0, active.id as string);
@@ -249,7 +227,6 @@ export function ChatSidebar() {
     }).filter(Boolean) as typeof categories;
     dispatch(setCategories(updatedCategories));
 
-    // Persist to backend
     dispatch(reorderCategoriesThunk(reordered));
   }, [sortableCategoryIds, categories, dispatch]);
 
@@ -259,7 +236,6 @@ export function ChatSidebar() {
 
   return (
     <div className="flex flex-col h-full" data-testid="chat-sidebar-root">
-      {/* Header */}
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         {canManageChat && (
           <>
@@ -293,7 +269,6 @@ export function ChatSidebar() {
         )}
       </div>
 
-      {/* Search */}
       <div className="px-3 py-2">
         <div className="relative">
           <MagnifyingGlass
@@ -311,9 +286,7 @@ export function ChatSidebar() {
         </div>
       </div>
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Threads link */}
         <button
           onClick={handleThreadsClick}
           className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -333,7 +306,6 @@ export function ChatSidebar() {
           )}
         </button>
 
-        {/* Unreads link */}
         <button
           onClick={() => navigate('/chat/unreads')}
           className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -353,7 +325,6 @@ export function ChatSidebar() {
           )}
         </button>
 
-        {/* Browse channels */}
         <button
           onClick={() => dispatch(openBrowseChannelsModal())}
           className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -363,7 +334,6 @@ export function ChatSidebar() {
           <span className="font-medium">Browse Channels</span>
         </button>
 
-        {/* Channel categories (drag-and-drop reorderable) */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortableCategoryIds} strategy={verticalListSortingStrategy}>
             {categorizedChannels.map(group => (
@@ -391,8 +361,6 @@ export function ChatSidebar() {
           </SortableContext>
         </DndContext>
 
-        {/* Agent Chats section - sits above Direct Messages so users can scan
-            their named agent conversations first. */}
         <div
           className="mt-1"
           data-testid="chat-sidebar-agent-chats-section"
@@ -447,7 +415,6 @@ export function ChatSidebar() {
           )}
         </div>
 
-        {/* Direct Messages section */}
         <div className="mt-1" data-testid="chat-sidebar-dm-section" data-state={dmSectionCollapsed ? 'collapsed' : 'expanded'}>
           <div className="flex items-center justify-between w-full px-3 py-1.5 group">
             <button

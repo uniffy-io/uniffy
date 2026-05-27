@@ -1,8 +1,4 @@
-/**
- * Shows on every login until the user either subscribes or dismisses.
- * Dismissed state persists for the session only (sessionStorage),
- * so it reappears on next login.
- */
+/** Dismissed state persists for the session only (sessionStorage), so the banner reappears on next login. */
 
 import { useCallback, useEffect, useReducer } from 'react';
 import { Bell, X, WarningCircle } from '@phosphor-icons/react';
@@ -31,17 +27,12 @@ function bannerReducer(state: BannerState, action: BannerAction): BannerState {
     }
 }
 
-/**
- * Compute initial banner visibility synchronously (no setState in effect).
- */
+/** Synchronous initial visibility - avoids setState-in-effect. `granted` still shows because the user may lack a subscription; `subscribe()` is idempotent. */
 function getInitialVisibility(isSupported: boolean): boolean {
     if (!isSupported) return false;
     if (typeof Notification === 'undefined') return false;
     if (Notification.permission === 'denied') return false;
     if (sessionStorage.getItem(DISMISSED_KEY) === 'true') return false;
-    // For 'granted' users we still show the banner -- they might not have a subscription.
-    // The subscribe() call is idempotent and will just re-register.
-    // For 'default' users we always show it.
     return true;
 }
 
@@ -64,7 +55,6 @@ export function PushNotificationBanner() {
         dispatch({ type: 'hide' });
     }, []);
 
-    // Auto-dismiss banner after showing error for a few seconds
     useEffect(() => {
         if (!state.error) return;
         const timer = setTimeout(() => {
@@ -76,7 +66,6 @@ export function PushNotificationBanner() {
 
     if (!state.visible) return null;
 
-    // Error state: show the error message with dismiss button
     if (state.error) {
         return (
             <div

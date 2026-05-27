@@ -1,9 +1,3 @@
-/**
- * Settings page - main entry point for user settings.
- *
- * Personal user preferences only - org admin functionality has moved to /admin.
- */
-
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -22,7 +16,6 @@ export function SettingsPage() {
     const [activeSection, setActiveSection] = useState<SettingsSection>(sectionParam || 'appearance');
     const { initializeSettings, initialized, loading, error, dismissError } = useSettings();
 
-    // Sync section with URL
     useEffect(() => {
         if (sectionParam && sectionParam !== activeSection) {
             setActiveSection(sectionParam);
@@ -35,7 +28,6 @@ export function SettingsPage() {
         setSearchParams({ section });
     };
 
-    // Initialize settings on mount
     useEffect(() => {
         if (!initialized) {
             initializeSettings();
@@ -43,10 +35,8 @@ export function SettingsPage() {
     }, [initialized, initializeSettings]);
 
     const handleCreateProfile = () => {
-        // TODO: Open create profile modal
     };
 
-    // Show loading state
     if (loading && !initialized) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -58,7 +48,6 @@ export function SettingsPage() {
         );
     }
 
-    // Render content based on active section
     const renderContent = () => {
         switch (activeSection) {
             case 'appearance':
@@ -87,7 +76,6 @@ export function SettingsPage() {
 
     return (
         <>
-            {/* Error banner */}
             {error && (
                 <div className="mb-6 p-4 rounded-lg border status-error">
                     <div className="flex items-center justify-between">

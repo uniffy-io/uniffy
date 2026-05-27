@@ -1,9 +1,3 @@
-/**
- * Filters Dashboard Component
- *
- * Main dashboard for managing saved file filters.
- */
-
 import { useState, useCallback } from 'react';
 import { Plus, Star, User } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -34,25 +28,21 @@ export function FiltersDashboard() {
     const [editingFilter, setEditingFilter] = useState<SerializedSavedFilter | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // Handle create new filter
     const handleCreate = useCallback(() => {
         setEditingFilter(null);
         setViewMode('create');
     }, []);
 
-    // Handle edit filter
     const handleEdit = useCallback((filter: SerializedSavedFilter) => {
         setEditingFilter(filter);
         setViewMode('edit');
     }, []);
 
-    // Handle cancel form
     const handleCancel = useCallback(() => {
         setEditingFilter(null);
         setViewMode('list');
     }, []);
 
-    // Handle save filter (create or update)
     const handleSave = useCallback(
         async (params: {
             name: string;
@@ -63,7 +53,6 @@ export function FiltersDashboard() {
             sortOrder?: string;
         }) => {
             if (editingFilter) {
-                // Update existing filter
                 const result = await update({
                     filterId: editingFilter.id,
                     ...params,
@@ -73,7 +62,6 @@ export function FiltersDashboard() {
                     setViewMode('list');
                 }
             } else {
-                // Create new filter
                 const result = await create(params);
                 if (result) {
                     setViewMode('list');
@@ -83,7 +71,6 @@ export function FiltersDashboard() {
         [editingFilter, create, update]
     );
 
-    // Handle delete filter
     const handleDelete = useCallback(
         async (filterId: string) => {
             setDeletingId(filterId);
@@ -93,7 +80,6 @@ export function FiltersDashboard() {
         [remove]
     );
 
-    // Handle apply filter
     const handleApply = useCallback(
         (filter: SerializedSavedFilter) => {
             applyFilter(filter);
@@ -101,7 +87,6 @@ export function FiltersDashboard() {
         [applyFilter]
     );
 
-    // Render form view
     if (viewMode === 'create' || viewMode === 'edit') {
         return (
             <div className="max-w-2xl mx-auto">
@@ -115,7 +100,6 @@ export function FiltersDashboard() {
         );
     }
 
-    // Render list view
     return (
         <div className="space-y-8">
             {/* Header */}

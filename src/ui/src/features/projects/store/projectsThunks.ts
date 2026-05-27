@@ -43,9 +43,6 @@ const hydrateTaskTags = (
   }
 };
 
-/**
- * Fetch all projects for the current organization
- */
 export const fetchProjects = createAsyncThunk<
   Project[],
   void,
@@ -67,9 +64,6 @@ export const fetchProjects = createAsyncThunk<
   }
 );
 
-/**
- * Fetch a single project by ID
- */
 export const fetchProject = createAsyncThunk<
   Project | null,
   string,
@@ -91,9 +85,6 @@ export const fetchProject = createAsyncThunk<
   }
 );
 
-/**
- * Fetch all tasks for a project
- */
 export const fetchProjectTasks = createAsyncThunk<
   Task[],
   | string
@@ -134,9 +125,6 @@ export const fetchProjectTasks = createAsyncThunk<
   }
 );
 
-/**
- * Create a new project
- */
 export const createProject = createAsyncThunk<
   Project,
   CreateProjectRequest,
@@ -158,9 +146,6 @@ export const createProject = createAsyncThunk<
   }
 );
 
-/**
- * Update an existing project
- */
 export const updateProject = createAsyncThunk<
   Project,
   UpdateProjectRequest,
@@ -182,9 +167,6 @@ export const updateProject = createAsyncThunk<
   }
 );
 
-/**
- * Delete a project (soft delete)
- */
 export const deleteProject = createAsyncThunk<void, string, { rejectValue: string }>(
   "projects/deleteProject",
   async (projectId, { getState, rejectWithValue }) => {
@@ -200,9 +182,6 @@ export const deleteProject = createAsyncThunk<void, string, { rejectValue: strin
   }
 );
 
-/**
- * Create a new task
- */
 export const createTask = createAsyncThunk<
   { task: Task; updatedParent?: Task },
   CreateTaskRequest,
@@ -224,9 +203,6 @@ export const createTask = createAsyncThunk<
   }
 );
 
-/**
- * Update an existing task
- */
 export const updateTask = createAsyncThunk<
   { task: Task; updatedParent?: Task; spawnedTask?: Task },
   UpdateTaskRequest,
@@ -252,10 +228,6 @@ export const updateTask = createAsyncThunk<
   }
 );
 
-/**
- * Move a task to a different status/position
- * Used for drag-and-drop operations
- */
 export const moveTask = createAsyncThunk<
   { task: Task; updatedParent?: Task; spawnedTask?: Task },
   MoveTaskRequest,
@@ -281,9 +253,6 @@ export const moveTask = createAsyncThunk<
   }
 );
 
-/**
- * Delete a task (soft delete)
- */
 export const deleteTask = createAsyncThunk<void, string, { rejectValue: string }>(
   "projects/deleteTask",
   async (taskId, { getState, rejectWithValue }) => {
@@ -299,9 +268,6 @@ export const deleteTask = createAsyncThunk<void, string, { rejectValue: string }
   }
 );
 
-/**
- * Delete multiple tasks (soft delete)
- */
 export const deleteTasks = createAsyncThunk<string[], string[], { rejectValue: string }>(
   "projects/deleteTasks",
   async (taskIds, { getState, rejectWithValue }) => {
@@ -318,11 +284,6 @@ export const deleteTasks = createAsyncThunk<string[], string[], { rejectValue: s
   }
 );
 
-// ===== Field Thunks =====
-
-/**
- * Create a custom field in a project
- */
 export const createFieldThunk = createAsyncThunk<
   FieldDefinition,
   { projectId: string; field: Omit<FieldDefinition, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> },
@@ -343,9 +304,6 @@ export const createFieldThunk = createAsyncThunk<
   }
 );
 
-/**
- * Update a field definition
- */
 export const updateFieldThunk = createAsyncThunk<
   FieldDefinition,
   { projectId: string; fieldId: string; updates: Partial<FieldDefinition> },
@@ -366,9 +324,6 @@ export const updateFieldThunk = createAsyncThunk<
   }
 );
 
-/**
- * Delete a custom field
- */
 export const deleteFieldThunk = createAsyncThunk<
   { projectId: string; fieldId: string },
   { projectId: string; fieldId: string },
@@ -389,11 +344,6 @@ export const deleteFieldThunk = createAsyncThunk<
   }
 );
 
-// ===== View Thunks =====
-
-/**
- * Create a new view for a project
- */
 export const createViewThunk = createAsyncThunk<
   ViewConfig,
   { projectId: string; view: Omit<ViewConfig, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> },
@@ -414,9 +364,6 @@ export const createViewThunk = createAsyncThunk<
   }
 );
 
-/**
- * Update a view configuration
- */
 export const updateViewThunk = createAsyncThunk<
   ViewConfig,
   { projectId: string; viewId: string; updates: Partial<ViewConfig> },
@@ -437,9 +384,6 @@ export const updateViewThunk = createAsyncThunk<
   }
 );
 
-/**
- * Delete a view
- */
 export const deleteViewThunk = createAsyncThunk<
   { projectId: string; viewId: string },
   { projectId: string; viewId: string },
@@ -460,11 +404,6 @@ export const deleteViewThunk = createAsyncThunk<
   }
 );
 
-// ===== Bulk Update Thunk =====
-
-/**
- * Bulk update multiple tasks
- */
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],
   { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null } },
@@ -486,11 +425,6 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
   }
 );
 
-// ===== Activity Thunks =====
-
-/**
- * Fetch activities for a task
- */
 export const fetchActivities = createAsyncThunk<
   { taskId: string; activities: TaskActivity[] },
   string,

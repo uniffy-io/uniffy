@@ -1,8 +1,3 @@
-/**
- * Single event row for the today's meetings quick view panel.
- * Shows time, title, location/attendees, and optional join button.
- */
-
 import { MapPin, VideoCamera, Users } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { formatTime } from '@/features/calendar/utils';
@@ -100,7 +95,6 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
         isCurrent && 'bg-primary/5'
       )}
     >
-      {/* Category color bar */}
       <div
         className={cn(
           'w-0.5 shrink-0 rounded-full mt-0.5',
@@ -109,9 +103,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
         style={{ backgroundColor: categoryColor }}
       />
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Time row: range + countdown */}
         <div className="flex items-center gap-1.5 mb-0.5">
           {isCurrent && (
             <span className="relative flex h-1.5 w-1.5 shrink-0">
@@ -135,18 +127,15 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           )}
         </div>
 
-        {/* Title */}
         <p className="text-sm font-medium text-foreground truncate leading-snug">
           {event.title}
         </p>
 
-        {/* Context line */}
         <div className="mt-0.5">
           <ContextLine event={event} />
         </div>
       </div>
 
-      {/* Join button */}
       {event.meetingUrl && (
         <a
           href={event.meetingUrl}

@@ -1,12 +1,5 @@
-/**
- * Notes Feature Exports
- *
- * Central export point for all notes feature modules.
- */
-
 export { notesApi } from '@/features/notes/api/notesApi';
 
-// Components
 export { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 export { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
 export { NotesLayout } from '@/features/notes/components/NotesLayout';
@@ -17,15 +10,12 @@ export { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewe
 export { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
 export { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 
-// Pages
 export { NotesPage } from '@/features/notes/pages/NotesPage';
 
-// Store - Slices
 export { notesReducer } from '@/features/notes/store/notesSlice';
 export { notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
 export { editorReducer } from '@/features/notes/store/editorSlice';
 
-// Store - Actions
 export {
     setNotes,
     setNote,
@@ -86,8 +76,6 @@ export {
     setMetadataPanelTab,
 } from '@/features/notes/store/editorSlice';
 
-// Store - Thunks
-// Note: Bookmark functionality is now in @/features/bookmarks
 export {
     fetchNotes,
     fetchDeletedNotes,
@@ -106,7 +94,6 @@ export { updateNoteIcon } from '@/features/notes/store/notesThunks';
 
 export { fetchNotesTree } from '@/features/notes/store/notesTreeSlice';
 
-// Hooks
 export {
     useNoteLoader,
     useCurrentNote,
@@ -127,7 +114,6 @@ export {
 } from '@/features/notes/utils/notesTreeUtils';
 export type { BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
 
-// Note icons - constants from noteIconConstants.ts, rendering from noteIcons.tsx
 export {
     CURATED_ICONS,
     COMMON_EMOJIS,
@@ -146,13 +132,11 @@ export {
     drawIconOnCanvas,
 } from '@/features/notes/utils/noteIcons';
 
-// Cache utilities (for logout cleanup)
 export {
     clearAllCache as clearNotesCache,
     clearCachedNotes,
 } from '@/features/notes/utils/notesCache';
 
-// Tree state persistence
 export {
     clearTreeState,
 } from '@/features/notes/utils/treeStateStorage';

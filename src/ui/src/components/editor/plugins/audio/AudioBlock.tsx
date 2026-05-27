@@ -1,17 +1,5 @@
-/**
- * AudioBlock Component
- *
- * Renders an inline audio player within the notes editor.
- * Uses a plain <canvas> for waveform visualization (bypasses WaveSurfer shadow DOM
- * which does not render inside ProseMirror node views) and a standard <audio>
- * element for playback via service worker streaming.
- *
- * Playback starts immediately using Range-based streaming (no full download).
- * The waveform is computed in the background from the full file and skipped
- * entirely for files >50MB.
- *
- * Shows an animated uploading indicator when src starts with "uploading:".
- */
+// Plain `<canvas>` is used for the waveform because WaveSurfer's shadow DOM doesn't render inside ProseMirror node views.
+// Range-based streaming starts playback immediately; the waveform is computed in the background and skipped for files > 50 MB.
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Pause, MusicNote } from '@phosphor-icons/react';

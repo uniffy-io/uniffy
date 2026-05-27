@@ -1,7 +1,3 @@
-/**
- * MonthView - Month calendar grid view
- */
-
 import { useMemo, useState } from 'react';
 import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -13,8 +9,7 @@ import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_HEADERS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-// Default color when category is not found
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
 export function MonthView() {
   const dispatch = useAppDispatch();
@@ -26,7 +21,6 @@ export function MonthView() {
   const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
-  // Group days into weeks
   const weeks = useMemo(() => {
     const result: typeof monthColumns[] = [];
     for (let i = 0; i < monthColumns.length; i += 7) {
@@ -43,10 +37,8 @@ export function MonthView() {
   const handleDragStart = (e: React.DragEvent, eventId: string) => {
     e.stopPropagation();
     e.dataTransfer.effectAllowed = 'move';
-    // Using simple text/plain for compatibility
     e.dataTransfer.setData('text/plain', eventId);
-    
-    // Set global drag state
+
     dispatch(startDrag(eventId));
   };
 
@@ -56,7 +48,7 @@ export function MonthView() {
   };
 
   const handleDragOver = (e: React.DragEvent, dateString: string) => {
-    e.preventDefault(); // Allow drop
+    e.preventDefault();
     if (draggedEventId && dragOverDate !== dateString) {
       setDragOverDate(dateString);
     }
@@ -73,14 +65,14 @@ export function MonthView() {
     const event = events[eventId];
     if (!event) return;
 
-    // Calculate new start/end preserving time and duration
+    // Move date while preserving local time-of-day and duration.
     const targetDate = new Date(targetDateStr);
     const oldStart = new Date(event.startTime);
     const oldEnd = new Date(event.endTime);
-    
+
     const newStart = new Date(targetDate);
     newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), oldStart.getSeconds(), oldStart.getMilliseconds());
-    
+
     const duration = oldEnd.getTime() - oldStart.getTime();
     const newEnd = new Date(newStart.getTime() + duration);
 
@@ -92,13 +84,12 @@ export function MonthView() {
         })).unwrap();
     } catch {
     }
-    
+
     dispatch(endDrag());
   };
 
   return (
     <div className="h-full flex flex-col p-2 md:p-4">
-      {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-border mb-1 md:mb-2">
         {(isMobile ? DAY_HEADERS_SHORT : DAY_HEADERS).map((day, i) => (
           <div
@@ -110,7 +101,6 @@ export function MonthView() {
         ))}
       </div>
 
-      {/* Calendar grid */}
       <div className="flex-1 grid grid-rows-6">
         {weeks.map((week, weekIndex) => (
           <div
@@ -137,7 +127,6 @@ export function MonthView() {
                     dragOverDate === day.dateString && 'bg-primary/10 ring-2 ring-inset ring-primary'
                   )}
                 >
-                  {/* Day number */}
                   <div className="flex justify-center mb-0.5 md:mb-1">
                     <span
                       className={cn(
@@ -153,10 +142,8 @@ export function MonthView() {
                     </span>
                   </div>
 
-                  {/* Events */}
                   <div className="space-y-0.5">
                     {displayEvents.map((event) => {
-                      // Look up category color from Redux state
                       const eventCategory = event.categoryId ? categories[event.categoryId] : null;
                       const eventColor = eventCategory?.color ?? DEFAULT_COLOR;
                       const attendee = currentUserId
@@ -171,7 +158,7 @@ export function MonthView() {
                           draggable
                           onDragStart={(e) => handleDragStart(e, event.id)}
                           onDragEnd={handleDragEnd}
-                          onClick={(e) => { e.stopPropagation(); /* Prevent day click */ }}
+                          onClick={(e) => { e.stopPropagation(); }}
                           className={cn(
                             'text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing',
                             declined && 'line-through',

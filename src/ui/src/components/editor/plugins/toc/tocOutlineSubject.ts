@@ -1,19 +1,11 @@
-/**
- * Per-view outline broadcast. The PM plugin walks top-level heading nodes
- * after every doc change and publishes the resulting entries here; every
- * ToC NodeView mounted on the same EditorView subscribes and re-renders.
- *
- * Kept module-level (no React context) because NodeViews mount their own
- * React roots outside the main provider tree.
- */
+/** Per-view outline broadcast — module-level because NodeViews mount their own React roots outside the main provider tree. */
 import type { EditorView } from '@milkdown/prose/view';
 
 export interface HeadingEntry {
-    /** 1-6, as declared by the heading node `level` attribute */
+    /** 1-6, as declared by the heading node `level` attribute. */
     level: number;
-    /** Trimmed heading text */
     text: string;
-    /** Final anchor slug, occurrence-suffixed when duplicates exist */
+    /** Occurrence-suffixed slug for duplicate headings. */
     slug: string;
 }
 
@@ -26,8 +18,7 @@ interface Subject {
 
 const subjects = new WeakMap<EditorView, Subject>();
 
-/** Stable reference for the "no outline yet" case so React snapshot
- *  identity holds and useSyncExternalStore does not loop. */
+/** Stable identity so `useSyncExternalStore` snapshots compare equal across renders. */
 const EMPTY_ENTRIES: HeadingEntry[] = [];
 
 function ensure(view: EditorView): Subject {

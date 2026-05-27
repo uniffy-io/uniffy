@@ -1,10 +1,3 @@
-/**
- * Live Mention System - Public API
- *
- * Shared mention components used across the entire app.
- * All mention rendering flows through these components.
- */
-
 export { MentionChip, MentionChipCompact, MentionChipBasic } from '@/components/mention/MentionChip';
 export { MentionPreview } from '@/components/mention/MentionPreview';
 export {

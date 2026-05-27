@@ -1,15 +1,4 @@
-/**
- * <FilterRail>
- *
- * Left rail of the unified tags explorer. Composable filter sections
- * (Tags / Domain / Owner / Source / Created / Updated / Advanced)
- * combine with implicit AND semantics, mirroring the files filter
- * pattern. The rail edits local criteria; the parent page wires URL
- * sync via ``useTagFilterState``.
- *
- * Inputs use the global app primitives (``Checkbox``, ``Select``,
- * ``DatePicker``) so the rail visually matches the rest of the app.
- */
+/** Composable filter sections combine with implicit AND semantics. Edits local criteria; the parent wires URL sync. */
 
 import { useCallback, useState } from 'react';
 import {

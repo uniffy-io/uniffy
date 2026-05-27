@@ -1,22 +1,11 @@
-/**
- * Filter Hints Component
- *
- * Displays available search filter syntax hints in the empty search state.
- */
-
 import { FILTER_HINTS } from '@/features/search/utils/queryParser';
 import { cn } from '@/shared/utils/cn';
 
 interface FilterHintsProps {
-    /** Callback when a filter hint is clicked */
     onHintClick?: (filter: string) => void;
-    /** Additional CSS classes */
     className?: string;
 }
 
-/**
- * Shows available filter prefixes with examples.
- */
 export function FilterHints({ onHintClick, className }: FilterHintsProps) {
     return (
         <div className={cn("flex flex-wrap gap-2 justify-center", className)}>
@@ -40,9 +29,6 @@ export function FilterHints({ onHintClick, className }: FilterHintsProps) {
     );
 }
 
-/**
- * Compact version showing just the filter syntax inline.
- */
 export function FilterHintsCompact({ className }: { className?: string }) {
     return (
         <div className={cn("text-xs text-muted-foreground/60", className)}>

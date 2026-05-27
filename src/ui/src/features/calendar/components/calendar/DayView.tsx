@@ -1,7 +1,3 @@
-/**
- * DayView - Single day calendar view
- */
-
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEventThunk, openEventModal } from '@/features/calendar/store';
@@ -22,14 +18,12 @@ export function DayView() {
   const { currentDate } = useCalendarNavigation();
   const { getPositionedEvents } = useCalendarEvents();
 
-  // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ hour: number; isHalf: boolean } | null>(null);
   const [dropPreview, setDropPreview] = useState<{ hour: number; isHalf: boolean } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
   const currentDateObj = useMemo(() => parseISO(currentDate), [currentDate]);
 
-  // Create a day column for the header
   const dayColumn = useMemo(
     () => ({
       date: currentDateObj,
@@ -44,18 +38,16 @@ export function DayView() {
     [currentDateObj, currentDate]
   );
 
-  // Get positioned events for the day
   const positionedEvents = useMemo(
     () => getPositionedEvents(currentDate),
     [getPositionedEvents, currentDate]
   );
 
-  // Calculate grid height (taller for day view)
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
-  const hourHeight = 80; // Taller hours for day view
+  // Day view uses taller hour rows than week view.
+  const hourHeight = 80;
   const gridHeight = hourCount * hourHeight;
 
-  // Auto-scroll to current time on mount
   useEffect(() => {
     if (scrollRef.current) {
       const now = new Date();
@@ -68,7 +60,6 @@ export function DayView() {
     }
   }, [hourHeight]);
 
-  // Clear selected slot on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedSlot) {
@@ -80,9 +71,6 @@ export function DayView() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedSlot]);
 
-  /**
-   * Calculate grid slot from mouse coordinates
-   */
   const getSlotFromCoordinates = useCallback((clientY: number) => {
     if (!gridRef.current || !scrollRef.current) return null;
 
@@ -101,12 +89,9 @@ export function DayView() {
     return { hour, isHalf };
   }, [hourHeight]);
 
-  /**
-   * Handle drag over to show preview
-   */
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); // Allow dropping
-    
+    e.preventDefault();
+
     if (!draggedEventId) return;
 
     const slot = getSlotFromCoordinates(e.clientY);
@@ -117,9 +102,6 @@ export function DayView() {
     }
   }, [draggedEventId, getSlotFromCoordinates]);
 
-  /**
-   * Handle drop to reschedule event
-   */
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setDropPreview(null);
@@ -129,7 +111,6 @@ export function DayView() {
     const slot = getSlotFromCoordinates(e.clientY);
     if (!slot) return;
 
-    // Calculate new start time
     const newStartDate = new Date(currentDate);
     newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
 
@@ -153,13 +134,9 @@ export function DayView() {
     }
   }, [draggedEventId, getSlotFromCoordinates, currentDate, positionedEvents, dispatch]);
 
-  /**
-   * Handle clicks on empty grid cells - select half-hour slots
-   */
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
-    // Only handle clicks on empty grid area
     if (
       target.closest('[data-event-block]') ||
       target.closest('[data-event]') ||
@@ -179,7 +156,6 @@ export function DayView() {
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
-      // Double-click: open event creation modal with prefilled date/time
       const clickedHour = hour + (isHalf ? 0.5 : 0);
       const startMinutes = Math.round((clickedHour % 1) * 60);
       const endHourVal = clickedHour + 1;
@@ -202,7 +178,6 @@ export function DayView() {
       }));
       setSelectedSlot(null);
     } else {
-      // Single click: select slot
       setSelectedSlot({ hour, isHalf });
       lastClickTimeRef.current = currentTime;
     }
@@ -211,27 +186,21 @@ export function DayView() {
   return (
     <>
       <div className="h-full flex flex-col">
-        {/* Day header */}
         <div className="flex border-b border-border flex-shrink-0">
-          {/* Time column header spacer */}
           <div
             className="flex-shrink-0 bg-muted/50 border-r border-border"
             style={{ width: LAYOUT.TIME_COLUMN_WIDTH }}
           />
 
-          {/* Day header */}
           <div className="flex-1 flex justify-center">
             <DayHeader day={dayColumn} />
           </div>
         </div>
 
-        {/* Scrollable grid area */}
         <div ref={scrollRef} className="flex-1 overflow-auto">
           <div className="flex">
-            {/* Time column */}
             <TimeColumn hourHeight={hourHeight} />
 
-            {/* Grid column */}
             <div
               ref={gridRef}
               className="flex-1 relative cursor-pointer select-none"
@@ -240,10 +209,8 @@ export function DayView() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              {/* Grid lines */}
               <GridLines columnCount={1} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} hourHeight={hourHeight} />
 
-              {/* Selected half-hour slot indicator */}
               {selectedSlot && (
                 <div
                   className="absolute w-full bg-primary/20 border-2 border-primary pointer-events-none"
@@ -254,7 +221,6 @@ export function DayView() {
                 />
               )}
 
-              {/* Drop Preview Ghost */}
               {dropPreview && draggedEventId && (
                 <div
                   className="absolute bg-primary/20 border-2 border-dashed border-primary z-20 pointer-events-none rounded transition-all duration-75"
@@ -269,7 +235,6 @@ export function DayView() {
                 />
               )}
 
-              {/* Today highlight */}
               {dayColumn.isToday && (
                 <div
                   className="absolute inset-x-0 bg-primary/5 pointer-events-none"
@@ -277,7 +242,6 @@ export function DayView() {
                 />
               )}
 
-              {/* Events */}
               {positionedEvents.map((event) => (
                 <div
                   key={event.id}
@@ -287,7 +251,7 @@ export function DayView() {
                   <EventBlock
                     event={{
                       ...event,
-                      // Adjust for taller hour height and top padding
+                      // Rescale week-view positions into the taller day-view hour rows.
                       top: TIME_COLUMN_TOP_PADDING + (event.top / GRID.HOUR_HEIGHT) * hourHeight,
                       height: (event.height / GRID.HOUR_HEIGHT) * hourHeight,
                     }}
@@ -296,7 +260,6 @@ export function DayView() {
                 </div>
               ))}
 
-              {/* Current time indicator */}
               <DayCurrentTimeIndicator date={currentDate} topOffset={TIME_COLUMN_TOP_PADDING} hourHeight={hourHeight} />
             </div>
           </div>

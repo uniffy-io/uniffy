@@ -1,9 +1,3 @@
-/**
- * Admin Redux Thunks
- *
- * Async actions for organization administration.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { adminApi } from '@/features/admin/api/adminApi';
@@ -33,8 +27,6 @@ import {
     type SerializedUserQuotaOverride,
     type SerializedStorageUsageInfo,
 } from '@/features/admin/store/adminSlice';
-
-// Permission Defaults
 
 export const fetchPermissionDefaults = createAsyncThunk<
     SerializedContentTypeDefaults[],
@@ -83,8 +75,6 @@ export const updatePermissionDefaults = createAsyncThunk<
     return serializeContentTypeDefaults(response.defaults);
 });
 
-// Organization Overview
-
 export const fetchOrganizationOverview = createAsyncThunk<
     SerializedOrgOverview,
     void,
@@ -101,8 +91,6 @@ export const fetchOrganizationOverview = createAsyncThunk<
     if (!response.overview) throw new Error('overview missing in GetOrganizationOverview response');
     return serializeOrgOverview(response.overview);
 });
-
-// Organization Settings
 
 export interface SerializedOrgSettings {
     chat: {
@@ -152,8 +140,6 @@ export const updateOrganizationSettings = createAsyncThunk<
         },
     };
 });
-
-// Members
 
 export const fetchMembers = createAsyncThunk<
     { members: SerializedMemberInfo[]; totalCount: number },
@@ -219,8 +205,6 @@ export const removeMember = createAsyncThunk<
 
     await adminApi.removeMember({ organizationId, userId });
 });
-
-// Groups
 
 export const fetchGroups = createAsyncThunk<
     { groups: SerializedGroupInfo[]; totalCount: number },
@@ -308,8 +292,6 @@ export const deleteGroup = createAsyncThunk<
     await adminApi.deleteGroup({ organizationId, groupId });
 });
 
-// Group Members
-
 export const fetchGroupMembers = createAsyncThunk<
     { members: SerializedGroupMemberInfo[]; totalCount: number },
     { groupId: string; page?: number; pageSize?: number },
@@ -374,8 +356,6 @@ export const removeGroupMember = createAsyncThunk<
 
     await adminApi.removeGroupMember({ organizationId, groupId, userId });
 });
-
-// Domain Admins
 
 export const fetchDomainAdmins = createAsyncThunk<
     { domainAdmins: SerializedDomainAdminInfo[]; totalCount: number },
@@ -444,8 +424,6 @@ export const revokeDomainAdmin = createAsyncThunk<
         domain: domain as DomainType,
     });
 });
-
-// Storage Quotas
 
 export const fetchOrgStorageQuota = createAsyncThunk<
     { quota: SerializedOrgStorageQuota; totalUsedBytes: number; totalFileCount: number },
@@ -639,8 +617,6 @@ export const recalculateStorageUsage = createAsyncThunk<
         hasOverride: u.hasOverride,
     }));
 });
-
-// Encryption key rotation (org owner only)
 
 export interface EncryptionRotationResult {
     newVersion: number;

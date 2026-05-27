@@ -1,10 +1,3 @@
-/**
- * Project icon mapping utility
- *
- * Maps project icon name strings to Phosphor icon components.
- * Used instead of emojis for consistency with the rest of the app.
- */
-
 import {
   Kanban,
   Megaphone,
@@ -25,9 +18,6 @@ import {
 } from "@phosphor-icons/react";
 import type { ComponentType } from "react";
 
-/**
- * Available project icon names
- */
 export type ProjectIconName =
   | "kanban"
   | "megaphone"
@@ -67,10 +57,7 @@ interface ProjectIconProps extends IconProps {
   icon: string;
 }
 
-/**
- * Renders the appropriate Phosphor icon for a project.
- * Falls back to Kanban if the icon name is not recognized.
- */
+/** Falls back to Kanban when the icon name is not recognized. */
 export function ProjectIcon({ icon, ...props }: ProjectIconProps) {
   const IconComponent = ICON_MAP[icon as ProjectIconName] || Kanban;
   return <IconComponent {...props} />;

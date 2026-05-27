@@ -1,7 +1,3 @@
-/**
- * GeneralSection - Project general settings (name, description, visibility, icon, slug)
- */
-
 import { useState, useEffect, useRef } from "react";
 import { Gear, Check } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";

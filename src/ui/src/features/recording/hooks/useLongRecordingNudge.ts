@@ -1,14 +1,4 @@
-/**
- * Long-recording nudge.
- *
- * Fires a non-blocking toast at 55 minutes ("You've been recording for
- * 55 minutes. Take a break or stop when ready.") and re-warns every
- * 30 minutes after that. Resets when the recording ends.
- *
- * Drives off `state.recording.startedAt` + `pausedDurationMs` + the
- * current `pausedAt`, so paused time does NOT count toward the elapsed
- * total - a clip that's been paused for an hour does not nag the user.
- */
+/** Toast nudge at 55 min, repeats every 30 min; paused time does NOT count toward elapsed total. */
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';

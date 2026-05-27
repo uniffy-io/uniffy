@@ -1,12 +1,3 @@
-/**
- * Bookmarks Redux slice for managing user bookmark state.
- *
- * Provides:
- * - bookmarkedUrns: Fast lookup for bookmark status by URN
- * - bookmarks: Full bookmark objects keyed by URN
- * - Loading states for list and individual toggle operations
- */
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
@@ -24,22 +15,13 @@ export interface SerializedBookmark {
 }
 
 export interface BookmarksState {
-    /** Fast lookup: URN -> boolean (true if bookmarked) */
+    /** URN -> bookmarked? - fast lookup for components. */
     bookmarkedUrns: Record<string, boolean>;
-
-    /** Full bookmark objects keyed by URN */
     bookmarks: Record<string, SerializedBookmark>;
-
-    /** True while fetching all bookmarks */
     loading: boolean;
-
-    /** Per-URN toggle loading state */
+    /** Per-URN toggle in-flight flag. */
     toggling: Record<string, boolean>;
-
-    /** Last error message */
     error: string | null;
-
-    /** Total count of bookmarks */
     totalCount: number;
 }
 
@@ -60,9 +42,6 @@ const bookmarkToPlain = (bookmark: Bookmark): SerializedBookmark => ({
     createdAt: (bookmark.createdAt ? timestampDate(bookmark.createdAt) : new Date()).toISOString(),
 });
 
-/**
- * Fetch all bookmarks for the current user in the current organization.
- */
 export const fetchBookmarks = createAsyncThunk<
     { bookmarks: SerializedBookmark[]; totalCount: number },
     void,
@@ -77,7 +56,7 @@ export const fetchBookmarks = createAsyncThunk<
         const response = await bookmarksApi.listBookmarks({
             organizationId,
             page: 1,
-            pageSize: 100, // Fetch all bookmarks initially
+            pageSize: 100,
         });
 
         return {
@@ -91,9 +70,6 @@ export const fetchBookmarks = createAsyncThunk<
     }
 });
 
-/**
- * Toggle bookmark on a URN.
- */
 export const toggleBookmark = createAsyncThunk<
     { urn: string; isBookmarked: boolean; bookmark: SerializedBookmark | null },
     string,
@@ -122,9 +98,6 @@ export const toggleBookmark = createAsyncThunk<
     }
 });
 
-/**
- * Bulk check bookmark status for multiple URNs.
- */
 export const bulkCheckBookmarks = createAsyncThunk<
     Record<string, boolean>,
     string[],
@@ -145,7 +118,6 @@ export const bulkCheckBookmarks = createAsyncThunk<
             urns,
         });
 
-        // Return the bookmarked URNs map directly (already a plain object)
         return response.bookmarkedUrns;
     } catch (error) {
         return rejectWithValue(
@@ -158,14 +130,8 @@ const bookmarksSlice = createSlice({
     name: 'bookmarks',
     initialState,
     reducers: {
-        /**
-         * Clear all bookmarks (used on logout).
-         */
         clearBookmarks: () => initialState,
 
-        /**
-         * Set bookmark status for a URN directly (for optimistic updates).
-         */
         setBookmarkStatus: (
             state,
             action: PayloadAction<{ urn: string; isBookmarked: boolean }>
@@ -173,15 +139,11 @@ const bookmarksSlice = createSlice({
             state.bookmarkedUrns[action.payload.urn] = action.payload.isBookmarked;
         },
 
-        /**
-         * Clear error state.
-         */
         clearError: (state) => {
             state.error = null;
         },
     },
     extraReducers: (builder) => {
-        // ─── Fetch bookmarks ───
         builder
             .addCase(fetchBookmarks.pending, (state) => {
                 state.loading = true;
@@ -191,7 +153,6 @@ const bookmarksSlice = createSlice({
                 state.loading = false;
                 state.totalCount = action.payload.totalCount;
 
-                // Reset and rebuild state from fetched bookmarks
                 state.bookmarkedUrns = {};
                 state.bookmarks = {};
 
@@ -205,7 +166,6 @@ const bookmarksSlice = createSlice({
                 state.error = action.payload ?? 'Failed to fetch bookmarks';
             });
 
-        // ─── Toggle bookmark ───
         builder
             .addCase(toggleBookmark.pending, (state, action) => {
                 state.toggling[action.meta.arg] = true;
@@ -229,7 +189,6 @@ const bookmarksSlice = createSlice({
                 state.error = action.payload ?? 'Failed to toggle bookmark';
             });
 
-        // ─── Bulk check bookmarks ───
         builder
             .addCase(bulkCheckBookmarks.fulfilled, (state, action) => {
                 for (const [urn, isBookmarked] of Object.entries(action.payload)) {

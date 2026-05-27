@@ -1,14 +1,4 @@
-/**
- * Task Mention Preview Card
- *
- * Jira-in-Slack style hover card for task mentions. Shows rich metadata:
- * task identifier (SLUG-123), status/priority badges with project-specific
- * colors, assignee avatars, due date, subtask progress, and blocked state.
- *
- * Markup uses only inline elements (`<span>` with `block`/`flex`/`grid`
- * Tailwind classes) so the card stays HTML-valid inside a `<p>`.
- */
-
+// Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
   Clock,

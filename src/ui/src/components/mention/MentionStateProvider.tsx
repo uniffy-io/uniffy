@@ -1,19 +1,4 @@
 /* eslint-disable react-refresh/only-export-components */
-/**
- * Mention State Provider
- *
- * React context that manages batch resolution and real-time updates for
- * all visible mention chips. Mounted in MainLayout so every domain page
- * gets live mention state automatically.
- *
- * How it works:
- * 1. MentionChip components register their URN via useMentionState(urn)
- * 2. Provider collects URNs, debounces 200ms, calls resolveUrns in batch
- * 3. Results stored in Map<string, MentionLiveState>
- * 4. Streaming events from useNotificationStream update individual URNs
- * 5. Only URNs currently registered (visible) are tracked
- */
-
 import {
   createContext,
   useCallback,
@@ -37,7 +22,6 @@ import { useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
 export type MentionDisplayMode = 'expanded' | 'compact';
 
-// Debounce interval for batch resolution (ms)
 const RESOLVE_DEBOUNCE = 200;
 
 interface MentionStateContextValue {
@@ -47,7 +31,7 @@ interface MentionStateContextValue {
   mentionDisplay: MentionDisplayMode;
 }
 
-/** Stable sentinel used to detect whether the provider is mounted */
+/** Stable sentinel — identity comparison detects whether the provider is mounted. */
 export const MENTION_NOOP = () => {};
 
 export const MentionStateContext = createContext<MentionStateContextValue>({
@@ -57,9 +41,6 @@ export const MentionStateContext = createContext<MentionStateContextValue>({
   mentionDisplay: 'expanded',
 });
 
-/**
- * Convert UrnMetadata (from resolveUrns API) to MentionLiveState
- */
 function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   const parsed = parseUrn(urn);
   const m = meta.metadata ?? {};
@@ -74,7 +55,6 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
     status: m.urn_status === 'DELETED' ? 'deleted' : 'ok',
   };
 
-  // Shared tags
   if (meta.contentTags?.length) state.contentTags = [...meta.contentTags];
 
   switch (parsed.type) {
@@ -158,8 +138,7 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   return state;
 }
 
-/** Decode the pipe / colon serialised per-domain breakdown the tag entity
- *  doc carries (e.g. ``NOTE:12|FILE:3``). */
+/** Decodes the pipe/colon serialised per-domain breakdown (e.g. `NOTE:12|FILE:3`). */
 function parseTagDomainBreakdown(raw: string): Record<string, number> {
   const out: Record<string, number> = {};
   for (const pair of raw.split('|')) {
@@ -171,12 +150,7 @@ function parseTagDomainBreakdown(raw: string): Record<string, number> {
   return out;
 }
 
-/**
- * Convert a snake_case proto map payload from the notification stream
- * into a typed ``Partial<MentionLiveState>`` patch. Mirrors the field
- * mapping in ``metadataToLiveState`` so live updates land on the same
- * camelCase keys the chip components read.
- */
+/** Translates snake_case stream payloads into the camelCase keys chip components read. */
 export function streamChangesToLiveState(changes: Record<string, string>): Partial<MentionLiveState> {
   const patch: Partial<MentionLiveState> = {};
   for (const [key, raw] of Object.entries(changes)) {
@@ -309,15 +283,11 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
   const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
 
-  // Registered URNs (currently visible in viewport)
-  const registeredUrns = useRef(new Map<string, number>()); // urn -> refcount
-  // Resolved states
+  const registeredUrns = useRef(new Map<string, number>());
   const [states, setStates] = useState<Map<string, MentionLiveState>>(new Map());
-  // URNs pending resolution
   const pendingUrns = useRef(new Set<string>());
   const resolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Batch resolve pending URNs
   const flushPending = useCallback(async () => {
     resolveTimer.current = null;
     if (!organizationId || pendingUrns.current.size === 0) return;
@@ -339,9 +309,8 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
           const meta = metadata as UrnMetadata;
           const liveState = metadataToLiveState(urn, meta);
           next.set(urn, liveState);
-          // Also update the module-level store for ProseMirror access
+          // Also publish to the module-level emitter so ProseMirror NodeView roots pick it up.
           setMentionState(urn, liveState);
-          // Store resolved URL for click navigation (handles nested routes like tasks)
           if (meta.url) {
             setMentionUrl(urn, meta.url);
           }
@@ -349,22 +318,16 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
         return next;
       });
     } catch {
-      // Non-fatal - chips render without live state
+      // Non-fatal — chips render without live state.
     }
   }, [organizationId]);
 
-  // Schedule batch resolution
   const scheduleBatch = useCallback(() => {
     if (resolveTimer.current) clearTimeout(resolveTimer.current);
     resolveTimer.current = setTimeout(flushPending, RESOLVE_DEBOUNCE);
   }, [flushPending]);
 
-  // Register a URN for live state tracking. Re-fetch on every fresh
-  // registration so a domain switch / page reload pulls fresh state
-  // from Meili rather than serving the cached state forever. Stream
-  // patches keep the cache fresh between fetches; ``setStates``
-  // discards the prior entry only when a newer one arrives, so the UI
-  // never flickers.
+  // Refetch on every fresh registration so domain switches pull fresh state from Meili rather than serve indefinitely cached entries.
   const register = useCallback((urn: string) => {
     const count = registeredUrns.current.get(urn) ?? 0;
     registeredUrns.current.set(urn, count + 1);
@@ -375,24 +338,17 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     }
   }, [scheduleBatch]);
 
-  // Unregister a URN (chip scrolled out of viewport or unmounted)
   const unregister = useCallback((urn: string) => {
     const count = registeredUrns.current.get(urn) ?? 0;
     if (count <= 1) {
       registeredUrns.current.delete(urn);
-      // Don't remove from states - keeps cache warm if chip re-appears
+      // Keep states warm so a re-appearing chip avoids a re-resolve.
     } else {
       registeredUrns.current.set(urn, count - 1);
     }
   }, []);
 
-  // Listen for real-time state change events from the notification
-  // stream. The emitter is shared with the local batch resolver, so
-  // ``changes`` arrives as either raw snake_case ``Record<string,
-  // string>`` (stream) or a typed camelCase ``Partial<MentionLiveState>``
-  // (local). Spread both shapes -- unmatched keys are harmless -- then
-  // overlay the translated camelCase patch so stream deltas land on
-  // the right fields.
+  // Stream patches arrive snake_case; spread both shapes then overlay the translated camelCase patch so deltas land on the right fields.
   useEffect(() => {
     const unsubscribe = onMentionStateChange((urn, changes) => {
       setStates((prev) => {
@@ -410,7 +366,6 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     return unsubscribe;
   }, []);
 
-  // Clean up on unmount (navigation)
   useEffect(() => {
     return () => {
       if (resolveTimer.current) clearTimeout(resolveTimer.current);
@@ -418,7 +373,6 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     };
   }, []);
 
-  // Re-resolve all registered URNs when org changes
   useEffect(() => {
     if (!organizationId) return;
 
@@ -426,7 +380,6 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     setStates(new Map());
     clearMentionStates();
 
-    // Queue all currently registered URNs for re-resolution
     for (const urn of registeredUrns.current.keys()) {
       pendingUrns.current.add(urn);
     }
@@ -435,10 +388,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     }
   }, [organizationId, scheduleBatch]);
 
-  // Stable context value - identity only changes when one of the tracked
-  // values changes. Without this every provider render creates a fresh
-  // object, which would re-fire every consumer's `useEffect([context])`
-  // and trigger an infinite register/unregister/resolve loop.
+  // Stable identity is mandatory — a fresh object every render would re-fire every consumer's `useEffect([context])` into an infinite loop.
   const value = useMemo<MentionStateContextValue>(
     () => ({ states, register, unregister, mentionDisplay }),
     [states, register, unregister, mentionDisplay],
@@ -453,15 +403,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
 
 const EMPTY_STATES: Map<string, MentionLiveState> = new Map();
 
-/**
- * Lightweight bridge for React roots mounted outside the main app tree (e.g.
- * the editor's per-chip ProseMirror NodeView roots). Supplies only
- * `mentionDisplay` via context; live-state delivery falls back to the
- * module-level emitter inside `useMentionState`.
- *
- * Use this when you cannot mount the full `MentionStateProvider` (which would
- * spin up a redundant batch resolver and own the global state lifecycle).
- */
+/** Supplies only `mentionDisplay` for React roots mounted outside the main tree (ProseMirror NodeViews); state arrives via the module-level emitter. */
 export function MentionDisplayBridge({ children }: MentionStateProviderProps) {
   const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
   const value = useMemo<MentionStateContextValue>(

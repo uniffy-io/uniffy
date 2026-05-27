@@ -1,7 +1,3 @@
-/**
- * Sessions management section - shows active sessions with revocation controls.
- */
-
 import { useEffect } from 'react';
 import {
     Desktop,

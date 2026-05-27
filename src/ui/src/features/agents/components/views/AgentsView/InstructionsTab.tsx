@@ -51,8 +51,6 @@ function formatTime(ts?: { seconds: number; nanos: number }): string {
     });
 }
 
-// Chat Bubble
-
 function ChatBubble({
     message,
     onApply,
@@ -105,8 +103,6 @@ function ChatBubble({
     );
 }
 
-// Thinking Indicator
-
 const THINKING_PHASES = [
     "Understanding your request",
     "Analyzing agent requirements",
@@ -148,8 +144,6 @@ function ThinkingIndicator() {
         </div>
     );
 }
-
-// Prompt Builder Drawer (slide-over panel)
 
 function PromptBuilderDrawer({
     agent,
@@ -239,7 +233,6 @@ function PromptBuilderDrawer({
                 open ? "translate-x-0" : "translate-x-full pointer-events-none",
             )}
         >
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
                 <div className="flex items-center gap-2">
                     <ChatCircleDots size={18} weight="duotone" className="text-primary" />
@@ -270,7 +263,6 @@ function PromptBuilderDrawer({
                 </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto">
                 {!sessionId ? (
                     <div className="flex items-center justify-center h-full">
@@ -323,7 +315,6 @@ function PromptBuilderDrawer({
                 )}
             </div>
 
-            {/* Input */}
             <div className="border-t border-border bg-card px-3 py-2.5 shrink-0">
                 <div className="relative flex flex-col bg-muted border border-border rounded-lg focus-within:ring-1 focus-within:ring-ring">
                     <textarea
@@ -352,8 +343,6 @@ function PromptBuilderDrawer({
     );
 }
 
-// Assembled Prompt Preview
-
 function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
     const [expanded, setExpanded] = useState(true);
@@ -361,7 +350,6 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     const [loading, setLoading] = useState(false);
     const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Fingerprint of fields that affect the assembled prompt
     const promptFingerprint = useMemo(
         () => [
             agent.id,
@@ -374,7 +362,6 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
         [agent.id, agent.soulPrompt, agent.name, agent.promptId, agent.enabledTools, agent.enabledSkills],
     );
 
-    // Auto-fetch on mount and debounce re-fetch when fingerprint changes
     useEffect(() => {
         if (!expanded) return;
 
@@ -464,8 +451,6 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     );
 }
 
-// Soul Prompt Editor (main editor area)
-
 function SoulPromptEditor({
     agent,
     canEdit,
@@ -477,7 +462,6 @@ function SoulPromptEditor({
     const [localValue, setLocalValue] = useState(agent.soulPrompt);
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Reset local value when agent changes
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when agent.id changes
         setLocalValue(agent.soulPrompt);
@@ -486,14 +470,12 @@ function SoulPromptEditor({
     const handleChange = useCallback((markdown: string) => {
         setLocalValue(markdown);
 
-        // Debounced auto-save
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
             dispatch(updateAgent({ agentId: agent.id, soulPrompt: markdown }));
         }, 800);
     }, [agent.id, dispatch]);
 
-    // Flush on unmount
     useEffect(() => {
         return () => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -514,8 +496,6 @@ function SoulPromptEditor({
         />
     );
 }
-
-// Main InstructionsTab
 
 export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
@@ -564,10 +544,8 @@ export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
 
     return (
         <div className="relative flex flex-col h-full overflow-hidden">
-            {/* Scrollable content area */}
             <div className="flex-1 overflow-y-auto">
                 <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-                    {/* Prompt Template Selector */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden">
                         <div className="h-1 bg-gradient-to-r from-primary/80 via-primary/40 to-transparent" />
                         <div className="p-6">
@@ -596,7 +574,6 @@ export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
                         </div>
                     </div>
 
-                    {/* Custom Instructions Editor */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden">
                         <div className="p-6 pb-4">
                             <div className="flex items-center justify-between mb-4">
@@ -630,7 +607,6 @@ export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
                         </div>
                     </div>
 
-                    {/* Assembled Prompt Preview */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden">
                         <div className="p-6">
                             <AssembledPromptPreview agent={agent} />
@@ -639,7 +615,6 @@ export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
                 </div>
             </div>
 
-            {/* Prompt builder drawer (slides from right) */}
             <PromptBuilderDrawer
                 agent={agent}
                 canEdit={canEdit}
@@ -647,7 +622,6 @@ export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
                 onClose={() => setDrawerOpen(false)}
             />
 
-            {/* Backdrop when drawer is open */}
             {drawerOpen && (
                 <div
                     className="absolute inset-0 z-10 bg-background/40 backdrop-blur-[2px] transition-opacity"

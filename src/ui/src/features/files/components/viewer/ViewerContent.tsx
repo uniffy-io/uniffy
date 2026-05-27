@@ -1,15 +1,8 @@
-/**
- * Viewer Content
- *
- * Routes to the appropriate viewer based on file MIME type.
- * Uses lazy loading for heavy viewer components.
- */
-
 import { lazy, Suspense } from 'react';
 import { Spinner } from '@phosphor-icons/react';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
-// Lazy load viewers to reduce initial bundle size
+// Lazy load to keep the initial bundle small.
 const ImageViewer = lazy(() =>
     import('./viewers/ImageViewer').then((m) => ({ default: m.ImageViewer }))
 );
@@ -39,11 +32,7 @@ interface ViewerContentProps {
     onExitEdit?: () => void;
 }
 
-/**
- * Check if a MIME type is a code/text file.
- */
 function isCodeFile(mimeType: string): boolean {
-    // Common code MIME types
     const codeTypes = [
         'application/javascript',
         'application/typescript',
@@ -61,7 +50,6 @@ function isCodeFile(mimeType: string): boolean {
         return true;
     }
 
-    // text/* types are generally viewable
     if (mimeType.startsWith('text/')) {
         return true;
     }
@@ -69,9 +57,6 @@ function isCodeFile(mimeType: string): boolean {
     return false;
 }
 
-/**
- * Loading fallback for lazy-loaded viewers.
- */
 function ViewerLoading() {
     return (
         <div className="viewer-loading">

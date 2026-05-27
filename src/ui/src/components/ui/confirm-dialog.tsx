@@ -1,9 +1,3 @@
-/**
- * Confirm Dialog Component
- *
- * A styled confirmation dialog that replaces browser's native confirm().
- */
-
 import { useEffect, useRef } from 'react';
 import { Warning, X } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -35,10 +29,9 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
     const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Focus confirm button when dialog opens
     useEffect(() => {
         if (isOpen) {
-            // Small delay to ensure the dialog is rendered
+            // Defer focus until the dialog is in the DOM.
             const timer = setTimeout(() => {
                 confirmButtonRef.current?.focus();
             }, 50);
@@ -57,7 +50,6 @@ export function ConfirmDialog({
     return (
         <Modal onClose={onClose} closeDisabled={loading} maxWidth="max-w-md">
             <div data-testid="confirm-dialog" data-variant={variant}>
-            {/* Header */}
             <div className="flex items-start gap-4 p-6 pb-4">
                 <div className={cn('p-3 rounded-full', variant === 'default' && 'bg-primary/10 text-primary')} style={iconStyles[variant]}>
                     <Warning size={24} weight="duotone" />
@@ -77,7 +69,6 @@ export function ConfirmDialog({
                 </button>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
                 <Button
                     type="button"

@@ -1,10 +1,3 @@
-/**
- * AgendaView - Scrollable chronological list of upcoming events grouped by date.
- *
- * Fourth calendar view mode alongside day/week/month.
- * Shows events from today forward in a clean list format.
- */
-
 import { useMemo } from 'react';
 import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -17,9 +10,6 @@ import { cn } from '@/shared/utils/cn';
 
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
-/**
- * Get a display label for a date relative to today.
- */
 function getDateLabel(dateStr: string): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -39,9 +29,6 @@ function getDateLabel(dateStr: string): string {
   return formatDateWithWeekday(dateStr);
 }
 
-/**
- * Get local date string (YYYY-MM-DD) from ISO timestamp.
- */
 function toLocalDateString(isoString: string): string {
   const d = new Date(isoString);
   const year = d.getFullYear();
@@ -50,9 +37,6 @@ function toLocalDateString(isoString: string): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Check if a date string is today.
- */
 function isToday(dateStr: string): boolean {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -86,7 +70,6 @@ export function AgendaView() {
     now.setHours(0, 0, 0, 0);
     const todayStr = toLocalDateString(now.toISOString());
 
-    // Filter events from today forward and sort by start time
     const upcoming = [...visibleEvents]
       .filter((e) => {
         const eventDate = toLocalDateString(e.startTime);
@@ -94,7 +77,6 @@ export function AgendaView() {
       })
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-    // Group by date
     const groups = new Map<string, DateGroup>();
 
     for (const event of upcoming) {
@@ -141,7 +123,6 @@ export function AgendaView() {
           const today = isToday(group.date);
           return (
             <div key={group.date}>
-              {/* Date header */}
               <div
                 className={cn(
                   'sticky top-0 z-10 px-3 py-2 rounded-lg text-sm font-semibold mb-2',
@@ -153,7 +134,6 @@ export function AgendaView() {
                 {group.label}
               </div>
 
-              {/* Event cards */}
               <div className="space-y-2">
                 {group.events.map((event) => (
                   <button
@@ -167,13 +147,11 @@ export function AgendaView() {
                         : 'border-border bg-card'
                     )}
                   >
-                    {/* Category color bar */}
                     <div
                       className="w-1 self-stretch rounded-full shrink-0 mt-0.5"
                       style={{ backgroundColor: event.categoryColor }}
                     />
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">
                         {event.title}

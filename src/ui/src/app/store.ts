@@ -46,105 +46,66 @@ import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
 import { tagsReducer } from '@/features/tags/store/tagsSlice';
 import { recordingReducer } from '@/features/recording';
 
-/**
- * Security transform: Remove access token from persistence.
- *
- * Access tokens are stored in memory only to reduce XSS attack surface.
- * On page reload, the app uses the refresh token to get a new access token.
- * This is an industry-standard security practice.
- */
+/** Access tokens live in memory only to reduce XSS surface; refresh token recovers them on reload. */
 const authSecurityTransform = createTransform(
-  // Transform state before persisting (outbound)
   (inboundState: AuthState) => ({
     ...inboundState,
-    accessToken: null, // Never persist access token
+    accessToken: null,
   }),
-  // Transform state when rehydrating (inbound)
   (outboundState: AuthState) => ({
     ...outboundState,
-    accessToken: null, // Ensure no stale access token
-    isAuthenticated: false, // Will be set true after refresh
+    accessToken: null,
+    isAuthenticated: false,
   }),
   { whitelist: ['auth'] }
 );
 
-/**
- * Calendar UI transform: Reset currentDate to today on rehydration.
- *
- * Users expect to see today's date when opening the calendar, not the
- * last date they were viewing from a previous session. Other UI preferences
- * like viewMode, sidebar settings, etc. are still preserved.
- */
+/** Calendar opens to today, not the last viewed date; other UI prefs survive. */
 const calendarUiTransform = createTransform(
-  // Transform state before persisting (outbound) - keep as is
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (inboundState: any) => inboundState,
-  // Transform state when rehydrating (inbound) - reset currentDate to today
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
-    currentDate: new Date().toISOString().split('T')[0], // Reset to today (YYYY-MM-DD)
+    currentDate: new Date().toISOString().split('T')[0],
   }),
   { whitelist: ['calendarUi'] }
 );
 
-/**
- * Projects UI transform: Reset transient state on rehydration.
- *
- * Preserves layout preferences (panel open/close, widths, viewMode, scope,
- * columnWidths) but resets transient state that should not survive a page
- * refresh (selections, modals, drag/editing, undo/redo).
- */
+/** Preserve layout prefs; reset selections, modals, drag, undo, autosave. Column state lives in localStorage. */
 const projectsUiTransform = createTransform(
-  // Transform state before persisting (outbound) - strip column state (source of truth is localStorage)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (inboundState: any) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { columnWidths, hiddenColumns, ...rest } = inboundState ?? {};
     return rest;
   },
-  // Transform state when rehydrating (inbound) - reset transient state and reload column state from localStorage
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
-    // Reload column state from localStorage (the source of truth).
-    // The outbound transform strips these, so they won't be in persisted state.
     columnWidths: loadColumnWidths(),
     hiddenColumns: loadHiddenColumns(),
-    // Reset selections
     selectedTaskId: null,
     selectedTaskIds: [],
     isMultiSelectMode: false,
-    // Reset modals
     isCreateProjectModalOpen: false,
     editProjectId: null,
     isCreateTaskModalOpen: false,
     isFieldPickerOpen: false,
     isViewConfigOpen: false,
     editingFieldId: null,
-    // Reset transient interaction state
     dragState: null,
     editingCell: null,
     focusedCell: null,
     searchQuery: '',
-    // Reset undo/redo (not meaningful across sessions)
     undoStack: [],
     redoStack: [],
-    // Reset autosave (stale across sessions)
     autosave: { isSaving: {}, lastSaved: {}, hasChanges: {} },
   }),
   { whitelist: ['projectsUi'] }
 );
 
-/**
- * Recording transform: Reset transient state on rehydration.
- *
- * Preserves picker preferences (source, mic, captureTabAudio,
- * controllerCorner, recordingsFolderId, recents) but wipes the live state
- * machine. The MediaRecorder + MediaStream cannot survive a reload, so
- * leaving the slice "stuck" in `recording` after a refresh would be a
- * bug; force `idle` on every rehydrate.
- */
+/** Force `idle` on rehydrate - MediaRecorder/MediaStream can't survive a reload. Picker prefs persist. */
 const recordingTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (inboundState: any) => inboundState,
@@ -167,12 +128,7 @@ const recordingTransform = createTransform(
   { whitelist: ['recording'] },
 );
 
-/**
- * Agents UI transform: Reset transient state on rehydration.
- *
- * Preserves layout preferences (activeTab, sidebarCollapsed, agentsSidebarCollapsed,
- * agentsPanel) but resets transient state (selections, messages, search).
- */
+/** Preserve layout prefs; reset selections, messages, search on rehydrate. */
 const agentsUiTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (inboundState: any) => inboundState,
@@ -235,9 +191,7 @@ const rootReducer = combineReducers({
   recording: recordingReducer,
 });
 
-// Migrations to handle state shape changes across versions
 const migrations: MigrationManifest = {
-  // Version 2: Migrate from currentTheme (string) to themeMode ('system' | 'light' | 'dark')
   2: (state: PersistedState) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = state as any;
@@ -260,8 +214,6 @@ const migrations: MigrationManifest = {
     }
     return state;
   },
-  // Version 3: Security - Remove access token from persistence
-  // Access tokens are now stored in memory only to reduce XSS attack surface
   3: (state: PersistedState) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = state as any;
@@ -279,13 +231,11 @@ const migrations: MigrationManifest = {
   },
 };
 
-// Type the persisted reducer properly - during rehydration state is never truly undefined
-// because each slice has an initialState that's used as fallback
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
-  version: 3, // Bumped to trigger security migration (access token removal)
+  version: 3,
   storage,
   whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi', 'recording'],
   transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform, recordingTransform],
@@ -304,8 +254,6 @@ export const store = configureStore({
     }).concat(errorToastMiddleware),
 });
 
-// Initialize storeRef for modules that need store access without direct import
-// This breaks the circular dependency: api.ts -> store.ts -> authSlice.ts
 setStoreRef(store);
 
 export const persistor = persistStore(store);

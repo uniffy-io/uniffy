@@ -1,8 +1,3 @@
-/**
- * Quick Event Creation Modal
- * Modern, clean design with visibility selector and reorganized layout
- */
-
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   X,
@@ -37,9 +32,6 @@ import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
 
-/**
- * Get date string (YYYY-MM-DD) from Date object
- */
 function getDateString(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -47,9 +39,6 @@ function getDateString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Generate date options for the next 60 days and past 7 days
- */
 function generateDateOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
   const today = new Date();
@@ -275,16 +264,13 @@ export function QuickEventModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-xl animate-in zoom-in-95 fade-in duration-200">
         <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10"
@@ -292,10 +278,8 @@ export function QuickEventModal({
             <X size={18} weight="bold" />
           </button>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="max-h-[calc(85vh-80px)] overflow-y-auto">
             <div className="p-5 pt-12 space-y-5">
-              {/* Visibility Selector */}
               <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
                 <button
                   type="button"
@@ -325,7 +309,6 @@ export function QuickEventModal({
                 </button>
               </div>
 
-              {/* Title */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />
@@ -341,7 +324,6 @@ export function QuickEventModal({
                 />
               </div>
 
-              {/* Attendees - Moved up */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Users size={16} weight="duotone" className="text-muted-foreground" />
@@ -354,7 +336,6 @@ export function QuickEventModal({
                 />
               </div>
 
-              {/* Room */}
               {organizationId && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -371,7 +352,6 @@ export function QuickEventModal({
                 </div>
               )}
 
-              {/* Date & Time */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -397,7 +377,6 @@ export function QuickEventModal({
 
                 {isMultiDay ? (
                   <div className="space-y-3">
-                    {/* Start */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">Start Date</label>
@@ -427,7 +406,6 @@ export function QuickEventModal({
                         />
                       </div>
                     </div>
-                    {/* End */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">End Date</label>
@@ -488,10 +466,8 @@ export function QuickEventModal({
                 )}
               </div>
 
-              {/* Recurrence */}
               <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 
-              {/* Category */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Tag size={16} weight="duotone" className="text-muted-foreground" />
@@ -520,7 +496,6 @@ export function QuickEventModal({
                 </div>
               </div>
 
-              {/* Tags */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Tag size={16} weight="duotone" className="text-muted-foreground" />
@@ -533,7 +508,6 @@ export function QuickEventModal({
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />
@@ -553,7 +527,6 @@ export function QuickEventModal({
               </div>
             </div>
 
-            {/* Conflict warning */}
             {conflicts.length > 0 && (
               <div
                 className="mx-5 mb-3 p-3 rounded-lg text-sm"
@@ -572,7 +545,6 @@ export function QuickEventModal({
               </div>
             )}
 
-            {/* Footer */}
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">
               <Button type="button" variant="outline" size="md" onClick={onClose} className="flex-1">
                 Cancel

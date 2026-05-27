@@ -1,10 +1,3 @@
-/**
- * ReminderSelector - Toggle-chip multi-select for reminder intervals.
- *
- * Displays a row of toggle chips for common reminder intervals.
- * Selected chips use theme accent colors, unselected use muted styling.
- */
-
 import { cn } from '@/shared/utils/cn';
 
 const REMINDER_OPTIONS = [

@@ -1,15 +1,8 @@
-/**
- * Frontend mirror of the backend audit action catalogue.
- *
- * The backend source of truth is `src/uniffy/core/audit/actions.py`. The
- * catalogue is mirrored here so the action multi-select can group filter
- * options by domain without round-tripping the catalogue over the wire.
- */
+/** Mirrors `src/uniffy/core/audit/actions.py` so action filters group by domain client-side. */
 
 export interface ActionGroup {
     domain: string;
     label: string;
-    /** Tailwind classes for the action badge in the table. */
     badgeClass: string;
     actions: readonly { value: string; label: string }[];
 }
@@ -310,30 +303,18 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
 const ACTION_BADGE_DEFAULT =
     'bg-muted text-muted-foreground';
 
-/**
- * Group key for an action string, derived from its dotted prefix.
- *
- * Dynamic tool-call actions (`agent.tool_call.<tool>`) collapse onto the
- * "agent" group so they share the same badge colour.
- */
+/** Tool-call actions (`agent.tool_call.<tool>`) collapse onto the "agent" group. */
 export function actionDomain(action: string): string {
     if (action.startsWith('agent.tool_call.')) return 'agent';
     return action.split('.')[0] ?? '';
 }
 
-/**
- * Tailwind classes for the action badge by inspecting the action prefix.
- */
 export function actionDomainColor(action: string): string {
     const key = actionDomain(action);
     const group = ACTION_GROUPS.find((g) => g.domain === key);
     return group?.badgeClass ?? ACTION_BADGE_DEFAULT;
 }
 
-/**
- * Human-readable label for any action string. Falls back to the raw
- * dotted string for unknown actions (e.g. dynamic tool-call ids).
- */
 export function actionLabel(action: string): string {
     const key = actionDomain(action);
     const group = ACTION_GROUPS.find((g) => g.domain === key);

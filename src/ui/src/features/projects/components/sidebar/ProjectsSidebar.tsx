@@ -1,10 +1,3 @@
-/**
- * ProjectsSidebar - Left navigation sidebar for projects
- *
- * Matches the style of other feature sidebars (calendar, notes).
- * No heading - just scope filter + create button, then project list.
- */
-
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Gear, CaretDoubleLeft, ChartPieSlice } from "@phosphor-icons/react";

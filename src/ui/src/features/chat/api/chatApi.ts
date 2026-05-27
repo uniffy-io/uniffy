@@ -60,7 +60,6 @@ const chatClient = createClient(ChatService, unaryTransport);
 const chatStreamClient = createClient(ChatStreamService, transport);
 
 export const chatApi = {
-  // Channels
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     chatClient.createChannel(req),
   getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) =>
@@ -74,7 +73,6 @@ export const chatApi = {
   listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
     chatClient.listChannels(req),
 
-  // Named agent chats
   createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     chatClient.createAgentChat(req),
   renameAgentChat: (req: MessageInitShape<typeof RenameAgentChatRequestSchema>) =>
@@ -82,7 +80,6 @@ export const chatApi = {
   listAgentChats: (req: MessageInitShape<typeof ListAgentChatsRequestSchema>) =>
     chatClient.listAgentChats(req),
 
-  // Membership
   joinChannel: (req: MessageInitShape<typeof JoinChannelRequestSchema>) =>
     chatClient.joinChannel(req),
   leaveChannel: (req: MessageInitShape<typeof LeaveChannelRequestSchema>) =>
@@ -96,7 +93,6 @@ export const chatApi = {
   updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
     chatClient.updateChannelMember(req),
 
-  // Messages
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) =>
     chatClient.sendMessage(req),
   getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) =>
@@ -108,7 +104,6 @@ export const chatApi = {
   deleteMessage: (req: MessageInitShape<typeof DeleteMessageRequestSchema>) =>
     chatClient.deleteMessage(req),
 
-  // Pins
   pinMessage: (req: MessageInitShape<typeof PinMessageRequestSchema>) =>
     chatClient.pinMessage(req),
   unpinMessage: (req: MessageInitShape<typeof UnpinMessageRequestSchema>) =>
@@ -116,7 +111,6 @@ export const chatApi = {
   getPinnedMessages: (req: MessageInitShape<typeof GetPinnedMessagesRequestSchema>) =>
     chatClient.getPinnedMessages(req),
 
-  // Threads
   getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) =>
     chatClient.getThread(req),
   getThreadMessages: (req: MessageInitShape<typeof GetThreadMessagesRequestSchema>) =>
@@ -128,13 +122,11 @@ export const chatApi = {
   unfollowThread: (req: MessageInitShape<typeof UnfollowThreadRequestSchema>) =>
     chatClient.unfollowThread(req),
 
-  // Reactions
   addReaction: (req: MessageInitShape<typeof AddReactionRequestSchema>) =>
     chatClient.addReaction(req),
   removeReaction: (req: MessageInitShape<typeof RemoveReactionRequestSchema>) =>
     chatClient.removeReaction(req),
 
-  // Typing and read state
   setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) =>
     chatClient.setTyping(req),
   markChannelRead: (req: MessageInitShape<typeof MarkChannelReadRequestSchema>) =>
@@ -144,11 +136,9 @@ export const chatApi = {
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     chatClient.getUnreadCounts(req),
 
-  // Resources
   getChannelResources: (req: MessageInitShape<typeof GetChannelResourcesRequestSchema>) =>
     chatClient.getChannelResources(req),
 
-  // Categories
   createCategory: (req: MessageInitShape<typeof CreateCategoryRequestSchema>) =>
     chatClient.createCategory(req),
   updateCategory: (req: MessageInitShape<typeof UpdateCategoryRequestSchema>) =>
@@ -162,13 +152,11 @@ export const chatApi = {
   moveChannelToCategory: (req: MessageInitShape<typeof MoveChannelToCategoryRequestSchema>) =>
     chatClient.moveChannelToCategory(req),
 
-  // Agent confirmations
   respondToAgentConfirmation: (req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>) =>
     chatClient.respondToAgentConfirmation(req),
   getChannelPendingApprovals: (req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>) =>
     chatClient.getChannelPendingApprovals(req),
 
-  // Per-(channel, agent) context management
   getChannelAgentContextStats: (req: MessageInitShape<typeof GetChannelAgentContextStatsRequestSchema>) =>
     chatClient.getChannelAgentContextStats(req),
   getChannelAgentContextStatsBatch: (

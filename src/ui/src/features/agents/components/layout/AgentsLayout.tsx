@@ -1,20 +1,3 @@
-/**
- * AgentsLayout - Main layout for the Agents feature.
- *
- * Structure:
- * - Left sidebar: Navigation tabs grouped by category (toggle-controlled, resizable)
- * - Main content: Active view based on selected tab
- *
- * The sidebar is either expanded or collapsed, controlled by a single toggle
- * button. When collapsed, an icon rail with hover-to-expand overlay is shown
- * via the shared CollapsibleSidebarRail component.
- *
- * Supports:
- * - Zen Mode (full screen, hides sidebar)
- * - Collapsed icon rail with hover-to-expand overlay
- * - Persistent resizable sidebar width via panelStorage
- */
-
 import { useState, useCallback, useMemo } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import {
@@ -55,10 +38,6 @@ import {
   type SidebarSection,
 } from "@/components/layout/CollapsibleSidebarRail";
 
-/**
- * Build sections for the collapsed rail from agent nav tabs.
- * Each icon navigates to the corresponding tab on click.
- */
 function useAgentsSections(): SidebarSection[] {
   const navigate = useNavigate();
   const activeTab = useAppSelector(selectActiveTab);
@@ -76,9 +55,6 @@ function useAgentsSections(): SidebarSection[] {
   ], [activeTab, navigate]);
 }
 
-/**
- * Render the active view component based on the current tab.
- */
 function renderView(tab: AgentsTab) {
   switch (tab) {
     case "agents":
@@ -135,7 +111,6 @@ export function AgentsLayout() {
         isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
       )}
     >
-      {/* Collapsed icon rail with hover-to-expand overlay */}
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
           <CollapsibleSidebarRail
@@ -153,7 +128,6 @@ export function AgentsLayout() {
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Expanded resizable sidebar */}
         {showSidebar && (
           <>
             <Panel
@@ -170,7 +144,6 @@ export function AgentsLayout() {
           </>
         )}
 
-        {/* Main content */}
         <Panel id="agents-main" minSize={400}>
           <div
             className={cn(

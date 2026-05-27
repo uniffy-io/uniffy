@@ -1,10 +1,3 @@
-/**
- * BookmarkedItemsWidget - Quick access to bookmarked content
- *
- * Groups bookmarks by URN type with color-coded badges.
- * Max 6 items shown with "View all bookmarks" footer.
- */
-
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { BookmarkSimple, ArrowRight } from '@phosphor-icons/react';

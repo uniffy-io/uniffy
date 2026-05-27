@@ -1,10 +1,3 @@
-/**
- * AvailabilityGrid - Visual timeline showing booked vs available slots for a room
- *
- * Displays a horizontal bar from 8am-8pm with each hour as a segment.
- * Available segments are clickable, booked segments show tooltip with booker name.
- */
-
 import { useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
 import type { TimeSlot } from '@/features/rooms/types';
@@ -18,16 +11,10 @@ interface AvailabilityGridProps {
   className?: string;
 }
 
-/**
- * Parse an ISO time string to extract the hour (0-23).
- */
 function getHour(isoString: string): number {
   return new Date(isoString).getHours();
 }
 
-/**
- * Build a map of hour -> slot data for quick lookup.
- */
 function buildHourMap(slots: TimeSlot[]): Map<number, TimeSlot> {
   const map = new Map<number, TimeSlot>();
   for (const slot of slots) {
@@ -62,7 +49,6 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      {/* Time labels */}
       <div className="flex">
         {hours.map((h, i) => (
           <div
@@ -78,7 +64,6 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
         ))}
       </div>
 
-      {/* Grid bar */}
       <div className="flex h-7 rounded-md overflow-hidden border border-border">
         {hours.map((h) => (
           <button
@@ -116,7 +101,6 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
         ))}
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
         <div className="flex items-center gap-1">
           <div className="w-3 h-2 rounded-sm bg-muted border border-border/40" />

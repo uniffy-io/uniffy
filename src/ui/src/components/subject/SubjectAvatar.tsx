@@ -1,16 +1,8 @@
-/**
- * SubjectAvatar - Avatar circle for users and groups
- *
- * Users: tries loading photo via buildAvatarUrl, falls back to accent-colored initials circle.
- * Groups: violet initials circle derived from group name.
- */
-
 import { useState, useCallback } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 
-// Module-level cache of avatar URLs that returned 404.
-// Prevents repeated network requests for users without avatars.
+// Avoid repeated requests for avatar URLs that already 404'd.
 const _failedAvatars = new Set<string>();
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { SUBJECT_TYPE, type Subject, type SubjectAvatarSize } from '@/components/subject/types';
@@ -83,7 +75,6 @@ export function SubjectAvatar({
         );
     }
 
-    // User avatar element (photo or initials fallback)
     const avatarElement = avatarSrc && !imgFailed ? (
         <img
             src={avatarSrc}
@@ -127,10 +118,6 @@ export function SubjectAvatar({
     return avatarElement;
 }
 
-/**
- * Minimal avatar rendering by ID alone when no Subject object is available.
- * Shows initials from a display name or truncated ID.
- */
 interface SubjectAvatarByIdProps {
     userId: string;
     displayName?: string;

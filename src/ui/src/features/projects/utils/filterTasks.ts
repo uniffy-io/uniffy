@@ -1,9 +1,3 @@
-/**
- * Filter evaluation utility for tasks
- *
- * Evaluates FilterConfig conditions against tasks with AND/OR logic.
- */
-
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types";
 import type { FilterConfig, FilterCondition } from "@/features/projects/types/views";
@@ -23,21 +17,12 @@ const HIERARCHY_FIELD_IDS = new Set([
 ]);
 
 export interface TaskHierarchyIndex {
-  /** task id -> depth in tree (0 for root) */
   depthById: Map<string, number>;
-  /** task id -> set of ancestor task ids (excluding self) */
   ancestorIdsById: Map<string, Set<string>>;
-  /** set of task ids that have at least one direct child */
   hasChildren: Set<string>;
 }
 
-/**
- * Pre-compute per-task ancestry data once per filter pass.
- *
- * The depth is the number of ancestors above the task (0 for root).
- * Cycles in ``parent_id`` are tolerated: each chain stops at the depth limit
- * or when a repeat is detected, so a malformed dataset cannot loop forever.
- */
+/** Cycles in parent_id are tolerated: each chain stops at MAX_DEPTH or on repeat. */
 export function buildTaskHierarchyIndex(tasks: Task[]): TaskHierarchyIndex {
   const parentById = new Map<string, string | null>();
   const hasChildren = new Set<string>();
@@ -109,9 +94,6 @@ function evaluateHierarchyCondition(
   return true;
 }
 
-/**
- * Get a field value from a task for filter evaluation
- */
 function getFieldValue(task: Task, fieldId: string): unknown {
   switch (fieldId) {
     case SYSTEM_FIELD_IDS.TITLE:
@@ -142,18 +124,15 @@ function evaluateTagCondition(task: Task, condition: FilterCondition): boolean {
   if (tagIds.length === 0 && condition.operator !== "is_empty" && condition.operator !== "is_not_empty") {
     return true;
   }
+  // Operator semantics: equals=ALL, not_equals=NONE, contains=ANY, not_contains=NONE.
   switch (condition.operator) {
     case "equals":
-      // is (single) - task must carry every selected tag (ALL).
       return tagIds.every((id) => taskTagSet.has(id));
     case "not_equals":
-      // is not (single) - task must carry none of the selected tags (NONE).
       return tagIds.every((id) => !taskTagSet.has(id));
     case "contains":
-      // is one of - task must carry at least one of the selected tags (ANY).
       return tagIds.some((id) => taskTagSet.has(id));
     case "not_contains":
-      // is none of - task must carry none of the selected tags (NONE).
       return tagIds.every((id) => !taskTagSet.has(id));
     case "is_empty":
       return taskTagSet.size === 0;
@@ -164,9 +143,6 @@ function evaluateTagCondition(task: Task, condition: FilterCondition): boolean {
   }
 }
 
-/**
- * Evaluate a single filter condition against a task
- */
 function evaluateCondition(
   task: Task,
   condition: FilterCondition,
@@ -232,13 +208,7 @@ function evaluateCondition(
   }
 }
 
-/**
- * Apply a FilterConfig (with AND/OR logic) to a list of tasks.
- *
- * Pass ``hierarchyIndex`` (precomputed from the full task list) when the
- * filter may contain hierarchy pseudo-fields. Without it those conditions
- * pass-through unchanged.
- */
+/** Pass hierarchyIndex when conditions reference hierarchy pseudo-fields; else they no-op. */
 export function applyFilters(
   tasks: Task[],
   filterConfig: FilterConfig | null,

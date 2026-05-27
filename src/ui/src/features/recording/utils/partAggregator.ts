@@ -1,17 +1,6 @@
 /**
- * Aggregate variable-size MediaRecorder chunks into S3-legal multipart parts.
- *
- * S3 requires every non-final part to be at least 5 MB. `MediaRecorder.timeslice=5000`
- * yields chunks that swing from ~50 KB (static screen) to ~2 MB (high motion),
- * so sending raw chunks would fail at `complete_multipart_upload` with
- * `EntityTooSmall`.
- *
- * The aggregator buffers chunks until the buffer crosses the 5 MB floor, OR a
- * 45-second soft-flush deadline elapses (bounded latency at low motion). The
- * upper ceiling is 100 MB so a misbehaving deadline never balloons memory.
- *
- * On `finish()`, whatever's left becomes the final part regardless of size -
- * S3 allows the last part to be smaller.
+ * Aggregates MediaRecorder chunks into S3-legal multipart parts (>= 5 MB except final).
+ * Flushes when buffer crosses 5 MB or 45s soft-deadline; 100 MB hard ceiling caps memory.
  */
 
 const MIN_PART_SIZE = 5 * 1024 * 1024;

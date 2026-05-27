@@ -1,16 +1,4 @@
-/**
- * Video Block Plugin for Milkdown/Crepe Editor
- *
- * Adds block-level video support with:
- * - Markdown persistence as [[[video|url]]] or [[[video|url|title]]]
- * - Video player rendering via VideoBlock component (Video.js)
- * - Service worker streaming for seek support
- *
- * Plugin components:
- * - videoBlockNode: Block-level atomic node schema
- * - videoBlockRemarkPlugin: Parses [[[video|url]]] and [[[video|url|title]]] from markdown
- * - videoBlockView: React NodeView rendering VideoBlock
- */
+// Markdown literal: `[[[video|url]]]` or `[[[video|url|title]]]`. Service worker handles range-based seek.
 
 import { $node, $view, $remark } from '@milkdown/kit/utils';
 import { Node } from '@milkdown/kit/prose/model';
@@ -22,8 +10,6 @@ import React from 'react';
 import { VideoBlock } from '@/components/editor/plugins/video/VideoBlock';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
-
-// ── Node Schema ──────────────────────────────────────────────────────────────
 
 export const videoBlockNode = $node('video_block', () => ({
     group: 'block',
@@ -66,7 +52,7 @@ export const videoBlockNode = $node('video_block', () => ({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         runner: (state: any, node: Node) => {
             const attrs = node.attrs as { src: string; title: string };
-            // Skip serializing upload placeholders -- they are transient
+            // Upload placeholders are transient — don't serialize them.
             if (attrs.src.startsWith('uploading:')) return;
             state.addNode('videoBlock', undefined, undefined, {
                 src: attrs.src,
@@ -76,41 +62,25 @@ export const videoBlockNode = $node('video_block', () => ({
     },
 }));
 
-// ── Remark Plugin ────────────────────────────────────────────────────────────
-
-// Regex to match [[[video|url]]] or [[[video|url|title]]] format.
-// The title capture uses .*? (non-greedy) so that ] characters inside filenames
-// (e.g. "[wwQDYSVAwXs].mp3") are tolerated -- the ]]] at the end anchors the match.
+// Title capture is non-greedy so `]` characters in filenames (e.g. `[wwQDYSVAwXs].mp3`) are tolerated; `]]]` anchors the match.
 const VIDEO_REGEX = /^\[\[\[video\|([^\]|]+)(?:\|(.*?))?\]\]\]$/;
 
-// Custom video block node type for the AST
 interface VideoBlockAstNode extends UnistNode {
     type: 'videoBlock';
     src: string;
     title?: string;
 }
 
-/**
- * Remark plugin to parse video blocks from markdown.
- *
- * Handles the formats: [[[video|url]]] and [[[video|url|title]]]
- * A paragraph containing only such a pattern is converted to a videoBlock node.
- *
- * Stringify handler converts videoBlock nodes back to [[[video|url|title]]] or [[[video|url]]].
- *
- * IMPORTANT: This plugin must be registered BEFORE the mention remark plugin
- * so that [[[video|X]]] patterns are consumed before the general mention regex.
- */
+// Register BEFORE the mention remark plugin so `[[[video|...]]]` is consumed before the general mention regex.
 export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return function videoPlugin(this: any) {
-        // Add handler for stringifying video block nodes back to markdown
         const toMarkdownExtension = {
             handlers: {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 videoBlock: (node: any) => {
                     if (node.title) {
-                        // Sanitize brackets in title to prevent breaking the ]]] delimiter
+                        // Sanitize brackets so they don't break the `]]]` delimiter.
                         const safeTitle = node.title.replace(/\[/g, '\uFF3B').replace(/\]/g, '\uFF3D');
                         return `[[[video|${node.src}|${safeTitle}]]]`;
                     }
@@ -122,7 +92,6 @@ export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
         const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
         this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
 
-        // Return the tree transformer for parsing
         return (tree: Parent) => {
             visit(tree, 'paragraph', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
                 if (!parent || index === undefined) return;
@@ -130,13 +99,10 @@ export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
                 const paraNode = node as Parent;
                 if (paraNode.children.length === 0) return;
 
-                // Concatenate all inline text content. Remark may split the
-                // paragraph into multiple children when the title contains
-                // bracket characters (e.g. "[foo]" parsed as a linkReference).
+                // Bracket characters in the title (`[foo]`) make remark emit a `linkReference` child, so reassemble the original text.
                 const textValue = paraNode.children
                     .map((c) => {
                         if (c.type === 'text') return (c as { type: 'text'; value: string }).value;
-                        // linkReference nodes generated from bare [brackets]
                         if (c.type === 'linkReference') {
                             const lr = c as Parent & { label?: string };
                             const inner = lr.children
@@ -152,7 +118,6 @@ export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
                 const match = VIDEO_REGEX.exec(textValue);
                 if (!match) return;
 
-                // Replace the paragraph with a videoBlock node
                 const videoNode: VideoBlockAstNode = {
                     type: 'videoBlock',
                     src: match[1],
@@ -165,8 +130,6 @@ export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
         };
     };
 });
-
-// ── Node View ────────────────────────────────────────────────────────────────
 
 class VideoBlockNodeView implements NodeView {
     dom: HTMLElement;
@@ -182,12 +145,10 @@ class VideoBlockNodeView implements NodeView {
         this.getPos = getPos;
         this.destroyed = false;
 
-        // Create wrapper element (block-level)
         this.dom = document.createElement('div');
         this.dom.className = 'video-block-wrapper';
         this.dom.contentEditable = 'false';
 
-        // Mount React component
         this.root = createRoot(this.dom);
         this.render();
     }
@@ -232,14 +193,9 @@ export const videoBlockView = $view(videoBlockNode, () => (node: Node, view: Edi
     new VideoBlockNodeView(node, view, getPos)
 );
 
-// ── Export ────────────────────────────────────────────────────────────────────
-
-// The remark plugin must come first to parse [[[video|url]]] before other processing
-// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
+// Remark plugin must come first so `[[[video|url]]]` is parsed before the general mention regex. $remark returns a tuple, hence the spread.
 export const videoPlugins = [...videoBlockRemarkPlugin, videoBlockNode, videoBlockView];
 
-// Re-export component
 export { VideoBlock } from '@/components/editor/plugins/video/VideoBlock';
 
-// Exported for unit testing
 export { VIDEO_REGEX };

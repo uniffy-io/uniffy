@@ -1,7 +1,3 @@
-/**
- * CategoryList - List of event categories for filtering
- */
-
 import { useState } from 'react';
 import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -81,12 +77,10 @@ export function CategoryList() {
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              {/* Clickable area for filter toggle */}
               <button
                 onClick={() => handleToggle(category.id)}
                 className="flex items-center gap-2 flex-1 text-left min-w-0"
               >
-                {/* Color dot */}
                 <div
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: category.color }}
@@ -94,7 +88,6 @@ export function CategoryList() {
                 <span className="truncate">{category.name}</span>
               </button>
 
-              {/* Hover actions */}
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
                 <span
                   onClick={(e) => handleEdit(category.id, e)}

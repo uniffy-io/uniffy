@@ -1,19 +1,8 @@
-/**
- * Highlight Mark Plugin for Milkdown/Crepe Editor
- *
- * Adds text highlighting with multiple color options.
- * Persisted in markdown as HTML <mark> tags with data-color attributes.
- *
- * Plugin components:
- * - highlightMark: ProseMirror mark schema via $mark
- * - highlightRemarkPlugin: Remark plugin for parsing/serializing <mark> HTML
- */
+// Persisted as HTML `<mark data-color="...">` tags inside the markdown text.
 
 import { $mark, $remark } from '@milkdown/kit/utils';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
-
-// -- Colors -------------------------------------------------------------------
 
 export interface HighlightColor {
   name: string;
@@ -34,8 +23,6 @@ export function colorToBg(color: string): string {
   const found = HIGHLIGHT_COLORS.find((c) => c.value === color);
   return found ? found.bg : 'rgba(248,113,113,0.35)';
 }
-
-// -- Mark Schema --------------------------------------------------------------
 
 export const highlightMark = $mark('highlight', () => ({
   attrs: {
@@ -85,22 +72,9 @@ export const highlightMark = $mark('highlight', () => ({
   },
 }));
 
-// -- Remark Plugin ------------------------------------------------------------
-
-/**
- * Remark plugin to parse <mark> HTML tags from markdown into highlight AST nodes,
- * and stringify highlight AST nodes back to <mark> HTML.
- *
- * Parsing: Finds inline <mark data-color="...">text</mark> HTML in the AST
- * and converts to { type: 'highlight', color: '...', children: [...] } nodes.
- *
- * Stringifying: Converts highlight nodes back to <mark> HTML with data-color
- * and inline style attributes.
- */
 export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function remarkHighlight(this: any) {
-    // Add stringify handler for highlight nodes
     const toMarkdownExtension = {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,7 +94,6 @@ export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
       (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
     this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
 
-    // Return tree transformer for parsing
     return (tree: Parent) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       visit(tree, (node: any, index: number | undefined, parent: any) => {
@@ -131,11 +104,10 @@ export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
         const openMatch = value.match(/^<mark\b([^>]*)>/);
         if (!openMatch) return;
 
-        // Extract color from data-color attribute
         const colorMatch = openMatch[1].match(/data-color="([^"]+)"/);
         const color = colorMatch ? colorMatch[1] : '#f87171';
 
-        // Find the closing </mark> in subsequent siblings
+        // Walk forward through siblings to find the matching `</mark>`, honoring nesting.
         const children = parent.children as UnistNode[];
         let closeIndex = -1;
         let nestingLevel = 1;
@@ -160,10 +132,8 @@ export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
 
         if (closeIndex === -1) return;
 
-        // Collect children between open and close tags
         const innerChildren = children.slice(index + 1, closeIndex);
 
-        // Create highlight node
         const highlightNode = {
           type: 'highlight',
           color,
@@ -173,7 +143,6 @@ export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
               : [{ type: 'text', value: '' }],
         };
 
-        // Replace the range [index, closeIndex] with the highlight node
         parent.children.splice(index, closeIndex - index + 1, highlightNode);
 
         return [SKIP, index] as [typeof SKIP, number];
@@ -182,8 +151,5 @@ export const highlightRemarkPlugin = $remark('highlightRemarkPlugin', () => {
   };
 });
 
-// -- Export --------------------------------------------------------------------
-
-// The remark plugin must come first for markdown parsing/serialization.
-// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it.
+// Remark plugin must come first so markdown parsing/serialization wraps the mark. $remark returns a tuple, hence the spread.
 export const highlightPlugins = [...highlightRemarkPlugin, highlightMark];

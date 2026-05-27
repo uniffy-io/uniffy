@@ -1,23 +1,10 @@
-/**
- * useSubjectResolver Hook
- *
- * Resolves arrays of user/group IDs to Subject objects using the admin store.
- * Checks both state.admin.members (users) and state.admin.groups (groups).
- * Auto-dispatches fetchMembers/fetchGroups if the stores are empty.
- */
-
 import { useEffect, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { fetchMembers, fetchGroups } from '@/features/admin/store/adminThunks';
 import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 
-/**
- * Resolve an array of user/group IDs to Subject objects.
- *
- * Looks up each ID in state.admin.members and state.admin.groups.
- * Unresolved IDs get a fallback Subject with the truncated ID as the name.
- */
+/** Resolves IDs against admin.members/groups; unresolved IDs get a truncated-ID fallback Subject. */
 export function useSubjectResolver(ids: string[]): {
     subjects: Subject[];
     loading: boolean;
@@ -30,14 +17,12 @@ export function useSubjectResolver(ids: string[]): {
     const groupsLoading = useAppSelector((state) => state.admin.groupsLoading);
     const groupsFetched = useAppSelector((state) => state.admin.groupsFetched);
 
-    // Fetch members if not yet fetched
     useEffect(() => {
         if (!membersFetched && !membersLoading) {
             dispatch(fetchMembers({ pageSize: 200 }));
         }
     }, [dispatch, membersFetched, membersLoading]);
 
-    // Fetch groups if not yet fetched
     useEffect(() => {
         if (!groupsFetched && !groupsLoading) {
             dispatch(fetchGroups({}));
@@ -81,7 +66,6 @@ export function useSubjectResolver(ids: string[]): {
                     memberCount: group.memberCount,
                 };
             }
-            // Fallback for unresolved IDs
             return {
                 id,
                 type: SUBJECT_TYPE.USER,

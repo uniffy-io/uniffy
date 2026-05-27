@@ -3,15 +3,7 @@ import { isRejectedWithValue, isRejected } from '@reduxjs/toolkit';
 import { toast } from 'sonner';
 import { friendlyErrorMessage } from '@/config/errorMessages';
 
-/**
- * Redux middleware that catches rejected async thunks and shows
- * user-friendly error toasts.
- *
- * - rejectWithValue payloads and thrown error messages are both
- *   run through `friendlyErrorMessage` so raw codes like
- *   "[unknown] 500" become readable sentences.
- * - Returns `null` for errors that should be suppressed (aborts, etc.).
- */
+/** Catches rejected thunks, translates raw payloads/errors via `friendlyErrorMessage`, suppresses aborts. */
 export const errorToastMiddleware: Middleware = () => (next) => (action) => {
     const result = next(action);
 

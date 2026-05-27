@@ -1,10 +1,3 @@
-/**
- * AgentChatPickerModal - Pick an agent to start a new named chat with.
- *
- * Multiple chats per agent are supported, so this list keeps showing every
- * accessible agent regardless of whether the user already has a chat with it.
- */
-
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MagnifyingGlass } from '@phosphor-icons/react';

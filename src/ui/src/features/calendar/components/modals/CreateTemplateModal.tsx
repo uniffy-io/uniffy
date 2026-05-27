@@ -1,8 +1,3 @@
-/**
- * Create Template Modal
- * Dialog for creating a new event template
- */
-
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
@@ -24,10 +19,10 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [duration, setDuration] = useState(60); // minutes
+  const [duration, setDuration] = useState(60);
   const [location, setLocation] = useState('');
 
-  // Reset form when modal opens or editing target changes (render-time state adjustment)
+  // Render-phase reset keyed on (open + edit target) avoids an effect-loop.
   const [formKey, setFormKey] = useState('');
   const currentFormKey = isOpen ? `open-${editingTemplateId ?? 'new'}` : 'closed';
   if (currentFormKey !== formKey) {
@@ -104,15 +99,12 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
             {isEditing ? 'Edit Template' : 'New Template'}
@@ -137,9 +129,7 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Name Input */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Template Name
@@ -154,7 +144,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Description (optional)
@@ -168,7 +157,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             />
           </div>
 
-          {/* Location */}
           <div>
              <label className="block text-sm font-medium text-foreground mb-1">
                Location (optional)
@@ -182,7 +170,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
              />
           </div>
           
-          {/* Category Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Category
@@ -200,7 +187,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             </select>
           </div>
 
-          {/* Duration */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Default Duration (minutes)
@@ -215,7 +201,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             />
           </div>
 
-          {/* Action buttons */}
           <div className="flex gap-2 pt-4 border-t border-border">
             <Button variant="outline" size="md" className="flex-1" onClick={onClose} disabled={isLoading}>
               Cancel

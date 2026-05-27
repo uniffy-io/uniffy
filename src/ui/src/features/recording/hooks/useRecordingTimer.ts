@@ -1,13 +1,4 @@
-/**
- * Tick-on-rAF elapsed-time hook for the recording controller.
- * Returns formatted `mm:ss` (or `hh:mm:ss` once past an hour).
- *
- * The `now` snapshot lives in state and only ticks while a recording is
- * actively encoding; this keeps render pure and avoids the
- * `react-hooks/purity` lint. While paused, the displayed time freezes by
- * subtracting `pausedDurationMs` (cumulative) plus the in-flight pause
- * window (`now - pausedAt`).
- */
+/** rAF-driven elapsed-time hook; freezes display while paused by subtracting `pausedDurationMs` + in-flight pause window. */
 
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/app/hooks';

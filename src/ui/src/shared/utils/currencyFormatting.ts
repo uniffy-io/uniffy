@@ -1,14 +1,4 @@
-/**
- * Currency formatting helpers built on Intl.NumberFormat.
- *
- * The org chooses its display currency on the backend; the UI never
- * hardcodes a symbol or label. Money values flow over the wire as
- * Decimal-as-string + an ISO 4217 currency code; the UI formats them
- * here with the user's locale so a EUR amount renders as ``1.234,56 €``
- * for de-DE and ``€1,234.56`` for en-US without extra logic at the
- * call site.
- */
-
+/** Money flows over the wire as Decimal-as-string + ISO 4217 code; locale-aware formatting happens here so call sites stay clean. */
 export function formatCurrency(
     amount: number | string,
     currency: string,
@@ -38,10 +28,7 @@ export function currencySymbol(
     return parts.find((p) => p.type === 'currency')?.value ?? currency;
 }
 
-/**
- * Common ISO 4217 codes for the org currency picker. Not exhaustive --
- * orgs that need a code outside this list can type one in.
- */
+/** Picker shortlist; orgs that need a code outside this list can type one in. */
 export const COMMON_CURRENCIES: readonly string[] = [
     'EUR',
     'USD',

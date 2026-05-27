@@ -1,12 +1,3 @@
-/**
- * FilterBuilder - Popover for building multi-condition filters
- *
- * Supports:
- * - Multiple filter conditions with field/operator/value
- * - AND/OR logic toggle
- * - Operator options vary by field type
- */
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, X, CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
@@ -343,8 +334,6 @@ export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClos
   );
 }
 
-// ===== Custom Themed Select =====
-
 interface FilterSelectProps {
   value: string;
   options: { value: string; label: string; color?: string }[];
@@ -459,8 +448,6 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
     </div>
   );
 }
-
-// ===== Value Input =====
 
 const NUMBER_INPUT_CLASS =
   "h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";

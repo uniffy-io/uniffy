@@ -1,13 +1,3 @@
-/**
- * <TagFilterBuilder>
- *
- * Modal form used by Save As / Edit on the explorer's saved filters.
- * Reuses the rail's criteria editor inline plus a small header for
- * name / description / icon / sort. The submit handler calls back
- * with the full payload; the page wires it to ``createSavedFilter``
- * or ``updateSavedFilter``.
- */
-
 import { useCallback, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';

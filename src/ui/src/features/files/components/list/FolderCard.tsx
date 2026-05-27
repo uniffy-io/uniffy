@@ -1,9 +1,3 @@
-/**
- * Folder Card Component
- *
- * Displays a folder in grid or list view with actions.
- */
-
 import { useState } from 'react';
 import {
     Folder,
@@ -67,7 +61,6 @@ export function FolderCard({
     const folderUrn = `urn:uniffy:content:FOLDER:${folder.id}`;
     const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(folderUrn);
 
-    // Handle click based on select mode
     const handleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming
         if (isRenaming) return;

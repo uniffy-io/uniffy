@@ -1,18 +1,4 @@
-/**
- * Tag Plugin for Milkdown/Crepe Editor
- *
- * Adds inline #tag support with:
- * - Markdown persistence as [[[tag|tagname]]]
- * - Auto-conversion when typing #tagname followed by space
- * - Lightweight pill rendering via TagChip component
- * - Click navigation to /tags/:tagname
- *
- * Plugin components:
- * - tagNode: Inline atomic node schema
- * - tagRemarkPlugin: Parses [[[tag|name]]] from markdown
- * - tagInputRule: Converts #tagname on space
- * - tagView: React NodeView rendering TagChip
- */
+// Markdown literal: `[[[tag|name]]]`. Typed `#name<space>` is auto-converted via the input rule.
 
 import { $node, $inputRule, $view, $remark } from '@milkdown/kit/utils';
 import { InputRule } from '@milkdown/kit/prose/inputrules';
@@ -26,8 +12,6 @@ import { TagChip } from '@/components/editor/plugins/tag/TagChip';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
-
-// ── Node Schema ──────────────────────────────────────────────────────────────
 
 export const tagNode = $node('tag', () => ({
   group: 'inline',
@@ -75,26 +59,17 @@ export const tagNode = $node('tag', () => ({
   },
 }));
 
-// ── Remark Plugin ────────────────────────────────────────────────────────────
-
-// Regex to match [[[tag|tagname]]] format (persisted canonical form)
+// Persisted canonical form.
 const TAG_BRACKET_REGEX = /\[\[\[tag\|([^\]]+)\]\]\]/g;
 
-// Regex to match inline #tagname (shorthand typed by users)
-// Matches # preceded by start-of-string or whitespace, followed by a tag name
-// starting with a letter then alphanumeric/hyphen/underscore chars
+// Shorthand: `#name` preceded by start-of-string or whitespace; name starts with a letter.
 const TAG_HASH_REGEX = /#([a-zA-Z][a-zA-Z0-9_-]*)/g;
 
-// Custom tag node type for the AST
 interface TagAstNode extends UnistNode {
   type: 'tag';
   name: string;
 }
 
-/**
- * Split a text node by a given regex, producing tag AST nodes for matches.
- * Returns the new nodes array, or null if no matches were found.
- */
 function splitTextByTagPattern(
   value: string,
   regex: RegExp,
@@ -110,10 +85,8 @@ function splitTextByTagPattern(
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(value)) !== null) {
-    // Optional validation (e.g. check preceding character for hash tags)
     if (validateMatch && !validateMatch(match, value)) continue;
 
-    // Add text before the match
     if (match.index > lastIndex) {
       newNodes.push({
         type: 'text',
@@ -121,7 +94,6 @@ function splitTextByTagPattern(
       } as UnistNode);
     }
 
-    // Add the tag node
     newNodes.push({
       type: 'tag',
       name: match[captureGroupIndex],
@@ -130,7 +102,6 @@ function splitTextByTagPattern(
     lastIndex = match.index + match[0].length;
   }
 
-  // Add any remaining text after the last match
   if (lastIndex < value.length) {
     newNodes.push({
       type: 'text',
@@ -138,26 +109,13 @@ function splitTextByTagPattern(
     } as UnistNode);
   }
 
-  // Only return if we actually produced tag nodes
   return newNodes.length > 0 && newNodes.some((n) => n.type === 'tag') ? newNodes : null;
 }
 
-/**
- * Remark plugin to parse tags from markdown into tag AST nodes.
- *
- * Handles two formats:
- * 1. [[[tag|tagname]]] — canonical persisted format
- * 2. #tagname — inline shorthand (normalized to [[[tag|tagname]]] on save)
- *
- * Stringify handler converts tag nodes back to [[[tag|tagname]]].
- *
- * IMPORTANT: This plugin must be registered BEFORE the mention remark plugin
- * so that [[[tag|X]]] patterns are consumed before the general mention regex matches them.
- */
+// Register BEFORE the mention remark plugin so `[[[tag|...]]]` is consumed before the general mention regex.
 export const tagRemarkPlugin = $remark('tagRemarkPlugin', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function tagPlugin(this: any) {
-    // Add handler for stringifying tag nodes back to markdown
     const toMarkdownExtension = {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,9 +126,8 @@ export const tagRemarkPlugin = $remark('tagRemarkPlugin', () => {
     const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
     this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
 
-    // Return the tree transformer for parsing
     return (tree: Parent) => {
-      // Pass 1: Convert [[[tag|tagname]]] bracket syntax
+      // Canonical `[[[tag|...]]]` first; shorthand `#name` second.
       visit(tree, 'text', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
         if (!parent || index === undefined) return;
         const value = (node as { type: 'text'; value: string }).value;
@@ -182,14 +139,12 @@ export const tagRemarkPlugin = $remark('tagRemarkPlugin', () => {
         }
       });
 
-      // Pass 2: Convert inline #tagname shorthand
       visit(tree, 'text', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
         if (!parent || index === undefined) return;
         const value = (node as { type: 'text'; value: string }).value;
 
         const newNodes = splitTextByTagPattern(value, TAG_HASH_REGEX, 1, (match, val) => {
-          // Only match if # is at start of string or preceded by whitespace
-          // This prevents matching mid-word like foo#bar or URLs with fragments
+          // Anchor to start-of-string or whitespace so we don't match mid-word `foo#bar` or URL fragments.
           if (match.index > 0) {
             const prevChar = val[match.index - 1];
             if (prevChar !== ' ' && prevChar !== '\t' && prevChar !== '\n') return false;
@@ -206,17 +161,7 @@ export const tagRemarkPlugin = $remark('tagRemarkPlugin', () => {
   };
 });
 
-// ── Input Rule ───────────────────────────────────────────────────────────────
-
-/**
- * Input rule that converts #tagname to a tag node when the user types space.
- *
- * Pattern: (^|\s)#tagname<space>
- * - (^|\s) prevents mid-word matching like foo#bar
- * - Tag name must start with a letter (prevents #123 numeric-only)
- * - Allowed chars: letters, digits, hyphens, underscores
- * - Trailing space triggers the conversion
- */
+// `(^|\s)#name<space>` — anchor prevents mid-word matches, leading letter prevents `#123`.
 export const tagInputRule = $inputRule(() => {
   const regex = /(^|\s)#([a-zA-Z][a-zA-Z0-9_-]*) $/;
 
@@ -242,8 +187,6 @@ export const tagInputRule = $inputRule(() => {
     return tr;
   });
 });
-
-// ── Node View ────────────────────────────────────────────────────────────────
 
 class TagNodeView implements NodeView {
   dom: HTMLElement;
@@ -331,11 +274,7 @@ export const tagView = $view(tagNode, () => (node: Node, view: EditorView, getPo
   new TagNodeView(node, view, getPos)
 );
 
-// ── Export ────────────────────────────────────────────────────────────────────
-
-// The remark plugin must come first to parse [[[tag|name]]] before other processing
-// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
+// Remark plugin must come first so `[[[tag|...]]]` is parsed before the general mention regex. $remark returns a tuple, hence the spread.
 export const tagPlugins = [...tagRemarkPlugin, tagNode, tagInputRule, tagView];
 
-// Re-export components
 export { TagChip } from '@/components/editor/plugins/tag/TagChip';

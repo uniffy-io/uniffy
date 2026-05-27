@@ -1,11 +1,3 @@
-/**
- * ResourceView - Tasks grouped by assignee with workload stats.
- *
- * Shows each team member's assigned tasks with a summary header
- * (task count, estimated/spent time). Sections are collapsible.
- * An "Unassigned" section collects tasks without assignees.
- */
-
 import { useState, useMemo, useCallback } from "react";
 import { CaretDown, CaretRight, User, CalendarBlank, Clock } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";

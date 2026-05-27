@@ -1,16 +1,7 @@
-/**
- * Files Feature - Public Exports
- *
- * This is the main entry point for the files feature.
- * Import from '@/features/files' to access public API.
- */
-
-// Pages
 export { FilesPage } from '@/features/files/pages/FilesPage';
 export { FiltersPage } from '@/features/files/pages/FiltersPage';
 export { FilesTrashPage } from '@/features/files/pages/FilesTrashPage';
 
-// Trash Store
 export {
     trashReducer,
     fetchTrash,
@@ -20,7 +11,6 @@ export {
     clearTrash,
 } from '@/features/files/store/trashSlice';
 
-// Components
 export { FilesLayout } from '@/features/files/components/FilesLayout';
 export { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 export { FilesList } from '@/features/files/components/list/FilesList';
@@ -28,7 +18,6 @@ export { UploadDropzone } from '@/features/files/components/upload/UploadDropzon
 export { UploadPanel } from '@/features/files/components/upload/UploadPanel';
 export { FileViewerModal } from '@/features/files/components/viewer';
 
-// Store
 export {
     filesReducer,
     setFiles,
@@ -101,7 +90,6 @@ export {
     selectTotalPendingUploads,
 } from '@/features/files/store';
 
-// Hooks
 export { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 export { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
 export { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
@@ -109,7 +97,6 @@ export { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
 export { filesApi } from '@/features/files/api/filesApi';
 export { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 
-// Saved Filters Store
 export {
     savedFiltersReducer,
     fetchSavedFilters,
@@ -126,10 +113,8 @@ export {
 } from '@/features/files/store';
 export type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store';
 
-// Filter Components
 export { FiltersDashboard, FilterCard, FilterBuilder } from '@/features/files/components/filters';
 
-// Viewer Store
 export {
     viewerReducer,
     openViewer,
@@ -158,10 +143,8 @@ export {
     openViewerWithFetch,
 } from '@/features/files/store';
 
-// Blob Cache (for clearing on logout)
 export { clearBlobCache } from '@/features/files/components/viewer/hooks/blobCache';
 
-// Image Editor
 export {
     imageEditorReducer,
     enterEditMode,
@@ -193,8 +176,6 @@ export {
 } from '@/features/files/store';
 export type { EditorHistoryEntry, CropRect } from '@/features/files/store';
 
-// Image Editor Components
 export { ImageEditor } from '@/features/files/components/viewer/editor';
 
-// Image Editor Hook
 export { useImageEditor } from '@/features/files/hooks/useImageEditor';

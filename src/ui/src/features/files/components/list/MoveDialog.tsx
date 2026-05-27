@@ -1,10 +1,3 @@
-/**
- * Move Dialog Component
- *
- * Dialog for moving files/folders to a different location and/or visibility scope.
- * Supports both single and multi-select operations.
- */
-
 import { useState, useCallback, useMemo } from 'react';
 import {
     Folder,
@@ -66,7 +59,6 @@ export function MoveDialog({
     const [error, setError] = useState<string | null>(null);
     const [showOrgConfirm, setShowOrgConfirm] = useState(false);
 
-    // Get folders for the selected visibility
     const availableFolders = useMemo(() => {
         return selectedVisibility === 'personal' ? tree.personal : tree.organization;
     }, [selectedVisibility, tree]);
@@ -94,7 +86,6 @@ export function MoveDialog({
         setSelectedFolderId(folderId);
     }, [folderIds]);
 
-    // Handle visibility change
     const handleVisibilityChange = useCallback((visibility: VisibilityOption) => {
         setSelectedVisibility(visibility);
         setSelectedFolderId(null); // Reset folder selection when changing visibility
@@ -141,7 +132,7 @@ export function MoveDialog({
         }
     }, [dispatch, fileIds, folderIds, selectedFolderId, selectedVisibility, onClose]);
 
-    // Handle move button click - confirm before moving to organization
+    // Moving to ORG visibility is destructive enough to confirm.
     const handleMove = useCallback(async () => {
         const targetAccessMode = selectedVisibility === 'organization'
             ? AccessMode.OPEN_TO_ORG
@@ -156,7 +147,6 @@ export function MoveDialog({
         await performMove();
     }, [selectedVisibility, currentAccessMode, performMove]);
 
-    // Render a folder node in the tree
     const renderFolderNode = useCallback((node: SerializedTreeNode, depth = 0): React.ReactNode => {
         if (!node.isFolder) return null;
 

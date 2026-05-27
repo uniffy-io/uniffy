@@ -1,9 +1,3 @@
-/**
- * RoomDetailPanel - Detail panel showing room info, availability, and bookings.
- *
- * Used inside a Drawer on the admin rooms page.
- */
-
 import { useEffect, useMemo } from 'react';
 import {
   X,
@@ -46,7 +40,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
   const loading = useAppSelector(selectRoomsLoading);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-  // Fetch bookings and availability for this room
   useEffect(() => {
     if (!organizationId || !roomId) return;
     const now = new Date();
@@ -67,7 +60,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
     }));
   }, [dispatch, organizationId, roomId]);
 
-  // Filter bookings for this room: only confirmed and not yet ended
   const roomBookings = useMemo(
     () => {
       const now = new Date();
@@ -81,7 +73,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
   const handleCancelBooking = async (bookingId: string) => {
     if (!organizationId) return;
     await dispatch(cancelBooking({ bookingId, organizationId }));
-    // Re-fetch bookings and availability
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -123,7 +114,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
 
   return (
     <div className={cn('flex flex-col h-full bg-card', className)}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="text-sm font-semibold text-foreground">Room Details</span>
         <button type="button" onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
@@ -133,7 +123,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
 
       <ScrollArea className="flex-1">
         <div className="p-4 flex flex-col gap-5">
-          {/* Name and badges */}
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-bold text-foreground">{room.name}</h2>
             <div className="flex items-center gap-2 flex-wrap">
@@ -149,14 +138,12 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
             </div>
           </div>
 
-          {/* Description */}
           {room.description && (
             <p className="text-sm text-muted-foreground leading-relaxed">
               {room.description}
             </p>
           )}
 
-          {/* Metadata */}
           <div className="flex flex-col gap-2.5">
             {room.capacity > 0 && (
               <div className="flex items-center gap-2.5 text-sm">
@@ -186,7 +173,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
             )}
           </div>
 
-          {/* Amenities */}
           {room.amenities.length > 0 && (
             <div className="flex flex-col gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -206,7 +192,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
             </div>
           )}
 
-          {/* Today's Availability */}
           {room.status === 'active' && (
             <div className="flex flex-col gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -220,7 +205,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
             </div>
           )}
 
-          {/* Upcoming Bookings */}
           <div className="flex flex-col gap-2">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Upcoming Bookings ({roomBookings.length})
@@ -248,7 +232,6 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
         </div>
       </ScrollArea>
 
-      {/* Book button */}
       {onBook && room.status === 'active' && (
         <div className="p-4 border-t border-border shrink-0">
           <Button onClick={onBook} size="md" className="w-full gap-1.5">

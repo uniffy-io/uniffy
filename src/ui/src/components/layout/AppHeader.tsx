@@ -15,7 +15,6 @@ import { UniffyLogo } from '@/components/ui/uniffy-logo';
 import { Drawer } from '@/components/ui/drawer';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
-// Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
 const fileConfig = getContentTypeConfig(UrnType.FILE);
 const chatConfig = getContentTypeConfig(UrnType.CHAT);
@@ -27,8 +26,7 @@ interface NavItem {
   icon: Icon;
 }
 
-// Nav items use icons from central config but may have custom paths/names
-// (nav paths like /chat differ from URN paths like /chats/{id})
+// Nav paths (`/chat`) differ from URN paths (`/chats/{id}`) so we keep the override here.
 const navItems: NavItem[] = [
   { name: noteConfig.labelPlural, path: '/notes', icon: noteConfig.icon },
   { name: fileConfig.labelPlural, path: '/files', icon: fileConfig.icon },
@@ -38,7 +36,6 @@ const navItems: NavItem[] = [
   { name: 'Agents', path: '/agents', icon: Cpu },
 ];
 
-// Logo nav item for home/dashboard
 function LogoNavItem({ isActive }: { isActive: boolean }) {
 
   return (
@@ -50,10 +47,8 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
         isActive && "text-foreground"
       )}
     >
-      {/* Hover underline effect */}
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-      {/* Logo */}
       <span className={cn(
         "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
         isActive
@@ -66,7 +61,6 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
         />
       </span>
 
-      {/* Label - hidden by default, shows on hover */}
       <span className={cn(
         "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
         "group-hover:ml-1.5 group-hover:max-w-24",
@@ -78,7 +72,6 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
   );
 }
 
-// Nav item that expands on hover to show label
 function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive: boolean }) {
   const Icon = item.icon;
 
@@ -91,7 +84,6 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
         isActive && "text-foreground"
       )}
     >
-      {/* Active indicator */}
       <span
         className={cn(
           "absolute inset-0 rounded-lg transition-all duration-500",
@@ -99,10 +91,8 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
         )}
       />
 
-      {/* Hover underline effect */}
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-      {/* Icon */}
       <span className={cn(
         "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
         isActive
@@ -112,7 +102,6 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
         <Icon size={20} weight={isActive ? "fill" : "duotone"} />
       </span>
 
-      {/* Label - hidden by default, shows on hover */}
       <span className={cn(
         "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
         "group-hover:ml-1.5 group-hover:max-w-24",
@@ -124,7 +113,6 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
   );
 }
 
-// Full-screen mobile navigation drawer
 function MobileNavDrawer({
   open,
   onClose,
@@ -193,13 +181,10 @@ export function AppHeader() {
           isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0"
         )}
       >
-        {/* Background */}
         <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
 
         <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
-          {/* Left: Navigation */}
           <div className="flex items-center gap-0.5 z-20">
-            {/* Mobile: Hamburger + Logo */}
             <div className="flex md:hidden items-center gap-0.5">
               <button
                 onClick={() => setMobileMenuOpen(true)}
@@ -211,7 +196,6 @@ export function AppHeader() {
               <LogoNavItem isActive={location.pathname === '/'} />
             </div>
 
-            {/* Desktop/Tablet Navigation - all items visible */}
             <nav className="hidden md:flex items-center gap-0.5">
               <LogoNavItem isActive={location.pathname === '/'} />
               {navItems.map((item) => {
@@ -223,7 +207,6 @@ export function AppHeader() {
             </nav>
           </div>
 
-          {/* Center: Search - hidden on mobile, shown on tablet+ */}
           <div className={cn(
             "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",
             "hidden sm:block"
@@ -231,9 +214,7 @@ export function AppHeader() {
             <GlobalSearch />
           </div>
 
-          {/* Right: Search (mobile) + Notifications + User */}
           <div className="flex items-center gap-2 z-20">
-            {/* Mobile search icon - opens spotlight instead */}
             {isMobile && (
               <MobileSearchButton />
             )}
@@ -245,7 +226,6 @@ export function AppHeader() {
         </div>
       </header>
 
-      {/* Mobile nav drawer */}
       <MobileNavDrawer
         open={mobileMenuOpen}
         onClose={closeMobileMenu}
@@ -255,10 +235,9 @@ export function AppHeader() {
   );
 }
 
-/** On mobile, show a search icon that triggers spotlight search */
 function MobileSearchButton() {
   const handleClick = () => {
-    // Trigger spotlight search via keyboard shortcut dispatch
+    // Trigger spotlight via the registered keyboard shortcut.
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   };
 

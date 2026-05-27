@@ -1,16 +1,9 @@
-/**
- * Files Tree Async Thunks
- *
- * Redux async thunks for folder tree operations.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
 import type { TreeNode, Folder } from '@uniffy/proto/files/v1/files_pb';
 import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
-// Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
     if (!orgId) {
@@ -19,7 +12,6 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-// Convert proto TreeNode to serializable format
 const treeNodeToPlain = (node: TreeNode): SerializedTreeNode => ({
     id: node.id,
     name: node.name,
@@ -32,7 +24,6 @@ const treeNodeToPlain = (node: TreeNode): SerializedTreeNode => ({
     children: node.children?.map(treeNodeToPlain),
 });
 
-// Convert proto Folder to serializable format
 const folderToPlain = (folder: Folder): SerializedFolder => ({
     id: folder.id,
     name: folder.name,
@@ -42,7 +33,6 @@ const folderToPlain = (folder: Folder): SerializedFolder => ({
     isDeleted: folder.isDeleted,
 });
 
-/** Serialized tree node type for Redux storage */
 export interface SerializedTreeNode {
     id: string;
     name: string;
@@ -55,7 +45,6 @@ export interface SerializedTreeNode {
     children?: SerializedTreeNode[];
 }
 
-/** Serialized folder type for Redux storage */
 export interface SerializedFolder {
     id: string;
     name: string;
@@ -65,9 +54,6 @@ export interface SerializedFolder {
     isDeleted: boolean;
 }
 
-/**
- * Fetch the files tree structure.
- */
 export const fetchFilesTree = createAsyncThunk<
     { nodes: SerializedTreeNode[] },
     { rootFolderId?: string; includeFiles?: boolean; personalOnly?: boolean } | void,
@@ -91,9 +77,6 @@ export const fetchFilesTree = createAsyncThunk<
     }
 });
 
-/**
- * Create a new folder.
- */
 export const createFolder = createAsyncThunk<
     SerializedFolder,
     {
@@ -121,9 +104,6 @@ export const createFolder = createAsyncThunk<
     }
 });
 
-/**
- * Update a folder.
- */
 export const updateFolder = createAsyncThunk<
     SerializedFolder,
     {
@@ -153,9 +133,6 @@ export const updateFolder = createAsyncThunk<
     }
 });
 
-/**
- * Delete a folder.
- */
 export const deleteFolder = createAsyncThunk<
     { folderId: string; filesDeleted: number; foldersDeleted: number },
     { folderId: string; permanent?: boolean; recursive?: boolean },

@@ -76,7 +76,7 @@ function saveCollapsed(s: Set<string>): void {
     try {
         localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...s]));
     } catch {
-        // ignore quota or privacy-mode failures
+        // quota / privacy-mode: best-effort persistence
     }
 }
 
@@ -146,6 +146,7 @@ export function PlatformLayout() {
     const orgSlug = useAppSelector((state) => state.auth.currentOrganizationSlug);
     const [collapsedPref, setCollapsedPref] = useState<Set<string>>(loadCollapsed);
 
+    // /platform/* is gated on is_system_admin (cloud operator), distinct from is_org_admin (tenant).
     if (!isSystemAdmin) {
         return <Navigate to="/" replace />;
     }

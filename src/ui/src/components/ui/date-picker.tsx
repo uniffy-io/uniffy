@@ -1,10 +1,3 @@
-/**
- * DatePicker Component
- *
- * A themed calendar date picker that replaces the native <input type="date">.
- * Uses portal-based dropdown like Select for proper z-index in modals.
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { CalendarBlank, CaretLeft, CaretRight, X } from "@phosphor-icons/react";
@@ -26,7 +19,8 @@ import {
 import { cn } from "@/shared/utils/cn";
 
 interface DatePickerProps {
-  value: string; // ISO date string (YYYY-MM-DD) or empty
+  /** ISO date string `YYYY-MM-DD`, or empty. */
+  value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -53,19 +47,16 @@ export function DatePicker({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Parse value into Date
   const selectedDate = useMemo(() => {
     if (!value) return null;
     const parsed = parse(value, "yyyy-MM-dd", new Date());
     return isValid(parsed) ? parsed : null;
   }, [value]);
 
-  // Current month being displayed
   const [displayMonth, setDisplayMonth] = useState<Date>(
     () => selectedDate || new Date()
   );
 
-  // Sync display month when value changes externally
   useEffect(() => {
     if (selectedDate) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting display month when selectedDate changes
@@ -73,7 +64,6 @@ export function DatePicker({
     }
   }, [selectedDate]);
 
-  // Calculate calendar days
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(displayMonth);
     const monthEnd = endOfMonth(displayMonth);
@@ -82,7 +72,6 @@ export function DatePicker({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [displayMonth]);
 
-  // Always position directly below the trigger button
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
 
@@ -95,7 +84,6 @@ export function DatePicker({
     });
   }, []);
 
-  // Update position on open and scroll/resize
   useEffect(() => {
     if (isOpen) {
       updatePosition();
@@ -109,7 +97,6 @@ export function DatePicker({
     }
   }, [isOpen, updatePosition]);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(event: MouseEvent) {
@@ -126,7 +113,6 @@ export function DatePicker({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // Close on escape
   useEffect(() => {
     if (!isOpen) return;
     function handleKeyDown(event: KeyboardEvent) {
@@ -176,7 +162,6 @@ export function DatePicker({
             : "slide-in-from-top-2"
         )}
       >
-        {/* Month navigation */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
           <button
             type="button"
@@ -197,7 +182,6 @@ export function DatePicker({
           </button>
         </div>
 
-        {/* Weekday headers */}
         <div className="grid grid-cols-7 px-2 pt-2">
           {WEEKDAYS.map((day) => (
             <div
@@ -209,7 +193,6 @@ export function DatePicker({
           ))}
         </div>
 
-        {/* Days grid */}
         <div className="grid grid-cols-7 px-2 pb-2">
           {calendarDays.map((day) => {
             const isCurrentMonth = isSameMonth(day, displayMonth);
@@ -241,7 +224,6 @@ export function DatePicker({
           })}
         </div>
 
-        {/* Footer with Today button */}
         <div className="flex items-center justify-between px-3 py-2 border-t border-border">
           <button
             type="button"

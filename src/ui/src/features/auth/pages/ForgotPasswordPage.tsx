@@ -28,8 +28,7 @@ export function ForgotPasswordPage() {
         try {
             await authClient.sendPasswordReset({ email: trimmed });
         } catch {
-            // RPC never reveals errors; even on transport failure show the
-            // same success state so we do not leak account existence.
+            // Always show the success state so we never leak whether the email exists.
         }
         setSubmitting(false);
         setSubmitted(true);

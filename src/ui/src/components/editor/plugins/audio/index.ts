@@ -1,16 +1,4 @@
-/**
- * Audio Block Plugin for Milkdown/Crepe Editor
- *
- * Adds block-level audio support with:
- * - Markdown persistence as [[[audio|url]]] or [[[audio|url|title]]]
- * - Audio player rendering via AudioBlock component (WaveSurfer.js)
- * - Service worker streaming for authenticated playback
- *
- * Plugin components:
- * - audioBlockNode: Block-level atomic node schema
- * - audioBlockRemarkPlugin: Parses [[[audio|url]]] and [[[audio|url|title]]] from markdown
- * - audioBlockView: React NodeView rendering AudioBlock
- */
+// Markdown literal: `[[[audio|url]]]` or `[[[audio|url|title]]]`. Service worker handles auth.
 
 import { $node, $view, $remark } from '@milkdown/kit/utils';
 import { Node } from '@milkdown/kit/prose/model';
@@ -23,8 +11,6 @@ import { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';
 import { AudioRecordingBar } from '@/components/editor/plugins/audio/AudioRecordingBar';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
-
-// -- Node Schema --
 
 export const audioBlockNode = $node('audio_block', () => ({
     group: 'block',
@@ -77,35 +63,19 @@ export const audioBlockNode = $node('audio_block', () => ({
     },
 }));
 
-// -- Remark Plugin --
-
-// Regex to match [[[audio|url]]] or [[[audio|url|title]]] format.
-// The title capture uses .*? (non-greedy) so that ] characters inside filenames
-// (e.g. "[wwQDYSVAwXs].mp3") are tolerated -- the ]]] at the end anchors the match.
+// Title capture is non-greedy so `]` in filenames is tolerated; `]]]` anchors the match.
 const AUDIO_REGEX = /^\[\[\[audio\|([^\]|]+)(?:\|(.*?))?\]\]\]$/;
 
-// Custom audio block node type for the AST
 interface AudioBlockAstNode extends UnistNode {
     type: 'audioBlock';
     src: string;
     title?: string;
 }
 
-/**
- * Remark plugin to parse audio blocks from markdown.
- *
- * Handles the formats: [[[audio|url]]] and [[[audio|url|title]]]
- * A paragraph containing only such a pattern is converted to an audioBlock node.
- *
- * Stringify handler converts audioBlock nodes back to [[[audio|url|title]]] or [[[audio|url]]].
- *
- * IMPORTANT: This plugin must be registered BEFORE the mention remark plugin
- * so that [[[audio|X]]] patterns are consumed before the general mention regex.
- */
+// Register BEFORE the mention remark plugin so `[[[audio|...]]]` is consumed before the general mention regex.
 export const audioBlockRemarkPlugin = $remark('audioBlockRemarkPlugin', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return function audioPlugin(this: any) {
-        // Add handler for stringifying audio block nodes back to markdown
         const toMarkdownExtension = {
             handlers: {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -166,8 +136,6 @@ export const audioBlockRemarkPlugin = $remark('audioBlockRemarkPlugin', () => {
         };
     };
 });
-
-// -- Node View --
 
 class AudioBlockNodeView implements NodeView {
     dom: HTMLElement;
@@ -233,8 +201,7 @@ export const audioBlockView = $view(audioBlockNode, () => (node: Node, view: Edi
     new AudioBlockNodeView(node, view, getPos)
 );
 
-// -- Audio Recording Node (transient, never persisted) --
-
+/** Transient: never serialized to markdown. Replaced by `audio_block` once the upload completes. */
 export const audioRecordingNode = $node('audio_recording', () => ({
     group: 'block',
     atom: true,
@@ -275,17 +242,10 @@ function getRecordingExtension(mimeType: string): string {
     return 'webm';
 }
 
-/**
- * Audio upload handler type. Set via setAudioRecordingUploadHandler()
- * before inserting an audio_recording node.
- */
 type AudioUploadHandler = (file: File) => Promise<string>;
 let _audioUploadHandler: AudioUploadHandler | null = null;
 
-/**
- * Register the audio upload handler for recording nodes.
- * Called by CrepeEditor when setting up the slash menu.
- */
+/** CrepeEditor wires this up when setting up the slash menu; audio_recording nodes read from the singleton. */
 export function setAudioRecordingUploadHandler(handler: AudioUploadHandler | null) {
     _audioUploadHandler = handler;
 }
@@ -415,10 +375,7 @@ export const audioRecordingView = $view(audioRecordingNode, () => (node: Node, v
     new AudioRecordingNodeView(node, view, getPos)
 );
 
-// -- Export --
-
-// The remark plugin must come first to parse [[[audio|url]]] before other processing
-// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
+// Remark plugin must come first so `[[[audio|...]]]` is parsed before the general mention regex. $remark returns a tuple, hence the spread.
 export const audioPlugins = [
     ...audioBlockRemarkPlugin,
     audioBlockNode,

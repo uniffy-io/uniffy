@@ -1,10 +1,3 @@
-/**
- * Audit API Service
- *
- * Wraps audit.v1.AuditService. ListEvents is unary (uses unaryTransport).
- * ExportEvents is server-streaming so it uses the no-timeout transport.
- */
-
 import { createClient } from '@connectrpc/connect';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { transport, unaryTransport } from '@/config/api';

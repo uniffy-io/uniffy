@@ -1,8 +1,3 @@
-/**
- * Event Editor Modal
- * Modern design with visibility selector and reorganized layout
- */
-
 import { useState, useEffect, useMemo } from 'react';
 import {
   X,
@@ -40,18 +35,12 @@ import { TagPicker } from '@/features/tags';
 
 type EventVisibility = 'private' | 'organization';
 
-/**
- * Extract time value (hours as decimal) from ISO string.
- * Preserves exact minutes (e.g. 9:15 -> 9.25, 14:45 -> 14.75).
- */
+/** Hours as a decimal in the local zone (9:15 -> 9.25). */
 function getTimeValue(isoString: string): number {
   const date = new Date(isoString);
   return date.getHours() + date.getMinutes() / 60;
 }
 
-/**
- * Extract date string (YYYY-MM-DD) from ISO string
- */
 function getDateString(isoString: string): string {
   const date = new Date(isoString);
   const year = date.getFullYear();
@@ -60,9 +49,6 @@ function getDateString(isoString: string): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Generate date options for the next 60 days and past 30 days
- */
 function generateDateOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
   const today = new Date();
@@ -164,7 +150,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset form when a different event is opened
       setFormData(event);
       setVisibility((event.visibility as EventVisibility) || 'private');
       setRecurrence(event.recurrence);
@@ -218,9 +204,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const doSubmit = async (scope?: RecurrenceEditScope) => {
     setIsSubmitting(true);
 
-    // For "all_events" scope, don't send occurrence-specific times
-    // (the form shows the occurrence's times, not the master's).
-    // Also don't send occurrenceDate so backend treats it as a plain master update.
+    // For "all_events" on an occurrence, drop the occurrence-specific times and date so the
+    // backend treats it as a plain master update rather than overriding the master with one
+    // occurrence's clock-time.
     const isAllEventsScope = scope === 'all_events';
     const isOccurrence = !!event.occurrenceDate;
 
@@ -271,16 +257,13 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
         <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10"
@@ -288,10 +271,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
             <X size={18} weight="bold" />
           </button>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="max-h-[calc(85vh-80px)] overflow-y-auto">
             <div className="p-5 pt-12 space-y-5">
-              {/* Visibility Selector */}
               <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
                 <button
                   type="button"
@@ -321,7 +302,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </button>
               </div>
 
-              {/* Title */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />
@@ -335,7 +315,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
 
-              {/* Attendees - Moved up */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Users size={16} weight="duotone" className="text-muted-foreground" />
@@ -348,7 +327,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
 
-              {/* Room */}
               {organizationId && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -365,7 +343,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </div>
               )}
 
-              {/* Date & Time */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -452,7 +429,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 )}
               </div>
 
-              {/* Category */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Tag size={16} weight="duotone" className="text-muted-foreground" />
@@ -481,7 +457,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </div>
               </div>
 
-              {/* Location & Meeting URL */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -511,7 +486,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </div>
               </div>
 
-              {/* Focus Time */}
               <button
                 type="button"
                 onClick={() => handleChange('isFocusTime', !formData.isFocusTime)}
@@ -529,7 +503,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 <span className="text-sm text-foreground">Focus/Deep Work Time</span>
               </button>
 
-              {/* Reminders */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Bell size={16} weight="duotone" className="text-muted-foreground" />
@@ -541,10 +514,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
 
-              {/* Recurrence */}
               <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 
-              {/* Tags */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Tag size={16} weight="duotone" className="text-muted-foreground" />
@@ -557,7 +528,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />
@@ -575,7 +545,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
               </div>
             </div>
 
-            {/* Conflict warning */}
             {conflicts.length > 0 && (
               <div
                 className="mx-5 mb-3 p-3 rounded-lg text-sm"
@@ -594,7 +563,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
               </div>
             )}
 
-            {/* Footer */}
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">
               <Button type="button" variant="outline" size="md" onClick={onClose} className="flex-1">
                 Cancel
@@ -613,7 +581,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         </div>
       </div>
 
-      {/* Recurring Event Edit Scope Dialog */}
       <RecurrenceEditScopeDialog
         isOpen={showScopeDialog}
         onClose={() => setShowScopeDialog(false)}

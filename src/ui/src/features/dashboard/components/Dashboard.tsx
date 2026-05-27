@@ -1,11 +1,3 @@
-/**
- * Dashboard - Main dashboard/home page component
- *
- * Unified command center showing key metrics, recent activity,
- * and quick actions across all content domains.
- * Supports Zen Mode, responsive 4/2/1 column grid, and widget customization.
- */
-
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
@@ -191,20 +183,17 @@ export function Dashboard() {
 
       <QuickStatsWidget />
 
-      {/* Row 1: Time-sensitive - agenda + tasks */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {isWidgetVisible('today-agenda') && <TodayAgendaWidget />}
         {isWidgetVisible('my-tasks') && <MyTasksWidget />}
       </div>
 
-      {/* Row 2: Actions + bookmarks */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {isWidgetVisible('quick-actions') && <QuickActionsWidget />}
         {isWidgetVisible('bookmarks') && <BookmarkedItemsWidget />}
         {isWidgetVisible('agents') && <AgentQuickAccessWidget />}
       </div>
 
-      {/* Row 3: Activity feed (full width) */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {isWidgetVisible('recent-activity') && <RecentActivityWidget />}
       </div>

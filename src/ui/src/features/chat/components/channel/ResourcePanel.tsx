@@ -1,10 +1,3 @@
-/**
- * ResourcePanel - Right-hand panel showing files, notes, and links mentioned in a channel.
- *
- * Fetches auto-tracked resources from the backend and groups them by content type.
- * Each resource is clickable and navigates to the referenced content.
- */
-
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, FunnelSimple } from '@phosphor-icons/react';
@@ -34,7 +27,6 @@ export function ResourcePanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
 
-  // Fetch all resources once (unfiltered), filter client-side
   useEffect(() => {
     if (!activeChannel) return;
     let cancelled = false;
@@ -70,7 +62,6 @@ export function ResourcePanel() {
     if (path) navigate(path);
   }, [navigate]);
 
-  // Group resources by content type
   const grouped = resources.reduce<Record<string, ChatResource[]>>((acc, r) => {
     const key = r.contentType;
     if (!acc[key]) acc[key] = [];
@@ -82,7 +73,6 @@ export function ResourcePanel() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <span className="text-sm font-semibold text-foreground">Resources</span>
         <button
@@ -93,7 +83,6 @@ export function ResourcePanel() {
         </button>
       </div>
 
-      {/* Filter bar */}
       {availableTypes.length > 1 && (
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border overflow-x-auto">
           <FunnelSimple size={14} className="text-muted-foreground shrink-0" />
@@ -125,7 +114,6 @@ export function ResourcePanel() {
         </div>
       )}
 
-      {/* Resource list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>

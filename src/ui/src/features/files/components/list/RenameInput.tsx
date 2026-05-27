@@ -1,9 +1,3 @@
-/**
- * Inline Rename Input Component
- *
- * Provides an inline text input for renaming files and folders.
- */
-
 import { useState, useRef, useEffect } from 'react';
 import { Check, X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';

@@ -2,10 +2,7 @@ import { useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import type { CustomStatus } from '@/features/presence/store/presenceSlice';
 
-/**
- * Get the custom status for a single user.
- * Returns undefined if no custom status is set or if it has expired.
- */
+/** Returns undefined when unset or expired. */
 export function useCustomStatus(userId: string): CustomStatus | undefined {
     const customStatus = useAppSelector(
         (state) => state.presence.customStatuses[userId],
@@ -14,7 +11,6 @@ export function useCustomStatus(userId: string): CustomStatus | undefined {
     return useMemo(() => {
         if (!customStatus) return undefined;
 
-        // Check expiry
         if (customStatus.expiresAt) {
             const expiresAt = new Date(customStatus.expiresAt);
             if (expiresAt <= new Date()) {

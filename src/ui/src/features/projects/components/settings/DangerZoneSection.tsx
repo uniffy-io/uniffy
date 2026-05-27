@@ -1,7 +1,3 @@
-/**
- * DangerZoneSection - Project archive/delete actions
- */
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Warning } from "@phosphor-icons/react";

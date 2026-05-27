@@ -1,8 +1,3 @@
-/**
- * Calendar feature constants exports
- */
-
-// Category colors
 export {
   CATEGORY_COLORS,
   DEFAULT_CATEGORIES,
@@ -14,7 +9,6 @@ export {
   CURRENT_TIME_COLOR,
 } from '@/features/calendar/constants/categoryColors';
 
-// UI constants
 export {
   LAYOUT,
   GRID,
@@ -29,7 +23,6 @@ export {
   SIDEBAR_SECTIONS,
 } from '@/features/calendar/constants/uiConstants';
 
-// Time ranges
 export {
   WORKING_HOURS,
   DEFAULT_DURATIONS,
@@ -44,7 +37,6 @@ export {
   DISPLAY_HOURS,
 } from '@/features/calendar/constants/timeRanges';
 
-// Templates
 export {
   DEFAULT_TEMPLATES,
   getTemplateById,

@@ -1,10 +1,3 @@
-/**
- * Calendar Async Thunks
- *
- * Redux async thunks for calendar API operations.
- * All async operations go through these thunks for proper state management.
- */
-
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { calendarApi } from '@/features/calendar/api/calendarApi';
 import type { RootState } from '@/app/store';
@@ -48,9 +41,6 @@ import {
 } from '@uniffy/proto/cal/v1/calendar_pb';
 
 
-/**
- * Get organization ID from state.
- */
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
     if (!orgId) {
@@ -59,18 +49,12 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-/**
- * Convert proto timestamp to ISO string.
- */
 const timestampToIso = (ts: Timestamp | undefined): string => {
     if (!ts) return new Date().toISOString();
     const seconds = typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds;
     return new Date(seconds * 1000).toISOString();
 };
 
-/**
- * Convert ISO string to proto timestamp.
- */
 const isoToTimestamp = (iso: string): Timestamp => {
     const date = new Date(iso);
     return create(TimestampSchema, {
@@ -78,8 +62,6 @@ const isoToTimestamp = (iso: string): Timestamp => {
         nanos: 0,
     });
 };
-
-// Enum Converters
 
 const RECURRENCE_FROM_PROTO: Record<ProtoRecurrencePattern, RecurrencePattern> = {
     [ProtoRecurrencePattern.UNSPECIFIED]: 'none',
@@ -172,11 +154,6 @@ function accessModeToFrontendVisibility(mode: number): 'private' | 'organization
     return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
 }
 
-// Proto to Domain Converters
-
-/**
- * Convert proto attendee to domain attendee.
- */
 const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
     id: proto.id,
     name: proto.name,
@@ -188,9 +165,6 @@ const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
     timezone: proto.timezone || undefined,
 });
 
-/**
- * Convert proto linked resource to domain.
- */
 const linkedResourceFromProto = (proto: ProtoLinkedResource): LinkedResource => ({
     id: proto.id,
     type: RESOURCE_TYPE_FROM_PROTO[proto.type] || 'note',
@@ -198,9 +172,6 @@ const linkedResourceFromProto = (proto: ProtoLinkedResource): LinkedResource => 
     url: proto.url || undefined,
 });
 
-/**
- * Convert proto recurrence config to domain.
- */
 const recurrenceConfigFromProto = (proto: ProtoRecurrenceConfig | undefined): RecurrenceConfig | undefined => {
     if (!proto) return undefined;
 
@@ -214,9 +185,6 @@ const recurrenceConfigFromProto = (proto: ProtoRecurrenceConfig | undefined): Re
     };
 };
 
-/**
- * Convert proto event to domain event.
- */
 const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     id: proto.id,
     organizationId: proto.organizationId,
@@ -250,10 +218,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
 });
 
-/**
- * Push hydrated tag rows into the tags-slice cache so chips render
- * directly from `state.tags.byId` without a follow-up RPC.
- */
+/** Push hydrated tag rows into tags-slice cache so chips render without a follow-up RPC. */
 const hydrateEventTags = (
     proto: ProtoCalendarEvent,
     dispatch: (action: unknown) => void,
@@ -262,9 +227,6 @@ const hydrateEventTags = (
     dispatch(bulkUpsertTags(proto.tags.map(tagToPlain)));
 };
 
-/**
- * Convert proto category to domain category.
- */
 const categoryFromProto = (proto: ProtoCategory): Category => ({
     id: proto.id,
     organizationId: proto.organizationId,
@@ -277,9 +239,6 @@ const categoryFromProto = (proto: ProtoCategory): Category => ({
     updatedAt: timestampToIso(proto.updatedAt),
 });
 
-/**
- * Convert proto template to domain template.
- */
 const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
     id: proto.id,
     organizationId: proto.organizationId,
@@ -296,11 +255,6 @@ const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
     updatedAt: proto.updatedAt ? timestampDate(proto.updatedAt) : new Date(),
 });
 
-// Event Thunks
-
-/**
- * Fetch events in a date range.
- */
 export const fetchEventsInRange = createAsyncThunk<
     CalendarEvent[],
     { startDate: string; endDate: string; calendarIds?: string[] },
@@ -324,9 +278,6 @@ export const fetchEventsInRange = createAsyncThunk<
     }
 });
 
-/**
- * Fetch a single event by ID.
- */
 export const fetchEvent = createAsyncThunk<
     CalendarEvent,
     string,
@@ -348,9 +299,6 @@ export const fetchEvent = createAsyncThunk<
     }
 });
 
-/**
- * Create a new event.
- */
 export const createEvent = createAsyncThunk<
     CalendarEvent,
     {
@@ -377,7 +325,6 @@ export const createEvent = createAsyncThunk<
     try {
         const organizationId = getOrganizationId(getState());
 
-        // Build recurrence config if provided
         const recurrence = params.recurrence;
         const isRecurring = recurrence && recurrence.pattern !== 'none';
         let recurrenceConfig = undefined;
@@ -419,7 +366,7 @@ export const createEvent = createAsyncThunk<
         hydrateEventTags(response.event, dispatch);
         const created = eventFromProto(response.event);
 
-        // Refetch current range to get expanded occurrences for recurring events
+        // Refetch range so server-expanded occurrences populate.
         if (isRecurring) {
             const currentDate = getState().calendarUi.currentDate;
             const d = new Date(currentDate);
@@ -437,9 +384,6 @@ export const createEvent = createAsyncThunk<
     }
 });
 
-/**
- * Update an existing event.
- */
 export const updateEvent = createAsyncThunk<
     CalendarEvent,
     {
@@ -469,7 +413,6 @@ export const updateEvent = createAsyncThunk<
     try {
         const organizationId = getOrganizationId(getState());
 
-        // Build recurrence config if provided
         let recurrenceConfig = undefined;
         if (params.recurrence) {
             recurrenceConfig = {
@@ -514,7 +457,7 @@ export const updateEvent = createAsyncThunk<
         hydrateEventTags(response.event, dispatch);
         const updated = eventFromProto(response.event);
 
-        // Refetch to get updated expanded occurrences
+        // Refetch range so updated expansion lands in the store.
         if (params.recurrenceEditScope) {
             const currentDate = getState().calendarUi.currentDate;
             const d = new Date(currentDate);
@@ -532,9 +475,6 @@ export const updateEvent = createAsyncThunk<
     }
 });
 
-/**
- * Delete an event.
- */
 export const deleteEvent = createAsyncThunk<
     { eventId: string },
     { eventId: string; recurrenceEditScope?: RecurrenceEditScope; occurrenceDate?: string },
@@ -554,7 +494,7 @@ export const deleteEvent = createAsyncThunk<
             return rejectWithValue('Failed to delete event');
         }
 
-        // Refetch to get updated expanded occurrences
+        // Refetch range so updated expansion lands in the store.
         if (params.recurrenceEditScope) {
             const currentDate = getState().calendarUi.currentDate;
             const d = new Date(currentDate);
@@ -572,11 +512,6 @@ export const deleteEvent = createAsyncThunk<
     }
 });
 
-// Category Thunks
-
-/**
- * Fetch all categories for the current organization.
- */
 export const fetchCategories = createAsyncThunk<
     Category[],
     void,
@@ -593,9 +528,6 @@ export const fetchCategories = createAsyncThunk<
     }
 });
 
-/**
- * Create a new category.
- */
 export const createCategory = createAsyncThunk<
     Category,
     {
@@ -622,9 +554,6 @@ export const createCategory = createAsyncThunk<
     }
 });
 
-/**
- * Update a category.
- */
 export const updateCategory = createAsyncThunk<
     Category,
     {
@@ -655,9 +584,6 @@ export const updateCategory = createAsyncThunk<
     }
 });
 
-/**
- * Delete a category.
- */
 export const deleteCategory = createAsyncThunk<
     { categoryId: string },
     string,
@@ -678,11 +604,6 @@ export const deleteCategory = createAsyncThunk<
     }
 });
 
-// Attendee Thunks
-
-/**
- * Update attendee status for an event.
- */
 export const updateAttendeeStatus = createAsyncThunk<
     { eventId: string; userId: string; status: AttendeeStatus },
     { eventId: string; status: AttendeeStatus },
@@ -705,8 +626,7 @@ export const updateAttendeeStatus = createAsyncThunk<
             return rejectWithValue('Failed to update attendee status');
         }
 
-        // Fetch the full event to ensure it is in the store (e.g. when
-        // accepting from a notification while the event was not yet loaded)
+        // Ensure full event lands in the store (notification accept may target an unloaded event).
         dispatch(fetchEvent(params.eventId));
 
         return {
@@ -719,9 +639,6 @@ export const updateAttendeeStatus = createAsyncThunk<
     }
 });
 
-/**
- * Add attendees to an event.
- */
 export const addAttendees = createAsyncThunk<
     CalendarEvent,
     { eventId: string; userIds: string[]; role?: AttendeeRole },
@@ -745,9 +662,6 @@ export const addAttendees = createAsyncThunk<
     }
 });
 
-/**
- * Remove attendees from an event.
- */
 export const removeAttendees = createAsyncThunk<
     CalendarEvent,
     { eventId: string; userIds: string[] },
@@ -769,8 +683,6 @@ export const removeAttendees = createAsyncThunk<
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove attendees');
     }
 });
-
-// Template Thunks
 
 export const createEventTemplate = createAsyncThunk<
     EventTemplate,

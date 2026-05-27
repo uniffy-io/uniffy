@@ -1,17 +1,3 @@
-/**
- * One-time consent modal shown the first time a user starts a recording.
- *
- * Tells them in plain language that the recording will capture everything
- * visible on the chosen surface, including other apps, tabs, and any
- * sensitive data on screen. The browser's own picker is the second
- * confirmation (and is non-skippable), but a friendlier in-app explainer
- * up front avoids surprise: a user who mis-clicked "Entire screen" and
- * had a password manager open has time to back out.
- *
- * Continue dispatches `firstUseAcknowledged` (persisted) and re-dispatches
- * `startRecording`. Cancel just closes the modal.
- */
-
 import { ShieldWarning, X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Modal } from '@/components/ui/modal';

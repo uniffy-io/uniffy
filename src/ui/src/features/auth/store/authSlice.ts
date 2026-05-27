@@ -2,26 +2,19 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { GetCurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
 
-/**
- * Auth state shape.
- *
- * Security note: accessToken is stored in memory only (not persisted to localStorage)
- * to reduce XSS attack surface. On page reload, the app uses refreshToken to get
- * a new accessToken via the rehydrateAuth() function.
- */
+/** accessToken stays in memory only; rehydrateAuth() re-mints it from refreshToken to limit XSS exposure. */
 export interface AuthState {
   user: Omit<GetCurrentUserResponse, '$typeName'> | null;
-  accessToken: string | null; // Memory only - never persisted
-  refreshToken: string | null; // Persisted for session continuity
+  accessToken: string | null;
+  refreshToken: string | null;
   currentOrganizationId: string | null;
-  // Persisted so token refresh can re-issue an org-scoped access
-  // token (the refresh RPC keys org context off the slug).
+  // Persisted so the refresh RPC can re-issue an org-scoped access token (keyed off the slug).
   currentOrganizationSlug: string | null;
-  currentOrganizationRole: string | null; // MEMBER, ADMIN, or OWNER
-  domainAdminDomains: number[]; // DomainType enum values where user is domain admin
-  currentSessionId: string | null; // Server-side session identifier
+  currentOrganizationRole: string | null;
+  domainAdminDomains: number[];
+  currentSessionId: string | null;
   isAuthenticated: boolean;
-  isRehydrating: boolean; // True while refreshing token on app startup
+  isRehydrating: boolean;
 }
 
 const initialState: AuthState = {
@@ -66,15 +59,9 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
-    /**
-     * Start rehydrating auth state (refreshing access token on app startup).
-     */
     startRehydrating: (state) => {
       state.isRehydrating = true;
     },
-    /**
-     * Rehydration complete - set user and tokens from refresh response.
-     */
     rehydrateComplete: (
       state,
       action: PayloadAction<{
@@ -100,9 +87,6 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
-    /**
-     * Rehydration failed - clear auth state.
-     */
     rehydrateFailed: (state) => {
       state.user = null;
       state.accessToken = null;
@@ -115,9 +99,6 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },
-    /**
-     * Update user profile fields (e.g., after avatar upload/delete).
-     */
     updateUser: (
       state,
       action: PayloadAction<Partial<Omit<GetCurrentUserResponse, '$typeName'>>>

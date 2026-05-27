@@ -1,10 +1,3 @@
-/**
- * MyTasksWidget - Shows tasks assigned to the current user
- *
- * Three sections: overdue (red), due today (orange), in progress (neutral).
- * Supports quick status toggle and navigation to project tasks.
- */
-
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckSquare, ArrowRight } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';

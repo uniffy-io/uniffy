@@ -1,9 +1,3 @@
-/**
- * Today's meetings dropdown panel.
- * Desktop: absolute dropdown anchored to the quick view button.
- * Mobile: full-screen bottom sheet with backdrop.
- */
-
 import { useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -105,7 +99,6 @@ function PanelContent({
   const hasUpcoming = upcomingCount > 0;
   const hasAnyEvents = hasPastEvents || hasUpcoming;
 
-  // Compute the last event's end time for the footer
   const currentEvents = groups.current;
   const nextEvent = groups.next;
   const laterEvents = groups.later;
@@ -123,7 +116,6 @@ function PanelContent({
 
   return (
     <>
-      {/* Header */}
       <div className="px-3.5 pt-3.5 pb-2.5 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
           <div>
@@ -171,7 +163,6 @@ function PanelContent({
         </div>
       </div>
 
-      {/* Event list */}
       <div className="flex-1 overflow-y-auto">
         {loading && !hasAnyEvents ? (
           <LoadingSkeleton />
@@ -181,7 +172,6 @@ function PanelContent({
           <EmptyState allDone />
         ) : (
           <div>
-            {/* Current events */}
             {groups.current.length > 0 && (
               <div>
                 <SectionHeader label="Happening now" />
@@ -197,7 +187,6 @@ function PanelContent({
               </div>
             )}
 
-            {/* Next event */}
             {groups.next && (
               <div>
                 <SectionHeader label="Up next" />
@@ -209,7 +198,6 @@ function PanelContent({
               </div>
             )}
 
-            {/* Later events */}
             {groups.later.length > 0 && (
               <div>
                 <SectionHeader label="Later today" />
@@ -227,7 +215,6 @@ function PanelContent({
         )}
       </div>
 
-      {/* Footer */}
       {lastEndTime && hasUpcoming && (
         <div className="px-3.5 py-2 border-t border-border shrink-0">
           <p className="text-[11px] text-muted-foreground/60 text-center">
@@ -244,7 +231,6 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
 
-  // Close on click outside (desktop only)
   useEffect(() => {
     if (isMobile) return;
 
@@ -266,7 +252,6 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
     };
   }, [onClose, isMobile, anchorRef]);
 
-  // Lock body scroll on mobile
   useEffect(() => {
     if (!isMobile) return;
     document.body.style.overflow = 'hidden';
@@ -292,7 +277,6 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
     isMobile,
   };
 
-  // Mobile: fixed bottom sheet
   if (isMobile) {
     return (
       <>
@@ -318,7 +302,6 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
     );
   }
 
-  // Desktop: absolute dropdown
   return (
     <div
       ref={panelRef}

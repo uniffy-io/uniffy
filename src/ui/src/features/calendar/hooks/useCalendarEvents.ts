@@ -1,7 +1,3 @@
-/**
- * Hook for managing calendar events
- */
-
 import { useMemo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
@@ -19,24 +15,18 @@ import type { CalendarEvent, EventModalPrefill, PositionedEvent } from '@/featur
 import { getPositionedEventsForDay, getPositionedEventsForWeek, areSameDay } from '@/features/calendar/utils';
 import { GRID } from '@/features/calendar/constants';
 
-/**
- * Hook for managing calendar events and event-related UI state
- */
 export function useCalendarEvents() {
   const dispatch = useAppDispatch();
 
-  // Get events from store
   const events = useAppSelector((state) => state.calendar.events);
   const filters = useAppSelector((state) => state.calendar.filters);
   const loading = useAppSelector((state) => state.calendar.loading);
   const errors = useAppSelector((state) => state.calendar.errors);
 
-  // Get event scope filter
   const eventScope = useAppSelector(
     (state) => state.calendarUi.eventScope
   );
 
-  // Get UI state
   const selectedEventId = useAppSelector(
     (state) => state.calendarUi.selectedEventId
   );
@@ -50,19 +40,10 @@ export function useCalendarEvents() {
     (state) => state.calendarUi.eventModalPrefill
   );
 
-  /**
-   * Get all visible events (filtered by scope and filters)
-   *
-   * Scope filtering:
-   * - 'all': Show all events
-   * - 'personal': Show only events with visibility='private'
-   * - 'organization': Show only events with visibility='organization'
-   */
   const visibleEvents = useMemo(() => {
     const allEvents = Object.values(events);
 
     return allEvents.filter((event) => {
-      // Filter by event scope (based on event visibility, not organizer)
       if (eventScope === 'personal' && event.visibility !== 'private') {
         return false;
       }
@@ -70,7 +51,6 @@ export function useCalendarEvents() {
         return false;
       }
 
-      // Filter by category
       if (
         filters.categoryIds.length > 0 &&
         !filters.categoryIds.includes(event.categoryId)
@@ -78,9 +58,7 @@ export function useCalendarEvents() {
         return false;
       }
 
-      // Filter by tags - logical AND across the selected tag id set so the
-      // sidebar tag cloud composes the same way the server-side `tag_ids[]`
-      // filter does on `ListEventsRequest`.
+      // Tag filter is logical AND, matching server-side `tag_ids[]` on ListEventsRequest.
       if (filters.tagIds.length > 0) {
         const hasAllTags = filters.tagIds.every((tagId) =>
           event.tagIds.includes(tagId)
@@ -90,12 +68,10 @@ export function useCalendarEvents() {
         }
       }
 
-      // Filter by focus time only
       if (filters.focusTimeOnly && !event.isFocusTime) {
         return false;
       }
 
-      // Filter by search query
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
         const matchesTitle = event.title.toLowerCase().includes(query);
@@ -111,9 +87,6 @@ export function useCalendarEvents() {
     });
   }, [events, filters, eventScope]);
 
-  /**
-   * Get events for a specific date
-   */
   const getEventsForDate = useCallback(
     (date: Date | string) => {
       return visibleEvents.filter((event) => areSameDay(event.startTime, date));
@@ -121,9 +94,6 @@ export function useCalendarEvents() {
     [visibleEvents]
   );
 
-  /**
-   * Get positioned events for a specific date
-   */
   const getPositionedEvents = useCallback(
     (date: Date | string): PositionedEvent[] => {
       return getPositionedEventsForDay(
@@ -136,9 +106,6 @@ export function useCalendarEvents() {
     [visibleEvents]
   );
 
-  /**
-   * Get positioned events for the current week
-   */
   const getPositionedEventsWeek = useCallback(
     (weekDates: Date[]): Map<string, PositionedEvent[]> => {
       return getPositionedEventsForWeek(
@@ -151,18 +118,11 @@ export function useCalendarEvents() {
     [visibleEvents]
   );
 
-  /**
-   * Get the currently selected event
-   */
   const selectedEvent = useMemo(() => {
     if (!selectedEventId) return null;
     return events[selectedEventId] ?? null;
   }, [events, selectedEventId]);
 
-  /**
-   * Get all unique tag ids from visible events. The sidebar TagCloud
-   * resolves these to display rows via the unified tags-slice cache.
-   */
   const allTagIds = useMemo(() => {
     const tagSet = new Set<string>();
     visibleEvents.forEach((event) => {
@@ -171,7 +131,6 @@ export function useCalendarEvents() {
     return Array.from(tagSet);
   }, [visibleEvents]);
 
-  // Action handlers
   const handleSelectEvent = useCallback(
     (eventId: string | null) => {
       dispatch(selectEvent(eventId));
@@ -219,23 +178,19 @@ export function useCalendarEvents() {
   }, [dispatch]);
 
   return {
-    // Data
     events,
     visibleEvents,
     selectedEvent,
     selectedEventId,
     allTagIds,
 
-    // Modal state
     isEventModalOpen,
     eventModalMode,
     eventModalPrefill,
 
-    // Loading/error states
     loading,
     errors,
 
-    // Computed data functions
     getEventsForDate,
     getPositionedEvents,
     getPositionedEventsWeek,

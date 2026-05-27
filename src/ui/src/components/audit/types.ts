@@ -1,8 +1,4 @@
-/**
- * Shared audit-view types used by both `/admin/audit-logs` (org-scoped)
- * and `/platform/audit` (cross-tenant). Each consuming page maps its
- * proto rows into `AuditEvent` and tells the rail which filters apply.
- */
+/** Shared types for `/admin/audit-logs` (org-scoped) and `/platform/audit` (cross-tenant); each page maps proto rows into `AuditEvent`. */
 
 export interface AuditEvent {
     id: string;

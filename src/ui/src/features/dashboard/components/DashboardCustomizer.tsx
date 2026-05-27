@@ -1,10 +1,3 @@
-/**
- * DashboardCustomizer - Edit mode UI for widget layout customization
- *
- * Toggle edit mode to show/hide widgets and adjust sizes.
- * Provides save/cancel/reset actions.
- */
-
 import {
   Eye,
   EyeSlash,

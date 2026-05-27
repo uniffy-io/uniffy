@@ -1,12 +1,3 @@
-/**
- * ChatView - Two-panel chat interface with session sidebar.
- *
- * Left panel: ChatSessionSidebar (session list, new chat, agent picker)
- * Right panel: Active conversation (messages, streaming, input) or empty state
- *
- * Supports Zen Mode (hides session sidebar).
- */
-
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
@@ -82,7 +73,6 @@ for (const section of TOOL_SECTIONS) {
 function getToolActionLabel(toolName: string): string {
     const display = TOOL_DISPLAY_NAMES[toolName];
     if (display) return display;
-    // Fallback: "tasks.create_task" -> "Create Task"
     const parts = toolName.split(".");
     const action = parts[parts.length - 1];
     return action
@@ -91,18 +81,14 @@ function getToolActionLabel(toolName: string): string {
         .join(" ");
 }
 
-/** Format a raw status/priority/type enum value into readable text. */
 function humanizeEnumValue(value: string): string {
-    // "status_todo" -> "Todo", "priority_high" -> "High", "task" -> "Task"
     const parts = value.split("_");
-    // Drop known prefixes like "status", "priority"
     const meaningful = (parts.length > 1 && ["status", "priority"].includes(parts[0]))
         ? parts.slice(1)
         : parts;
     return meaningful.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-/** Parse a pipe-delimited field line like "Type: task | Status: status_todo | Priority: priority_high". */
 function parseFieldLine(line: string): Array<{ key: string; value: string }> {
     return line.split("|").map((segment) => {
         const colonIdx = segment.indexOf(":");
@@ -141,8 +127,6 @@ function MarkdownLink({ href, children }: { href?: string; children?: React.Reac
 
         const handleClick = (e?: React.MouseEvent) => {
             if (!parsed.isValid) return;
-            // Prefer the resolved URL from search-index metadata so
-            // type-specific routing (e.g. /chat/{ch}#{msg}) works.
             const resolved = getMentionUrl(href);
             const path = resolved || urnToPath(href);
             if (!path || path === "#") return;
@@ -159,8 +143,6 @@ function MarkdownLink({ href, children }: { href?: string; children?: React.Reac
 }
 
 const markdownComponents = { a: MarkdownLink };
-
-// Message bubbles
 
 function ChatMessageContent({ content }: { content: string }) {
     const parts = useMemo(() => {
@@ -203,7 +185,6 @@ function ChatMessageContent({ content }: { content: string }) {
     return <p className="text-sm whitespace-pre-wrap">{parts}</p>;
 }
 
-/** Strip extracted file text blocks from stored content for display. */
 const FILE_TEXT_BLOCK_RE = /\n?--- File: .+? ---\n[\s\S]*?--- End of .+? ---/g;
 
 function UserBubble({ message }: { message: SerializedMessage }) {
@@ -465,7 +446,6 @@ function ToolResultHuman({ result }: { result: string }) {
     return (
         <div className="space-y-1">
             {lines.map((line, idx) => {
-                // First line is the heading (e.g. "Task updated: [[[name|urn]]]")
                 if (idx === 0) {
                     return (
                         <div key={idx} className="text-sm text-foreground">
@@ -475,7 +455,6 @@ function ToolResultHuman({ result }: { result: string }) {
                         </div>
                     );
                 }
-                // Pipe-delimited field lines (Type: x | Status: y | Priority: z)
                 if (line.includes("|") && line.includes(":")) {
                     const fields = parseFieldLine(line);
                     return (
@@ -491,12 +470,10 @@ function ToolResultHuman({ result }: { result: string }) {
                         </div>
                     );
                 }
-                // Key: value lines (Assignees, Blocked by, etc.)
                 const colonIdx = line.indexOf(":");
                 if (colonIdx > 0 && colonIdx < 30) {
                     const key = line.slice(0, colonIdx).trim();
                     const value = line.slice(colonIdx + 1).trim();
-                    // Render mentions in values if present
                     const hasMentions = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/.test(value);
                     return (
                         <div key={idx} className="text-xs">
@@ -513,7 +490,6 @@ function ToolResultHuman({ result }: { result: string }) {
                         </div>
                     );
                 }
-                // Plain text fallback
                 return (
                     <div key={idx} className="text-xs text-foreground">
                         <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -532,7 +508,6 @@ function ToolCallGroup({ messages }: { messages: SerializedMessage[] }) {
 
     if (messages.length === 0) return null;
 
-    // Deduplicate tool names for the summary label
     const toolNames = [...new Set(messages.map((m) => m.toolName).filter(Boolean))];
     const label = toolNames.length === 1
         ? getToolActionLabel(toolNames[0]!)
@@ -764,8 +739,6 @@ function ConfirmationDialog({
     );
 }
 
-// Empty state (no active session selected)
-
 function ChatEmptyState({
     onSelectAgent,
 }: {
@@ -842,8 +815,6 @@ function ChatEmptyState({
     );
 }
 
-// Active chat panel (messages + input)
-
 function ChatPanel() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -860,10 +831,8 @@ function ChatPanel() {
     const pendingConfirmation = useAppSelector(selectPendingConfirmation);
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-    // If the slice already carries a run_id at mount - either from a
-    // navigate-away-and-back or from a tab reload that rehydrated
-    // sessionStorage - reconnect via SubscribeToRun instead of starting
-    // a fresh stream. Captured once on first render so a later
+    // Reconnect via SubscribeToRun if a run_id is already in the slice at mount
+    // (navigate-back or sessionStorage rehydrate). Captured once so a later
     // runIdReceived from streamSendMessage does not retrigger the hook.
     const [reconnectRunId] = useState<string | null>(() => activeRunId);
     useAgentRunStream(reconnectRunId, organizationId ?? "", activeSessionId);
@@ -964,7 +933,6 @@ function ChatPanel() {
             el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     }, []);
 
-    // Fetch messages when active session changes
     useEffect(() => {
         if (activeSessionId) {
             dispatch(fetchMessages({ sessionId: activeSessionId }));
@@ -972,7 +940,6 @@ function ChatPanel() {
         }
     }, [activeSessionId, dispatch]);
 
-    // Refresh context stats and refocus the composer after streaming completes
     const prevStreamingRef = useRef(false);
     useEffect(() => {
         if (prevStreamingRef.current && !isStreaming && activeSessionId) {
@@ -982,21 +949,18 @@ function ChatPanel() {
         prevStreamingRef.current = isStreaming;
     }, [isStreaming, activeSessionId, dispatch]);
 
-    // Focus the composer when entering a chat session (new or switched)
     useEffect(() => {
         if (activeSessionId && !isStreaming) {
             textareaRef.current?.focus();
         }
     }, [activeSessionId, isStreaming]);
 
-    // Auto-scroll on new messages or streaming updates
     useEffect(() => {
         if (isNearBottomRef.current) {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages.length, streamingContent, streamingToolCalls.length, pendingConfirmation]);
 
-    // Keep scrolled to bottom when content height changes asynchronously
     useEffect(() => {
         const wrapper = contentWrapperRef.current;
         const container = scrollContainerRef.current;
@@ -1035,7 +999,6 @@ function ChatPanel() {
 
         const content = text || "Please analyze the attached file(s).";
 
-        // Collect file IDs from uploaded files
         const fileIds = pendingFiles
             .map((f) => f.fileId)
             .filter((id): id is string => !!id);
@@ -1183,8 +1146,6 @@ function ChatPanel() {
                         ? "text-yellow-600 dark:text-yellow-400"
                         : "text-muted-foreground";
 
-                // Estimate how many tokens could be freed by compaction
-                // (rough: active tokens minus 40% target)
                 const targetTokens = Math.round(contextStats.contextWindowTokens * 0.4);
                 const freeableTokens = Math.max(0, contextStats.activeTokens - targetTokens);
                 const canCompact = contextStats.activeMessages > 2;
@@ -1429,7 +1390,6 @@ function ChatPanel() {
                                                     elements.push(<UserBubble key={message.id} message={message} />);
                                                     i++;
                                                 } else if (message.role === MessageRole.TOOL) {
-                                                    // Group consecutive TOOL messages
                                                     const group: SerializedMessage[] = [];
                                                     while (i < messages.length && messages[i].role === MessageRole.TOOL) {
                                                         group.push(messages[i]);
@@ -1437,9 +1397,7 @@ function ChatPanel() {
                                                     }
                                                     elements.push(<ToolCallGroup key={group[0].id} messages={group} />);
                                                 } else {
-                                                    // Skip intermediate assistant messages from the tool loop -
-                                                    // these have toolCallId set and their content is just the
-                                                    // LLM's repeated preamble before each tool invocation.
+                                                    // Skip intermediate tool-loop assistant messages (toolCallId set) - their content is preamble repeated before each tool call.
                                                     if (!message.toolCallId) {
                                                         elements.push(<AssistantBubble key={message.id} message={message} />);
                                                     }
@@ -1625,8 +1583,6 @@ function ChatPanel() {
     );
 }
 
-// Main ChatView (two-panel layout)
-
 export function ChatView() {
     const dispatch = useAppDispatch();
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -1641,7 +1597,6 @@ export function ChatView() {
         [],
     );
 
-    // Fetch agents, sessions, and provider availability on mount
     useEffect(() => {
         dispatch(fetchAgents());
         dispatch(fetchSessions());

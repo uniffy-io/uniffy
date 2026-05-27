@@ -1,12 +1,4 @@
-/**
- * PortalMenu - dropdown rendered into document.body so it escapes
- * ancestor ``overflow: hidden`` containers (e.g. ``Table`` wrapper).
- *
- * Anchors to a trigger ref via getBoundingClientRect. Right-aligns to
- * the trigger's right edge by default; can override via the ``align``
- * prop. Closes on outside click + Escape.
- */
-
+/** Renders into `document.body` to escape ancestor `overflow: hidden` containers (e.g. Table). */
 import {
     type ReactNode,
     type RefObject,

@@ -1,20 +1,3 @@
-/**
- * <TagContentList>
- *
- * Mixed-domain content list for the selected tag. Uses each row's
- * ``urnToPath`` for navigation and renders a uniform card per item
- * (icon + title + relative-time + content type badge).
- *
- * The plan calls for per-domain canonical row components (note row,
- * file row, ...) so the explorer feels like a navigable index rather
- * than a generic table. Phase 5 ships the uniform card; a follow-up
- * swaps in the per-domain components once the right-panel UX is
- * settled and the ``TaggedContentItem`` proto carries enough metadata
- * to drive each domain's row contract. The uniform card is good
- * enough today: title, content-type label, owner / preview hints
- * arrive with the planned hydration pass.
- */
-
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';

@@ -1,9 +1,3 @@
-/**
- * Members Section
- *
- * Admin UI for managing organization members.
- */
-
 import { useEffect, useState, useRef } from 'react';
 import {
     Users,
@@ -45,13 +39,11 @@ import {
     TableEmpty,
 } from '@/components/ui/table';
 
-// Role options for the member role selector
 const ROLE_OPTIONS: SelectOption<number>[] = [
     { value: OrganizationRole.ADMIN, label: 'Admin' },
     { value: OrganizationRole.MEMBER, label: 'Member' },
 ];
 
-// Role filter options (includes "All roles")
 const ROLE_FILTER_OPTIONS: SelectOption<string>[] = [
     { value: '', label: 'All roles' },
     { value: String(OrganizationRole.OWNER), label: 'Owners' },
@@ -141,7 +133,6 @@ function MemberRow({
         }
     };
 
-    // Get role badge style
     const getRoleBadgeStyle = (role: number) => {
         switch (role) {
             case OrganizationRole.OWNER:
@@ -156,7 +147,6 @@ function MemberRow({
     return (
         <>
             <TableRow className={removing ? 'opacity-50' : ''}>
-                {/* Member */}
                 <TableCell>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
@@ -184,7 +174,6 @@ function MemberRow({
                     </div>
                 </TableCell>
 
-                {/* Role */}
                 <TableCell align="center">
                     {isOwner ? (
                         <span
@@ -207,7 +196,6 @@ function MemberRow({
                     )}
                 </TableCell>
 
-                {/* Status */}
                 <TableCell align="center" className="hidden sm:table-cell">
                     <span
                         className="text-xs font-medium"
@@ -217,7 +205,6 @@ function MemberRow({
                     </span>
                 </TableCell>
 
-                {/* Actions */}
                 <TableCell align="right">
                     {!isOwner && !isCurrentUser && (
                         <div className="flex items-center justify-end gap-1">
@@ -268,7 +255,6 @@ function MemberRow({
                 </TableCell>
             </TableRow>
 
-            {/* Remove confirmation dialog */}
             <ConfirmDialog
                 isOpen={showRemoveConfirm}
                 onClose={() => setShowRemoveConfirm(false)}
@@ -280,7 +266,6 @@ function MemberRow({
                 loading={removing}
             />
 
-            {/* Invalidate caches confirmation dialog */}
             <ConfirmDialog
                 isOpen={showInvalidateCachesConfirm}
                 onClose={() => setShowInvalidateCachesConfirm(false)}
@@ -292,7 +277,6 @@ function MemberRow({
                 loading={invalidatingCaches}
             />
 
-            {/* MFA reset dialog */}
             <ReasonDialog
                 isOpen={showMfaResetDialog}
                 onClose={() => setShowMfaResetDialog(false)}
@@ -311,7 +295,6 @@ function MemberRow({
                 loading={mfaResetting}
             />
 
-            {/* Agent spend quota dialog */}
             <MemberAgentQuotaDialog
                 open={showQuotaDialog}
                 userId={showQuotaDialog ? member.userId : null}
@@ -333,14 +316,11 @@ export function MembersSection() {
     const [inviteOpen, setInviteOpen] = useState(false);
     const [invitationsRefreshKey, setInvitationsRefreshKey] = useState(0);
 
-    // Track previous values to detect actual changes vs initial mount
     const prevSearchRef = useRef<string | undefined>(undefined);
     const prevRoleFilterRef = useRef<number | undefined>(undefined);
     const hasFetchedRef = useRef(false);
 
-    // Fetch on mount and when filters change (debounced)
     useEffect(() => {
-        // Initial fetch - immediate
         if (!hasFetchedRef.current) {
             hasFetchedRef.current = true;
             prevSearchRef.current = search;
@@ -349,16 +329,13 @@ export function MembersSection() {
             return;
         }
 
-        // Check if values actually changed
         if (prevSearchRef.current === search && prevRoleFilterRef.current === roleFilter) {
             return;
         }
 
-        // Update refs
         prevSearchRef.current = search;
         prevRoleFilterRef.current = roleFilter;
 
-        // Debounce subsequent filter/search changes
         const timer = setTimeout(() => {
             refresh({ search: search || undefined, roleFilter });
         }, 300);
@@ -372,14 +349,12 @@ export function MembersSection() {
         toast.success(`Local caches invalidated for ${displayName}.`);
     };
 
-    // Count by role
     const ownerCount = members.filter((m) => m.role === OrganizationRole.OWNER).length;
     const adminCount = members.filter((m) => m.role === OrganizationRole.ADMIN).length;
     const memberCount = members.filter((m) => m.role === OrganizationRole.MEMBER).length;
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
                     <Users size={24} weight="duotone" className="text-primary shrink-0" />
@@ -390,7 +365,6 @@ export function MembersSection() {
                 </p>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
                     <p className="text-xl md:text-2xl font-bold">{totalCount}</p>
@@ -406,9 +380,7 @@ export function MembersSection() {
                 </div>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
-                {/* Search */}
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
@@ -421,7 +393,6 @@ export function MembersSection() {
                     />
                 </div>
 
-                {/* Role filter */}
                 <Select
                     value={roleFilter !== undefined ? String(roleFilter) : ''}
                     onChange={(val) => setRoleFilter(val ? Number(val) : undefined)}
@@ -441,7 +412,6 @@ export function MembersSection() {
                 )}
             </div>
 
-            {/* Error */}
             {error && (
                 <div className="p-4 rounded-lg border status-error">
                     <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
@@ -451,7 +421,6 @@ export function MembersSection() {
                 </div>
             )}
 
-            {/* Members table */}
             <Table>
                 <TableHeader>
                     <TableRow hoverable={false}>

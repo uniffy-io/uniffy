@@ -1,10 +1,3 @@
-/**
- * AgentQuickAccessWidget - Shows recent agent sessions
- *
- * Only renders if the user has agent sessions.
- * Shows last 3 sessions with agent name, message count, and time.
- */
-
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Brain, ArrowRight, Plus } from '@phosphor-icons/react';

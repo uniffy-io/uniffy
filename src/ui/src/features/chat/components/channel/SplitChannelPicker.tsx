@@ -1,10 +1,3 @@
-/**
- * SplitChannelPicker - Dropdown picker for selecting a channel to open in split view.
- *
- * Shows all channels except the currently active one. Includes a search filter.
- * Positioned as an absolute dropdown below the split button.
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Hash, Lock, MagnifyingGlass } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
@@ -26,7 +19,6 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
 
   const channels = useAppSelector((state) => state.chatChannels.channels);
 
-  // Filter out the current channel and apply search
   const filteredChannels = useMemo(() => {
     const query = search.toLowerCase();
     return channels
@@ -34,7 +26,6 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
       .filter((c) => !query || c.name.toLowerCase().includes(query));
   }, [channels, currentChannelId, search]);
 
-  // Group by type for display
   const channelGroups = useMemo(() => {
     const regular = filteredChannels.filter(
       (c) => c.channelType === 'PUBLIC' || c.channelType === 'PRIVATE',
@@ -45,19 +36,17 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
     return { regular, dms };
   }, [filteredChannels]);
 
-  // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Close on click outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    // Use setTimeout to avoid the click that opened the picker from closing it
+    // Defer registration so the opening click doesn't immediately close the picker.
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClick);
     }, 0);
@@ -67,7 +56,6 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
     };
   }, [onClose]);
 
-  // Close on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -109,7 +97,6 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
       ref={containerRef}
       className="absolute top-full right-0 mt-1 w-64 bg-card border border-border rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-hidden flex flex-col"
     >
-      {/* Search input */}
       <div className="px-2 py-1.5">
         <div className="relative">
           <MagnifyingGlass
@@ -127,7 +114,6 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
         </div>
       </div>
 
-      {/* Channel list */}
       <div className="overflow-y-auto flex-1">
         {channelGroups.regular.length > 0 && (
           <div>

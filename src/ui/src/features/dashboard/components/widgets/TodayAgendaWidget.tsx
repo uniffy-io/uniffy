@@ -1,10 +1,3 @@
-/**
- * TodayAgendaWidget - Shows today's calendar events in a timeline layout
- *
- * Displays all-day events at top, then timed events sorted chronologically.
- * Highlights the current/next event with a "Now" indicator.
- */
-
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CalendarBlank, MapPin, Clock, ArrowRight } from '@phosphor-icons/react';

@@ -1,13 +1,3 @@
-/**
- * AdminRoute - Protected route wrapper for admin pages.
- *
- * Allows access for:
- * - Organization admins (ADMIN or OWNER role in current org)
- * - System admins
- *
- * Redirects to login if not authenticated, or home if not an admin.
- */
-
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
 import { useAdminAccess } from '@/features/admin/hooks/useAdminHooks';
@@ -23,7 +13,6 @@ export function AdminRoute({ children }: AdminRouteProps) {
     const location = useLocation();
     const { canAccessAdmin } = useAdminAccess();
 
-    // Wait for auth rehydration to complete before making redirect decisions
     if (isRehydrating || (!isAuthenticated && refreshToken)) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-background">
@@ -36,7 +25,6 @@ export function AdminRoute({ children }: AdminRouteProps) {
         return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
-    // Check if user can access admin (org admin or system admin)
     if (!canAccessAdmin) {
         return <Navigate to="/" replace />;
     }

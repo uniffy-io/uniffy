@@ -1,9 +1,3 @@
-/**
- * Files List Component
- *
- * Displays files in grid or list view with sorting and filtering.
- */
-
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
     File,
@@ -73,9 +67,6 @@ import { MoveDialog } from '@/features/files/components/list/MoveDialog';
 import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
 import { FilesListSkeleton } from '@/features/files/components/list/FilesListSkeleton';
 
-/**
- * Build breadcrumb path by walking up folder parentId chain.
- */
 function buildFolderBreadcrumb(
     folders: Record<string, SerializedFolder>,
     currentFolderId: string | null,
@@ -125,7 +116,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const viewScope = useAppSelector((state) => state.files.filters.viewScope);
     const userId = useAppSelector((state) => state.auth.user?.id);
 
-    // Get current file for share button
     const currentFile = currentFileId ? filesMap[currentFileId] : null;
 
     // Active filter state
@@ -145,7 +135,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const lastSelectedId = useAppSelector((state) => state.files.lastSelectedId);
     const lastSelectedType = useAppSelector((state) => state.files.lastSelectedType);
 
-    // Get subfolders for current folder
     const subfolders = useAppSelector(selectSubfoldersForCurrentFolder);
 
     // Folder breadcrumb
@@ -213,7 +202,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         }
     }, [contextMenu]);
 
-    // Handle right-click on files area
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         // Don't show context menu in "Shared With Me" view
@@ -362,7 +350,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     // Move folder handler (single folder from context menu)
     const handleMoveFolder = useCallback(
         (folderId: string) => {
-            // Find folder in the tree
             const findFolder = (nodes: SerializedTreeNode[]): SerializedTreeNode | null => {
                 for (const node of nodes) {
                     if (node.id === folderId) return node;
@@ -421,7 +408,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         [dispatch]
     );
 
-    // Handle opening a folder
     const handleOpenFolder = useCallback(
         (folderId: string) => {
             dispatch(setSelectedFolder(folderId));
@@ -461,13 +447,11 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         return options;
     }, [savedFilters]);
 
-    // Handle filter selection from dropdown
     const handleFilterChange = useCallback((filterId: string) => {
         if (!filterId) {
             // Clear filter (preserve current folder)
             dispatch(clearActiveFilter());
         } else {
-            // Find and apply the filter
             const filter = savedFilters.find(f => f.id === filterId);
             if (filter) {
                 applyFilter(filter);
@@ -565,7 +549,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         setPendingDelete({ kind: 'bulk', fileIds: [...selectedFileIds], folderIds: [...selectedFolderIds] });
     }, [selectedFileIds, selectedFolderIds, totalSelectedCount]);
 
-    // Build a file info array for folder content lookup (use allFiles for recursive downloads)
+    // Use allFiles so recursive folder downloads see content the current view filters out.
     const filesForDownload = allFiles || files;
     const allFilesInfo = useMemo(() => createFileInfoArray(
         filesForDownload.reduce((acc, f) => {

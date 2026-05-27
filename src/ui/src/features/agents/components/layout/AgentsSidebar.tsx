@@ -1,11 +1,3 @@
-/**
- * AgentsSidebar - Left navigation sidebar for the Agents feature.
- *
- * Two modes controlled by a single toggle button:
- * - Expanded: Full-width with section headers and text labels
- * - Collapsed: Narrow icon rail that expands on hover as an overlay
- */
-
 import {
   ChatCircle,
   Plugs,
@@ -77,11 +69,9 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
   const navigate = useNavigate();
   const activeTab = useAppSelector(selectActiveTab);
 
-  // Expanded mode (full sidebar with labels)
   if (!collapsed) {
     return (
       <div className="h-full flex flex-col overflow-y-auto">
-        {/* Header with collapse toggle */}
         <div className="flex items-center px-3 pt-3 pb-1">
           <div className="flex-1" />
           <button
@@ -128,7 +118,6 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
     );
   }
 
-  // Collapsed mode: icon rail that expands on hover as overlay
   return (
     <div className="group/sidebar h-full relative">
       <div
@@ -139,7 +128,6 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
           "group-hover/sidebar:shadow-xl group-hover/sidebar:border-r group-hover/sidebar:border-border"
         )}
       >
-        {/* Header with expand toggle */}
         <div className="flex items-center justify-end px-2 pt-3 pb-1">
           <button
             type="button"
@@ -154,7 +142,6 @@ export function AgentsSidebar({ collapsed = false }: AgentsSidebarProps) {
         <nav className="flex-1 pb-2">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              {/* Section divider (collapsed) / label (hover-expanded) */}
               <div className="mt-3 mb-0.5 px-3 h-4 flex items-center">
                 <span className="hidden group-hover/sidebar:block text-xs uppercase text-muted-foreground font-medium tracking-wider whitespace-nowrap">
                   {group.label}

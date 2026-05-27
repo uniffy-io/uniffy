@@ -1,13 +1,3 @@
-/**
- * BoardView - Kanban board view for tasks
- *
- * Features:
- * - Horizontal scroll container for columns
- * - Uses status field options as columns
- * - Drag-and-drop between columns
- * - Task filtering by search query
- */
-
 import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
@@ -76,7 +66,6 @@ export function BoardView() {
   const [reparentHintActive, setReparentHintActive] = useState(false);
   const { isCollapsed, toggle: toggleLane } = useSwimlaneCollapse(project?.id ?? "");
 
-  // Configure sensors for drag detection
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: canEdit ? 8 : Infinity,
@@ -119,19 +108,16 @@ export function BoardView() {
     return null;
   }
 
-  // Get status field options (columns)
   const statusField = project.fieldDefinitions.find(
     (f) => f.id === SYSTEM_FIELD_IDS.STATUS
   );
   const statusOptions = statusField?.config.options || [];
 
-  // Get priority options for card badges
   const priorityField = project.fieldDefinitions.find(
     (f) => f.id === SYSTEM_FIELD_IDS.PRIORITY
   );
   const priorityOptions = priorityField?.config.options || [];
 
-  // Group tasks by status
   const tasksByStatus = statusOptions.reduce(
     (acc, option) => {
       acc[option.id] = tasks.filter((t) => t.status === option.id);
@@ -217,14 +203,12 @@ export function BoardView() {
     
     const updatedConfig = { ...statusField.config, options: [...existingOptions, newOption] };
 
-    // Optimistic update
     dispatch(updateFieldDefinition({
       projectId: project.id,
       fieldId: SYSTEM_FIELD_IDS.STATUS,
       changes: { config: updatedConfig },
     }));
 
-    // API update
     dispatch(updateFieldThunk({
       projectId: project.id,
       fieldId: SYSTEM_FIELD_IDS.STATUS,

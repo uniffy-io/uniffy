@@ -1,8 +1,3 @@
-/**
- * Calendar UI Redux slice
- * Manages UI state: view mode, navigation, panel visibility, etc.
- */
-
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type {
@@ -16,73 +11,38 @@ import type {
 import { LAYOUT, SIDEBAR_SECTIONS } from '@/features/calendar/constants';
 import { toDateString } from '@/features/calendar/utils';
 
-/**
- * Calendar UI state
- */
 interface CalendarUiState {
-  // View mode (day, week, month)
   viewMode: ViewMode;
-
-  // Currently displayed date (ISO string)
   currentDate: string;
-
-  // Active quick access filter
   quickAccessFilter: QuickAccessFilter | null;
-
-  // Selected event for detail panel
   selectedEventId: string | null;
-
-  // Detail panel state
   isDetailPanelOpen: boolean;
   detailPanelWidth: number;
   activeDetailTab: DetailPanelTab;
   detailViewMode: 'sidebar' | 'modal';
-
-  // Event modal state
   isEventModalOpen: boolean;
   eventModalMode: 'create' | 'edit';
   eventModalPrefill: EventModalPrefill | null;
-
-  // Event editor modal (edit existing event)
   isEditingEventOpen: boolean;
-
-  // Sidebar state
   isSidebarCollapsed: boolean;
   sidebarWidth: number;
   collapsedSections: SidebarSectionId[];
-
-  // Drag and drop
   draggedEventId: string | null;
   dropTarget: DropTarget | null;
   isDragging: boolean;
-
-  // Timezone
   displayTimezone: string;
   isTravelingMode: boolean;
-
-  // Quick capture modal
   isQuickCaptureOpen: boolean;
-
-  // Timezone modal
   isTimezoneModalOpen: boolean;
-
-  // Category/Template modals
   isAddCategoryModalOpen: boolean;
   editingCategoryId: string | null;
   isCreateTemplateModalOpen: boolean;
   editingTemplateId: string | null;
-
-  // Mobile state
   isMobileView: boolean;
   activeMobilePanel: 'sidebar' | 'calendar' | 'detail';
-
-  // Event scope filter: all, personal, organization
   eventScope: 'all' | 'personal' | 'organization';
 }
 
-/**
- * Get default collapsed sections
- */
 function getDefaultCollapsedSections(): SidebarSectionId[] {
   return (Object.entries(SIDEBAR_SECTIONS) as [SidebarSectionId, boolean][])
     .filter(([, isExpanded]) => !isExpanded)
@@ -125,12 +85,10 @@ const calendarUiSlice = createSlice({
   name: 'calendarUi',
   initialState,
   reducers: {
-    // View mode
     setViewMode: (state, action: PayloadAction<ViewMode>) => {
       state.viewMode = action.payload;
     },
 
-    // Date navigation
     setCurrentDate: (state, action: PayloadAction<string>) => {
       state.currentDate = action.payload;
     },
@@ -139,7 +97,6 @@ const calendarUiSlice = createSlice({
       state.currentDate = toDateString(new Date());
     },
 
-    // Quick access filter
     setQuickAccessFilter: (
       state,
       action: PayloadAction<QuickAccessFilter | null>
@@ -147,7 +104,6 @@ const calendarUiSlice = createSlice({
       state.quickAccessFilter = action.payload;
     },
 
-    // Event selection and detail panel
     selectEvent: (state, action: PayloadAction<string | null>) => {
       state.selectedEventId = action.payload;
       if (action.payload) {
@@ -191,7 +147,6 @@ const calendarUiSlice = createSlice({
       state.activeDetailTab = action.payload;
     },
 
-    // Event modal
     openEventModal: (
       state,
       action: PayloadAction<{
@@ -209,7 +164,6 @@ const calendarUiSlice = createSlice({
       state.eventModalPrefill = null;
     },
 
-    // Edit event modal
     openEditEvent: (state, action: PayloadAction<string>) => {
       state.selectedEventId = action.payload;
       state.isEditingEventOpen = true;
@@ -219,7 +173,6 @@ const calendarUiSlice = createSlice({
       state.isEditingEventOpen = false;
     },
 
-    // Sidebar
     toggleSidebar: (state) => {
       state.isSidebarCollapsed = !state.isSidebarCollapsed;
     },
@@ -260,7 +213,6 @@ const calendarUiSlice = createSlice({
       }
     },
 
-    // Drag and drop
     startDrag: (state, action: PayloadAction<string>) => {
       state.draggedEventId = action.payload;
       state.isDragging = true;
@@ -276,7 +228,6 @@ const calendarUiSlice = createSlice({
       state.isDragging = false;
     },
 
-    // Timezone
     setDisplayTimezone: (state, action: PayloadAction<string>) => {
       state.displayTimezone = action.payload;
     },
@@ -289,7 +240,6 @@ const calendarUiSlice = createSlice({
       state.isTravelingMode = action.payload;
     },
 
-    // Quick capture
     openQuickCapture: (state) => {
       state.isQuickCaptureOpen = true;
     },
@@ -298,7 +248,6 @@ const calendarUiSlice = createSlice({
       state.isQuickCaptureOpen = false;
     },
 
-    // Timezone modal
     openTimezoneModal: (state) => {
       state.isTimezoneModalOpen = true;
     },
@@ -307,7 +256,6 @@ const calendarUiSlice = createSlice({
       state.isTimezoneModalOpen = false;
     },
 
-    // Category/Template modals
     openAddCategoryModal: (state) => {
       state.isAddCategoryModalOpen = true;
       state.editingCategoryId = null;
@@ -338,7 +286,6 @@ const calendarUiSlice = createSlice({
       state.editingTemplateId = null;
     },
 
-    // Mobile state
     setMobileView: (state, action: PayloadAction<boolean>) => {
       state.isMobileView = action.payload;
       if (action.payload) {
@@ -353,12 +300,10 @@ const calendarUiSlice = createSlice({
       state.activeMobilePanel = action.payload;
     },
 
-    // Event scope filter
     setEventScope: (state, action: PayloadAction<'all' | 'personal' | 'organization'>) => {
       state.eventScope = action.payload;
     },
 
-    // Reset
     resetCalendarUiState: () => initialState,
   },
 });

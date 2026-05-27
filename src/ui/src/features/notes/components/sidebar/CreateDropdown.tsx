@@ -1,10 +1,3 @@
-/**
- * Create Dropdown Component
- *
- * A "+" button that opens a fixed-position popover with options to create a Note, Canvas, or Folder.
- * Uses fixed positioning so the menu never disrupts the parent layout.
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Plus,
@@ -20,7 +13,6 @@ interface CreateDropdownProps {
     onCreateFolder: () => void;
     disabled?: boolean;
     creating?: boolean;
-    /** Compact mode for inline use (e.g. section headers, folder rows). Shows a small icon button. */
     compact?: boolean;
 }
 
@@ -37,7 +29,6 @@ export function CreateDropdown({
     const triggerRef = useRef<HTMLSpanElement | HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Close on outside click
     useEffect(() => {
         if (!isOpen) return;
 
@@ -53,7 +44,6 @@ export function CreateDropdown({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen]);
 
-    // Close on escape
     useEffect(() => {
         if (!isOpen) return;
 

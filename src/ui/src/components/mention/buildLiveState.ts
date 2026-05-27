@@ -1,10 +1,3 @@
-/**
- * Build MentionLiveState from preview metadata
- *
- * Shared mapper that converts raw search-index metadata (string key-value pairs)
- * into the typed MentionLiveState structure used by chips and previews.
- */
-
 import type { MentionLiveState } from '@/components/mention/types';
 
 export function buildLiveStateFromMetadata(
