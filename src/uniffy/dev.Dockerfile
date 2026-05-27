@@ -1,8 +1,3 @@
-# Dev image for backend + worker-core + worker-egress.
-# Same Python base as the prod Dockerfile - already includes uv, tini, ffmpeg,
-# Pillow deps, build-essential. No need to reinstall any of that here.
-# Source code is bind-mounted at runtime; uv sync runs in entrypoint and is
-# cached via the per-container .venv anonymous volume.
 FROM registry.uniffy.io/uniffy/python-base:3.14.4-slim-trixie
 
 WORKDIR /app

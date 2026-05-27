@@ -34,6 +34,7 @@ const OrganizationPicker = lazyImport(() => import('@/features/auth/components/O
 const AcceptInvitePage = lazyImport(() => import('@/features/auth/pages/AcceptInvitePage'), 'AcceptInvitePage');
 const ForgotPasswordPage = lazyImport(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 const ResetPasswordPage = lazyImport(() => import('@/features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
+const EnrollmentPage = lazyImport(() => import('@/features/mfa/pages/EnrollmentPage'), 'EnrollmentPage');
 
 // Dashboard
 const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashboard'), 'Dashboard');
@@ -247,6 +248,15 @@ export function App() {
                             element={
                                 <AuthLayout>
                                     <LazyRoute><ResetPasswordPage /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/auth/enroll-mfa"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><EnrollmentPage /></LazyRoute>
                                 </AuthLayout>
                             }
                         />

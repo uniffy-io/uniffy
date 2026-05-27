@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file superadmin/v1/system_config.proto.
  */
 export const file_superadmin_v1_system_config: GenFile = /*@__PURE__*/
-  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJGCgxTeXN0ZW1Db25maWcSNgoTcHVibGljX3JlZ2lzdHJhdGlvbhgBIAEoCzIZLnN1cGVyYWRtaW4udjEuU3lzdGVtRmxhZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZzLvAQoTU3lzdGVtQ29uZmlnU2VydmljZRJiCg9HZXRTeXN0ZW1Db25maWcSJS5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlIgASdAoVU2V0UHVibGljUmVnaXN0cmF0aW9uEisuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXF1ZXN0Giwuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZSIAQkNaQWdpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL3N1cGVyYWRtaW4vdjE7c3VwZXJhZG1pbnYxYgZwcm90bzM");
+  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJGCgxTeXN0ZW1Db25maWcSNgoTcHVibGljX3JlZ2lzdHJhdGlvbhgBIAEoCzIZLnN1cGVyYWRtaW4udjEuU3lzdGVtRmxhZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIvCglNZmFQb2xpY3kSIgoacmVxdWlyZWRfZm9yX3N5c3RlbV9hZG1pbnMYASABKAgiFQoTR2V0TWZhUG9saWN5UmVxdWVzdCJAChRHZXRNZmFQb2xpY3lSZXNwb25zZRIoCgZwb2xpY3kYASABKAsyGC5zdXBlcmFkbWluLnYxLk1mYVBvbGljeSI5ChNTZXRNZmFQb2xpY3lSZXF1ZXN0EiIKGnJlcXVpcmVkX2Zvcl9zeXN0ZW1fYWRtaW5zGAEgASgIIkAKFFNldE1mYVBvbGljeVJlc3BvbnNlEigKBnBvbGljeRgBIAEoCzIYLnN1cGVyYWRtaW4udjEuTWZhUG9saWN5MqUDChNTeXN0ZW1Db25maWdTZXJ2aWNlEmIKD0dldFN5c3RlbUNvbmZpZxIlLnN1cGVyYWRtaW4udjEuR2V0U3lzdGVtQ29uZmlnUmVxdWVzdBomLnN1cGVyYWRtaW4udjEuR2V0U3lzdGVtQ29uZmlnUmVzcG9uc2UiABJ0ChVTZXRQdWJsaWNSZWdpc3RyYXRpb24SKy5zdXBlcmFkbWluLnYxLlNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QaLC5zdXBlcmFkbWluLnYxLlNldFB1YmxpY1JlZ2lzdHJhdGlvblJlc3BvbnNlIgASWQoMR2V0TWZhUG9saWN5EiIuc3VwZXJhZG1pbi52MS5HZXRNZmFQb2xpY3lSZXF1ZXN0GiMuc3VwZXJhZG1pbi52MS5HZXRNZmFQb2xpY3lSZXNwb25zZSIAElkKDFNldE1mYVBvbGljeRIiLnN1cGVyYWRtaW4udjEuU2V0TWZhUG9saWN5UmVxdWVzdBojLnN1cGVyYWRtaW4udjEuU2V0TWZhUG9saWN5UmVzcG9uc2UiAEJDWkFnaXRodWIuY29tL0F0aGVubmFNaW5kL3VuaWZmeS1wcm90by1nby9zdXBlcmFkbWluL3YxO3N1cGVyYWRtaW52MWIGcHJvdG8z");
 
 /**
  * One configuration flag's effective state.
@@ -122,6 +122,91 @@ export const SetPublicRegistrationResponseSchema: GenMessage<SetPublicRegistrati
   messageDesc(file_superadmin_v1_system_config, 5);
 
 /**
+ * Deployment-wide MFA policy snapshot. Mirrors the
+ * ``deployment_settings(namespace='mfa')`` row; absent rows fall back
+ * to env then to the coded default.
+ *
+ * @generated from message superadmin.v1.MfaPolicy
+ */
+export type MfaPolicy = Message<"superadmin.v1.MfaPolicy"> & {
+  /**
+   * @generated from field: bool required_for_system_admins = 1;
+   */
+  requiredForSystemAdmins: boolean;
+};
+
+/**
+ * Describes the message superadmin.v1.MfaPolicy.
+ * Use `create(MfaPolicySchema)` to create a new message.
+ */
+export const MfaPolicySchema: GenMessage<MfaPolicy> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 6);
+
+/**
+ * @generated from message superadmin.v1.GetMfaPolicyRequest
+ */
+export type GetMfaPolicyRequest = Message<"superadmin.v1.GetMfaPolicyRequest"> & {
+};
+
+/**
+ * Describes the message superadmin.v1.GetMfaPolicyRequest.
+ * Use `create(GetMfaPolicyRequestSchema)` to create a new message.
+ */
+export const GetMfaPolicyRequestSchema: GenMessage<GetMfaPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 7);
+
+/**
+ * @generated from message superadmin.v1.GetMfaPolicyResponse
+ */
+export type GetMfaPolicyResponse = Message<"superadmin.v1.GetMfaPolicyResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.MfaPolicy policy = 1;
+   */
+  policy?: MfaPolicy | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.GetMfaPolicyResponse.
+ * Use `create(GetMfaPolicyResponseSchema)` to create a new message.
+ */
+export const GetMfaPolicyResponseSchema: GenMessage<GetMfaPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 8);
+
+/**
+ * @generated from message superadmin.v1.SetMfaPolicyRequest
+ */
+export type SetMfaPolicyRequest = Message<"superadmin.v1.SetMfaPolicyRequest"> & {
+  /**
+   * @generated from field: bool required_for_system_admins = 1;
+   */
+  requiredForSystemAdmins: boolean;
+};
+
+/**
+ * Describes the message superadmin.v1.SetMfaPolicyRequest.
+ * Use `create(SetMfaPolicyRequestSchema)` to create a new message.
+ */
+export const SetMfaPolicyRequestSchema: GenMessage<SetMfaPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 9);
+
+/**
+ * @generated from message superadmin.v1.SetMfaPolicyResponse
+ */
+export type SetMfaPolicyResponse = Message<"superadmin.v1.SetMfaPolicyResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.MfaPolicy policy = 1;
+   */
+  policy?: MfaPolicy | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.SetMfaPolicyResponse.
+ * Use `create(SetMfaPolicyResponseSchema)` to create a new message.
+ */
+export const SetMfaPolicyResponseSchema: GenMessage<SetMfaPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 10);
+
+/**
  * Deployment-wide configuration flags surfaced to the platform admin
  * surface. Every flag follows the same resolution: ``deployment_settings``
  * row (operator-edited) > env default (set at deploy time) > coded default.
@@ -153,6 +238,29 @@ export const SystemConfigService: GenService<{
     methodKind: "unary";
     input: typeof SetPublicRegistrationRequestSchema;
     output: typeof SetPublicRegistrationResponseSchema;
+  },
+  /**
+   * Read the deployment-wide MFA policy: whether platform admins must
+   * have MFA enabled, and the day / login caps on the per-user grace
+   * window before the requirement becomes hard.
+   *
+   * @generated from rpc superadmin.v1.SystemConfigService.GetMfaPolicy
+   */
+  getMfaPolicy: {
+    methodKind: "unary";
+    input: typeof GetMfaPolicyRequestSchema;
+    output: typeof GetMfaPolicyResponseSchema;
+  },
+  /**
+   * Partial update to the MFA policy. Only fields explicitly set in
+   * the request are written. Audits as ``auth.mfa_policy_changed``.
+   *
+   * @generated from rpc superadmin.v1.SystemConfigService.SetMfaPolicy
+   */
+  setMfaPolicy: {
+    methodKind: "unary";
+    input: typeof SetMfaPolicyRequestSchema;
+    output: typeof SetMfaPolicyResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_superadmin_v1_system_config, 0);

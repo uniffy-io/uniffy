@@ -95,12 +95,18 @@ interface AuditRowProps {
 function AuditRow({ event, expanded, onToggle, showOrganization }: AuditRowProps) {
     const { subjects } = useSubjectResolver(event.actorUserId ? [event.actorUserId] : []);
     const actor = subjects[0];
-    const isAgent = useMemo(() => {
+    const { isAgent, agentName } = useMemo(() => {
         try {
             const details = JSON.parse(event.detailsJson || '{}');
-            return details?.actor_kind === 'agent';
+            return {
+                isAgent: details?.actor_kind === 'agent',
+                agentName:
+                    typeof details?.agent_name === 'string'
+                        ? (details.agent_name as string)
+                        : null,
+            };
         } catch {
-            return false;
+            return { isAgent: false, agentName: null };
         }
     }, [event.detailsJson]);
     const target = useMemo(() => buildTarget(event), [event]);
@@ -158,8 +164,16 @@ function AuditRow({ event, expanded, onToggle, showOrganization }: AuditRowProps
                             </span>
                         )}
                         {isAgent && (
-                            <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-400 uppercase tracking-wider">
-                                agent
+                            <span
+                                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-400 uppercase tracking-wider"
+                                title={agentName ?? undefined}
+                            >
+                                <span>agent</span>
+                                {agentName && (
+                                    <span className="normal-case tracking-normal font-medium max-w-[10rem] truncate">
+                                        {agentName}
+                                    </span>
+                                )}
                             </span>
                         )}
                     </div>
@@ -193,11 +207,13 @@ function AuditRow({ event, expanded, onToggle, showOrganization }: AuditRowProps
                                 }
                                 mono
                             />
-                            <DetailField
-                                label="On behalf of"
-                                value={event.onBehalfOfUserId ?? '-'}
-                                mono
-                            />
+                            {event.onBehalfOfUserId && (
+                                <DetailField
+                                    label="On behalf of"
+                                    value={event.onBehalfOfUserId}
+                                    mono
+                                />
+                            )}
                             <DetailField label="IP address" value={event.ipAddress ?? '-'} mono />
                             <DetailField label="User agent" value={event.userAgent ?? '-'} />
                             <div className="md:col-span-2 space-y-1">

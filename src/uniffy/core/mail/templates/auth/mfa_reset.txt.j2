@@ -1,0 +1,11 @@
+Two-factor authentication was reset
+
+Hi{% if user_name %} {{ user_name }}{% endif %},
+
+An administrator of {{ org_name }}{% if actor_name %} ({{ actor_name }}){% endif %} reset the two-factor authentication on your account.
+
+Every existing session has been signed out and your recovery codes have been invalidated. The next time you sign in you will be guided through enrolling a new authenticator app and shown a fresh set of recovery codes.
+
+{% if reason %}Reason given by the administrator: {{ reason }}
+
+{% endif %}If you did not expect this change, contact your organization administrator immediately.

@@ -3,7 +3,9 @@ import { transport } from '@/config/api';
 import {
     SystemConfigService,
     GetSystemConfigRequestSchema,
+    GetMfaPolicyRequestSchema,
     SetPublicRegistrationRequestSchema,
+    SetMfaPolicyRequestSchema,
 } from '@uniffy/proto/superadmin/v1/system_config_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -17,4 +19,12 @@ export const systemConfigApi = {
     setPublicRegistration: async (
         request: MessageInitShape<typeof SetPublicRegistrationRequestSchema>,
     ) => client.setPublicRegistration(request),
+
+    getMfaPolicy: async (
+        request: MessageInitShape<typeof GetMfaPolicyRequestSchema> = {},
+    ) => client.getMfaPolicy(request),
+
+    setMfaPolicy: async (
+        request: MessageInitShape<typeof SetMfaPolicyRequestSchema>,
+    ) => client.setMfaPolicy(request),
 };

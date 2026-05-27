@@ -49,8 +49,11 @@ from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
+from uniffy.core.models.login.platform_mfa_reset_request import PlatformMfaResetRequest
 from uniffy.core.models.login.sso_configuration import SSOConfiguration, SSOProvider
 from uniffy.core.models.login.user import User
+from uniffy.core.models.login.user_mfa import UserMfa
+from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.models.mail.suppression import EmailSuppression, EmailSuppressionReason
 from uniffy.core.models.notes.note import Note
@@ -108,6 +111,9 @@ __all__ = [
     "SSOConfiguration",
     "SSOProvider",
     "UserSession",
+    "UserMfa",
+    "UserRecoveryCode",
+    "PlatformMfaResetRequest",
     "PasswordResetToken",
     "Invitation",
     # Mail

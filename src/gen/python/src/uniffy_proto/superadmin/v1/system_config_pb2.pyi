@@ -40,3 +40,31 @@ class SetPublicRegistrationResponse(_message.Message):
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     config: SystemConfig
     def __init__(self, config: _Optional[_Union[SystemConfig, _Mapping]] = ...) -> None: ...
+
+class MfaPolicy(_message.Message):
+    __slots__ = ("required_for_system_admins",)
+    REQUIRED_FOR_SYSTEM_ADMINS_FIELD_NUMBER: _ClassVar[int]
+    required_for_system_admins: bool
+    def __init__(self, required_for_system_admins: _Optional[bool] = ...) -> None: ...
+
+class GetMfaPolicyRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetMfaPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: MfaPolicy
+    def __init__(self, policy: _Optional[_Union[MfaPolicy, _Mapping]] = ...) -> None: ...
+
+class SetMfaPolicyRequest(_message.Message):
+    __slots__ = ("required_for_system_admins",)
+    REQUIRED_FOR_SYSTEM_ADMINS_FIELD_NUMBER: _ClassVar[int]
+    required_for_system_admins: bool
+    def __init__(self, required_for_system_admins: _Optional[bool] = ...) -> None: ...
+
+class SetMfaPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: MfaPolicy
+    def __init__(self, policy: _Optional[_Union[MfaPolicy, _Mapping]] = ...) -> None: ...

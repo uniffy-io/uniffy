@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
+
+// MFA service. Co-located with AuthService in the auth.v1 package so
+// the wire surface stays tight. TOTP (RFC 6238) is the only v1 factor;
+// the methods field on MfaChallenge is a list precisely so additive
+// factors (WebAuthn, ...) can land later without re-plumbing the
+// login flow.
+service MfaService {
+  // Authenticated. Begins enrollment: server generates a secret,
+  // stores it encrypted-but-disabled, returns provisioning URI + QR
+  // (base64 SVG, server-rendered, no CDN) + manual-entry b32 form.
+  // Re-running this RPC before ConfirmEnrollment overwrites the
+  // pending secret (last write wins).
+  rpc BeginEnrollment(BeginEnrollmentRequest) returns (BeginEnrollmentResponse);
+
+  // Authenticated. Verifies a TOTP code against the pending secret;
+  // on success flips enabled=true, generates 10 recovery codes
+  // (plaintext returned ONCE in this response), bumps token_version.
+  rpc ConfirmEnrollment(ConfirmEnrollmentRequest) returns (ConfirmEnrollmentResponse);
+
+  // Unauthenticated. Takes the challenge token issued by
+  // AuthService.Authenticate plus a TOTP code or recovery code.
+  // Returns the real AuthResult on success.
+  rpc VerifyMfa(VerifyMfaRequest) returns (VerifyMfaResponse);
+
+  // Authenticated. Disables MFA on the calling user. REQUIRES a
+  // current TOTP code (password alone is not sufficient).
+  rpc DisableMfa(DisableMfaRequest) returns (DisableMfaResponse);
+
+  // Authenticated. Re-issues 10 recovery codes. Requires current TOTP
+  // code. Old codes are invalidated.
+  rpc RegenerateRecoveryCodes(RegenerateRecoveryCodesRequest) returns (RegenerateRecoveryCodesResponse);
+
+  // Authenticated as org admin. Resets MFA on a user who is a member
+  // of the calling org. Cross-checks org membership.
+  rpc AdminResetMfa(AdminResetMfaRequest) returns (AdminResetMfaResponse);
+
+  // Authenticated as platform admin. Direct reset is constrained to
+  // users with zero org memberships.
+  rpc PlatformResetMfa(PlatformResetMfaRequest) returns (PlatformResetMfaResponse);
+
+  // Authenticated as platform admin. Request the reset of another
+  // platform admin's MFA. Requires a second admin's approval within
+  // a 10-minute window.
+  rpc RequestPlatformPeerReset(RequestPlatformPeerResetRequest) returns (RequestPlatformPeerResetResponse);
+
+  // Authenticated as platform admin (distinct from the requester).
+  // Approves a pending peer-reset request and performs the reset.
+  rpc ApprovePlatformPeerReset(ApprovePlatformPeerResetRequest) returns (ApprovePlatformPeerResetResponse);
+
+  // Authenticated as platform admin. Returns every pending (not yet
+  // approved, not yet expired) peer-reset request so other platform
+  // admins can co-sign them from the inbox panel.
+  rpc ListPlatformPeerResets(ListPlatformPeerResetsRequest) returns (ListPlatformPeerResetsResponse);
+
+  // Authenticated. Returns the calling user's MFA enrollment state.
+  rpc GetMfaStatus(GetMfaStatusRequest) returns (GetMfaStatusResponse);
+}
+
+// ---------------------------------------------------------------- //
+// Enrollment                                                        //
+// ---------------------------------------------------------------- //
+
+message BeginEnrollmentRequest {}
+
+message BeginEnrollmentResponse {
+  // Base32 form of the TOTP secret. Authenticator apps that do not
+  // scan QR codes consume this directly.
+  string secret_b32 = 1;
+  // otpauth:// provisioning URI per RFC 6238 §4.
+  string provisioning_uri = 2;
+  // Inline SVG QR code, base64-encoded so the client can render with
+  // <img src="data:image/svg+xml;base64,...">. Server-rendered via
+  // segno; no third-party QR service.
+  string qr_svg_base64 = 3;
+}
+
+message ConfirmEnrollmentRequest {
+  string code = 1;
+}
+
+message ConfirmEnrollmentResponse {
+  // Plaintext recovery codes shown ONCE. Hashed at rest.
+  repeated string recovery_codes = 1;
+  // Fresh AuthResult for the calling session. The previous tokens
+  // were invalidated by the token_version bump.
+  string access_token = 2;
+  string refresh_token = 3;
+  string session_id = 4;
+}
+
+// ---------------------------------------------------------------- //
+// Verify (login completion)                                         //
+// ---------------------------------------------------------------- //
+
+message VerifyMfaRequest {
+  // The mfa_challenge JWT returned by AuthService.Authenticate.
+  string challenge_token = 1;
+  // User-supplied 6-digit TOTP code OR a recovery code in
+  // xxxx-xxxx-xxxx form. method below disambiguates.
+  string code = 2;
+  string method = 3; // "totp" | "recovery_code"
+}
+
+message VerifyMfaResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3; // always "bearer"
+  string user_id = 4;
+  optional string organization_id = 5;
+  optional string organization_role = 6;
+  optional string session_id = 7;
+  // True when this verify consumed a recovery code (UI nudges the
+  // user to regenerate when fewer than 3 remain).
+  bool used_recovery_code = 8;
+  int32 remaining_recovery_codes = 9;
+}
+
+// ---------------------------------------------------------------- //
+// Self-service management                                           //
+// ---------------------------------------------------------------- //
+
+message DisableMfaRequest {
+  string code = 1; // Current TOTP code.
+}
+
+message DisableMfaResponse {
+  bool success = 1;
+}
+
+message RegenerateRecoveryCodesRequest {
+  string code = 1; // Current TOTP code.
+}
+
+message RegenerateRecoveryCodesResponse {
+  repeated string recovery_codes = 1; // Shown once.
+}
+
+message GetMfaStatusRequest {}
+
+message GetMfaStatusResponse {
+  bool enabled = 1;
+  optional google.protobuf.Timestamp enrolled_at = 2;
+  optional google.protobuf.Timestamp last_used_at = 3;
+  int32 remaining_recovery_codes = 4;
+}
+
+// ---------------------------------------------------------------- //
+// Admin / platform reset                                            //
+// ---------------------------------------------------------------- //
+
+message AdminResetMfaRequest {
+  string organization_id = 1;
+  string target_user_id = 2;
+  string reason = 3;
+}
+
+message AdminResetMfaResponse {
+  bool success = 1;
+}
+
+message PlatformResetMfaRequest {
+  string target_user_id = 1;
+  string reason = 2;
+}
+
+message PlatformResetMfaResponse {
+  bool success = 1;
+}
+
+message RequestPlatformPeerResetRequest {
+  string target_user_id = 1;
+  string reason = 2;
+}
+
+message RequestPlatformPeerResetResponse {
+  string request_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ApprovePlatformPeerResetRequest {
+  string request_id = 1;
+}
+
+message ApprovePlatformPeerResetResponse {
+  bool success = 1;
+}
+
+message PendingPeerReset {
+  string request_id = 1;
+  string requester_user_id = 2;
+  string requester_email = 3;
+  string target_user_id = 4;
+  string target_email = 5;
+  string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+message ListPlatformPeerResetsRequest {}
+
+message ListPlatformPeerResetsResponse {
+  repeated PendingPeerReset requests = 1;
+}

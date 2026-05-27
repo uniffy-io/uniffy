@@ -14,10 +14,6 @@ Worker / cron / ARQ paths that emit audit rows leave both ContextVars
 unset; the writer treats unset values as ``None`` (system-initiated
 events).
 
-ContextVars copy with :class:`asyncio.Task` by default (Python 3.13
-behaviour), so ``asyncio.gather`` fan-out inside a request - notably
-the agent tool executor's parallel read-tool pool - inherits the
-captured IP / UA without any extra glue.
 """
 
 import os

@@ -2,8 +2,12 @@
 
 from connectrpc.request import RequestContext
 from uniffy_proto.superadmin.v1.system_config_pb2 import (
+    GetMfaPolicyRequest,
+    GetMfaPolicyResponse,
     GetSystemConfigRequest,
     GetSystemConfigResponse,
+    SetMfaPolicyRequest,
+    SetMfaPolicyResponse,
     SetPublicRegistrationRequest,
     SetPublicRegistrationResponse,
 )
@@ -30,3 +34,17 @@ class SystemConfigServiceImpl:
         ctx: RequestContext,
     ) -> SetPublicRegistrationResponse:
         return await self._handlers.set_public_registration(request, ctx)
+
+    async def get_mfa_policy(
+        self,
+        request: GetMfaPolicyRequest,
+        ctx: RequestContext,
+    ) -> GetMfaPolicyResponse:
+        return await self._handlers.get_mfa_policy(request, ctx)
+
+    async def set_mfa_policy(
+        self,
+        request: SetMfaPolicyRequest,
+        ctx: RequestContext,
+    ) -> SetMfaPolicyResponse:
+        return await self._handlers.set_mfa_policy(request, ctx)

@@ -5,16 +5,12 @@ A single CLI dispatches the three long-running processes:
     python -m uniffy --backend
     python -m uniffy --worker-core
     python -m uniffy --worker-egress
-
-The dispatch loads dotenv and calls ``bootstrap_multiproc_metrics`` for
-the chosen component before importing anything that pulls in
-``prometheus_client`` (Granian + factory for backend, observability +
-ARQ runner for workers). Everything heavy lives behind the per-mode
-function so a single ``--help`` invocation stays cheap.
+    python -m uniffy --mfa-reset
 """
 
 import argparse
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -100,6 +96,12 @@ _MODES = {
 def main() -> None:
     """Parse the mode flag and run the matching process."""
     load_dotenv()
+
+    if "--mfa-reset" in sys.argv:
+        from uniffy.cli.mfa import run as _run_mfa_reset
+
+        _run_mfa_reset()
+        return
 
     parser = argparse.ArgumentParser(
         prog="python -m uniffy",

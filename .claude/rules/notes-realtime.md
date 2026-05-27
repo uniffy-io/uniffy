@@ -74,7 +74,7 @@ Browser tab ────► ONE WebSocket  /api/realtime?org_id=<uuid>
 
 ## 2. Generic core vs domain adapter
 
-**`core/realtime/*` MUST NOT import from `domains/*`.** Domain coupling goes through `RealtimeContentAdapter`. Adding tasks / projects / comments realtime later means writing a new adapter, not touching the core.
+**`core/realtime/*` does not import from `domains/*`.** Domain coupling goes through `RealtimeContentAdapter`. Adding tasks / projects / comments realtime later means writing a new adapter rather than touching the core.
 
 ```python
 class RealtimeContentAdapter(Protocol):
@@ -87,11 +87,11 @@ class RealtimeContentAdapter(Protocol):
 Notes adapter at `domains/notes/realtime_adapter.py`. Self-registers at module import; `domains/notes/__init__.py` imports it so the existing notes-service import chain triggers registration at boot.
 
 Adapter rules:
-- `authorize` returns `None` (not raises) for no access / missing row. Use `PermissionChecker.effective_role(...)` directly; do NOT call `_require_view` (which raises).
-- `hydrate_ydoc` is invoked ONCE per process when the snapshot row is empty. Notes dispatches on `node_type`:
+- `authorize` returns `None` (rather than raising) for no access / missing row. Reach for `PermissionChecker.effective_role(...)` directly; `_require_view` raises and is the wrong fit here.
+- `hydrate_ydoc` is invoked once per process when the snapshot row is empty. Notes dispatches on `node_type`:
   - `NodeType.NOTE` / `TEMPLATE` -> seed `Y.Text("markdown")` with current `note.content`.
-  - `NodeType.CANVAS` -> seed `Y.Map "nodes"` + `Y.Array "order"` + `Y.Map "edges"` + `Y.Map "defaults"`. Per-node text fields (`text.content`, `shape.label`, `mindmap.label`) MUST be wrapped as `pycrdt.Text` at seed time - lazy-upgrading them later races concurrent attaches.
-- `render_and_persist` MUST be idempotent. The ARQ task can fire repeatedly with the same state. Use `NoteOperations.realtime_save(...)`, which mirrors `autosave()` minus the permission gate + optimistic-version check. Snapshot has no acting user, so mention notifications / inline tags use the note's `owner_id` as the actor (documented trade-off, plan §6.4).
+  - `NodeType.CANVAS` -> seed `Y.Map "nodes"` + `Y.Array "order"` + `Y.Map "edges"` + `Y.Map "defaults"`. Per-node text fields (`text.content`, `shape.label`, `mindmap.label`) are wrapped as `pycrdt.Text` at seed time - lazy-upgrading them later races concurrent attaches.
+- `render_and_persist` is idempotent. The ARQ task can fire repeatedly with the same state. Reach for `NoteOperations.realtime_save(...)`, which mirrors `autosave()` minus the permission gate + optimistic-version check. Snapshot has no acting user, so mention notifications / inline tags use the note's `owner_id` as the actor (documented trade-off, plan §6.4).
 
 ---
 
@@ -101,16 +101,16 @@ Adapter rules:
 [VarString docName][y-protocols frame bytes]
 ```
 
-- `VarString` = lib0 varint length prefix + UTF-8 body. Implementations in `core/realtime/multiplex.py` (Python) and `features/realtime/multiplex.ts` (TS) are byte-compatible. Do not roll your own.
-- `docName = "<CONTENT_TYPE>:<uuid>"`, e.g. `"NOTE:01a3..."`. `doc_name_for(key)` / `parse_doc_name(name)` are the only correct producers / consumers.
-- `peek_var_string(buf)` returns `(doc_name, payload_offset)` WITHOUT consuming the y-protocols payload. The router hands `buf[payload_offset:]` straight to the per-doc handler. Do NOT decode + re-encode (Hocuspocus issue #724 - solved by design here, do not regress).
-- The y-protocols payload inside the envelope is unchanged. Use `pycrdt`'s helpers (`create_sync_message`, `handle_sync_message`, `Decoder.read_message`, `create_update_message`) via `core/realtime/wire.py`. Edit-gate predicate is `is_sync_write_frame` - VIEWERs sending a write close the WHOLE socket with `4403`.
+- `VarString` = lib0 varint length prefix + UTF-8 body. Implementations in `core/realtime/multiplex.py` (Python) and `features/realtime/multiplex.ts` (TS) are byte-compatible. Rolling your own tends to introduce subtle drift.
+- `docName = "<CONTENT_TYPE>:<uuid>"`, e.g. `"NOTE:01a3..."`. `doc_name_for(key)` / `parse_doc_name(name)` are the canonical producers / consumers.
+- `peek_var_string(buf)` returns `(doc_name, payload_offset)` without consuming the y-protocols payload. The router hands `buf[payload_offset:]` straight to the per-doc handler. Decoding + re-encoding here regresses Hocuspocus issue #724 - it is solved by design.
+- The y-protocols payload inside the envelope is unchanged. Reach for `pycrdt`'s helpers (`create_sync_message`, `handle_sync_message`, `Decoder.read_message`, `create_update_message`) via `core/realtime/wire.py`. Edit-gate predicate is `is_sync_write_frame` - VIEWERs sending a write close the whole socket with `4403`.
 
 ---
 
 ## 4. Auth on the WebSocket
 
-Bearer JWT travels in `Sec-WebSocket-Protocol` as `bearer.<urlencoded-token>` alongside the canonical `uniffy.realtime.v1` protocol value. `extract_bearer` parses it; mobile clients can fall back to the `Authorization` header (`extract_bearer_from_auth_header`). On accept, the server echoes ONLY `uniffy.realtime.v1` - **never** echo the bearer entry back; doing so leaks the token via `WebSocket.protocol`.
+Bearer JWT travels in `Sec-WebSocket-Protocol` as `bearer.<urlencoded-token>` alongside the canonical `uniffy.realtime.v1` protocol value. `extract_bearer` parses it; mobile clients can fall back to the `Authorization` header (`extract_bearer_from_auth_header`). On accept, the server echoes ONLY `uniffy.realtime.v1` - the server MUST NOT echo the bearer entry back, since doing so leaks the token via `WebSocket.protocol`. This is a security boundary.
 
 Order of checks at upgrade (all in `ws_routes.py`):
 1. Origin allowlist.
@@ -118,7 +118,7 @@ Order of checks at upgrade (all in `ws_routes.py`):
 3. `payload["type"] == "access"` - refresh tokens are rejected even though they share the HS256 secret.
 4. Token `org_id` claim matches the URL `org_id` query.
 
-Per-doc authorize runs **lazily** on the first frame for each unseen docname inside `run_multiplexed_session`. Denial closes the WHOLE socket (`4403`), not just the doc - otherwise the client waits forever for a SyncStep1.
+Per-doc authorize runs **lazily** on the first frame for each unseen docname inside `run_multiplexed_session`. Denial closes the whole socket (`4403`) rather than just the doc - otherwise the client waits forever for a SyncStep1.
 
 Close codes (`features/realtime/protocol.ts` mirrors these):
 - `1009` oversized frame, `4401` missing/invalid token, `4403` forbidden (org / view / edit / revoked), `4404` not found, `4408` idle eviction, `4410` token revoked.
@@ -129,26 +129,26 @@ Token refresh mid-session: `api.ts::refreshAccessToken` dispatches `uniffy:auth:
 
 ## 5. Multiplexed transport (plan §18, shipped as P8)
 
-**One WebSocket per browser tab carries every doc.** Per-doc connections were unrunnable at the target scale (1000 orgs × 100 users -> ~70k Valkey subscribers per replica vs `maxclients=10000`).
+**One WebSocket per browser tab carries every doc.** Per-doc connections did not scale (1000 orgs × 100 users -> ~70k Valkey subscribers per replica vs `maxclients=10000`).
 
 Backend:
 - Single FastAPI route `/api/realtime?org_id=<uuid>`. No content_type / content_id in the URL.
 - `WSSession` (per WS) owns the outbound queue + a `doc_handles: dict[DocKey, ClientHandle]`. Outbound frames are wrapped with `encode_doc_frame(doc_name, body)` at enqueue time so the WS pump is a trivial drain loop. The per-WS queue (`OUTBOUND_QUEUE_MAX = 1024`) bounds backpressure for the whole socket.
-- One `RealtimeRouter` per process owns 4 `PSUBSCRIBE`s (`realtime:doc:*`, `realtime:perm:*`, `realtime:defaults:*`, `auth:revoke:*`). The manager registers per-doc sessions + per-handle attachments with the router on acquire / release; the router dispatches Valkey payloads back into the manager via `RouterCallbacks`. **No new per-doc / per-user subscribe tasks.** The old `subscribe_doc` / `subscribe_perm` / `subscribe_token_revoke` wrappers are deleted - `core/valkey/pubsub.py` only keeps `subscribe_user` + `subscribe_channels` (still used by chat + notifications).
+- One `RealtimeRouter` per process owns 4 `PSUBSCRIBE`s (`realtime:doc:*`, `realtime:perm:*`, `realtime:defaults:*`, `auth:revoke:*`). The manager registers per-doc sessions + per-handle attachments with the router on acquire / release; the router dispatches Valkey payloads back into the manager via `RouterCallbacks`. **New per-doc / per-user subscribe tasks regress the scale fix.** The old `subscribe_doc` / `subscribe_perm` / `subscribe_token_revoke` wrappers are gone - `core/valkey/pubsub.py` only keeps `subscribe_user` + `subscribe_channels` (still used by chat + notifications).
 
 Frontend:
 - `features/realtime/multiplexer.ts` exports the singleton `realtimeMultiplexer`. `attach({ contentType, contentId, ydoc, awareness, onStatus, onSync, onCloseCode })` returns a `DocSubscription` with `destroy()`. One WS opens on first attach, closes after 30s with no attached docs. Subprotocol auth, exp backoff (500ms -> 15s), 30s periodic resync.
-- Trigger events the multiplexer listens for: `online`, `offline`, `visibilitychange`, `uniffy:auth:refreshed`, `uniffy:auth:revoked`. y-protocols awareness keep-alive runs every 15s (the lib GCs peers after ~30s of silence - omitting this makes peer cursors vanish during typing pauses).
-- **`y-websocket` is not installed.** P8 ripped it out. Editor bindings (`y-prosemirror`, `y-protocols`, our `canvasBinding`) talk to `Y.Doc` / `Awareness` directly. Do not reintroduce `WebsocketProvider`.
+- Trigger events the multiplexer listens for: `online`, `offline`, `visibilitychange`, `uniffy:auth:refreshed`, `uniffy:auth:revoked`. y-protocols awareness keep-alive runs every 15s (the lib GCs peers after ~30s of silence - skipping this makes peer cursors vanish during typing pauses).
+- **`y-websocket` is not installed.** It was removed when the multiplexed transport landed. Editor bindings (`y-prosemirror`, `y-protocols`, our `canvasBinding`) talk to `Y.Doc` / `Awareness` directly. Reintroducing `WebsocketProvider` regresses the design.
 
-Failure isolation: multiplexed transport has head-of-line blocking (slow doc can stall peers on the same WS). Mitigations baked in: 1MB frame cap, bounded outbound queue with drop policy, canvas throttle ~30ms. Acceptable for this app's edit rates - revisit only with profiling.
+Failure isolation: multiplexed transport has head-of-line blocking (slow doc can stall peers on the same WS). Mitigations baked in: 1MB frame cap, bounded outbound queue with drop policy, canvas throttle ~30ms. Acceptable for this app's edit rates - revisit with profiling if needed.
 
 ---
 
 ## 6. Permission revoke / token revoke fanout
 
 - `core/content/members.py` publishes `realtime:perm:{content_type}:{content_id}` after every commit in `add_member`, `update_member_role`, `remove_member`, `set_access_mode`, `transfer_ownership`. Targeted user_id when the subject is a USER; content-wide (`user_id=None`) for GROUP / access-mode / ownership changes (re-authorizes every active client).
-- `domains/users/operations.py::update_user` fires `publish_token_revoke(user_id, new_version)` after every `token_version` bump (deactivation + password change). Single home for realtime fanouts is `core/realtime/publisher.py` - do not split it into `core/auth/revocation.py`.
+- `domains/users/operations.py::update_user` fires `publish_token_revoke(user_id, new_version)` after every `token_version` bump (deactivation + password change). The single home for realtime fanouts is `core/realtime/publisher.py` - splitting it into `core/auth/revocation.py` tends to scatter the contract.
 - Decision matrix (`_enforce_role_change` in `ydoc_manager.py`):
   - BLOCKED / None -> `4403` close.
   - VIEWER -> flip `handle.can_edit = False` in place.
@@ -161,7 +161,7 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 
 - `SnapshotWriter` lives in `core/realtime/snapshot.py`. `schedule(session)` re-arms a 5s per-key debounce; `flush(session)` encodes `ydoc.get_update()` + `ydoc.get_state()` under `session.lock`, base64-wraps, enqueues `save_realtime_snapshot` on the `core` ARQ queue.
 - ARQ task `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` lives in `workers/tasks/realtime.py` and is registered in `CORE_TASKS`. UPSERT `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then `adapter.render_and_persist`.
-- `_job_id` is `snapshot:{ct}:{id}:{sha256(update_bytes)[:16]}`. Hashing the payload (not just the key) is mandatory - ARQ caches completed job results for `WORKER_KEEP_RESULT` seconds and a static id silently drops every subsequent enqueue. Reusing `snapshot:NOTE:<id>` froze `notes_notes.content` mid-session in an earlier revision.
+- `_job_id` is `snapshot:{ct}:{id}:{sha256(update_bytes)[:16]}`. Hashing the payload (rather than just the key) is part of the contract - ARQ caches completed job results for `WORKER_KEEP_RESULT` seconds and a static id silently drops every subsequent enqueue. Reusing `snapshot:NOTE:<id>` froze `notes_notes.content` mid-session in an earlier revision.
 - `YDocManager.apply_local_update` AND `_apply_remote_pubsub_update` both call `snapshot_writer.schedule(session)` so the pipeline runs whichever replica receives the edit.
 - `YDocManager._evict_after_idle` force-flushes synchronously before dropping the in-memory session. The last edit always lands in PG.
 
@@ -187,7 +187,7 @@ Encrypted IDB persistence:
 - Writes filter `HYDRATION_ORIGIN` and `REMOTE_ORIGIN` - only local edits get persisted.
 - Update bytes are base64-wrapped before `encryptForStorage` (the encrypt helper is JSON-only).
 - Compaction every 100 updates + on `beforeunload`. Listens for `uniffy:encryption:rekey` (re-seed) and `uniffy:encryption:teardown` (no-op writes via `isStorageEncryptionReady`).
-- Per-row decrypt failure -> skip + continue. Do not nuke the whole doc.
+- Per-row decrypt failure -> skip + continue. Nuking the whole doc tends to lose recoverable rows.
 
 ---
 
@@ -205,7 +205,7 @@ features/notes/realtime/
 ```
 
 Markdown:
-- `CrepeEditor` accepts a `realtime` binding. When present: skip `defaultValue` seeding (avoid seeding race), register `ySyncPlugin / yCursorPlugin / yUndoPlugin` via `$prose`, and mirror `markdownUpdated` into `Y.Text("markdown")` so the snapshot pipeline reads canonical markdown. The mirror is the `$prose` plugin variant - **NOT** the `markdownUpdated` listener (Milkdown's listener pipeline filters y-prosemirror's `ySync` meta key, which silently persisted empty content in an earlier revision).
+- `CrepeEditor` accepts a `realtime` binding. When present: skip `defaultValue` seeding (avoid seeding race), register `ySyncPlugin / yCursorPlugin / yUndoPlugin` via `$prose`, and mirror `markdownUpdated` into `Y.Text("markdown")` so the snapshot pipeline reads canonical markdown. The mirror is the `$prose` plugin variant - **not** the `markdownUpdated` listener (Milkdown's listener pipeline filters y-prosemirror's `ySync` meta key, which silently persisted empty content in an earlier revision).
 - Cold-start seed: `Y.Text("markdown")` -> `Y.XmlFragment("prosemirror")` via Milkdown's `parserCtx`, gated on `whenSynced`. Guard with `if (fragment.length > 0) return` to minimize a two-attach race.
 - Markdown + readonly view modes consume `Y.Text` live via `useRealtimeMarkdownContent(ydoc, fallback, {whenSynced, debounceMs})`. Without this, switching modes renders an empty editor while the YDoc holds current content.
 - Crepe `Feature.History` is NOT a `CrepeFeature` and currently coexists with `yUndoPlugin` (acceptable v1 known gap; revisit if double-undo is observed).
@@ -213,8 +213,8 @@ Markdown:
 Canvas:
 - Y types: `Y.Map nodes` (id -> Y.Map { id, type, position, width, height, data: Y.Map }), `Y.Array order` (z-order), `Y.Map edges` (id -> flat Y.Map { source, target, sourceHandle, targetHandle, type, data }), `Y.Map defaults`.
 - Per-node text fields live as `Y.Text` inside the node's `data` Y.Map. Source of truth: `NODE_TEXT_FIELDS = { text: 'content', shape: 'label', mindmap: 'label' }` in `canvasBinding.ts`; mirror on the Python side in `_NODE_TEXT_FIELDS` (`realtime_adapter.py`). Keep them in lockstep.
-- Text edits go through `writeNodeTextDiff` which diffs against a per-`${nodeId}:${field}` local snapshot (`localTextSnapshotsRef`) and applies a minimal delete+insert delta inside `ydoc.transact(sessionId)`. Diffing against the post-merge view destroys concurrent peer inserts - always diff against the user's last local string.
-- `mutateNodeYMap` MUST skip text fields. A structural write (drag / style / position) overwriting an in-flight `Y.Text` clobbers character edits.
+- Text edits go through `writeNodeTextDiff` which diffs against a per-`${nodeId}:${field}` local snapshot (`localTextSnapshotsRef`) and applies a minimal delete+insert delta inside `ydoc.transact(sessionId)`. Diffing against the post-merge view destroys concurrent peer inserts - diff against the user's last local string.
+- `mutateNodeYMap` skips text fields. A structural write (drag / style / position) overwriting an in-flight `Y.Text` clobbers character edits.
 - Drag commit uses the existing 300ms `scheduleChange` debounce -> one `ydoc.transact(sessionId)` at the end so undo pops to pre-drag.
 - Pointer awareness throttled at 30ms, flow coords via `useReactFlow().flowToScreenPosition`. Awareness payload also carries `selection: string[]`.
 
@@ -222,7 +222,7 @@ Canvas:
 
 ## 10. Origin tagging discipline
 
-Every local mutation MUST tag with the session id. Three origins, three behaviors:
+Every local mutation tags with the session id. Three origins, three behaviors:
 
 | Origin | Source | Tracked by UndoManager? | Persisted to IDB? |
 |---|---|---|---|
@@ -232,17 +232,17 @@ Every local mutation MUST tag with the session id. Three origins, three behavior
 
 `Y.UndoManager` is created with `trackedOrigins: new Set([sessionId])` so users undo only their own edits. The IDB write path filters by these constants - if you add a new origin and forget to filter, peer updates re-enter the local update path on cold start.
 
-Origin-replica dedup (backend): every fanout payload carries `origin_replica_id` (set once per process at boot in `core/realtime/identity.py`). The router drops messages whose origin matches its own replica id. Do NOT publish peer updates back out of the manager - `apply_local_update` publishes, `_apply_remote_pubsub_update` does NOT publish (no loop).
+Origin-replica dedup (backend): every fanout payload carries `origin_replica_id` (set once per process at boot in `core/realtime/identity.py`). The router drops messages whose origin matches its own replica id. Publishing peer updates back out of the manager creates a loop - `apply_local_update` publishes, `_apply_remote_pubsub_update` does not.
 
 ---
 
 ## 11. Common pitfalls
 
-- **Importing `core/realtime` from inside `domains/*` is fine; the reverse is forbidden.** The CI guard is manual review for v1. If you find yourself wanting to import a domain class into `core/realtime`, write an adapter method instead.
-- **Do not add a fresh Valkey `subscribe_*` task** for any new realtime fanout - extend `RealtimeRouter` instead, or you regress the P8 collapse from 9 connections back to thousands.
-- **Touching `state.py` shapes requires checking `router.py` + `ydoc_manager.py` + `snapshot.py` + `session.py` + `ws_routes.py`** - they all consume the dataclasses directly. The split is intentional to break cycles, not because the data has multiple owners.
-- **Adding a y-prosemirror plugin or a Milkdown listener that reads document content?** Verify it fires for `ySync`-driven PM transactions. The default Milkdown `markdownUpdated` listener does NOT. Use a `$prose` plugin that hooks `view.update` if you need universal observation.
-- **Schema migrations:** the snapshot table key is `(content_type, content_id)`. Other domains plug in without touching the schema - never add per-domain columns. Notes-specific things (version bump, outgoing_references, inline tags, search reindex) live in `NoteOperations.realtime_save`, NOT in `core/realtime/*`.
+- **Importing `core/realtime` from inside `domains/*` is fine; the reverse breaks the layering.** The CI guard is manual review for v1. If you find yourself wanting to import a domain class into `core/realtime`, writing an adapter method is the right fit.
+- **A fresh Valkey `subscribe_*` task for any new realtime fanout regresses the scale collapse** - extend `RealtimeRouter` instead, or the connection count grows from 9 back to thousands.
+- **Touching `state.py` shapes means checking `router.py` + `ydoc_manager.py` + `snapshot.py` + `session.py` + `ws_routes.py`** - they all consume the dataclasses directly. The split is intentional to break cycles, not because the data has multiple owners.
+- **Adding a y-prosemirror plugin or a Milkdown listener that reads document content?** Verify it fires for `ySync`-driven PM transactions. The default Milkdown `markdownUpdated` listener does not. A `$prose` plugin that hooks `view.update` is a better fit for universal observation.
+- **Schema migrations:** the snapshot table key is `(content_type, content_id)`. Other domains plug in without touching the schema - per-domain columns tend to drift. Notes-specific things (version bump, outgoing_references, inline tags, search reindex) live in `NoteOperations.realtime_save` rather than in `core/realtime/*`.
 - **Snapshot job IDs hash the payload bytes (not just the key)** - see §7. Static `_job_id`s freeze persistence for `WORKER_KEEP_RESULT` seconds.
-- **Vite dev proxy** has `'/api/realtime'` configured with `ws: true` ahead of the generic `'/api'` entry. Leave the order alone.
-- **Mobile (Expo) clients** are out of v1 scope - the mobile app keeps the legacy autosave path via `UpdateNote` (post-P6 cutover, `AutosaveNote` is gone for everyone). When mobile ships realtime, RN's WebSocket supports the `Authorization` header directly; the server already accepts both carriers.
+- **Vite dev proxy** has `'/api/realtime'` configured with `ws: true` ahead of the generic `'/api'` entry. The order matters.
+- **Mobile (Expo) clients** are out of v1 scope - the mobile app keeps the legacy autosave path via `UpdateNote` (`AutosaveNote` is retired everywhere). When mobile ships realtime, RN's WebSocket supports the `Authorization` header directly; the server already accepts both carriers.

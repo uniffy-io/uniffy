@@ -30,6 +30,7 @@ from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
 from uniffy_proto.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
 from uniffy_proto.audit.v1.audit_connect import AuditServiceASGIApplication
 from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
+from uniffy_proto.auth.v1.mfa_connect import MfaServiceASGIApplication
 from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
 from uniffy_proto.chat.v1.chat_connect import ChatServiceASGIApplication
@@ -110,6 +111,7 @@ from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
 from uniffy.domains.auth.interceptors import AuthRevocationInterceptor
+from uniffy.domains.auth.mfa.service import MfaServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
@@ -257,6 +259,7 @@ def _setup_observability() -> None:
     environment = os.getenv("ENVIRONMENT", "development")
     log_level = os.getenv("LOG_LEVEL", "info").upper()
 
+    # TODO: version inject
     setup_observability(
         config=ObservabilityConfig(
             app_name="uniffy",
@@ -392,7 +395,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown
     logger.info("Shutting down UNIFFY application...")
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
@@ -413,6 +415,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     _setup_observability()
 
+    # TODO: Fix title and desc, also inject version var
     app = FastAPI(
         title="UNIFFY - Unified Work Operating System",
         description="The Operating System for Work",
@@ -465,6 +468,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/auth.v1.AuthService",
         AuthServiceASGIApplication(AuthServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
+        "/auth.v1.MfaService",
+        MfaServiceASGIApplication(MfaServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/notes.v1.NotesService",

@@ -39,6 +39,12 @@ const (
 	// SystemConfigServiceSetPublicRegistrationProcedure is the fully-qualified name of the
 	// SystemConfigService's SetPublicRegistration RPC.
 	SystemConfigServiceSetPublicRegistrationProcedure = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
+	// SystemConfigServiceGetMfaPolicyProcedure is the fully-qualified name of the SystemConfigService's
+	// GetMfaPolicy RPC.
+	SystemConfigServiceGetMfaPolicyProcedure = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
+	// SystemConfigServiceSetMfaPolicyProcedure is the fully-qualified name of the SystemConfigService's
+	// SetMfaPolicy RPC.
+	SystemConfigServiceSetMfaPolicyProcedure = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
 )
 
 // SystemConfigServiceClient is a client for the superadmin.v1.SystemConfigService service.
@@ -47,6 +53,13 @@ type SystemConfigServiceClient interface {
 	GetSystemConfig(context.Context, *connect.Request[v1.GetSystemConfigRequest]) (*connect.Response[v1.GetSystemConfigResponse], error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error)
+	// Read the deployment-wide MFA policy: whether platform admins must
+	// have MFA enabled, and the day / login caps on the per-user grace
+	// window before the requirement becomes hard.
+	GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error)
+	// Partial update to the MFA policy. Only fields explicitly set in
+	// the request are written. Audits as “auth.mfa_policy_changed“.
+	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
 }
 
 // NewSystemConfigServiceClient constructs a client for the superadmin.v1.SystemConfigService
@@ -72,6 +85,18 @@ func NewSystemConfigServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(systemConfigServiceMethods.ByName("SetPublicRegistration")),
 			connect.WithClientOptions(opts...),
 		),
+		getMfaPolicy: connect.NewClient[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse](
+			httpClient,
+			baseURL+SystemConfigServiceGetMfaPolicyProcedure,
+			connect.WithSchema(systemConfigServiceMethods.ByName("GetMfaPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		setMfaPolicy: connect.NewClient[v1.SetMfaPolicyRequest, v1.SetMfaPolicyResponse](
+			httpClient,
+			baseURL+SystemConfigServiceSetMfaPolicyProcedure,
+			connect.WithSchema(systemConfigServiceMethods.ByName("SetMfaPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -79,6 +104,8 @@ func NewSystemConfigServiceClient(httpClient connect.HTTPClient, baseURL string,
 type systemConfigServiceClient struct {
 	getSystemConfig       *connect.Client[v1.GetSystemConfigRequest, v1.GetSystemConfigResponse]
 	setPublicRegistration *connect.Client[v1.SetPublicRegistrationRequest, v1.SetPublicRegistrationResponse]
+	getMfaPolicy          *connect.Client[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse]
+	setMfaPolicy          *connect.Client[v1.SetMfaPolicyRequest, v1.SetMfaPolicyResponse]
 }
 
 // GetSystemConfig calls superadmin.v1.SystemConfigService.GetSystemConfig.
@@ -91,12 +118,29 @@ func (c *systemConfigServiceClient) SetPublicRegistration(ctx context.Context, r
 	return c.setPublicRegistration.CallUnary(ctx, req)
 }
 
+// GetMfaPolicy calls superadmin.v1.SystemConfigService.GetMfaPolicy.
+func (c *systemConfigServiceClient) GetMfaPolicy(ctx context.Context, req *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error) {
+	return c.getMfaPolicy.CallUnary(ctx, req)
+}
+
+// SetMfaPolicy calls superadmin.v1.SystemConfigService.SetMfaPolicy.
+func (c *systemConfigServiceClient) SetMfaPolicy(ctx context.Context, req *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error) {
+	return c.setMfaPolicy.CallUnary(ctx, req)
+}
+
 // SystemConfigServiceHandler is an implementation of the superadmin.v1.SystemConfigService service.
 type SystemConfigServiceHandler interface {
 	// Read every known flag's effective value + source.
 	GetSystemConfig(context.Context, *connect.Request[v1.GetSystemConfigRequest]) (*connect.Response[v1.GetSystemConfigResponse], error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error)
+	// Read the deployment-wide MFA policy: whether platform admins must
+	// have MFA enabled, and the day / login caps on the per-user grace
+	// window before the requirement becomes hard.
+	GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error)
+	// Partial update to the MFA policy. Only fields explicitly set in
+	// the request are written. Audits as “auth.mfa_policy_changed“.
+	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
 }
 
 // NewSystemConfigServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -118,12 +162,28 @@ func NewSystemConfigServiceHandler(svc SystemConfigServiceHandler, opts ...conne
 		connect.WithSchema(systemConfigServiceMethods.ByName("SetPublicRegistration")),
 		connect.WithHandlerOptions(opts...),
 	)
+	systemConfigServiceGetMfaPolicyHandler := connect.NewUnaryHandler(
+		SystemConfigServiceGetMfaPolicyProcedure,
+		svc.GetMfaPolicy,
+		connect.WithSchema(systemConfigServiceMethods.ByName("GetMfaPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	systemConfigServiceSetMfaPolicyHandler := connect.NewUnaryHandler(
+		SystemConfigServiceSetMfaPolicyProcedure,
+		svc.SetMfaPolicy,
+		connect.WithSchema(systemConfigServiceMethods.ByName("SetMfaPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/superadmin.v1.SystemConfigService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SystemConfigServiceGetSystemConfigProcedure:
 			systemConfigServiceGetSystemConfigHandler.ServeHTTP(w, r)
 		case SystemConfigServiceSetPublicRegistrationProcedure:
 			systemConfigServiceSetPublicRegistrationHandler.ServeHTTP(w, r)
+		case SystemConfigServiceGetMfaPolicyProcedure:
+			systemConfigServiceGetMfaPolicyHandler.ServeHTTP(w, r)
+		case SystemConfigServiceSetMfaPolicyProcedure:
+			systemConfigServiceSetMfaPolicyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -139,4 +199,12 @@ func (UnimplementedSystemConfigServiceHandler) GetSystemConfig(context.Context, 
 
 func (UnimplementedSystemConfigServiceHandler) SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.SetPublicRegistration is not implemented"))
+}
+
+func (UnimplementedSystemConfigServiceHandler) GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.GetMfaPolicy is not implemented"))
+}
+
+func (UnimplementedSystemConfigServiceHandler) SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.SetMfaPolicy is not implemented"))
 }

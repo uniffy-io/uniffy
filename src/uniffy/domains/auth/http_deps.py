@@ -53,7 +53,15 @@ async def get_current_user_id(
 
     try:
         payload = decode_access_token(token)
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Wrong token type for this endpoint",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user_id = UUID(payload["sub"])
+    except HTTPException:
+        raise
     except Exception as e:
         logger.debug(f"JWT decode error: {e}")
         raise HTTPException(

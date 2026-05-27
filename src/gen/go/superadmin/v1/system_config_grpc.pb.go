@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	SystemConfigService_GetSystemConfig_FullMethodName       = "/superadmin.v1.SystemConfigService/GetSystemConfig"
 	SystemConfigService_SetPublicRegistration_FullMethodName = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
+	SystemConfigService_GetMfaPolicy_FullMethodName          = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
+	SystemConfigService_SetMfaPolicy_FullMethodName          = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
 )
 
 // SystemConfigServiceClient is the client API for SystemConfigService service.
@@ -40,6 +42,13 @@ type SystemConfigServiceClient interface {
 	GetSystemConfig(ctx context.Context, in *GetSystemConfigRequest, opts ...grpc.CallOption) (*GetSystemConfigResponse, error)
 	// Set the public-registration flag.
 	SetPublicRegistration(ctx context.Context, in *SetPublicRegistrationRequest, opts ...grpc.CallOption) (*SetPublicRegistrationResponse, error)
+	// Read the deployment-wide MFA policy: whether platform admins must
+	// have MFA enabled, and the day / login caps on the per-user grace
+	// window before the requirement becomes hard.
+	GetMfaPolicy(ctx context.Context, in *GetMfaPolicyRequest, opts ...grpc.CallOption) (*GetMfaPolicyResponse, error)
+	// Partial update to the MFA policy. Only fields explicitly set in
+	// the request are written. Audits as “auth.mfa_policy_changed“.
+	SetMfaPolicy(ctx context.Context, in *SetMfaPolicyRequest, opts ...grpc.CallOption) (*SetMfaPolicyResponse, error)
 }
 
 type systemConfigServiceClient struct {
@@ -70,6 +79,26 @@ func (c *systemConfigServiceClient) SetPublicRegistration(ctx context.Context, i
 	return out, nil
 }
 
+func (c *systemConfigServiceClient) GetMfaPolicy(ctx context.Context, in *GetMfaPolicyRequest, opts ...grpc.CallOption) (*GetMfaPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMfaPolicyResponse)
+	err := c.cc.Invoke(ctx, SystemConfigService_GetMfaPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemConfigServiceClient) SetMfaPolicy(ctx context.Context, in *SetMfaPolicyRequest, opts ...grpc.CallOption) (*SetMfaPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetMfaPolicyResponse)
+	err := c.cc.Invoke(ctx, SystemConfigService_SetMfaPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemConfigServiceServer is the server API for SystemConfigService service.
 // All implementations must embed UnimplementedSystemConfigServiceServer
 // for forward compatibility.
@@ -87,6 +116,13 @@ type SystemConfigServiceServer interface {
 	GetSystemConfig(context.Context, *GetSystemConfigRequest) (*GetSystemConfigResponse, error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *SetPublicRegistrationRequest) (*SetPublicRegistrationResponse, error)
+	// Read the deployment-wide MFA policy: whether platform admins must
+	// have MFA enabled, and the day / login caps on the per-user grace
+	// window before the requirement becomes hard.
+	GetMfaPolicy(context.Context, *GetMfaPolicyRequest) (*GetMfaPolicyResponse, error)
+	// Partial update to the MFA policy. Only fields explicitly set in
+	// the request are written. Audits as “auth.mfa_policy_changed“.
+	SetMfaPolicy(context.Context, *SetMfaPolicyRequest) (*SetMfaPolicyResponse, error)
 	mustEmbedUnimplementedSystemConfigServiceServer()
 }
 
@@ -102,6 +138,12 @@ func (UnimplementedSystemConfigServiceServer) GetSystemConfig(context.Context, *
 }
 func (UnimplementedSystemConfigServiceServer) SetPublicRegistration(context.Context, *SetPublicRegistrationRequest) (*SetPublicRegistrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetPublicRegistration not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) GetMfaPolicy(context.Context, *GetMfaPolicyRequest) (*GetMfaPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMfaPolicy not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) SetMfaPolicy(context.Context, *SetMfaPolicyRequest) (*SetMfaPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetMfaPolicy not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) mustEmbedUnimplementedSystemConfigServiceServer() {}
 func (UnimplementedSystemConfigServiceServer) testEmbeddedByValue()                             {}
@@ -160,6 +202,42 @@ func _SystemConfigService_SetPublicRegistration_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemConfigService_GetMfaPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMfaPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).GetMfaPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemConfigService_GetMfaPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).GetMfaPolicy(ctx, req.(*GetMfaPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemConfigService_SetMfaPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMfaPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).SetMfaPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemConfigService_SetMfaPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).SetMfaPolicy(ctx, req.(*SetMfaPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemConfigService_ServiceDesc is the grpc.ServiceDesc for SystemConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -174,6 +252,14 @@ var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPublicRegistration",
 			Handler:    _SystemConfigService_SetPublicRegistration_Handler,
+		},
+		{
+			MethodName: "GetMfaPolicy",
+			Handler:    _SystemConfigService_GetMfaPolicy_Handler,
+		},
+		{
+			MethodName: "SetMfaPolicy",
+			Handler:    _SystemConfigService_SetMfaPolicy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

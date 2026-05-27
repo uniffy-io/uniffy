@@ -288,6 +288,221 @@ func (x *SetPublicRegistrationResponse) GetConfig() *SystemConfig {
 	return nil
 }
 
+// Deployment-wide MFA policy snapshot. Mirrors the
+// “deployment_settings(namespace='mfa')“ row; absent rows fall back
+// to env then to the coded default.
+type MfaPolicy struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	RequiredForSystemAdmins bool                   `protobuf:"varint,1,opt,name=required_for_system_admins,json=requiredForSystemAdmins,proto3" json:"required_for_system_admins,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *MfaPolicy) Reset() {
+	*x = MfaPolicy{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MfaPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MfaPolicy) ProtoMessage() {}
+
+func (x *MfaPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MfaPolicy.ProtoReflect.Descriptor instead.
+func (*MfaPolicy) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MfaPolicy) GetRequiredForSystemAdmins() bool {
+	if x != nil {
+		return x.RequiredForSystemAdmins
+	}
+	return false
+}
+
+type GetMfaPolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMfaPolicyRequest) Reset() {
+	*x = GetMfaPolicyRequest{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMfaPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMfaPolicyRequest) ProtoMessage() {}
+
+func (x *GetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMfaPolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetMfaPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{7}
+}
+
+type GetMfaPolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        *MfaPolicy             `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMfaPolicyResponse) Reset() {
+	*x = GetMfaPolicyResponse{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMfaPolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMfaPolicyResponse) ProtoMessage() {}
+
+func (x *GetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMfaPolicyResponse.ProtoReflect.Descriptor instead.
+func (*GetMfaPolicyResponse) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetMfaPolicyResponse) GetPolicy() *MfaPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+type SetMfaPolicyRequest struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	RequiredForSystemAdmins bool                   `protobuf:"varint,1,opt,name=required_for_system_admins,json=requiredForSystemAdmins,proto3" json:"required_for_system_admins,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *SetMfaPolicyRequest) Reset() {
+	*x = SetMfaPolicyRequest{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMfaPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMfaPolicyRequest) ProtoMessage() {}
+
+func (x *SetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMfaPolicyRequest.ProtoReflect.Descriptor instead.
+func (*SetMfaPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SetMfaPolicyRequest) GetRequiredForSystemAdmins() bool {
+	if x != nil {
+		return x.RequiredForSystemAdmins
+	}
+	return false
+}
+
+type SetMfaPolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        *MfaPolicy             `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetMfaPolicyResponse) Reset() {
+	*x = SetMfaPolicyResponse{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMfaPolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMfaPolicyResponse) ProtoMessage() {}
+
+func (x *SetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMfaPolicyResponse.ProtoReflect.Descriptor instead.
+func (*SetMfaPolicyResponse) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SetMfaPolicyResponse) GetPolicy() *MfaPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
 var File_superadmin_v1_system_config_proto protoreflect.FileDescriptor
 
 const file_superadmin_v1_system_config_proto_rawDesc = "" +
@@ -305,10 +520,21 @@ const file_superadmin_v1_system_config_proto_rawDesc = "" +
 	"\x1cSetPublicRegistrationRequest\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\"T\n" +
 	"\x1dSetPublicRegistrationResponse\x123\n" +
-	"\x06config\x18\x01 \x01(\v2\x1b.superadmin.v1.SystemConfigR\x06config2\xef\x01\n" +
+	"\x06config\x18\x01 \x01(\v2\x1b.superadmin.v1.SystemConfigR\x06config\"H\n" +
+	"\tMfaPolicy\x12;\n" +
+	"\x1arequired_for_system_admins\x18\x01 \x01(\bR\x17requiredForSystemAdmins\"\x15\n" +
+	"\x13GetMfaPolicyRequest\"H\n" +
+	"\x14GetMfaPolicyResponse\x120\n" +
+	"\x06policy\x18\x01 \x01(\v2\x18.superadmin.v1.MfaPolicyR\x06policy\"R\n" +
+	"\x13SetMfaPolicyRequest\x12;\n" +
+	"\x1arequired_for_system_admins\x18\x01 \x01(\bR\x17requiredForSystemAdmins\"H\n" +
+	"\x14SetMfaPolicyResponse\x120\n" +
+	"\x06policy\x18\x01 \x01(\v2\x18.superadmin.v1.MfaPolicyR\x06policy2\xa5\x03\n" +
 	"\x13SystemConfigService\x12b\n" +
 	"\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n" +
-	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12Y\n" +
+	"\fGetMfaPolicy\x12\".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse\"\x00\x12Y\n" +
+	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_config_proto_rawDescOnce sync.Once
@@ -322,7 +548,7 @@ func file_superadmin_v1_system_config_proto_rawDescGZIP() []byte {
 	return file_superadmin_v1_system_config_proto_rawDescData
 }
 
-var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_superadmin_v1_system_config_proto_goTypes = []any{
 	(*SystemFlag)(nil),                    // 0: superadmin.v1.SystemFlag
 	(*SystemConfig)(nil),                  // 1: superadmin.v1.SystemConfig
@@ -330,20 +556,31 @@ var file_superadmin_v1_system_config_proto_goTypes = []any{
 	(*GetSystemConfigResponse)(nil),       // 3: superadmin.v1.GetSystemConfigResponse
 	(*SetPublicRegistrationRequest)(nil),  // 4: superadmin.v1.SetPublicRegistrationRequest
 	(*SetPublicRegistrationResponse)(nil), // 5: superadmin.v1.SetPublicRegistrationResponse
+	(*MfaPolicy)(nil),                     // 6: superadmin.v1.MfaPolicy
+	(*GetMfaPolicyRequest)(nil),           // 7: superadmin.v1.GetMfaPolicyRequest
+	(*GetMfaPolicyResponse)(nil),          // 8: superadmin.v1.GetMfaPolicyResponse
+	(*SetMfaPolicyRequest)(nil),           // 9: superadmin.v1.SetMfaPolicyRequest
+	(*SetMfaPolicyResponse)(nil),          // 10: superadmin.v1.SetMfaPolicyResponse
 }
 var file_superadmin_v1_system_config_proto_depIdxs = []int32{
-	0, // 0: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
-	1, // 1: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
-	1, // 2: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
-	2, // 3: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
-	4, // 4: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
-	3, // 5: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
-	5, // 6: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
+	1,  // 1: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
+	1,  // 2: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
+	6,  // 3: superadmin.v1.GetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	6,  // 4: superadmin.v1.SetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	2,  // 5: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
+	4,  // 6: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
+	7,  // 7: superadmin.v1.SystemConfigService.GetMfaPolicy:input_type -> superadmin.v1.GetMfaPolicyRequest
+	9,  // 8: superadmin.v1.SystemConfigService.SetMfaPolicy:input_type -> superadmin.v1.SetMfaPolicyRequest
+	3,  // 9: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
+	5,  // 10: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
+	8,  // 11: superadmin.v1.SystemConfigService.GetMfaPolicy:output_type -> superadmin.v1.GetMfaPolicyResponse
+	10, // 12: superadmin.v1.SystemConfigService.SetMfaPolicy:output_type -> superadmin.v1.SetMfaPolicyResponse
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_superadmin_v1_system_config_proto_init() }
@@ -357,7 +594,7 @@ func file_superadmin_v1_system_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_superadmin_v1_system_config_proto_rawDesc), len(file_superadmin_v1_system_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

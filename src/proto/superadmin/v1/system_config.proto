@@ -18,6 +18,15 @@ service SystemConfigService {
 
   // Set the public-registration flag.
   rpc SetPublicRegistration(SetPublicRegistrationRequest) returns (SetPublicRegistrationResponse) {}
+
+  // Read the deployment-wide MFA policy: whether platform admins must
+  // have MFA enabled, and the day / login caps on the per-user grace
+  // window before the requirement becomes hard.
+  rpc GetMfaPolicy(GetMfaPolicyRequest) returns (GetMfaPolicyResponse) {}
+
+  // Partial update to the MFA policy. Only fields explicitly set in
+  // the request are written. Audits as ``auth.mfa_policy_changed``.
+  rpc SetMfaPolicy(SetMfaPolicyRequest) returns (SetMfaPolicyResponse) {}
 }
 
 // One configuration flag's effective state.
@@ -44,4 +53,25 @@ message SetPublicRegistrationRequest {
 
 message SetPublicRegistrationResponse {
   SystemConfig config = 1;
+}
+
+// Deployment-wide MFA policy snapshot. Mirrors the
+// ``deployment_settings(namespace='mfa')`` row; absent rows fall back
+// to env then to the coded default.
+message MfaPolicy {
+  bool required_for_system_admins = 1;
+}
+
+message GetMfaPolicyRequest {}
+
+message GetMfaPolicyResponse {
+  MfaPolicy policy = 1;
+}
+
+message SetMfaPolicyRequest {
+  bool required_for_system_admins = 1;
+}
+
+message SetMfaPolicyResponse {
+  MfaPolicy policy = 1;
 }

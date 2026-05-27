@@ -25,3 +25,9 @@ class OrganizationAccessError(UNIFFYError):
     """Exception raised when user cannot access organization."""
 
     pass
+
+
+class MfaRateLimitedError(UNIFFYError):
+    """Raised when MFA verify attempts exceed the per-user / per-IP cap."""
+
+    pass

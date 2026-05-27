@@ -6,19 +6,6 @@ Every mutation call site that needs to record an audit event calls
 transaction commits both its domain mutation and the audit row in
 lock-step, or rolls back both together.
 
-Behaviour:
-
-- The actor's ``OrganizationRole`` is captured via a single
-  ``SELECT`` against ``login_organization_members``. No cache. Missing
-  membership snapshots as ``NULL`` and the write proceeds.
-- The client IP / User-Agent come from the request-context
-  ``ContextVar`` populated by :class:`RequestContextMiddleware`.
-  Worker / cron / system paths leave both fields ``NULL``.
-- Exceptions are **never** swallowed. A writer failure rolls back the
-  caller's mutation; the product treats audit gaps as bugs.
-- ``dedupe_key`` is honoured via a Valkey ``SET NX`` lock keyed
-  ``audit:debounce:{action}:{dedupe_key}`` with the caller-supplied
-  TTL. On lock miss the writer returns without inserting.
 """
 
 from __future__ import annotations

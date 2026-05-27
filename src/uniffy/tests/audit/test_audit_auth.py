@@ -16,6 +16,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.domains.auth.errors import AuthenticationError, TokenError
+from uniffy.domains.auth.mfa.enforcement import MfaRequirement, MfaRequirementResult
 from uniffy.domains.auth.operations import AuthOperations
 
 
@@ -62,6 +63,13 @@ def test_login_success_emits_login_success() -> None:
 
     with patch(
         "uniffy.domains.auth.operations.verify_password", return_value=True
+    ), patch.object(
+        AuthOperations,
+        "_load_user_mfa",
+        AsyncMock(return_value=None),
+    ), patch(
+        "uniffy.domains.auth.operations.evaluate_mfa_requirement",
+        AsyncMock(return_value=MfaRequirementResult(MfaRequirement.NOT_REQUIRED)),
     ), patch.object(
         AuthOperations,
         "_create_session",

@@ -21,6 +21,11 @@ from uniffy.domains.auth.errors import (
     TokenError,
 )
 from uniffy.domains.auth.handlers import AuthHandlers
+
+# Side-effect import: registers the DeploymentReEncryptingConsumer for
+# the login_user_mfa.totp_secret_encrypted column so deployment-DEK
+# rotation re-encrypts MFA secrets without further wiring.
+from uniffy.domains.auth.mfa import crypto as _mfa_crypto  # noqa: F401
 from uniffy.domains.auth.operations import AuthOperations
 from uniffy.domains.auth.passwords import hash_password, verify_password
 from uniffy.domains.auth.service import AuthServiceImpl

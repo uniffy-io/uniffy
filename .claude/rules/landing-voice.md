@@ -12,9 +12,9 @@ These rules apply to every word the public reads on `uniffy.io` and on the docs 
 
 Apply these rules when authoring new copy, and fix existing copy on sight when you touch the file for any other reason.
 
-## 1. No em dashes, no double hyphens
+## 1. Skip em dashes and double hyphens
 
-Never write `--`, `—`, `–`, or any other dash longer than a single hyphen. Not in body copy, not in pillar bodies, not in tables, not in alt text.
+Prefer to skip `--`, `—`, `–`, and any other dash longer than a single hyphen. Not in body copy, not in pillar bodies, not in tables, not in alt text.
 
 When tempted to use a dash as a pause, end the sentence instead and start a new one. Two short sentences beat one long sentence with a dash glued in the middle.
 
@@ -50,7 +50,7 @@ A single hyphen is allowed when it changes meaning. Compound modifiers that read
 | on-switch | switch |
 | first-run | first run |
 
-The principle: hyphens are punctuation. Punctuation should serve the reader, not decorate the page. If the phrase reads cleanly without the hyphen, do not insert one.
+The principle: hyphens are punctuation. Punctuation should serve the reader, not decorate the page. If the phrase reads cleanly without the hyphen, skip it.
 
 Hyphens that genuinely disambiguate stay. Product names that contain a hyphen stay. Code, file paths, URLs, and identifiers stay exactly as they are.
 
@@ -58,9 +58,9 @@ Hyphens that genuinely disambiguate stay. Product names that contain a hyphen st
 
 Write the way you would explain something to a smart friend. Use `we`, `you`, and `us` freely. Take positions. Own tradeoffs.
 
-**Banned vocabulary:** leverage, enable, empower, unlock, seamlessly, robust, holistic, cutting edge, best in class, world class, next generation, solution, offering, ecosystem, journey, paradigm shift, game changer.
+**Vocabulary to skip:** leverage, enable, empower, unlock, seamlessly, robust, holistic, cutting edge, best in class, world class, next generation, solution, offering, ecosystem, journey, paradigm shift, game changer.
 
-**Banned phrasings:** "designed to", "built to", "purpose built", "industry leading", "feature rich", any sentence that could appear on a competitor's homepage without changing meaning.
+**Phrasings to skip:** "designed to", "built to", "purpose built", "industry leading", "feature rich", any sentence that could appear on a competitor's homepage without changing meaning.
 
 **Encouraged moves:**
 
@@ -75,7 +75,7 @@ Default to short, declarative sentences. When a sentence grows past two clauses,
 
 A new paragraph is free. A reader who hits a wall of text bounces. Group ideas into 2 to 4 sentence paragraphs, with a blank line between them.
 
-Never write a four line single paragraph that could be two two line paragraphs.
+A four line single paragraph that could be two two line paragraphs is a good candidate for a split.
 
 ## 5. Concrete examples, not abstractions
 
@@ -97,7 +97,7 @@ Each scenario is its own paragraph. The pattern across paragraphs is parallel. T
 
 The reader of a narrative page is evaluating Uniffy, not reading the source. Strip terms that only make sense if you have the codebase open.
 
-**Banned in narrative pages such as the landing, the principles page, overviews, and intros:**
+**Patterns we skip in narrative pages such as the landing, the principles page, overviews, and intros:**
 
 - URL path conventions like `/admin/*`, `/platform/*`. Say "admin pages" and "platform pages".
 - Environment variable names like `SMTP_HOST`, `APP_MASTER_KEY`. Say "the mail server", "the master key", "the deployment level master key".
@@ -107,7 +107,7 @@ The reader of a narrative page is evaluating Uniffy, not reading the source. Str
 
 ### This rule does not apply to reference pages
 
-A page is a reference page when its entire job is to enumerate exact names that the operator will type, paste, or look up. The configure-Uniffy env var docs, the deployment architecture page, an API reference, a schema reference, an admin CLI reference. On those pages the exact variable name, URL path, header, flag, or class name is the whole point. Use them. Format them as code. Do not soften them into prose.
+A page is a reference page when its entire job is to enumerate exact names that the operator will type, paste, or look up. The configure-Uniffy env var docs, the deployment architecture page, an API reference, a schema reference, an admin CLI reference. On those pages the exact variable name, URL path, header, flag, or class name is the whole point. Use them. Format them as code. Softening them into prose tends to hide the lookup target.
 
 A page is narrative copy when its job is to explain what Uniffy is, why it is built this way, or what the reader should take away. On narrative pages, plain language wins every time.
 
@@ -160,8 +160,8 @@ That question outlives the page. A recap does not.
 ## 11. House spellings
 
 - `cloud` and `self hosted` are lowercase, two words, no hyphen.
-- `Uniffy` is capitalized, always. Never `uniffy`.
-- `cloud.uniffy.io` is the canonical cloud URL. Always backtick it.
+- `Uniffy` is capitalized, always. `uniffy` is not the brand spelling.
+- `cloud.uniffy.io` is the canonical cloud URL. Backtick it.
 - `Community Edition` in scare quotes when describing what we are *not*. The quotes are part of the joke.
 - `admin pages` and `platform pages` lowercase. They are common nouns, not product names.
 - Bolded concept names like **support session**, **egress worker**, **admin pages** are lowercase and not capitalized.

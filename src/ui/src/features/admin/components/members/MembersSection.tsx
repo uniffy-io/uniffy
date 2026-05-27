@@ -9,6 +9,7 @@ import {
     Users,
     MagnifyingGlass,
     ShieldCheck,
+    ShieldSlash,
     User,
     Trash,
     Warning,
@@ -27,6 +28,9 @@ import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
+import { friendlyErrorMessage } from '@/config';
+import { mfaClient } from '@/features/mfa/api/mfaApi';
 import { MemberAgentQuotaDialog } from '@/features/admin/components/members/MemberAgentQuotaDialog';
 import { InviteMemberDialog } from '@/features/admin/components/members/InviteMemberDialog';
 import { InvitationsTable } from '@/features/admin/components/members/InvitationsTable';
@@ -58,18 +62,47 @@ const ROLE_FILTER_OPTIONS: SelectOption<string>[] = [
 interface MemberRowProps {
     member: SerializedMemberInfo;
     currentUserId: string | undefined;
+    organizationId: string | null;
     onUpdateRole: (userId: string, role: number) => Promise<void>;
     onRemove: (userId: string) => Promise<void>;
     onInvalidateCaches: (userId: string, displayName: string) => Promise<void>;
 }
 
-function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidateCaches }: MemberRowProps) {
+function MemberRow({
+    member,
+    currentUserId,
+    organizationId,
+    onUpdateRole,
+    onRemove,
+    onInvalidateCaches,
+}: MemberRowProps) {
     const [updating, setUpdating] = useState(false);
     const [removing, setRemoving] = useState(false);
     const [invalidatingCaches, setInvalidatingCaches] = useState(false);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showInvalidateCachesConfirm, setShowInvalidateCachesConfirm] = useState(false);
     const [showQuotaDialog, setShowQuotaDialog] = useState(false);
+    const [showMfaResetDialog, setShowMfaResetDialog] = useState(false);
+    const [mfaResetting, setMfaResetting] = useState(false);
+
+    const handleMfaReset = async (reason: string) => {
+        if (!organizationId) return;
+        setMfaResetting(true);
+        try {
+            await mfaClient.adminResetMfa({
+                organizationId,
+                targetUserId: member.userId,
+                reason,
+            });
+            toast.success(`Two factor reset for ${member.displayName}. They will be signed out and prompted to enrol again.`);
+            setShowMfaResetDialog(false);
+        } catch (err) {
+            const raw = err instanceof Error ? err.message : 'Failed to reset MFA';
+            toast.error(friendlyErrorMessage(raw) || raw);
+        } finally {
+            setMfaResetting(false);
+        }
+    };
 
     const isCurrentUser = member.userId === currentUserId;
     const isOwner = member.role === OrganizationRole.OWNER;
@@ -210,6 +243,17 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
                             </button>
                             <button
                                 type="button"
+                                onClick={() => setShowMfaResetDialog(true)}
+                                disabled={mfaResetting}
+                                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                                    opacity-0 group-hover:opacity-100 transition-all
+                                    disabled:opacity-50"
+                                title="Reset two factor authentication"
+                            >
+                                <ShieldSlash size={16} />
+                            </button>
+                            <button
+                                type="button"
                                 onClick={handleRemoveClick}
                                 disabled={removing}
                                 className="p-2 rounded-md text-muted-foreground hover-destructive
@@ -246,6 +290,25 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidate
                 confirmLabel="Invalidate"
                 variant="danger"
                 loading={invalidatingCaches}
+            />
+
+            {/* MFA reset dialog */}
+            <ReasonDialog
+                isOpen={showMfaResetDialog}
+                onClose={() => setShowMfaResetDialog(false)}
+                onConfirm={handleMfaReset}
+                title="Reset two factor authentication"
+                description={
+                    <>
+                        This disables MFA on <strong>{member.email}</strong>, kills every active session,
+                        and sends them an out of band email if mail is configured. They will be guided
+                        through fresh enrollment on the next sign in.
+                    </>
+                }
+                reasonPlaceholder="Why are you resetting their MFA?"
+                confirmLabel="Reset"
+                variant="danger"
+                loading={mfaResetting}
             />
 
             {/* Agent spend quota dialog */}
@@ -415,6 +478,7 @@ export function MembersSection() {
                                 key={member.userId}
                                 member={member}
                                 currentUserId={currentUser?.id}
+                                organizationId={organizationId}
                                 onUpdateRole={updateRole}
                                 onRemove={remove}
                                 onInvalidateCaches={handleInvalidateCaches}

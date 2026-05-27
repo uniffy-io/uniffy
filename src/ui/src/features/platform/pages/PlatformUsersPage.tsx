@@ -4,6 +4,7 @@ import {
     UsersThree,
     MagnifyingGlass,
     ShieldCheck,
+    ShieldSlash,
     SignOut,
     DotsThreeVertical,
     CheckCircle,
@@ -32,11 +33,15 @@ import { useAppSelector } from '@/app/hooks';
 import { platformUsersApi } from '@/features/platform/api/systemDirectoryApi';
 import { PlatformUserDetailPanel } from '@/features/platform/components/PlatformUserDetailPanel';
 import { ReasonDialog } from '@/components/ui/reason-dialog';
+import { mfaClient } from '@/features/mfa/api/mfaApi';
+import { PeerResetInbox } from '@/features/mfa/components/PeerResetInbox';
 import type { PlatformUserSummary } from '@uniffy/proto/superadmin/v1/system_directory_pb';
 
 type PendingUserAction =
     | { kind: 'force-logout'; user: PlatformUserSummary }
-    | { kind: 'toggle-admin'; user: PlatformUserSummary };
+    | { kind: 'toggle-admin'; user: PlatformUserSummary }
+    | { kind: 'mfa-reset-direct'; user: PlatformUserSummary }
+    | { kind: 'mfa-reset-peer'; user: PlatformUserSummary };
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -53,9 +58,18 @@ interface RowActionsProps {
     isSelf: boolean;
     onForceLogout: () => void;
     onToggleSystemAdmin: () => void;
+    onResetMfaDirect: () => void;
+    onRequestPeerMfaReset: () => void;
 }
 
-function RowActions({ user, isSelf, onForceLogout, onToggleSystemAdmin }: RowActionsProps) {
+function RowActions({
+    user,
+    isSelf,
+    onForceLogout,
+    onToggleSystemAdmin,
+    onResetMfaDirect,
+    onRequestPeerMfaReset,
+}: RowActionsProps) {
     const [open, setOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     return (
@@ -109,6 +123,35 @@ function RowActions({ user, isSelf, onForceLogout, onToggleSystemAdmin }: RowAct
                     <ShieldCheck size={14} weight="duotone" />
                     {user.isSystemAdmin ? 'Revoke system admin' : 'Grant system admin'}
                 </button>
+                {!isSelf && user.mfaEnabled && user.isSystemAdmin && (
+                    <button
+                        type="button"
+                        className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-accent text-rose-700 dark:text-rose-400"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setOpen(false);
+                            onRequestPeerMfaReset();
+                        }}
+                    >
+                        <ShieldSlash size={14} weight="duotone" /> Request peer MFA reset
+                    </button>
+                )}
+                {!isSelf
+                    && user.mfaEnabled
+                    && !user.isSystemAdmin
+                    && user.orgMembershipsCount === 0 && (
+                        <button
+                            type="button"
+                            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-accent text-rose-700 dark:text-rose-400"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setOpen(false);
+                                onResetMfaDirect();
+                            }}
+                        >
+                            <ShieldSlash size={14} weight="duotone" /> Reset MFA
+                        </button>
+                    )}
             </PortalMenu>
         </>
     );
@@ -160,7 +203,7 @@ export function PlatformUsersPage() {
             if (pending.kind === 'force-logout') {
                 await platformUsersApi.forceLogout({ userId: pending.user.id, reason });
                 toast.success(`Forced logout: ${pending.user.email}`);
-            } else {
+            } else if (pending.kind === 'toggle-admin') {
                 const wasAdmin = pending.user.isSystemAdmin;
                 await platformUsersApi.setSystemAdmin({
                     userId: pending.user.id,
@@ -171,6 +214,20 @@ export function PlatformUsersPage() {
                     wasAdmin
                         ? `Revoked system admin from ${pending.user.email}`
                         : `Granted system admin to ${pending.user.email}`,
+                );
+            } else if (pending.kind === 'mfa-reset-direct') {
+                await mfaClient.platformResetMfa({
+                    targetUserId: pending.user.id,
+                    reason,
+                });
+                toast.success(`Two factor reset for ${pending.user.email}`);
+            } else if (pending.kind === 'mfa-reset-peer') {
+                const response = await mfaClient.requestPlatformPeerReset({
+                    targetUserId: pending.user.id,
+                    reason,
+                });
+                toast.success(
+                    `Peer reset requested for ${pending.user.email}. Another platform admin has 10 minutes to approve (request ${response.requestId.slice(0, 8)}).`,
                 );
             }
             setPending(null);
@@ -208,6 +265,8 @@ export function PlatformUsersPage() {
                     </p>
                 </div>
             </div>
+
+            <PeerResetInbox selfId={selfId} onApproved={fetchRows} />
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 relative">
@@ -342,6 +401,12 @@ export function PlatformUsersPage() {
                                         onToggleSystemAdmin={() =>
                                             setPending({ kind: 'toggle-admin', user: u })
                                         }
+                                        onResetMfaDirect={() =>
+                                            setPending({ kind: 'mfa-reset-direct', user: u })
+                                        }
+                                        onRequestPeerMfaReset={() =>
+                                            setPending({ kind: 'mfa-reset-peer', user: u })
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
@@ -403,7 +468,11 @@ export function PlatformUsersPage() {
                           ? pending.user.isSystemAdmin
                                 ? `Revoke system admin from ${pending.user.email}?`
                                 : `Grant system admin to ${pending.user.email}?`
-                          : ''
+                          : pending?.kind === 'mfa-reset-direct'
+                            ? `Reset MFA on ${pending.user.email}?`
+                            : pending?.kind === 'mfa-reset-peer'
+                              ? `Request peer MFA reset for ${pending.user.email}?`
+                              : ''
                 }
                 description={
                     pending?.kind === 'force-logout'
@@ -412,7 +481,11 @@ export function PlatformUsersPage() {
                           ? pending.user.isSystemAdmin
                                 ? 'User loses access to /platform/* and is logged out everywhere.'
                                 : 'User gains access to /platform/* and is logged out everywhere.'
-                          : undefined
+                          : pending?.kind === 'mfa-reset-direct'
+                            ? 'Direct platform reset is only allowed for users with zero org memberships. The target is signed out everywhere and prompted to enrol again on next sign in.'
+                            : pending?.kind === 'mfa-reset-peer'
+                              ? 'Opens a 10 minute peer co-sign window. Another platform admin (not you) must approve before MFA is actually reset.'
+                              : undefined
                 }
                 confirmLabel={
                     pending?.kind === 'force-logout'
@@ -421,7 +494,11 @@ export function PlatformUsersPage() {
                           ? pending.user.isSystemAdmin
                                 ? 'Revoke'
                                 : 'Grant'
-                          : 'Confirm'
+                          : pending?.kind === 'mfa-reset-direct'
+                            ? 'Reset'
+                            : pending?.kind === 'mfa-reset-peer'
+                              ? 'Request reset'
+                              : 'Confirm'
                 }
                 variant={
                     pending?.kind === 'toggle-admin' && !pending.user.isSystemAdmin

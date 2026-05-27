@@ -39,6 +39,13 @@ TEMPLATES: dict[str, MailTemplate] = {
             "user's primary-org SMTP config."
         ),
     ),
+    "auth/mfa_reset": MailTemplate(
+        name="auth/mfa_reset",
+        description=(
+            "Out-of-band notice sent to a user whose MFA was reset "
+            "by an org admin, platform admin, or break-glass CLI."
+        ),
+    ),
     "platform/org_deleted": MailTemplate(
         name="platform/org_deleted",
         description=(

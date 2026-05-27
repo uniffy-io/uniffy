@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1\">\n\nSystemFlag\x12\x18\n\x07\x65nabled\x18\x01 \x01(\x08R\x07\x65nabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source\"Z\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b\x32\x19.superadmin.v1.SystemFlagR\x12publicRegistration\"\x18\n\x16GetSystemConfigRequest\"N\n\x17GetSystemConfigResponse\x12\x33\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.superadmin.v1.SystemConfigR\x06\x63onfig\"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07\x65nabled\x18\x01 \x01(\x08R\x07\x65nabled\"T\n\x1dSetPublicRegistrationResponse\x12\x33\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.superadmin.v1.SystemConfigR\x06\x63onfig2\xef\x01\n\x13SystemConfigService\x12\x62\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x42\x43ZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1\">\n\nSystemFlag\x12\x18\n\x07\x65nabled\x18\x01 \x01(\x08R\x07\x65nabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source\"Z\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b\x32\x19.superadmin.v1.SystemFlagR\x12publicRegistration\"\x18\n\x16GetSystemConfigRequest\"N\n\x17GetSystemConfigResponse\x12\x33\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.superadmin.v1.SystemConfigR\x06\x63onfig\"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07\x65nabled\x18\x01 \x01(\x08R\x07\x65nabled\"T\n\x1dSetPublicRegistrationResponse\x12\x33\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.superadmin.v1.SystemConfigR\x06\x63onfig\"H\n\tMfaPolicy\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins\"\x15\n\x13GetMfaPolicyRequest\"H\n\x14GetMfaPolicyResponse\x12\x30\n\x06policy\x18\x01 \x01(\x0b\x32\x18.superadmin.v1.MfaPolicyR\x06policy\"R\n\x13SetMfaPolicyRequest\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins\"H\n\x14SetMfaPolicyResponse\x12\x30\n\x06policy\x18\x01 \x01(\x0b\x32\x18.superadmin.v1.MfaPolicyR\x06policy2\xa5\x03\n\x13SystemConfigService\x12\x62\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12Y\n\x0cGetMfaPolicy\x12\".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse\"\x00\x12Y\n\x0cSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00\x42\x43ZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -44,6 +44,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SETPUBLICREGISTRATIONREQUEST']._serialized_end=370
   _globals['_SETPUBLICREGISTRATIONRESPONSE']._serialized_start=372
   _globals['_SETPUBLICREGISTRATIONRESPONSE']._serialized_end=456
-  _globals['_SYSTEMCONFIGSERVICE']._serialized_start=459
-  _globals['_SYSTEMCONFIGSERVICE']._serialized_end=698
+  _globals['_MFAPOLICY']._serialized_start=458
+  _globals['_MFAPOLICY']._serialized_end=530
+  _globals['_GETMFAPOLICYREQUEST']._serialized_start=532
+  _globals['_GETMFAPOLICYREQUEST']._serialized_end=553
+  _globals['_GETMFAPOLICYRESPONSE']._serialized_start=555
+  _globals['_GETMFAPOLICYRESPONSE']._serialized_end=627
+  _globals['_SETMFAPOLICYREQUEST']._serialized_start=629
+  _globals['_SETMFAPOLICYREQUEST']._serialized_end=711
+  _globals['_SETMFAPOLICYRESPONSE']._serialized_start=713
+  _globals['_SETMFAPOLICYRESPONSE']._serialized_end=785
+  _globals['_SYSTEMCONFIGSERVICE']._serialized_start=788
+  _globals['_SYSTEMCONFIGSERVICE']._serialized_end=1209
 # @@protoc_insertion_point(module_scope)

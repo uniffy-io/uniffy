@@ -2,15 +2,6 @@
 
 Two worker classes, two queues, one Valkey instance:
 
-- ``CoreWorkerSettings`` runs on ``uniffy:queue:core`` with default
-  ARQ tuning (``max_jobs=10``). Owns thumbnail / extraction /
-  notification / reminder / storage / chat-mute work plus the cron
-  jobs whose downstream effects land on the core queue.
-- ``EgressWorkerSettings`` runs on ``uniffy:queue:egress`` with a
-  larger pool (``max_jobs=50`` default) and tighter ``poll_delay``
-  (50ms) so agent-runtime time-to-first-token stays low. Owns
-  agent runtime / compaction / cron tasks.
-
 Run with one of:
     arq uniffy.workers.settings.CoreWorkerSettings
     arq uniffy.workers.settings.EgressWorkerSettings
@@ -28,6 +19,7 @@ from uniffy.observability import ObservabilityConfig, setup_observability
 _environment = os.getenv("ENVIRONMENT", "development")
 _log_level = os.getenv("LOG_LEVEL", "info").upper()
 
+# TODO: Fix version inject
 setup_observability(
     config=ObservabilityConfig(
         app_name="uniffy-worker",

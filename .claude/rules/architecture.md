@@ -31,7 +31,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 - **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
 - **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
 
-**API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication uses generated clients - never REST. Proto definitions are the source of truth. Generated code is imported as `from uniffy_proto.` (Python) and `@uniffy/proto/` (TypeScript).
+**API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication goes through generated clients rather than REST. Proto definitions are the source of truth. Generated code is imported as `from uniffy_proto.` (Python) and `@uniffy/proto/` (TypeScript).
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
 
@@ -86,13 +86,13 @@ Uniffy uses URNs to uniquely identify all content. This enables universal `@` me
 **Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`, `PROJECT`, `TASK`, `USER`, `GROUP`
 
 **Requirements:**
-- All content models MUST have a `urn` property
-- All content MUST be indexed in search for `@` mention lookup
-- Use `BaseContentOperations` which handles URN generation and search indexing automatically
+- All content models carry a `urn` property
+- All content is indexed in search so `@` mention lookup works everywhere
+- `BaseContentOperations` handles URN generation and search indexing automatically - extending it is the easiest way to get both right
 
 ## Markdown Content Standard
 
-All user-editable text content MUST support Markdown with URN mentions.
+All user-editable text content supports Markdown with URN mentions - this keeps the `@` mention experience consistent across the app.
 
 **Mention Format:**
 ```markdown

@@ -39,20 +39,39 @@ export function SecuritySection() {
         void reload();
     }, [reload]);
 
-    const togglePasswordReset = async (enabled: boolean) => {
+    const togglePasswordReset = (enabled: boolean) =>
+        applyChange('password_reset_enabled', { passwordResetEnabled: enabled }, enabled
+            ? 'Password reset enabled for this organization'
+            : 'Password reset disabled for this organization');
+
+    const toggleMfaMembers = (enabled: boolean) =>
+        applyChange('mfa_required_for_members', { mfaRequiredForMembers: enabled }, enabled
+            ? 'MFA now required for every member'
+            : 'MFA no longer required for members');
+
+    const toggleMfaAdmins = (enabled: boolean) =>
+        applyChange('mfa_required_for_admins', { mfaRequiredForAdmins: enabled }, enabled
+            ? 'MFA now required for organization admins'
+            : 'MFA no longer required for organization admins');
+
+    const applyChange = async (
+        key: string,
+        patch: Partial<{
+            passwordResetEnabled: boolean;
+            mfaRequiredForMembers: boolean;
+            mfaRequiredForAdmins: boolean;
+        }>,
+        successMessage: string,
+    ) => {
         if (!organizationId || !settings || savingKey) return;
-        setSavingKey('password_reset_enabled');
+        setSavingKey(key);
         try {
             const response = await securityApi.update({
                 organizationId,
-                passwordResetEnabled: enabled,
+                ...patch,
             });
             setSettings(response.settings ?? null);
-            toast.success(
-                enabled
-                    ? 'Password reset enabled for this organization'
-                    : 'Password reset disabled for this organization',
-            );
+            toast.success(successMessage);
         } catch (err) {
             const friendly =
                 friendlyErrorMessage(err instanceof Error ? err.message : String(err))
@@ -98,6 +117,22 @@ export function SecuritySection() {
                         onChange={togglePasswordReset}
                         disabled={!isAdmin || savingKey !== null}
                         saving={savingKey === 'password_reset_enabled'}
+                    />
+                    <ToggleRow
+                        title="Require MFA for admins"
+                        description="OWNER and ADMIN role members must have two factor authentication enabled. Recommended for any organization that holds production data."
+                        enabled={settings.mfaRequiredForAdmins}
+                        onChange={toggleMfaAdmins}
+                        disabled={!isAdmin || savingKey !== null}
+                        saving={savingKey === 'mfa_required_for_admins'}
+                    />
+                    <ToggleRow
+                        title="Require MFA for all members"
+                        description="Every member must enrol two factor authentication. New members and members invited during the grace window will be prompted on first sign in."
+                        enabled={settings.mfaRequiredForMembers}
+                        onChange={toggleMfaMembers}
+                        disabled={!isAdmin || savingKey !== null}
+                        saving={savingKey === 'mfa_required_for_members'}
                     />
                 </div>
             )}

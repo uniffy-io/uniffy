@@ -564,6 +564,7 @@ class PlatformDirectoryOperations:
         user_ids = [u.id for u in users]
         membership_counts = await self._fetch_membership_counts(user_ids)
         last_logins = await self._fetch_user_last_logins(user_ids)
+        mfa_enabled_ids = await self._fetch_mfa_enabled(user_ids)
 
         rows: list[PlatformUserSummary] = []
         for u in users:
@@ -576,7 +577,7 @@ class PlatformDirectoryOperations:
                     is_active=u.is_active,
                     is_system_admin=u.is_system_admin,
                     email_verified=u.email_verified,
-                    mfa_enabled=False,
+                    mfa_enabled=u.id in mfa_enabled_ids,
                     org_memberships_count=membership_counts.get(u.id, 0),
                     last_login_at=last_logins.get(u.id),
                     created_at=u.created_at,
@@ -594,6 +595,7 @@ class PlatformDirectoryOperations:
         target = await self._require_user(target_user_id)
         memberships = await self._fetch_user_memberships(target.id)
         last_logins = await self._fetch_user_last_logins([target.id])
+        mfa_enabled_ids = await self._fetch_mfa_enabled([target.id])
         summary = PlatformUserSummary(
             id=target.id,
             email=target.email,
@@ -602,7 +604,7 @@ class PlatformDirectoryOperations:
             is_active=target.is_active,
             is_system_admin=target.is_system_admin,
             email_verified=target.email_verified,
-            mfa_enabled=False,
+            mfa_enabled=target.id in mfa_enabled_ids,
             org_memberships_count=len(memberships),
             last_login_at=last_logins.get(target.id),
             created_at=target.created_at,
@@ -762,6 +764,20 @@ class PlatformDirectoryOperations:
             )
         ).all()
         return {oid: int(count) for oid, count in rows}
+
+    async def _fetch_mfa_enabled(self, user_ids: list[UUID]) -> set[UUID]:
+        if not user_ids:
+            return set()
+        from uniffy.core.models.login.user_mfa import UserMfa
+
+        rows = (
+            await self._session.execute(
+                select(UserMfa.user_id)
+                .where(UserMfa.user_id.in_(user_ids))
+                .where(UserMfa.enabled.is_(True))
+            )
+        ).all()
+        return {uid for (uid,) in rows}
 
     async def _fetch_membership_counts(self, user_ids: list[UUID]) -> dict[UUID, int]:
         if not user_ids:

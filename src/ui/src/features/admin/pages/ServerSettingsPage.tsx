@@ -109,26 +109,41 @@ export function ServerSettingsPage() {
     // not persisted anywhere yet.
     const [maintenanceMode, setMaintenanceMode] = useState(false);
     const [emailNotifications, setEmailNotifications] = useState(true);
-    const [twoFactorRequired, setTwoFactorRequired] = useState(false);
     const [auditLogging, setAuditLogging] = useState(true);
     const [apiRateLimiting, setApiRateLimiting] = useState(true);
+
+    // MFA platform policy -- backed by SystemConfigService.GetMfaPolicy.
+    const [mfaRequiredForAdmins, setMfaRequiredForAdmins] = useState(false);
+    const [mfaPolicyLoading, setMfaPolicyLoading] = useState(true);
+    const [mfaPolicySaving, setMfaPolicySaving] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
             setPublicRegistrationLoading(true);
+            setMfaPolicyLoading(true);
             try {
-                const response = await systemConfigApi.getSystemConfig({});
-                const flag = response.config?.publicRegistration;
+                const [systemResponse, mfaResponse] = await Promise.all([
+                    systemConfigApi.getSystemConfig({}),
+                    systemConfigApi.getMfaPolicy({}),
+                ]);
+                const flag = systemResponse.config?.publicRegistration;
                 if (!cancelled && flag) {
                     setPublicRegistrationState(flag.enabled);
                     setPublicRegistrationSource(flag.source || 'default');
+                }
+                const policy = mfaResponse.policy;
+                if (!cancelled && policy) {
+                    setMfaRequiredForAdmins(policy.requiredForSystemAdmins);
                 }
             } catch (err) {
                 const friendly = friendlyErrorMessage((err as Error).message);
                 if (friendly) toast.error(friendly);
             } finally {
-                if (!cancelled) setPublicRegistrationLoading(false);
+                if (!cancelled) {
+                    setPublicRegistrationLoading(false);
+                    setMfaPolicyLoading(false);
+                }
             }
         };
         void load();
@@ -136,6 +151,32 @@ export function ServerSettingsPage() {
             cancelled = true;
         };
     }, []);
+
+    const updateMfaPolicy = useCallback(
+        async (requiredForSystemAdmins: boolean) => {
+            setMfaPolicySaving(true);
+            try {
+                const response = await systemConfigApi.setMfaPolicy({
+                    requiredForSystemAdmins,
+                });
+                const policy = response.policy;
+                if (policy) {
+                    setMfaRequiredForAdmins(policy.requiredForSystemAdmins);
+                }
+                toast.success(
+                    requiredForSystemAdmins
+                        ? 'MFA now required for platform admins'
+                        : 'MFA no longer required for platform admins',
+                );
+            } catch (err) {
+                const friendly = friendlyErrorMessage((err as Error).message);
+                if (friendly) toast.error(friendly);
+            } finally {
+                setMfaPolicySaving(false);
+            }
+        },
+        [],
+    );
 
     const handlePublicRegistrationChange = useCallback(async (enabled: boolean) => {
         const previous = publicRegistration;
@@ -243,10 +284,12 @@ export function ServerSettingsPage() {
                     />
                     <SettingItem
                         icon={Key}
-                        title="Require Two-Factor Authentication"
-                        description="Enforce 2FA for all user accounts to enhance security"
-                        enabled={twoFactorRequired}
-                        onChange={setTwoFactorRequired}
+                        title="Require two factor authentication for platform admins"
+                        description="Every platform admin must enrol an authenticator app. Takes effect on the next sign in."
+                        enabled={mfaRequiredForAdmins}
+                        onChange={(value) => void updateMfaPolicy(value)}
+                        disabled={mfaPolicyLoading || mfaPolicySaving}
+                        badge={mfaPolicyLoading ? 'Loading' : undefined}
                     />
                 </div>
             </div>

@@ -1,18 +1,5 @@
 """Seed a 'Hierarchy QA' project with a curated task tree.
 
-One-off helper for manually QA'ing the parent-aware filters added in
-issue #95. Goes through ``ProjectOperations.create`` and
-``TaskOperations.create`` so URNs and search indexing are populated
-correctly (raw SQL would skip ``BaseContentOperations``).
-
-Usage:
-
-    uv run python scripts/seed_hierarchy_qa_project.py
-
-Idempotent: if a project named "Hierarchy QA" already exists for the
-admin user's first org, it is deleted (soft) first and recreated, so
-re-running gives a clean fixture each time.
-
 Hierarchy seeded:
 
     Epic A

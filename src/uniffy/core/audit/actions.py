@@ -5,31 +5,6 @@ drawn from this module. New mutation call sites must add their action
 constant here before emitting events - the enum is the source of truth
 for the front-end filter UI and for retention / export tooling.
 
-Agent-as-actor attribution
---------------------------
-
-When an agent performs a mutation on behalf of its human owner, the
-audit row attributes the action to the **human owner**, with the
-agent's identity surfaced through ``details``::
-
-    actor_user_id        = <human owner UUID>
-    on_behalf_of_user_id = NULL
-    actor_org_role       = <human's org role snapshot>
-    details              = {
-        "actor_kind": "agent",
-        "agent_id":   "<agents_agents.id>",
-        "tool_name":  "<tool name when applicable>",
-        "target_urn": "<urn:uniffy:content:..."
-    }
-
-Rationale: auditor mental model maps actions to the responsible human.
-``actor_user_id`` is the single indexed column for "what did user X
-do" filters and surfaces both manual and agent-driven activity. The
-UI renders an "agent" badge from ``details.actor_kind``.
-
-``on_behalf_of_user_id`` is reserved for delegated-admin /
-system-initiated flows where actor and beneficiary diverge. Stays
-``NULL`` outside that pattern.
 """
 
 
@@ -53,6 +28,22 @@ class Action:
     AUTH_PASSWORD_RESET_REQUESTED = "auth.password_reset_requested"
     AUTH_PASSWORD_RESET_COMPLETED = "auth.password_reset_completed"
     AUTH_PASSWORD_RESET_BLOCKED = "auth.password_reset_blocked"
+    AUTH_LOGIN_RATE_LIMITED = "auth.login_rate_limited"
+
+    # Auth - MFA (TOTP)
+    AUTH_MFA_ENROLLMENT_STARTED = "auth.mfa_enrollment_started"
+    AUTH_MFA_ENROLLED = "auth.mfa_enrolled"
+    AUTH_MFA_VERIFIED = "auth.mfa_verified"
+    AUTH_MFA_FAILED = "auth.mfa_failed"
+    AUTH_MFA_RECOVERY_CODE_USED = "auth.mfa_recovery_code_used"
+    AUTH_MFA_RECOVERY_CODES_REGENERATED = "auth.mfa_recovery_codes_regenerated"
+    AUTH_MFA_DISABLED = "auth.mfa_disabled"
+    AUTH_MFA_ADMIN_RESET = "auth.mfa_admin_reset"
+    AUTH_MFA_PLATFORM_RESET = "auth.mfa_platform_reset"
+    AUTH_MFA_PLATFORM_RESET_REQUESTED = "auth.mfa_platform_reset_requested"
+    AUTH_MFA_PLATFORM_RESET_APPROVED = "auth.mfa_platform_reset_approved"
+    AUTH_MFA_BREAK_GLASS_RESET = "auth.mfa_break_glass_reset"
+    AUTH_MFA_POLICY_CHANGED = "auth.mfa_policy_changed"
 
     # Users
     USER_INVITED = "user.invited"
@@ -73,6 +64,7 @@ class Action:
     ORGANIZATION_MEMBER_ROLE_CHANGED = "organization.member_role_changed"
     ORGANIZATION_DELETED = "organization.deleted"
     ORGANIZATION_ENCRYPTION_KEY_ROTATED = "organization.encryption_key_rotated"
+    ORGANIZATION_PERMISSION_DEFAULTS_CHANGED = "organization.permission_defaults_changed"
     ORGANIZATION_MEMBER_INVITED = "organization.member_invited"
     ORGANIZATION_MEMBER_ADDED_VIA_INVITE = "organization.member_added_via_invite"
     ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
@@ -222,10 +214,5 @@ class Action:
 
 
 def tool_call_action(tool_name: str) -> str:
-    """Build the dynamic action identifier for an agent tool call.
-
-    Used by the agent ToolExecutor when emitting an audit row for a
-    mutating (``read_only=False``) tool invocation. The resulting
-    action follows ``agent.tool_call.<tool_name>``.
-    """
+    """Build the dynamic action identifier for an agent tool call."""
     return f"agent.tool_call.{tool_name}"

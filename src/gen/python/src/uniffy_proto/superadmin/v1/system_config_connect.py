@@ -24,6 +24,12 @@ class SystemConfigService(Protocol):
     async def set_public_registration(self, request: superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_mfa_policy(self, request: superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_mfa_policy(self, request: superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class SystemConfigServiceASGIApplication(ConnectASGIApplication[SystemConfigService]):
     def __init__(self, service: SystemConfigService | AsyncGenerator[SystemConfigService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -49,6 +55,26 @@ class SystemConfigServiceASGIApplication(ConnectASGIApplication[SystemConfigServ
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.set_public_registration,
+                ),
+                "/superadmin.v1.SystemConfigService/GetMfaPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetMfaPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+                        output=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_mfa_policy,
+                ),
+                "/superadmin.v1.SystemConfigService/SetMfaPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetMfaPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+                        output=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_mfa_policy,
                 ),
             },
             interceptors=interceptors,
@@ -104,6 +130,46 @@ class SystemConfigServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_mfa_policy(
+        self,
+        request: superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMfaPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+                output=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_mfa_policy(
+        self,
+        request: superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMfaPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+                output=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -112,6 +178,10 @@ class SystemConfigServiceSync(Protocol):
     def get_system_config(self, request: superadmin_dot_v1_dot_system__config__pb2.GetSystemConfigRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.GetSystemConfigResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def set_public_registration(self, request: superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_mfa_policy(self, request: superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_mfa_policy(self, request: superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -138,6 +208,26 @@ class SystemConfigServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.set_public_registration,
+                ),
+                "/superadmin.v1.SystemConfigService/GetMfaPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetMfaPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+                        output=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_mfa_policy,
+                ),
+                "/superadmin.v1.SystemConfigService/SetMfaPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetMfaPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+                        output=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_mfa_policy,
                 ),
             },
             interceptors=interceptors,
@@ -187,6 +277,46 @@ class SystemConfigServiceClientSync(ConnectClientSync):
                 service_name="superadmin.v1.SystemConfigService",
                 input=superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationRequest,
                 output=superadmin_dot_v1_dot_system__config__pb2.SetPublicRegistrationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_mfa_policy(
+        self,
+        request: superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMfaPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyRequest,
+                output=superadmin_dot_v1_dot_system__config__pb2.GetMfaPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_mfa_policy(
+        self,
+        request: superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMfaPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyRequest,
+                output=superadmin_dot_v1_dot_system__config__pb2.SetMfaPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

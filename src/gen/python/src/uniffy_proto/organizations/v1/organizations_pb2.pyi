@@ -477,10 +477,14 @@ class ResendInvitationResponse(_message.Message):
     def __init__(self, invitation: _Optional[_Union[Invitation, _Mapping]] = ...) -> None: ...
 
 class SecuritySettings(_message.Message):
-    __slots__ = ("password_reset_enabled",)
+    __slots__ = ("password_reset_enabled", "mfa_required_for_members", "mfa_required_for_admins")
     PASSWORD_RESET_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    MFA_REQUIRED_FOR_MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    MFA_REQUIRED_FOR_ADMINS_FIELD_NUMBER: _ClassVar[int]
     password_reset_enabled: bool
-    def __init__(self, password_reset_enabled: _Optional[bool] = ...) -> None: ...
+    mfa_required_for_members: bool
+    mfa_required_for_admins: bool
+    def __init__(self, password_reset_enabled: _Optional[bool] = ..., mfa_required_for_members: _Optional[bool] = ..., mfa_required_for_admins: _Optional[bool] = ...) -> None: ...
 
 class GetSecuritySettingsRequest(_message.Message):
     __slots__ = ("organization_id",)
@@ -495,12 +499,16 @@ class GetSecuritySettingsResponse(_message.Message):
     def __init__(self, settings: _Optional[_Union[SecuritySettings, _Mapping]] = ...) -> None: ...
 
 class UpdateSecuritySettingsRequest(_message.Message):
-    __slots__ = ("organization_id", "password_reset_enabled")
+    __slots__ = ("organization_id", "password_reset_enabled", "mfa_required_for_members", "mfa_required_for_admins")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_RESET_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    MFA_REQUIRED_FOR_MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    MFA_REQUIRED_FOR_ADMINS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     password_reset_enabled: bool
-    def __init__(self, organization_id: _Optional[str] = ..., password_reset_enabled: _Optional[bool] = ...) -> None: ...
+    mfa_required_for_members: bool
+    mfa_required_for_admins: bool
+    def __init__(self, organization_id: _Optional[str] = ..., password_reset_enabled: _Optional[bool] = ..., mfa_required_for_members: _Optional[bool] = ..., mfa_required_for_admins: _Optional[bool] = ...) -> None: ...
 
 class UpdateSecuritySettingsResponse(_message.Message):
     __slots__ = ("settings",)
